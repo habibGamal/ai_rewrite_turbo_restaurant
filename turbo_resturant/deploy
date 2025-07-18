@@ -1,0 +1,4 @@
+// backup data
+DELETE t1 FROM product_components t1 INNER JOIN product_components t2 ON t1.product_id = t2.product_id AND t1.component_id = t2.component_id WHERE t1.id > t2.id;
+// migration:run
+// env => production
