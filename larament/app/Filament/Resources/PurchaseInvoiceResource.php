@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Resources\PurchaseInvoiceResource\Pages;
 use App\Filament\Resources\PurchaseInvoiceResource\RelationManagers;
 use App\Models\PurchaseInvoice;
@@ -9,18 +10,17 @@ use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Category;
+use App\Services\PurchaseInvoiceCalculatorService;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Filament\Forms;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Form;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Actions;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
@@ -77,149 +77,25 @@ class PurchaseInvoiceResource extends Resource
                             ->label('إجمالي الفاتورة (ج.م)')
                             ->numeric()
                             ->prefix('ج.م')
-                            ->readOnly()
+                            ->disabled()
+                            ->dehydrated(false)
                             ->default(0),
                     ])
                     ->columns(3),
 
                 Section::make('أصناف الفاتورة')
+                    ->extraAttributes([
+                        '@update-total' => PurchaseInvoiceCalculatorService::getJavaScriptCalculation(),
+                    ])
                     ->schema([
                         Actions::make([
-                            Action::make('importProducts')
-                                ->label('استيراد المنتجات')
-                                ->icon('heroicon-m-plus-circle')
-                                ->color('success')
-                                ->form([
-                                    Grid::make(2)
-                                        ->schema([
-                                            Select::make('category_filter')
-                                                ->label('فلترة حسب الفئة')
-                                                ->placeholder('جميع الفئات')
-                                                ->options(Category::all()->pluck('name', 'id'))
-                                                ->reactive()
-                                                ->afterStateUpdated(fn($state, callable $set) => $set('selected_products', [])),
-                                            
-                                            TextInput::make('search_filter')
-                                                ->label('البحث في المنتجات')
-                                                ->placeholder('ابحث باسم المنتج...')
-                                                ->reactive()
-                                                ->afterStateUpdated(fn($state, callable $set) => $set('selected_products', [])),
-                                        ]),
-                                    
-                                    CheckboxList::make('selected_products')
-                                        ->label('اختر المنتجات للاستيراد')
-                                        ->options(function (Get $get) {
-                                            $query = Product::query();
-                                            
-                                            // Filter by category if selected
-                                            if ($categoryId = $get('category_filter')) {
-                                                $query->where('category_id', $categoryId);
-                                            }
-                                            
-                                            // Filter by search term if provided
-                                            if ($search = $get('search_filter')) {
-                                                $query->where('name', 'like', '%' . $search . '%');
-                                            }
-                                            
-                                            return $query->get()->mapWithKeys(function ($product) {
-                                                $price = $product->cost ?? $product->price;
-                                                $categoryName = $product->category ? $product->category->name : 'بدون فئة';
-                                                return [
-                                                    $product->id => $product->name . ' - ' . $price . ' ج.م' . ' (' . $categoryName . ')'
-                                                ];
-                                            });
-                                        })
-                                        ->searchable()
-                                        ->bulkToggleable()
-                                        ->columns(1)
-                                        ->required()
-                                        ->reactive()
-                                        ->descriptions(function (Get $get) {
-                                            $products = Product::query();
-                                            
-                                            if ($categoryId = $get('category_filter')) {
-                                                $products->where('category_id', $categoryId);
-                                            }
-                                            
-                                            if ($search = $get('search_filter')) {
-                                                $products->where('name', 'like', '%' . $search . '%');
-                                            }
-                                            
-                                            return $products->get()->mapWithKeys(function ($product) {
-                                                $cost = $product->cost ?? 0;
-                                                $price = $product->price ?? 0;
-                                                $description = "سعر التكلفة: {$cost} ج.م | سعر البيع: {$price} ج.م";
-                                                if ($product->unit) {
-                                                    $description .= " | الوحدة: {$product->unit}";
-                                                }
-                                                return [$product->id => $description];
-                                            });
-                                        })
-                                ])
-                                ->action(function (array $data, Set $set, Get $get) {
-                                    $selectedProducts = $data['selected_products'] ?? [];
-                                    $currentItems = $get('items') ?? [];
-                                    
-                                    // Get existing product IDs to avoid duplicates
-                                    $existingProductIds = collect($currentItems)->pluck('product_id')->filter()->toArray();
-                                    
-                                    $addedCount = 0;
-                                    $skippedCount = 0;
-                                    
-                                    foreach ($selectedProducts as $productId) {
-                                        // Skip if product already exists in the list
-                                        if (in_array($productId, $existingProductIds)) {
-                                            $skippedCount++;
-                                            continue;
-                                        }
-                                        
-                                        $product = Product::find($productId);
-                                        if ($product) {
-                                            $price = $product->cost ?? $product->price;
-                                            $quantity = 1;
-                                            $total = $quantity * $price;
-                                            
-                                            $currentItems[] = [
-                                                'product_id' => $product->id,
-                                                'quantity' => $quantity,
-                                                'price' => $price,
-                                                'total' => $total,
-                                            ];
-                                            $addedCount++;
-                                        }
-                                    }
-                                    
-                                    $set('items', $currentItems);
-                                    
-                                    // Recalculate invoice total
-                                    $invoiceTotal = 0;
-                                    foreach ($currentItems as $item) {
-                                        $invoiceTotal += $item['total'] ?? 0;
-                                    }
-                                    $set('total', $invoiceTotal);
-                                    
-                                    // Show notification
-                                    $message = "تم إضافة {$addedCount} منتج بنجاح";
-                                    if ($skippedCount > 0) {
-                                        $message .= " وتم تجاهل {$skippedCount} منتج موجود مسبقاً";
-                                    }
-                                    
-                                    \Filament\Notifications\Notification::make()
-                                        ->title('تم استيراد المنتجات')
-                                        ->body($message)
-                                        ->success()
-                                        ->send();
-                                })
-                                ->modalHeading('استيراد المنتجات')
-                                ->modalSubheading('اختر المنتجات التي تريد إضافتها إلى الفاتورة. يمكنك استخدام الفلاتر لتسهيل البحث.')
-                                ->modalWidth('2xl')
-                                ->slideOver()
+                            ProductImporterAction::make('importProducts')
                         ])
-                        ->alignStart(),
-                        
+                            ->alignStart(),
+
                         TableRepeater::make('items')
                             ->label('الأصناف')
-                            ->relationship('items')
+                            ->relationship('items', fn($query) => $query->with('product'))
                             ->headers([
                                 Header::make('product_id')->label('المنتج')->width('200px'),
                                 Header::make('quantity')->label('الكمية')->width('100px'),
@@ -227,11 +103,16 @@ class PurchaseInvoiceResource extends Resource
                                 Header::make('total')->label('الإجمالي (ج.م)')->width('120px'),
                             ])
                             ->schema([
-                                Select::make('product_id')
+                                Hidden::make('product_id'),
+                                TextInput::make('product_name')
                                     ->label('المنتج')
-                                    ->relationship('product', 'name')
-                                    ->searchable()
-                                    ->required(),
+                                    ->formatStateUsing(function ($record) {
+                                        if (!$record)
+                                            return 'غير محدد';
+                                        return $record->product_name != null ? $record->product_name : $record->product->name;
+                                    })
+                                    ->dehydrated(false)
+                                    ->disabled(),
 
                                 TextInput::make('quantity')
                                     ->label('الكمية')
@@ -239,42 +120,42 @@ class PurchaseInvoiceResource extends Resource
                                     ->required()
                                     ->default(1)
                                     ->minValue(1)
-                                    ->reactive()
-                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                        $price = $get('price') ?? 0;
-                                        $set('total', ($state ?? 1) * $price);
-                                    }),
+                                    ->extraAttributes([
+                                        'x-on:change' => '$dispatch("update-total")',
+                                    ])
+                                ,
 
                                 TextInput::make('price')
                                     ->label('سعر الوحدة (ج.م)')
                                     ->numeric()
                                     ->required()
                                     ->prefix('ج.م')
-                                    ->reactive()
-                                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
-                                        $quantity = $get('quantity') ?? 1;
-                                        $set('total', $quantity * ($state ?? 0));
-                                    }),
+                                    ->extraAttributes([
+                                        'x-on:change' => '$dispatch("update-total")',
+                                    ])
+                                ,
 
                                 TextInput::make('total')
                                     ->label('الإجمالي (ج.م)')
                                     ->numeric()
                                     ->prefix('ج.م')
-                                    ->readOnly(),
+                                    ->extraAttributes([
+                                        '@update-total.window' => PurchaseInvoiceCalculatorService::getItemJavaScriptCalculation(),
+                                    ])
+                                    ->disabled()
+                                    ->dehydrated(false),
                             ])
                             ->columns(4)
-                            ->defaultItems(1)
+                            ->defaultItems(0)
                             ->reorderableWithButtons()
-                            ->collapsible()
-                            ->reactive()
-                            ->afterStateUpdated(function (Set $set, Get $get) {
-                                $items = $get('items') ?? [];
-                                $total = 0;
-                                foreach ($items as $item) {
-                                    $total += $item['total'] ?? 0;
-                                }
-                                $set('total', $total);
-                            }),
+                            ->dehydrated(true)
+                            ->mutateRelationshipDataBeforeCreateUsing(function ($data) {
+                                return PurchaseInvoiceCalculatorService::prepareItemData($data);
+                            })
+                            ->mutateRelationshipDataBeforeSaveUsing(function ($data) {
+                                return PurchaseInvoiceCalculatorService::prepareItemData($data);
+                            })
+                            ->collapsible(),
                     ]),
             ]);
     }

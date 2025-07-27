@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\PurchaseInvoiceResource\Pages;
 
 use App\Filament\Resources\PurchaseInvoiceResource;
+use App\Services\PurchaseInvoiceCalculatorService;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class CreatePurchaseInvoice extends CreateRecord
 {
@@ -14,14 +16,16 @@ class CreatePurchaseInvoice extends CreateRecord
     {
         // Calculate total from items if not already set
         if (isset($data['items']) && is_array($data['items'])) {
-            $total = 0;
-            foreach ($data['items'] as $item) {
-                $total += $item['total'] ?? 0;
-            }
-            $data['total'] = $total;
+            $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotal($data['items']);
         }
 
         return $data;
+    }
+
+
+    protected function handleRecordCreation(array $data): Model
+    {
+        return static::getModel()::create($data);
     }
 
     protected function getRedirectUrl(): string

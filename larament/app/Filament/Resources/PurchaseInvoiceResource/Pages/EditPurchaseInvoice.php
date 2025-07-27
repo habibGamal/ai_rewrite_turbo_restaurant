@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\PurchaseInvoiceResource\Pages;
 
 use App\Filament\Resources\PurchaseInvoiceResource;
+use App\Services\PurchaseInvoiceCalculatorService;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class EditPurchaseInvoice extends EditRecord
 {
@@ -17,18 +19,12 @@ class EditPurchaseInvoice extends EditRecord
         ];
     }
 
-    protected function mutateFormDataBeforeSave(array $data): array
-    {
-        // Calculate total from items if not already set
-        if (isset($data['items']) && is_array($data['items'])) {
-            $total = 0;
-            foreach ($data['items'] as $item) {
-                $total += $item['total'] ?? 0;
-            }
-            $data['total'] = $total;
-        }
 
-        return $data;
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotalFromCollection($record->items);
+        $record->update($data);
+        return $record;
     }
 
     protected function getRedirectUrl(): string
