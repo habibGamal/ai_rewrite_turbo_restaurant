@@ -3,10 +3,10 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\ProductImporterAction;
-use App\Filament\Actions\ClosePurchaseInvoiceAction;
-use App\Filament\Resources\PurchaseInvoiceResource\Pages;
-use App\Filament\Resources\PurchaseInvoiceResource\RelationManagers;
-use App\Models\PurchaseInvoice;
+use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
+use App\Filament\Resources\ReturnPurchaseInvoiceResource\Pages;
+use App\Filament\Resources\ReturnPurchaseInvoiceResource\RelationManagers;
+use App\Models\ReturnPurchaseInvoice;
 use App\Models\Supplier;
 use App\Models\Product;
 use App\Models\User;
@@ -18,13 +18,10 @@ use Awcodes\TableRepeater\Header;
 use Filament\Forms;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Form;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Actions;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
@@ -35,20 +32,18 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class PurchaseInvoiceResource extends Resource
+class ReturnPurchaseInvoiceResource extends Resource
 {
-    protected static ?string $model = PurchaseInvoice::class;
+    protected static ?string $model = ReturnPurchaseInvoice::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static ?string $navigationIcon = 'heroicon-o-arrow-uturn-left';
 
-    protected static ?string $navigationLabel = 'فواتير الشراء';
+    protected static ?string $navigationLabel = 'مرتجع المشتريات';
 
-    protected static ?string $modelLabel = 'فاتورة شراء';
+    protected static ?string $modelLabel = 'مرتجع شراء';
 
-    protected static ?string $pluralModelLabel = 'فواتير الشراء';
+    protected static ?string $pluralModelLabel = 'مرتجع المشتريات';
 
     protected static ?string $navigationGroup = 'المشتريات';
 
@@ -56,7 +51,7 @@ class PurchaseInvoiceResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('معلومات الفاتورة')
+                Section::make('معلومات المرتجع')
                     ->schema([
                         Select::make('user_id')
                             ->label('المستخدم')
@@ -82,7 +77,7 @@ class PurchaseInvoiceResource extends Resource
                             ]),
 
                         TextInput::make('total')
-                            ->label('إجمالي الفاتورة (ج.م)')
+                            ->label('إجمالي المرتجع (ج.م)')
                             ->numeric()
                             ->prefix('ج.م')
                             ->disabled()
@@ -91,7 +86,7 @@ class PurchaseInvoiceResource extends Resource
                     ])
                     ->columns(3),
 
-                Section::make('أصناف الفاتورة')
+                Section::make('أصناف المرتجع')
                     ->extraAttributes([
                         "x-init" => PurchaseInvoiceCalculatorService::getJavaScriptCalculation(),
                     ])
@@ -127,16 +122,14 @@ class PurchaseInvoiceResource extends Resource
                                     ->numeric()
                                     ->required()
                                     ->default(1)
-                                    ->minValue(1)
-                                ,
+                                    ->minValue(1),
 
                                 TextInput::make('price')
                                     ->label('سعر الوحدة (ج.م)')
                                     ->numeric()
                                     ->required()
                                     ->minValue(0)
-                                    ->prefix('ج.م')
-                                ,
+                                    ->prefix('ج.م'),
 
                                 TextInput::make('total')
                                     ->label('الإجمالي (ج.م)')
@@ -164,10 +157,10 @@ class PurchaseInvoiceResource extends Resource
     {
         return $infolist
             ->schema([
-                InfoSection::make('معلومات الفاتورة')
+                InfoSection::make('معلومات المرتجع')
                     ->schema([
                         TextEntry::make('id')
-                            ->label('رقم الفاتورة'),
+                            ->label('رقم المرتجع'),
 
                         TextEntry::make('supplier.name')
                             ->label('المورد'),
@@ -176,13 +169,13 @@ class PurchaseInvoiceResource extends Resource
                             ->label('المستخدم'),
 
                         TextEntry::make('total')
-                            ->label('إجمالي الفاتورة')
+                            ->label('إجمالي المرتجع')
                             ->money('EGP'),
 
                         TextEntry::make('closed_at')
                             ->label('الحالة')
                             ->formatStateUsing(function ($state) {
-                                return $state ? 'مغلقة' : 'مفتوحة';
+                                return $state ? 'مغلق' : 'مفتوح';
                             })
                             ->badge()
                             ->color(fn(?string $state): string => $state ? 'success' : 'warning'),
@@ -192,6 +185,18 @@ class PurchaseInvoiceResource extends Resource
                             ->dateTime('d/m/Y H:i'),
                     ])
                     ->columns(3),
+
+                InfoSection::make('إحصائيات المرتجع')
+                    ->schema([
+                        TextEntry::make('items_count')
+                            ->label('عدد الأصناف')
+                            ->getStateUsing(fn($record) => $record->items->count()),
+
+                        TextEntry::make('total_quantity')
+                            ->label('إجمالي الكمية')
+                            ->getStateUsing(fn($record) => $record->items->sum('quantity')),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -200,7 +205,7 @@ class PurchaseInvoiceResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('رقم الفاتورة')
+                    ->label('رقم المرتجع')
                     ->sortable()
                     ->searchable(),
 
@@ -220,18 +225,17 @@ class PurchaseInvoiceResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('total')
-                    ->label('إجمالي الفاتورة')
+                    ->label('إجمالي المرتجع')
                     ->money('EGP')
                     ->sortable(),
 
                 TextColumn::make('closed_at')
                     ->label('الحالة')
                     ->formatStateUsing(function ($state) {
-                                dd($state);
-                        return $state ? 'مغلقة' : 'مفتوحة';
+                        return $state ? 'مغلق' : 'مفتوح';
                     })
                     ->badge()
-                    ->color(fn(string $state): string => $state ? 'success' : 'warning')
+                    ->color(fn (string $state): string => $state ? 'success' : 'warning')
                     ->sortable(),
 
                 TextColumn::make('created_at')
@@ -269,10 +273,14 @@ class PurchaseInvoiceResource extends Resource
                     }),
             ])
             ->actions([
-                ClosePurchaseInvoiceAction::table(),
+                CloseReturnPurchaseInvoiceAction::table(),
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
+
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -282,18 +290,19 @@ class PurchaseInvoiceResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getRelations(): array
     {
-        return is_null($record->closed_at);
+        return [
+        ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPurchaseInvoices::route('/'),
-            'create' => Pages\CreatePurchaseInvoice::route('/create'),
-            'view' => Pages\ViewPurchaseInvoice::route('/{record}'),
-            'edit' => Pages\EditPurchaseInvoice::route('/{record}/edit'),
+            'index' => Pages\ListReturnPurchaseInvoices::route('/'),
+            'create' => Pages\CreateReturnPurchaseInvoice::route('/create'),
+            'view' => Pages\ViewReturnPurchaseInvoice::route('/{record}'),
+            'edit' => Pages\EditReturnPurchaseInvoice::route('/{record}/edit'),
         ];
     }
 }

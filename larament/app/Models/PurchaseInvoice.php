@@ -13,6 +13,7 @@ class PurchaseInvoice extends Model
         'user_id',
         'supplier_id',
         'total',
+        'closed_at',
     ];
 
     public function user()

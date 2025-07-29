@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Resources;
 
 class PurchaseInvoiceCalculatorService
 {
@@ -15,7 +15,7 @@ class PurchaseInvoiceCalculatorService
     /**
      * Calculate total for all items in a purchase invoice
      */
-    public static function calculateInvoiceTotal(array $items): float
+    private static function calculateInvoiceTotalFromArray(array $items): float
     {
         $total = 0;
 
@@ -31,7 +31,7 @@ class PurchaseInvoiceCalculatorService
     /**
      * Calculate total from purchase invoice items collection
      */
-    public static function calculateInvoiceTotalFromCollection($items): float
+    private static function calculateInvoiceTotalFromCollection($items): float
     {
         $total = 0;
 
@@ -42,6 +42,20 @@ class PurchaseInvoiceCalculatorService
         }
 
         return $total;
+    }
+
+
+    /**
+     * Calculate total for all items in a purchase invoice
+     */
+    public static function calculateInvoiceTotal($items): float
+    {
+
+        if (is_array($items)) {
+            return self::calculateInvoiceTotalFromArray($items);
+        }
+
+        return self::calculateInvoiceTotalFromCollection($items);
     }
 
     /**
@@ -63,23 +77,16 @@ class PurchaseInvoiceCalculatorService
     public static function getJavaScriptCalculation(): string
     {
         return <<<JS
-            let items = \$wire.data.items;
-            if (!Array.isArray(items)) {
-                items = Object.values(items);
-            }
-            \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0);
-        JS;
-    }
-
-    /**
-     * Generate JavaScript code for individual item total calculation
-     */
-    public static function getItemJavaScriptCalculation(): string
-    {
-        return <<<JS
-            const splittedId = \$el.getElementsByTagName('input')[0].id.split('.');
-            const index = splittedId[splittedId.length - 2];
-            \$wire.data.items[index].total = (\$wire.data.items[index].quantity ?? 0) * (\$wire.data.items[index].price ?? 0);
+            \$watch('\$wire.data', value => {
+                let items = \$wire.data.items;
+                if (!Array.isArray(items)) {
+                    items = Object.values(items);
+                }
+                \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0);
+                items.forEach(item => {
+                    item.total = item.quantity * item.price || 0;
+                });
+            })
         JS;
     }
 }

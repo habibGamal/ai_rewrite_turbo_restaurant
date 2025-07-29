@@ -15,9 +15,7 @@ class CreatePurchaseInvoice extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         // Calculate total from items if not already set
-        if (isset($data['items']) && is_array($data['items'])) {
-            $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotal($data['items']);
-        }
+        $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotal($data['items']);
 
         return $data;
     }

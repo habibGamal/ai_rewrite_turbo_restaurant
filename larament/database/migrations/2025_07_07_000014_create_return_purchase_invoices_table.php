@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
             $table->decimal('total', 10, 2);
+            $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });
     }

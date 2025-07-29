@@ -22,7 +22,7 @@ class EditPurchaseInvoice extends EditRecord
 
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotalFromCollection($record->items);
+        $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotal($record->items);
         $record->update($data);
         return $record;
     }

@@ -53,6 +53,16 @@ class Product extends Model
         return $this->hasMany(WastedItem::class);
     }
 
+    public function purchaseInvoiceItems(): HasMany
+    {
+        return $this->hasMany(PurchaseInvoiceItem::class);
+    }
+
+    public function returnPurchaseInvoiceItems(): HasMany
+    {
+        return $this->hasMany(ReturnPurchaseInvoiceItem::class);
+    }
+
     public function components(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'product_id', 'component_id')->withPivot('quantity');
