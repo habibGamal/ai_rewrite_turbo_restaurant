@@ -12,6 +12,7 @@ use App\Events\Orders\OrderCompleted;
 use App\Events\Orders\OrderCreated;
 use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Models\Product;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\Orders\OrderCalculationService;
 use App\Services\Orders\OrderPaymentService;
@@ -28,7 +29,8 @@ class OrderService
         private readonly OrderCalculationService $orderCalculationService,
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
-    ) {}
+    ) {
+    }
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
     {
@@ -58,6 +60,22 @@ class OrderService
             if (!$order->status->canBeModified()) {
                 throw new OrderException('لا يمكن تعديل الطلب في هذه المرحلة');
             }
+
+            $productIds = array_column($itemsData, 'product_id');
+            $products = Product::select(['id', 'cost', 'price'])->whereIn('id', $productIds)->get();
+            $itemsData = array_map(function ($item) use ($products) {
+                $product = $products->firstWhere('id', $item['product_id']);
+                if (!$product) {
+                    throw new OrderException('المنتج غير موجود');
+                }
+                return [
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price' => (float) $product->price,
+                    'cost' => (float) $product->cost,
+                    'notes' => $item['notes'] ?? null,
+                ];
+            }, $itemsData);
 
             $itemDTOs = array_map(fn($item) => OrderItemDTO::fromArray($item), $itemsData);
 
@@ -152,8 +170,8 @@ class OrderService
             }
 
             // Free table if dine-in
-            if ($order->type->requiresTable() && $order->table_number) {
-                $this->tableManagementService->freeTable($order->table_number);
+            if ($order->type->requiresTable() && $order->dine_table_number) {
+                $this->tableManagementService->freeTable($order->dine_table_number);
             }
 
             // Update order status
@@ -194,8 +212,8 @@ class OrderService
             $newOrderType = \App\Enums\OrderType::from($newType);
 
             // Free old table if switching from dine-in
-            if ($oldType->requiresTable() && $order->table_number) {
-                $this->tableManagementService->freeTable($order->table_number);
+            if ($oldType->requiresTable() && $order->dine_table_number) {
+                $this->tableManagementService->freeTable($order->dine_table_number);
             }
 
             // Reserve new table if switching to dine-in

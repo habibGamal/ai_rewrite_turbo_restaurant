@@ -10,9 +10,15 @@ return new class extends Migration
     {
         Schema::create('shifts', function (Blueprint $table) {
             $table->id();
+            $table->timestamp('start_at');
+            $table->timestamp('end_at')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->timestamp('start_time');
-            $table->timestamp('end_time')->nullable();
+            $table->decimal('start_cash', 10, 2);
+            $table->decimal('end_cash', 10, 2)->nullable();
+            $table->decimal('losses_amount', 10, 2)->nullable();
+            $table->decimal('real_cash', 10, 2)->nullable();
+            $table->boolean('has_deficit')->default(false);
+            $table->boolean('closed')->default(false);
             $table->timestamps();
         });
     }

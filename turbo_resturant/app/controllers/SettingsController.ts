@@ -1,8 +1,15 @@
+import { SettingKeys } from '#enums/SettingsEnums'
 import Setting from '#models/Setting'
+import SettingsService from '#services/SettingsService'
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import { PrinterTypes, ThermalPrinter } from 'node-thermal-printer'
 import os from 'os'
+
+@inject()
 export default class SettingsController {
+  constructor(protected settingsService:SettingsService){}
+
   public async index({ inertia }: HttpContext) {
     const settings = await Setting.all()
     const settingsPairs: { [key: string]: string } = {}
@@ -14,7 +21,7 @@ export default class SettingsController {
     })
   }
 
-  public async scanForPrinters({ response, session, message }: HttpContext) {
+  public async scanForPrinters({ response }: HttpContext) {
     const interfaces = os.networkInterfaces()
     console.log(interfaces)
     const activePrinters: string[] = []
@@ -42,12 +49,13 @@ export default class SettingsController {
     return response.redirect().back()
   }
 
-  public async setSetting({ response, message, params, request }: HttpContext) {
-    const key = params.key
-    const value = request.input(key)
-    await Setting.updateOrCreate({ key }, { key, value })
-    message.success('تم التحديث بنجاح')
-    return response.redirect().back()
+  public async setSetting(ctx: HttpContext) {
+    const key = ctx.params.key
+    const value = ctx.request.input(key)
+    const setting = await Setting.updateOrCreate({ key }, { key, value })
+     this.settingsService.updateCookies(setting)
+    ctx.message.success('تم التحديث بنجاح')
+    return ctx.response.redirect().back()
   }
 
   public async importDataFromExcel({}: HttpContext) {

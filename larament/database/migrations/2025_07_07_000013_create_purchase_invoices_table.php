@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
             $table->decimal('total', 10, 2);
             $table->timestamp('closed_at')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

@@ -14,6 +14,7 @@ class ReturnPurchaseInvoice extends Model
         'supplier_id',
         'total',
         'closed_at',
+        'notes',
     ];
 
     public function user()

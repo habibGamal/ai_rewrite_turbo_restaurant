@@ -117,19 +117,21 @@ export default function ReportHeader({
           عرض النتائج
         </Button>
         <Divider type="vertical" className="hidden md:block" />
-        <Button
-          className="hidden md:block"
-          onClick={() => {
-            const excel = new Excel()
-            excel
-              .addSheet('export')
-              .addColumns(columns as any)
-              .addDataSource(dataSource)
-              .saveAs(`${title}_${period.from}-${period.to}.xlsx`)
-          }}
-        >
-          استخراج csv
-        </Button>
+        {columns.length !== 0 && (
+          <Button
+            className="hidden md:block"
+            onClick={() => {
+              const excel = new Excel()
+              excel
+                .addSheet('export')
+                .addColumns(columns as any)
+                .addDataSource(dataSource)
+                .saveAs(`${title}_${period.from}-${period.to}.xlsx`)
+            }}
+          >
+            استخراج csv
+          </Button>
+        )}
       </Space>
     </div>
   )

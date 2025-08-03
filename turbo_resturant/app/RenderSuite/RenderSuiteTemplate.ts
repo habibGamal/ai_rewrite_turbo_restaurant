@@ -1,7 +1,7 @@
 import { exportToCSV } from '#services/ExportCSV'
 import { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import { HttpContext } from '@adonisjs/core/http'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 
 type Column = ReturnType<typeof RenderSuiteTemplate.prototype.column>
 type Expand = ReturnType<typeof RenderSuiteTemplate.prototype.expand>

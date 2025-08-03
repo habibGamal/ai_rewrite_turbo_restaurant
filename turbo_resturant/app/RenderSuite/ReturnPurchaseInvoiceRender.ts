@@ -1,10 +1,10 @@
 import ReturnPurchaseInvoice from '#models/ReturnPurchaseInvoice'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
 
 export default class ReturnPurchaseInvoiceRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(ReturnPurchaseInvoice.query().preload('supplier'))
     const template = new RenderSuiteTemplate<typeof data>()
     template

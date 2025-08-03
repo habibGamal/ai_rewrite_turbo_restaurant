@@ -7,6 +7,7 @@ import ReceiptTemplate from '~/components/Print/ReceiptTemplate'
 import ShiftSummaryTemplate from '~/components/Print/ShiftSummaryTemplate'
 import { Order } from '~/types/Models'
 import { OrderItemT } from '~/types/Types'
+import axios from 'axios'
 export default async function printTemplate(id: string, element: React.ReactNode) {
   const printContainer = document.getElementById('print_container')!
   printContainer.innerHTML = renderToString(element)
@@ -18,7 +19,14 @@ export default async function printTemplate(id: string, element: React.ReactNode
   return canvas.toDataURL('image/png', 1)
 }
 
-export async function printOrder(order: Order, orderItems: OrderItemT[], footer: string) {
+export async function printOrder(
+  order: Order,
+  orderItems: OrderItemT[],
+  footer: string,
+  options?: {
+    useApiCall?: boolean
+  }
+) {
   const maxItemsInPrint = 5
   const images: string[] = []
   let itemsCount = orderItems.length
@@ -53,6 +61,11 @@ export async function printOrder(order: Order, orderItems: OrderItemT[], footer:
     }
   }
   console.log(images)
+  if(options?.useApiCall){
+    return axios.post(`/print/${order.id}`, {
+      images,
+    })
+  }
   router.post(
     `/print/${order.id}`,
     {

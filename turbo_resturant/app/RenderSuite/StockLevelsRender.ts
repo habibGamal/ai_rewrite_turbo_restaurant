@@ -1,10 +1,10 @@
 import InventoryItem from '#models/InventoryItem'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
 
 export default class StockLevelsRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(InventoryItem.query().preload('product'))
     const template = new RenderSuiteTemplate<typeof data>()
     template

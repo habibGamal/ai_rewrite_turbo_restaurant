@@ -88,6 +88,10 @@ class PurchaseInvoiceResource extends Resource
                             ->disabled()
                             ->dehydrated(false)
                             ->default(0),
+                        Forms\Components\TextArea::make('notes')
+                            ->label('ملاحظات')
+                            ->required(false)
+                            ->columnSpanFull(),
                     ])
                     ->columns(3),
 
@@ -223,11 +227,13 @@ class PurchaseInvoiceResource extends Resource
                     ->label('إجمالي الفاتورة')
                     ->money('EGP')
                     ->sortable(),
-
+                TextColumn::make('notes')
+                    ->label('ملاحظات')
+                    ->limit(50)
+                    ->tooltip(fn($state): ?string => $state),
                 TextColumn::make('closed_at')
                     ->label('الحالة')
                     ->formatStateUsing(function ($state) {
-                                dd($state);
                         return $state ? 'مغلقة' : 'مفتوحة';
                     })
                     ->badge()
@@ -286,6 +292,13 @@ class PurchaseInvoiceResource extends Resource
     {
         return is_null($record->closed_at);
     }
+
+    public static function canDelete(Model $record): bool
+    {
+        return is_null($record->closed_at);
+    }
+
+
 
     public static function getPages(): array
     {

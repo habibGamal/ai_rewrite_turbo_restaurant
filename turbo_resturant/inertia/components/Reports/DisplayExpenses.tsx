@@ -1,19 +1,8 @@
-import { Modal, Table, TableColumnsType, Typography } from 'antd'
-import {
-  ArrowSwapHorizontal,
-  Card,
-  Coin1,
-  Diagram,
-  DiscountCircle,
-  Money3,
-  Receipt2,
-} from 'iconsax-react'
-import React from 'react'
-import ReportHeaderMini from '../ReportHeaderMini.js'
+import { Modal, TableColumnsType, Typography } from 'antd'
 import useModal from '../../hooks/useModal.js'
-import OrdersReportService, { ordersColumns } from '../../services/OrdersReportService.js'
-import { Expense, Order } from '../../types/Models.js'
-import MoneyInfo from './MoneyInfo.js'
+import { Expense } from '../../types/Models.js'
+import ReportHeaderMini from '../ReportHeaderMini.js'
+import ShiftReportExpensesTable from './ShiftReportExpensesTable.js'
 
 const expensesColumns: TableColumnsType<{
   id: number
@@ -46,16 +35,14 @@ export default function DisplayExpenses({
   modal: ReturnType<typeof useModal>
   expensesDataSource: Expense[]
 }) {
-
-
   return (
     <Modal className="!w-[90%]" title="-" destroyOnClose {...modal} footer={null}>
       <ReportHeaderMini
         title="المصاريف"
-        columns={expensesColumns}
-        dataSource={expensesDataSource}
+        columns={[]}
+        dataSource={[]}
       />
-      <Table columns={expensesColumns} dataSource={expensesDataSource} />
+      <ShiftReportExpensesTable />
     </Modal>
   )
 }

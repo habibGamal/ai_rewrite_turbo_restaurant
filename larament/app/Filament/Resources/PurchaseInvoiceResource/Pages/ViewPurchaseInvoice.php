@@ -15,15 +15,6 @@ class ViewPurchaseInvoice extends ViewRecord
 {
     protected static string $resource = PurchaseInvoiceResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            ClosePurchaseInvoiceAction::make(),
-
-            Actions\EditAction::make()
-                ->visible(fn(PurchaseInvoice $record): bool => is_null($record->closed_at)),
-        ];
-    }
 
     public function getRelationManagers(): array
     {

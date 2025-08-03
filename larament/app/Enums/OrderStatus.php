@@ -24,6 +24,6 @@ enum OrderStatus: string
 
     public function canBeCancelled(): bool
     {
-        return $this === self::PROCESSING;
+        return true;
     }
 }

@@ -67,8 +67,6 @@ function itemCompare(originalItem?: OrderItem, newItem?: OrderItem) {
   /**
    * +ve added , -ve removed
    */
-  console.log("newQuantity", newQuantity)
-  console.log("originalQuantity", originalQuantity)
   return newQuantity - originalQuantity
 }
 

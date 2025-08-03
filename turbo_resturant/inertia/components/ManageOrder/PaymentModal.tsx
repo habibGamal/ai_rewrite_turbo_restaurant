@@ -28,28 +28,6 @@ export default function PaymentModal({
         : multiPaymentForm.getFieldsValue(),
       false
     )
-    // modal.confirm({
-    //   title: 'هل تريد طباعة الفاتورة؟',
-    //   icon: <PrinterOutlined />,
-    //   content: 'اضغط على "نعم" لطباعة الفاتورة',
-    //   okText: 'نعم',
-    //   cancelText: 'لا',
-    //   onOk: () =>
-    //     completeOrder(
-    //       paymentMethod === 'one_payment'
-    //         ? onePaymentForm.getFieldsValue()
-    //         : multiPaymentForm.getFieldsValue(),
-    //       true
-    //     ),
-    //   onCancel: () => {
-    //     completeOrder(
-    //       paymentMethod === 'one_payment'
-    //         ? onePaymentForm.getFieldsValue()
-    //         : multiPaymentForm.getFieldsValue(),
-    //       false
-    //     )
-    //   },
-    // })
   }
 
   const completeOrder = (values: any, print: boolean) => {

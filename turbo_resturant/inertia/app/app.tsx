@@ -10,6 +10,16 @@ import WatcherLayout from '~/layouts/WatcherLayout'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Turbo'
 
+const isDesktop = () => {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobile = /mobile|android|iphone|ipad|tablet|blackberry|opera mini|iemobile|wpdesktop/.test(userAgent)
+  return !isMobile
+}
+
+if (isDesktop() && 'Notification' in window) {
+  Notification.requestPermission()
+}
+
 createInertiaApp({
   progress: { color: '#5468FF' },
 
@@ -30,7 +40,6 @@ createInertiaApp({
     if (layout === 'watcher') {
       page.layout = (page: any) => <WatcherLayout children={page} />
     }
-    console.log(moment().utc())
     return page
   },
 

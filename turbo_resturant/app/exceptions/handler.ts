@@ -6,7 +6,9 @@ import { errors as vineErrors } from '@vinejs/vine'
 import { errors as sessionErrors } from '@adonisjs/session'
 
 import ErrorMsgException from './error_msg_exception.js'
+import PartialReloadException from './partial_reload_exception.js'
 import logger from '@adonisjs/core/services/logger'
+import WebApiException from './web_api_exception.js'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -36,6 +38,25 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    if (error instanceof PartialReloadException) {
+      ctx.message.error(error.message)
+      return ctx.inertia.location(ctx.request.url())
+    }
+
+    if (ctx.request.url().includes('/api/')) {
+      if (error instanceof vineErrors.E_VALIDATION_ERROR) {
+        ctx.response.status(422).json(error.messages)
+        return
+      }
+      if (error instanceof WebApiException) {
+        ctx.response.status(400).json(JSON.parse(error.message))
+        return
+      }
+      // error as ValidationError
+      console.log('api error', error)
+      return super.handle(error, ctx)
+    }
+
     console.log('error ', error)
     logger.use('error').error({
       error,
@@ -72,7 +93,9 @@ export default class HttpExceptionHandler extends ExceptionHandler {
           stack: error.stack?.substring(0, 2000),
         },
       })
-      return ctx.response.redirect().back()
+
+      return super.handle(error, ctx)
+      // return ctx.response.redirect().back()
     }
 
     return super.handle(error, ctx)

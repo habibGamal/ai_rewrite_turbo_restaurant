@@ -13,6 +13,7 @@ import Shift from './Shift.js'
 import User from './User.js'
 
 export default class Order extends BaseModel {
+  serializeExtras = true
   @column({ isPrimary: true })
   declare id: number
 
@@ -68,7 +69,15 @@ export default class Order extends BaseModel {
   declare orderNotes: string | null
 
   @column()
-  declare orderNumber: number
+  declare orderNumber: string
+
+  /**
+   * The difference between the web order total and the POS order subTotal
+   * +ve value means the web order prices is more than the POS order prices
+   * -ve value means the web order prices is less than the POS order prices
+   */
+  @column()
+  declare webPosDiff: number
 
   @column.dateTime({
     autoCreate: true,
@@ -116,12 +125,22 @@ export default class Order extends BaseModel {
         return 'شركات'
       case OrderType.Talabat:
         return 'طلبات'
+      case OrderType.Gazzer:
+        return 'جازر'
+      case OrderType.WebDelivery:
+        return 'دليفري اونلاين'
+      case OrderType.WebTakeaway:
+        return 'تيك اواي اونلاين'
     }
   }
 
   @computed()
   public get statusString() {
     switch (this.status) {
+      case OrderStatus.Pending:
+        return 'قيد الانتظار'
+      case OrderStatus.OutForDelivery:
+        return 'في الطريق'
       case OrderStatus.Completed:
         return 'مكتمل'
       case OrderStatus.Processing:

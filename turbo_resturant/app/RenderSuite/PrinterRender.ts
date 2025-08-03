@@ -1,10 +1,10 @@
 import Printer from '#models/Printer'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 
 export default class PrinterRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(Printer.query())
     const template = new RenderSuiteTemplate<typeof data>()
 

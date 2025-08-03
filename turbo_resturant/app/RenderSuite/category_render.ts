@@ -1,9 +1,9 @@
 import Category from '#models/Category'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 export class CategoryRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(Category.query())
 
     const template = new RenderSuiteTemplate<typeof data>()

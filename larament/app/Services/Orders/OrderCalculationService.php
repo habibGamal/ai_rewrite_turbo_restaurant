@@ -8,7 +8,7 @@ use App\Repositories\Contracts\OrderRepositoryInterface;
 class OrderCalculationService
 {
     private const TAX_RATE = 0.0; // 0% tax rate as per original system
-    private const SERVICE_CHARGE_RATE = 0.1; // 10% service charge for dine-in
+
 
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
@@ -31,7 +31,7 @@ class OrderCalculationService
         $discount = $this->calculateDiscount($order, $subtotal);
 
         // Calculate total
-        $total = $subtotal + $serviceCharge + $tax - $discount;
+        $total = ceil($subtotal + $serviceCharge + $tax - $discount);
 
         // Calculate profit
         $profit = $this->calculateProfit($order, $total);
@@ -77,7 +77,7 @@ class OrderCalculationService
     {
         if ($order->type->requiresTable()) {
             // Dine-in service charge
-            return $subtotal * self::SERVICE_CHARGE_RATE;
+            return $subtotal * $order->service_rate;
         } elseif ($order->type->hasDeliveryFee() && $order->customer) {
             // Delivery fee from customer
             return $order->customer->delivery_cost ?? 0;

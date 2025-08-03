@@ -21,7 +21,7 @@ const loggerConfig = defineConfig({
             level: 'error',
             options: {
               file: './logs/error.log',
-              frequency: 'daily',
+              // frequency: 'daily',
               size: '1m',
               mkdir: true,
             },
@@ -44,7 +44,7 @@ const loggerConfig = defineConfig({
             level: 'info',
             options: {
               file: './logs/app.log',
-              frequency: 'daily',
+              // frequency: 'daily',
               size: '1m',
               mkdir: true,
             },

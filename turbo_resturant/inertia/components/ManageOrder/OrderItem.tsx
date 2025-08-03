@@ -16,10 +16,12 @@ export default function OrderItem({
   orderItem,
   dispatch,
   disabled,
+  forWeb,
 }: {
   orderItem: OrderItemT
   dispatch: React.Dispatch<OrderItemsReducerActions>
   disabled?: boolean
+  forWeb?: boolean
 }) {
   const user = usePage().props.user as User
   const onChangeQuantity = (quantity: number) => {
@@ -54,20 +56,20 @@ export default function OrderItem({
         <Typography.Paragraph className="!my-0">{orderItem.name}</Typography.Paragraph>
         <div className="flex gap-2">
           <Button
-            disabled={disabled}
+            disabled={disabled || forWeb}
             onClick={onDecrement}
             className="icon-button"
             icon={<MinusCircleOutlined />}
           />
           <InputNumber
-            disabled={disabled}
+            disabled={disabled || forWeb}
             min={1}
             defaultValue={1}
             value={orderItem.quantity}
             onChange={onChangeQuantity}
           />
           <Button
-            disabled={disabled}
+            disabled={disabled || forWeb}
             onClick={onIncrement}
             className="icon-button"
             icon={<PlusCircleOutlined />}
@@ -83,7 +85,7 @@ export default function OrderItem({
         </Typography.Text>
         <div className="flex gap-4">
           <Button
-            disabled={disabled}
+            disabled={disabled || forWeb}
             onClick={onDelete}
             danger
             type="primary"

@@ -15,6 +15,7 @@ import Waste from '#models/Waste'
 import ErrorMsgException from '#exceptions/error_msg_exception'
 import logger from '@adonisjs/core/services/logger'
 import OrderItem from '#models/OrderItem'
+import { ShiftsReportService } from './ShiftsReportService.js'
 
 export default class ReportsService {
   public static async clientsReport(fromDt: string, toDt: string) {
@@ -116,19 +117,12 @@ export default class ReportsService {
   }
 
   public static async fullShiftsReport(fromDt: string, toDt: string) {
-    const shifts = await Shift.query()
-      .whereBetween('start_at', [fromDt, toDt])
-      .preload('user')
-      .preload('expenses', (query) => {
-        query.preload('expenseType')
-      })
-      .preload('orders', (query) => {
-        query.preload('payments')
-      })
-      .preload('payments', (query) => {
-        query.preload('order')
-      })
-    return shifts
+    const shifts = await Shift.query().select('id').whereBetween('start_at', [fromDt, toDt])
+    const report = new ShiftsReportService(shifts)
+    return {
+      statistics: await report.statistics(),
+      ordersPaginator: async () => await report.orders(),
+    }
   }
 
   public static async currentShiftReport() {
@@ -248,7 +242,6 @@ export default class ReportsService {
     const shiftsIds = shifts.map((shift) => shift.id)
     const drivers = await Driver.query().preload('orders', (query) => {
       query.whereIn('shift_id', shiftsIds).preload('driver')
-      query.preload('payments')
     })
     return drivers
   }

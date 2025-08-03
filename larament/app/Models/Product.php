@@ -28,6 +28,12 @@ class Product extends Model
         'type' => \App\Enums\ProductType::class,
     ];
 
+    public function getRawTypeAttribute(): string
+    {
+        return $this->type?->value ?? '';
+    }
+
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -71,5 +77,15 @@ class Product extends Model
     public function componentOf(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'component_id', 'product_id')->withPivot('quantity');
+    }
+
+    public function inventoryMovements(): HasMany
+    {
+        return $this->hasMany(InventoryItemMovement::class);
+    }
+
+    public function dailyMovements(): HasMany
+    {
+        return $this->hasMany(InventoryItemMovementDaily::class);
     }
 }

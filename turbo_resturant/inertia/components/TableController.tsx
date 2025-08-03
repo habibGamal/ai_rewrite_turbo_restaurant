@@ -28,7 +28,7 @@ export default function TableController({
   exitSearchMode,
 }: TableComponentProps) {
   return (
-    <Form className="flex gap-6 mb-6">
+    <Form className="flex gap-6 mb-6 w-full">
       <Search
         allowClear
         // style={{ maxWidth: "250px" }}

@@ -1,10 +1,10 @@
 import Region from '#models/Region'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
 
 export class RegionRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(Region.query())
     const template = new RenderSuiteTemplate<typeof data>()
 

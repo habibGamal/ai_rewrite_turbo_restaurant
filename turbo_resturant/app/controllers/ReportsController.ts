@@ -1,9 +1,10 @@
 import { HttpContext } from '@adonisjs/core/http'
 import HelperService from '#services/HelperService'
-import ReportsService from '#services/ReportsService'
+import ReportsService from '#services/reports/ReportsService'
 import ErrorMsgException from '#exceptions/error_msg_exception'
 import { UserRole } from '#enums/UserEnums'
 import Shift from '#models/Shift'
+import { ShiftsReportService } from '#services/reports/ShiftsReportService'
 import layout from '#helpers/layout'
 
 export default class ReportsController {
@@ -60,21 +61,37 @@ export default class ReportsController {
 
   public async fullShiftsReport({ inertia, request }: HttpContext) {
     const { fromDt, toDt } = HelperService.period(request.qs().from, request.qs().to)
-    const shifts = await ReportsService.fullShiftsReport(fromDt, toDt)
+    const shifts = await Shift.query().select('id').whereBetween('start_at', [fromDt, toDt])
+    const report = new ShiftsReportService(shifts)
 
     return inertia.render('Reports/FullShiftsReport' + layout(), {
-      shifts,
+      statistics: await report.statistics(),
+      main: async () => await report.orders(),
+      ordersByPaymentMethod: inertia.lazy(() => report.ordersByPaymentMethod()),
+      ordersByStatusOrType: inertia.lazy(() => report.ordersByStatusOrType()),
+      statisticsByStatusOrType: inertia.lazy(() => report.statisticsByStatusOrType()),
+      expenses: inertia.lazy(() => report.expenses()),
+      ordersHasDiscounts: inertia.lazy(() => report.ordersHasDiscounts()),
     })
   }
 
   public async currentShiftReport({ inertia }: HttpContext) {
     // get last shift
-    const shift = await ReportsService.currentShiftReport()
 
+    const shift = await Shift.query().select('id','startCash').orderBy('id', 'desc').first()
+    // console.log(shift.id)
     if (shift === null) throw new ErrorMsgException('لا يوجد شيفت مفتوح')
+    const report = new ShiftsReportService([shift])
+
 
     return inertia.render('Reports/CurrentShiftReport' + layout(), {
-      shift: shift,
+      statistics: await report.statistics(),
+      main: async () => await report.orders(),
+      ordersByPaymentMethod: inertia.lazy(() => report.ordersByPaymentMethod()),
+      ordersByStatusOrType: inertia.lazy(() => report.ordersByStatusOrType()),
+      statisticsByStatusOrType: inertia.lazy(() => report.statisticsByStatusOrType()),
+      expenses: inertia.lazy(() => report.expenses()),
+      ordersHasDiscounts: inertia.lazy(() => report.ordersHasDiscounts()),
     })
   }
 

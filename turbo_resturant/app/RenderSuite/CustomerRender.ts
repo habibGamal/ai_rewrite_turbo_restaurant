@@ -1,11 +1,11 @@
 import Customer from '#models/Customer'
-import { RenderSuitePagination } from './RenderSuitePagination.js'
+import { PaginatorService } from '../services/PaginatorService.js'
 import { RenderSuiteTemplate } from './RenderSuiteTemplate.js'
 import { CustomerRegion } from '#enums/CustomerEnums'
 
 export default class CustomerRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(Customer.query())
     const template = new RenderSuiteTemplate<typeof data>()
     template

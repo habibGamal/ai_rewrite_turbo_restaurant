@@ -38,6 +38,7 @@ router.use([
   () => import('@adonisjs/session/session_middleware'),
   () => import('@adonisjs/shield/shield_middleware'),
   () => import('@adonisjs/auth/initialize_auth_middleware'),
+  () => import('#middleware/hook_settings_in_cookies_middleware'),
   // () => import('#middleware/check_license_middleware')
   () => import('#middleware/logger_middleware')
 ])

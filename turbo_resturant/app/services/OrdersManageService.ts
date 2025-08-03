@@ -63,7 +63,13 @@ export default class OrderManagerService {
     // create order within shift
     const orderNumber = (await OrderManagerUtils.getShiftOrdersCount(shiftId)) + 1
     // create order within shift
-    const order = await Order.create({ type, shiftId, orderNumber, userId })
+    const order = await Order.create({
+      type,
+      shiftId,
+      orderNumber,
+      userId,
+      status: OrderStatus.Processing,
+    })
     // reserve table if order type is dine in
     if (type === OrderType.DineIn) {
       await new OrderInternalServices(order).reserveTable(tableNumber!)
@@ -174,7 +180,6 @@ export default class OrderManagerService {
     await order.load('items')
     await new OrderInternalServices(order).updateOrderTotal(order.items, 0)
     const differences = await orderItemsCompare(originalItems, orderItems)
-    console.log('differences', differences)
     watcher(order.shiftId).info({
       time: DateTime.now().toString(),
       actions: differences.map((item) => {
@@ -210,6 +215,21 @@ export default class OrderManagerService {
     await orderServices.updateOrderTotal(order.items, paid)
     await orderServices.saveOrderPayments(shiftId, payments)
     if (order.type === OrderType.DineIn) await orderServices.freeTable()
+    order.status = OrderStatus.Completed
+    await order.save()
+  }
+
+  public static async completeWebOrder(
+    order: Order,
+    shiftId: number,
+    payments: {
+      [PaymentMethod.Card]: number
+      [PaymentMethod.Cash]: number
+      [PaymentMethod.TalabatCard]: number
+    }
+  ) {
+    const orderServices = new OrderInternalServices(order)
+    await orderServices.saveOrderPayments(shiftId, payments)
     order.status = OrderStatus.Completed
     await order.save()
   }

@@ -2,8 +2,9 @@
 
 namespace App\Filament\Resources\PurchaseInvoiceResource\Pages;
 
+use App\Filament\Actions\ClosePurchaseInvoiceAction;
 use App\Filament\Resources\PurchaseInvoiceResource;
-use App\Services\PurchaseInvoiceCalculatorService;
+use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -15,10 +16,10 @@ class EditPurchaseInvoice extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            ClosePurchaseInvoiceAction::make(),
             Actions\DeleteAction::make(),
         ];
     }
-
 
     protected function handleRecordUpdate(Model $record, array $data): Model
     {

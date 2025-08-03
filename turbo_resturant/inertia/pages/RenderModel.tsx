@@ -1,9 +1,5 @@
 import CategoriesController from '#controllers/categories_controller'
-import {
-  Col,
-  Row,
-  Table
-} from 'antd/es'
+import { Col, Row, Table } from 'antd/es'
 import Header from '~/components/RenderModel/Header.js'
 import ModalForm from '~/components/RenderModel/ModalForm.js'
 import tableConfig, { TableData } from '~/helpers/tableConfig.js'
@@ -11,17 +7,12 @@ import useModalForm from '~/hooks/useModalForm.js'
 import { InferPageProps } from '~/index'
 import Pagination from '~/types/Pagination.js'
 import TableController from '../components/TableController.js'
+import { usePage } from '@inertiajs/react'
+import { TableConfig } from '~/types/Types.js'
 
 export type Props = InferPageProps<CategoriesController, 'index'>
 
-export default function RenderModel({
-  data,
-  actions,
-  routes,
-  noForm,
-  noActions,
-}: Props) {
-
+export default function RenderModel({ data, actions, routes, noForm, noActions }: Props) {
   const paginationData = data as Pagination<any>
 
   const { add, edit, model, modalForm } = useModalForm()
@@ -31,6 +22,7 @@ export default function RenderModel({
     ...record,
   })) as TableData[]
 
+  const tableConfigrations = usePage().props as unknown as TableConfig
   const {
     tableParams,
     tableColumns,
@@ -40,13 +32,11 @@ export default function RenderModel({
     searchableColumns,
     addControls,
     useSearchWhileTyping,
-  } = tableConfig()
+  } = tableConfig({ tableConfigrations })
 
   useSearchWhileTyping()
 
-
-  if (noActions === false)
-    addControls(actions, tableColumns, edit, routes?.destroy)
+  if (noActions === false) addControls(actions, tableColumns, edit, routes?.destroy)
 
   return (
     <Row gutter={[0, 25]} className="m-8">

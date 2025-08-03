@@ -1,9 +1,12 @@
 import React, { createContext, useEffect, useLayoutEffect, useState } from 'react'
-import { App, ConfigProvider, Spin, theme } from 'antd'
+import { App, Button, ConfigProvider, Spin, theme, Typography } from 'antd'
 import { router, usePage } from '@inertiajs/react'
 import moment from 'moment'
 import { configMomentLocaleAr } from '../config.js'
 import LogoSvg from '~/components/LogoSvg.js'
+import { transmit } from '~/app/app.js'
+import { webOrdersSubscription } from '~/app/transmit.js'
+import { Order } from '~/types/Models.js'
 interface Flash {
   error?: string
   success?: string
@@ -16,19 +19,29 @@ export const themeToggler = createContext<{
 } | null>(null)
 
 function Config(props: { children: JSX.Element }) {
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const page = usePage().props
+
   // check if flash has error or success message display it
   useLayoutEffect(() => {
+    router.on('finish', (e) => {
+      // console.log('success:',e.detail.page.props.errors)
+      // console.log('success:',e)
+    })
+
+    message.destroy()
     if (page.errors && typeof page.errors === 'string') {
       message.error(page.errors)
+      page.errors = undefined
     }
     if (page.success) {
       message.success(page.success as string)
+      page.success = undefined
     }
     if (page.exception) {
       message.error('حدث خطأ ما')
       console.table(page.exception)
+      page.exception = undefined
     }
   }, [page])
 
@@ -37,8 +50,8 @@ function Config(props: { children: JSX.Element }) {
     const handlePopState = (event: PopStateEvent) => {
       event.stopImmediatePropagation()
       router.reload({
-        preserveState: false,
-        preserveScroll: false,
+        // preserveState: false,
+        // preserveScroll: false,
         replace: true,
       })
     }
@@ -61,6 +74,58 @@ function Config(props: { children: JSX.Element }) {
       finishLoading()
     }
   }, [])
+
+  const [subscribed, setSubscribed] = useState(webOrdersSubscription.isCreated)
+  useEffect(() => {
+    if (subscribed) return
+    const subscripe = async () => {
+      await webOrdersSubscription.create()
+      setSubscribed(webOrdersSubscription.isCreated)
+    }
+    subscripe()
+  }, [])
+
+  useEffect(() => {
+    if (!('Notification' in window)) return
+    const cancelListen = webOrdersSubscription.onMessage((message: { order: Order }) => {
+      console.log('order:', message)
+      const audio = new Audio('/audio/web-notification.wav')
+      audio.play()
+      const browserNotification = new Notification('طلب اونلاين جديد', {
+        body: `رقم الطلب: ${message.order.orderNumber}`,
+        icon: '/images/logo.jpg',
+        // onclick: ()=>{}
+      })
+      browserNotification.onclick = () => {
+        window.focus()
+        notification.destroy()
+        router.get(`/orders/manage-web-order/${message.order.id}`)
+      }
+      notification.info({
+        message: 'طلب اونلاين جديد',
+        description: (
+          <div className="flex flex-col gap-4">
+            <Typography.Text>رقم الطلب: {message.order.orderNumber}</Typography.Text>
+            <Typography.Text>نوع الطلب: {message.order.typeString}</Typography.Text>
+            <Button
+              onClick={() => {
+                notification.destroy()
+                router.get(`/orders/manage-web-order/${message.order.id}`)
+              }}
+            >
+              عرض الطلب
+            </Button>
+          </div>
+        ),
+        duration: 0,
+        placement: 'topLeft',
+      })
+    })
+    return () => {
+      cancelListen()
+    }
+  }, [subscribed])
+
   return (
     <div className="relative">
       <div className="absolute -top-full z-[-1] opacity-0 ">

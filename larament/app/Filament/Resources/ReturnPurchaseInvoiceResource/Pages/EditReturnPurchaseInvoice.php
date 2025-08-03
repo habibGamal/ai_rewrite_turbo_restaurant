@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ReturnPurchaseInvoiceResource\Pages;
 
+use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
 use App\Filament\Resources\ReturnPurchaseInvoiceResource;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions;
@@ -12,6 +13,14 @@ use Illuminate\Database\Eloquent\Model;
 class EditReturnPurchaseInvoice extends EditRecord
 {
     protected static string $resource = ReturnPurchaseInvoiceResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CloseReturnPurchaseInvoiceAction::make(),
+            Actions\DeleteAction::make(),
+        ];
+    }
 
     protected function handleRecordUpdate(Model $record, array $data): Model
     {

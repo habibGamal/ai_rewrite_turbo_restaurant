@@ -83,6 +83,10 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ->disabled()
                             ->dehydrated(false)
                             ->default(0),
+                        Forms\Components\TextArea::make('notes')
+                            ->label('ملاحظات')
+                            ->required(false)
+                            ->columnSpanFull(),
                     ])
                     ->columns(3),
 
@@ -229,13 +233,17 @@ class ReturnPurchaseInvoiceResource extends Resource
                     ->money('EGP')
                     ->sortable(),
 
+                TextColumn::make('notes')
+                    ->label('ملاحظات')
+                    ->limit(50)
+                    ->tooltip(fn($state): ?string => $state),
                 TextColumn::make('closed_at')
                     ->label('الحالة')
                     ->formatStateUsing(function ($state) {
                         return $state ? 'مغلق' : 'مفتوح';
                     })
                     ->badge()
-                    ->color(fn (string $state): string => $state ? 'success' : 'warning')
+                    ->color(fn(string $state): string => $state ? 'success' : 'warning')
                     ->sortable(),
 
                 TextColumn::make('created_at')
@@ -277,10 +285,10 @@ class ReturnPurchaseInvoiceResource extends Resource
                 Tables\Actions\ViewAction::make(),
 
                 Tables\Actions\EditAction::make()
-                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
+                    ->visible(fn(ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
 
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
+                    ->visible(fn(ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

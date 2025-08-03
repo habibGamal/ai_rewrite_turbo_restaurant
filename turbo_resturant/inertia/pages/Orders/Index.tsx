@@ -1,6 +1,6 @@
 import { OrderStatus, OrderType } from '#enums/OrderEnums'
 import { router, usePage } from '@inertiajs/react'
-import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd'
+import { Badge, Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd'
 import React from 'react'
 import IsAdmin from '../../components/IsAdmin.js'
 import useModal from '../../hooks/useModal.js'
@@ -14,6 +14,9 @@ import ReceiveOrdersPayments from './Index/ReceiveOrdersPayments.js'
 import ShiftExpenses from './Index/ShiftExpenses.js'
 import Takeaway from './Index/Takeaway.js'
 import Talabat from './Index/Talabat.js'
+import Pending from './Index/Pending.js'
+import WebDelivery from './Index/WebDelivery.js'
+import WebTakeaway from './Index/WebTakeaway.js'
 type Props = {
   orders: Order[]
   previousPartialPaidOrders: Order[]
@@ -23,6 +26,13 @@ type User = {
 }
 export default function Orders({ orders, previousPartialPaidOrders }: Props) {
   const { user } = usePage().props
+  const pendingOrders = orders.filter((order) => order.status === OrderStatus.Pending)
+  const WebDeliveryOrders = orders.filter(
+    (order) => order.type === OrderType.WebDelivery && (order.status === OrderStatus.Processing || order.status === OrderStatus.OutForDelivery)
+  )
+  const WebTakeawayOrders = orders.filter(
+    (order) => order.type === OrderType.WebTakeaway &&  (order.status === OrderStatus.Processing || order.status === OrderStatus.OutForDelivery)
+  )
   const dineInOrders = orders.filter(
     (order) => order.type === OrderType.DineIn && order.status === OrderStatus.Processing
   )
@@ -121,6 +131,25 @@ export default function Orders({ orders, previousPartialPaidOrders }: Props) {
             label: 'شركات',
             children: <Companies orders={companiesOrders} />,
             key: 'companies',
+          },
+          {
+            label: pendingOrders.length ? (
+              <Badge status="processing" text="طلبات قيد الانتظار" />
+            ) : (
+              'طلبات قيد الانتظار'
+            ),
+            children: <Pending orders={pendingOrders} />,
+            key: 'pending',
+          },
+          {
+            label: 'دليفري اونلاين',
+            children: <WebDelivery orders={WebDeliveryOrders} />,
+            key: 'web_delivery',
+          },
+          {
+            label: 'تيك اواي اونلاين',
+            children: <WebTakeaway orders={WebTakeawayOrders} />,
+            key: 'web_takeaway',
           },
           {
             label: 'تسديد اوردرات شركات سابقة',

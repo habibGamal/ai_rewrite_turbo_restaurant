@@ -29,8 +29,8 @@ class OrderCompletionService
         );
 
         // Free table if dine-in
-        if ($order->type->requiresTable() && $order->table_number) {
-            $this->tableManagementService->freeTable($order->table_number);
+        if ($order->type->requiresTable() && $order->dine_table_number) {
+            $this->tableManagementService->freeTable($order->dine_table_number);
         }
 
         // Update order status

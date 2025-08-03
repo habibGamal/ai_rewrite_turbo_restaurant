@@ -5,6 +5,7 @@ import ExpenseType from './ExpenceType.js';
 import Shift from './Shift.js';
 
 export default class Expense extends BaseModel {
+  serializeExtras = true
   @column({ isPrimary: true })
   declare id: number
 

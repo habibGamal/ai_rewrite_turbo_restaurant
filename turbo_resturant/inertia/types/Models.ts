@@ -39,6 +39,9 @@ export type Expense = {
   updatedAt: string
   expenseTypeId: number
   expenseType?: ExpenseType
+  meta: {
+    type: string
+  }
 }
 
 export type InventoryItem = {
@@ -75,6 +78,14 @@ export type Order = {
   tax: number
   orderNumber: number
   tempDiscountPercent: number
+  webPosDiff: number
+  meta: {
+    paidCash: number
+    paidCard: number
+    paidTalabatCard: number
+    paid: number
+    remaining: number
+  }
 }
 
 export type Payment = {

@@ -13,6 +13,7 @@ import { Props } from '~/pages/RenderModel.js'
 import DeleteButton from '../components/DeleteButton.js'
 import EditButton from '../components/EditButton.js'
 import sortInfoMapping from '../helpers/sortInfoMapping.js'
+import { TableConfig } from '~/types/Types.js'
 type RowData = {
   id: number
   [key: string]: any
@@ -30,6 +31,7 @@ export type TableData = {
 
 type UpdateTableDataArgs = {
   slug: string
+  useSlug?: boolean
   page?: number
   pageSize?: number
   order?: string | null
@@ -39,8 +41,8 @@ type UpdateTableDataArgs = {
   tableLoading: ReturnType<typeof useLoading>
 }
 
-export default function tableConfig() {
-  const { columns, slug, searchable } = usePage().props as unknown as Props & PageProps
+export default function tableConfig({ tableConfigrations }: { tableConfigrations: TableConfig }) {
+  const { columns, slug, searchable, useSlug } = tableConfigrations
   const tableLoading = useLoading()
 
   const searchableColumns = searchable.map(({ key, label }) => ({
@@ -61,6 +63,7 @@ export default function tableConfig() {
     const sortInfo = sortInfoMapping(sorter as SorterResult<any>)
     updateTableData({
       slug,
+      useSlug,
       page: pagination.current!,
       pageSize: pagination.pageSize!,
       order: sortInfo.order,
@@ -80,6 +83,7 @@ export default function tableConfig() {
         sortingArrows!.resetSortState()
         updateTableData({
           slug,
+          useSlug,
           search: search.search,
           attribute: search.attribute,
           tableLoading,
@@ -160,12 +164,13 @@ const addControls = (
 }
 
 const columnsMapper = (columns: Props['columns'], sortingArrows: ReturnType<typeof useSortTable>) =>
-  columns.map(({ key, label, sortable, color, mappingValues }) => {
-    const dataIndex: string | string[] = key.includes('.') ? key.split('.') : key
+  columns.map(({ key, label, sortable, color, dataIndex, mappingValues, render }) => {
+    const getDataIndexFromkey = key.includes('.') ? key.split('.') : key
+    const dataIndexValue: string | string[] = dataIndex || getDataIndexFromkey
     let column: any = {
       key,
       title: label,
-      dataIndex: dataIndex,
+      dataIndex: dataIndexValue,
     }
     if (color) {
       column = {
@@ -193,12 +198,13 @@ const columnsMapper = (columns: Props['columns'], sortingArrows: ReturnType<type
         ...column,
         ...sortingArrows.getSortProps(key),
       }
-
+    if (render) column.render = render
     return column
   })
 
 const updateTableData = ({
   slug,
+  useSlug = false,
   page,
   pageSize,
   order,
@@ -208,7 +214,7 @@ const updateTableData = ({
   tableLoading,
 }: UpdateTableDataArgs) =>
   router.reload({
-    only: ['data'],
+    only: [useSlug ? slug : 'data'],
     data: {
       [`${slug}_page`]: page,
       [`${slug}_pageSize`]: pageSize,

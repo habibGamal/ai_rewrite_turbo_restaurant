@@ -1,64 +1,79 @@
-import { Modal, Table, Typography } from 'antd'
-import { ArrowSwapHorizontal, Card, Coin1, Diagram, DiscountCircle, Money3, Receipt2 } from 'iconsax-react'
-import React from 'react'
-import ReportHeaderMini from '../../components/ReportHeaderMini.js'
+import { usePage } from '@inertiajs/react'
+import { Modal, Typography } from 'antd'
+import { Card, Coin1, Diagram, DiscountCircle, Receipt2 } from 'iconsax-react'
 import useModal from '../../hooks/useModal.js'
-import OrdersReportService, { ordersColumns } from '../../services/OrdersReportService.js'
-import { Order } from '../../types/Models.js'
+import ReportHeaderMini from '../ReportHeaderMini.js'
 import MoneyInfo from './MoneyInfo.js'
+import { ShiftReportOrdersTable } from './ShiftReportOrdersTable.js'
 
-export default function DisplayOrderType({
+export default function DisplayOrdersByStatusOrType({
   modal,
   title,
-  orders,
 }: {
   modal: ReturnType<typeof useModal>
   title: string
-  orders: Order[]
 }) {
-  const ordersDataSource = OrdersReportService.mappingToTableData(orders)
-  const reportService = new OrdersReportService(orders)
-
+  const slug = 'ordersByStatusOrType'
+  const statisticsByStatusOrType =( usePage().props.statisticsByStatusOrType || {
+    count: 0,
+    paidCash: 0,
+    paidCard: 0,
+    paidTalabatCard: 0,
+    total: 0,
+    profit: 0,
+    discount: 0,
+  })as unknown as {
+    count: number
+    paidCash: number
+    paidCard: number
+    paidTalabatCard: number
+    total: number
+    profit: number
+    discount: number
+  }
   const moneyInfo = [
     {
       title: 'المبيعات',
-      value: reportService.sales,
+      value: statisticsByStatusOrType.total ?? 0,
       icon: <Receipt2 className="text-green-600" />,
       color: 'bg-green-200',
     },
     {
       title: 'الارباح',
-      value: reportService.profit,
+      value: statisticsByStatusOrType.profit ?? 0,
       icon: <Diagram className="text-emerald-600" />,
       color: 'bg-emerald-200',
     },
     {
       title: 'الخصومات',
-      value: reportService.totalDiscount,
+      value: statisticsByStatusOrType.discount ?? 0,
       icon: <DiscountCircle className="text-zinc-600" />,
       color: 'bg-zinc-200',
     },
     {
       title: 'النقود المدفوعة كاش',
-      value: reportService.cashPaymentsvalue,
+      value: statisticsByStatusOrType.paidCash ?? 0,
       icon: <Coin1 className="text-yellow-600" />,
       color: 'bg-yellow-200',
     },
     {
       title: 'النقود المدفوعة فيزا',
-      value: reportService.cardPaymentsvalue,
+      value: statisticsByStatusOrType.paidCard ?? 0,
       icon: <Card className="text-purple-600" />,
       color: 'bg-purple-200',
     },
     {
       title: 'النقود المدفوعة فيزا طلبات',
-      value: reportService.talabatCardPaymentsvalue,
+      value: statisticsByStatusOrType.paidTalabatCard ?? 0,
       icon: <Card className="text-orange-600" />,
       color: 'bg-orange-200',
     },
     {
       title: 'متوسط قيمة الاوردر',
-      value: reportService.avgReceiptValue,
+      value:
+        statisticsByStatusOrType.count > 0
+          ? statisticsByStatusOrType.total / statisticsByStatusOrType.count
+          : 0,
       icon: <Receipt2 className="text-green-600" />,
       color: 'bg-green-200',
     },
@@ -72,8 +87,8 @@ export default function DisplayOrderType({
         ))}
       </div>
       <div className="isolate no-mobile">
-        <ReportHeaderMini title="الاوردرات" columns={ordersColumns} dataSource={ordersDataSource} />
-        <Table columns={ordersColumns} dataSource={ordersDataSource} scroll={{ x: true }} />
+        <ReportHeaderMini title="الاوردرات" columns={[]} dataSource={[]} />
+        <ShiftReportOrdersTable slug={slug} />
       </div>
     </Modal>
   )

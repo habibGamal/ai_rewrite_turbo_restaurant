@@ -23,8 +23,7 @@ import {
   Typography,
 } from 'antd'
 import { useEffect, useReducer, useState } from 'react'
-import ReceiptTemplate from '~/components/Print/ReceiptTemplate.js'
-import printTemplate, { printOrder } from '~/helpers/printTemplate.js'
+import { printOrder } from '~/helpers/printTemplate.js'
 import IsAdmin from '../../components/IsAdmin.js'
 import Categories from '../../components/ManageOrder/Categories.js'
 import ChangeOrderTypeModal from '../../components/ManageOrder/ChangeOrderType.js'
@@ -46,7 +45,6 @@ import useModal from '../../hooks/useModal.js'
 import CashierLayout from '../../layouts/CashierLayout.js'
 import { Category, Order, User } from '../../types/Models.js'
 import { OrderItemT } from '../../types/Types.js'
-import PartialReceiptTemplate, { PartType } from '~/components/Print/PartialReceiptTemplate.js'
 
 export default function ManageOrder({
   order,

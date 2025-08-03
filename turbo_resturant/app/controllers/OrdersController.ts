@@ -70,6 +70,11 @@ export default class OrdersController {
     return inertia.render('Orders/ManageOrder', data)
   }
 
+  public async manageWebOrder({ inertia, params }: HttpContext) {
+    const data = await OrderManagerService.showOrderToCashier(params.id)
+    return inertia.render('Orders/ManageWebOrder', data)
+  }
+
   public async linkCustomer({ request, response, message, params }: HttpContext) {
     const { customerId } = await request.validateUsing(
       vine.compile(
@@ -153,9 +158,19 @@ export default class OrdersController {
       user: auth.user?.email,
       action: `تعديل الطلب رقم ${params.id}`,
     })
-    await OrderManagerService.saveOrderState(params.id, items)
-    message.success('تم حفظ الطلب')
-    return response.redirect().back()
+    const lock = await locks.createLock(`order.processing.${params.id}`)
+    const acquired = await lock.acquireImmediately()
+    if (!acquired) {
+      message.error('الطلب قيد التنفيذ')
+      return response.redirect().back()
+    }
+    try {
+      await OrderManagerService.saveOrderState(params.id, items)
+      message.success('تم حفظ الطلب')
+      return response.redirect().back()
+    } finally {
+      await lock.forceRelease()
+    }
   }
 
   public async makeDiscount({ request, response, message, params, session, auth }: HttpContext) {
@@ -192,12 +207,12 @@ export default class OrdersController {
       )
     )
     const [executed] = await locks
-      .createLock(`order.processing.${params.id}`)
+      .createLock(`order.completeing.${params.id}`)
       .runImmediately(async () => {
         await OrderManagerService.completeOrder(params.id, session.get('shiftId'), data)
         return
       })
-    if (!executed) message.error('الطلب قيد التنفيذ')
+    // if (!executed) message.error('الطلب قيد التنفيذ')
     if (data.print) {
       return response.redirect().toRoute('print-receipt', { id: params.id })
     }

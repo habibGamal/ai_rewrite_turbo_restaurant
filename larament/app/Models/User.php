@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -44,6 +46,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 
@@ -51,6 +54,26 @@ class User extends Authenticatable implements FilamentUser
     {
         /* TODO: Please implement your own logic here. */
         return true; // str_ends_with($this->email, '@larament.test');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::ADMIN;
+    }
+
+    public function canManageOrders(): bool
+    {
+        return $this->role?->canManageOrders() ?? false;
+    }
+
+    public function canCancelOrders(): bool
+    {
+        return $this->role?->canCancelOrders() ?? false;
+    }
+
+    public function canApplyDiscounts(): bool
+    {
+        return $this->role?->canApplyDiscounts() ?? false;
     }
     public function shifts()
     {

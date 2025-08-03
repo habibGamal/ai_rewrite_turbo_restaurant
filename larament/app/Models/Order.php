@@ -36,6 +36,10 @@ class Order extends Model
         'order_number',
     ];
 
+    protected $appends = [
+        'service_rate',
+    ];
+
     protected $casts = [
         'type' => OrderType::class,
         'status' => OrderStatus::class,
@@ -48,6 +52,11 @@ class Order extends Model
         'total' => 'decimal:2',
         'profit' => 'decimal:2',
     ];
+
+    public function getServiceRateAttribute(): float
+    {
+        return $this->type === OrderType::DINE_IN ? 0.12 : 0.0; // 12% service charge for dine-in
+    }
 
     public function customer(): BelongsTo
     {

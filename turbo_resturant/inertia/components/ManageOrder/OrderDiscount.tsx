@@ -6,27 +6,31 @@ import { Order } from '../../types/Models.js'
 export default function OrderDiscountModal({
   orderDiscountModal,
   order,
+  forWeb,
 }: {
   orderDiscountModal: ReturnType<typeof useModal>
   order: Order
+  forWeb?: boolean
 }) {
   const [form] = Form.useForm()
   const makeDiscount = async (values: any) => {
-    try {
-      router.post(`/orders/make-discount/${order.id}`, values, {
-        onSuccess: (page) => {
-          const order = page.props.order as Order
-          if (order.tempDiscountPercent !== 0) {
-            form.setFieldsValue({ discount: order.tempDiscountPercent, discountType: 'percent' })
-          } else {
-            form.setFieldsValue({ discount: order.discount, discountType: 'value' })
-          }
-          orderDiscountModal.closeModal()
-        },
-      })
-    } catch (e) {
-
+    const successCallback = (page: any) => {
+      const order = page.props.order as Order
+      if (order.tempDiscountPercent !== 0) {
+        form.setFieldsValue({ discount: order.tempDiscountPercent, discountType: 'percent' })
+      } else {
+        form.setFieldsValue({ discount: order.discount, discountType: 'value' })
+      }
+      orderDiscountModal.closeModal()
     }
+    if (!forWeb)
+      return router.post(`/orders/make-discount/${order.id}`, values, {
+        onSuccess: successCallback,
+      })
+
+    return router.post(`/web-orders/make-discount/${order.id}`, values, {
+      onSuccess: successCallback,
+    })
   }
 
   const options = [
@@ -48,8 +52,7 @@ export default function OrderDiscountModal({
         layout="vertical"
         form={form}
         initialValues={{
-          discount:
-            order.tempDiscountPercent !== 0 ? order.tempDiscountPercent : order.discount,
+          discount: order.tempDiscountPercent !== 0 ? order.tempDiscountPercent : order.discount,
           discountType: order.tempDiscountPercent !== 0 ? 'percent' : 'value',
         }}
       >

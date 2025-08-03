@@ -5,9 +5,11 @@ namespace App\Enums;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Database\Eloquent\Casts\AsStringable;
 
 enum ProductType: string implements HasColor, HasIcon, HasLabel
 {
+
     case Manufactured = 'manufactured';
     case RawMaterial = 'raw_material';
     case Consumable = 'consumable';

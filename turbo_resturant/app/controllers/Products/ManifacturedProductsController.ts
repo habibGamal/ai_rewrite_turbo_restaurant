@@ -68,26 +68,9 @@ export default class ManifacturedProductsController {
     )
     const data = await request.validateUsing(schema)
     const product = await Product.findOrFail(params.id)
-    // calculate costs from components
-    const components = await Product.query()
-      .select(['id', 'cost'])
-      .whereIn(
-        'id',
-        data.components!.map((c) => c.productId)
-      )
-    let cost = 0
-    components.forEach((component) => {
-      const quantity = data.components!.find((c) => c.productId === component.id)!.quantity
-      cost += component.cost * quantity
-    })
-    // sync components
-    const componentsSyncData: Record<number, { quantity: number }> = {}
-    data.components.forEach((c) => {
-      componentsSyncData[c.productId] = { quantity: c.quantity }
-    })
-    product.related('components').sync(componentsSyncData)
-    product.cost = cost
-    await product.save()
+
+    await product.updateComponents(data)
+
     message.success('تم تعديل معياري المنتج بنجاح')
     return response.redirect().back()
   }

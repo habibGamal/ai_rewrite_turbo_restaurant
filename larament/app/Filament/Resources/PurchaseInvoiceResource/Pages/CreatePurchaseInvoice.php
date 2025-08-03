@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\PurchaseInvoiceResource\Pages;
 
 use App\Filament\Resources\PurchaseInvoiceResource;
-use App\Services\PurchaseInvoiceCalculatorService;
+use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;

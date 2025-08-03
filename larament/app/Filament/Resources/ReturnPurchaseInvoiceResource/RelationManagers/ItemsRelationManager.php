@@ -25,59 +25,7 @@ class ItemsRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form
-            ->schema([
-                Forms\Components\Select::make('product_id')
-                    ->label('المنتج')
-                    ->options(Product::all()->pluck('name', 'id'))
-                    ->searchable()
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state) {
-                            $product = Product::find($state);
-                            if ($product) {
-                                $set('price', $product->cost);
-                                $set('product_name', $product->name);
-                            }
-                        }
-                    }),
-
-                Forms\Components\TextInput::make('product_name')
-                    ->label('اسم المنتج')
-                    ->disabled()
-                    ->dehydrated(false),
-
-                Forms\Components\TextInput::make('quantity')
-                    ->label('الكمية')
-                    ->numeric()
-                    ->required()
-                    ->default(1)
-                    ->minValue(1)
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $price = $get('price') ?? 0;
-                        $set('total', $state * $price);
-                    }),
-
-                Forms\Components\TextInput::make('price')
-                    ->label('سعر الوحدة (ج.م)')
-                    ->numeric()
-                    ->required()
-                    ->minValue(0)
-                    ->prefix('ج.م')
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $quantity = $get('quantity') ?? 1;
-                        $set('total', $state * $quantity);
-                    }),
-
-                Forms\Components\TextInput::make('total')
-                    ->label('الإجمالي (ج.م)')
-                    ->numeric()
-                    ->prefix('ج.م')
-                    ->disabled()
-                    ->dehydrated(),
-            ]);
+            ->schema([]);
     }
 
     public function table(Table $table): Table

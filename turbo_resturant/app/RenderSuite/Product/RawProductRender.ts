@@ -1,11 +1,11 @@
 import Product from '#models/Product'
-import { RenderSuitePagination } from '../RenderSuitePagination.js'
+import { PaginatorService } from '../../services/PaginatorService.js'
 import { RenderSuiteTemplate } from '../RenderSuiteTemplate.js'
 import { ProductType, ProductUnit } from '#enums/ProductEnums'
 import Category from '#models/Category'
 export default class RawProductRender {
   public async render() {
-    const pagination = new RenderSuitePagination()
+    const pagination = new PaginatorService()
     const data = await pagination.paginate(
       Product.query().preload('category').where('type', ProductType.RawMaterial)
     )

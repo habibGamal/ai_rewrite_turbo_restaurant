@@ -54,6 +54,24 @@ export const orderHeader = (order: Order) => {
           title: `طلب رقم ${order.orderNumber}`,
         },
       ]
+    case OrderType.WebDelivery:
+      return [
+        {
+          title: 'ديلفري اونلاين',
+        },
+        {
+          title: `طلب رقم ${order.orderNumber}`,
+        },
+      ]
+    case OrderType.WebTakeaway:
+      return [
+        {
+          title: 'تيك اواي اونلاين',
+        },
+        {
+          title: `طلب رقم ${order.orderNumber}`,
+        },
+      ]
     default:
       return [
         {

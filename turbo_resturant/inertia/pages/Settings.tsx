@@ -1,4 +1,4 @@
-import { SettingKeys } from '#enums/SettingsEnums'
+import { NodeType, SettingKeys } from '#enums/SettingsEnums'
 import { router } from '@inertiajs/react'
 import {
   Button,
@@ -8,10 +8,11 @@ import {
   QRCode,
   Radio,
   Row,
+  Select,
   Space,
   Switch,
   Tooltip,
-  Typography
+  Typography,
 } from 'antd'
 import { InfoCircle } from 'iconsax-react'
 import { useContext, useEffect, useMemo, useState } from 'react'
@@ -75,7 +76,7 @@ export default function Settings({ settings }: { settings: { [key: string]: stri
     <Row gutter={[0, 25]} className="m-8">
       <PageTitle name="الاعدادات" />
       <Col span="24" className="isolate">
-        <div className="grid gap-8 grid-cols-2 items-start">
+        <div className="grid gap-8 grid-cols-1 xl:grid-cols-2 items-start">
           <div className="flex gap-4">
             <Typography.Text>تفعيل الوضع المظلم</Typography.Text>
             <Switch defaultChecked={theme?.currentTheme === 'dark'} onChange={darkTheme} />
@@ -86,8 +87,34 @@ export default function Settings({ settings }: { settings: { [key: string]: stri
               عرض QR
             </Button>
           </div>
-
-          <SettingInput route="update-dns" title="DNS" name="dns" defaultValue={settings?.dns} />
+          <div className="isolate-0 flex flex-col gap-4">
+            <SettingInput
+              route={SettingKeys.NodeType}
+              title="نوع النقطة"
+              name={SettingKeys.NodeType}
+              defaultValue={settings?.[SettingKeys.NodeType]}
+              select
+              options={[
+                { label: 'رئيسي', value: NodeType.Master },
+                { label: 'فرع', value: NodeType.Slave },
+                { label: 'مستقل', value: NodeType.Standalone },
+              ]}
+            />
+            <SettingInput
+              route={SettingKeys.MasterLink}
+              title="رابط النقطة الرئيسية"
+              name={SettingKeys.MasterLink}
+              tooltip="format: https://localsys.turboplus.online"
+              defaultValue={settings?.[SettingKeys.MasterLink]}
+            />
+            <SettingInput
+              route={SettingKeys.WebsiteLink}
+              title="رابط الموقع"
+              name={SettingKeys.WebsiteLink}
+              tooltip="format: https://localsys.turboplus.online"
+              defaultValue={settings?.[SettingKeys.WebsiteLink]}
+            />
+          </div>
           <div className="flex gap-4 items-center">
             <SettingInput
               route="casheir-printer"
@@ -180,45 +207,14 @@ export default function Settings({ settings }: { settings: { [key: string]: stri
   )
 }
 
-const SettingAction = ({
-  actionName,
-  title,
-  btnText,
-  danger,
-}: {
-  actionName: string
-  title: string
-  btnText: string
-  danger?: boolean
-}) => {
-  const [loading, setLoading] = useState(false)
-  const action = () => {
-    setLoading(true)
-    router.get(
-      '/settings/' + actionName,
-      {},
-      {
-        onSuccess: () => setLoading(false),
-      }
-    )
-  }
-
-  return (
-    <div className="flex gap-4 items-center">
-      <Typography.Text>{title}</Typography.Text>
-      <Button loading={loading} type="primary" onClick={action} danger={danger}>
-        {btnText}
-      </Button>
-    </div>
-  )
-}
-
 const SettingInput = ({
   route,
   title,
   name,
   defaultValue,
   textArea,
+  select,
+  options,
   tooltip,
 }: {
   route: string
@@ -226,6 +222,8 @@ const SettingInput = ({
   name: string
   defaultValue: string
   textArea?: boolean
+  select?: boolean
+  options?: { label: string; value: string }[]
   tooltip?: string
 }) => {
   const [loading, setLoading] = useState(false)
@@ -242,6 +240,32 @@ const SettingInput = ({
     )
   }
   const [value, setValue] = useState(defaultValue)
+
+  if (select)
+    return (
+      <div className="flex flex-wrap gap-4 items-center">
+        <Typography.Text>
+          {title}
+          {tooltip && (
+            <Tooltip title={tooltip}>
+              <InfoCircle className="align-bottom mx-2" />
+            </Tooltip>
+          )}
+        </Typography.Text>
+        <Select
+          value={value}
+          options={options}
+          className="min-w-[300px]"
+          onChange={(value) => {
+            setValue(value)
+          }}
+        />
+        <Button loading={loading} onClick={update} type="primary">
+          تحديث
+        </Button>
+      </div>
+    )
+
   if (textArea)
     return (
       <div className="isolate-0 flex flex-wrap gap-4 items-center">
@@ -267,7 +291,14 @@ const SettingInput = ({
     )
   return (
     <div className="flex gap-4 items-center">
-      <Typography.Text className="text-nowrap">{title}</Typography.Text>
+      <Typography.Text className="text-nowrap">
+        {title}
+        {tooltip && (
+          <Tooltip title={tooltip}>
+            <InfoCircle className="align-bottom mx-2" />
+          </Tooltip>
+        )}
+      </Typography.Text>
       <Input
         value={value}
         className="max-w-[300px]"

@@ -218,7 +218,7 @@ export default class PrintersController {
       })
       await printerService.printImgDataUrl(image.image)
       try {
-        await printerService.execute()
+        printerService.execute()
       } catch (error) {
         console.log(error)
         message.error('حدث خطأ اثناء الطباعة')

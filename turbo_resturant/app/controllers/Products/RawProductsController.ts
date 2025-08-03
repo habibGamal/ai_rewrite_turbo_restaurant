@@ -32,6 +32,7 @@ export default class RawProductsController {
     const data = await request.validateUsing(productSchema)
     const product = await Product.findOrFail(params.id)
     product.merge(data)
+    product.price = data.cost
     await product.save()
     message.success('تم تعديل المنتج بنجاح')
     return response.redirect().back()

@@ -1,8 +1,11 @@
 import { ProductType, ProductUnit } from '#enums/ProductEnums'
+import { NodeType, SettingKeys } from '#enums/SettingsEnums'
+import ErrorMsgException from '#exceptions/error_msg_exception'
 import {
   BaseModel,
   afterCreate,
   afterUpdate,
+  beforeCreate,
   belongsTo,
   column,
   computed,
@@ -16,10 +19,11 @@ import Category from './Category.js'
 import InventoryItem from './InventoryItem.js'
 import OrderItem from './OrderItem.js'
 import Printer from './Printer.js'
+import Setting from './Setting.js'
 import WastedItem from './WastedItem.js'
-import logger from '@adonisjs/core/services/logger'
 
 export default class Product extends BaseModel {
+  serializeExtras = true
   @column({ isPrimary: true })
   declare id: number
 
@@ -43,6 +47,9 @@ export default class Product extends BaseModel {
 
   @column()
   declare printerId: number
+
+  @column()
+  declare productRef: string
 
   @column()
   declare legacy: boolean
@@ -70,11 +77,43 @@ export default class Product extends BaseModel {
       })
   }
 
+  @beforeCreate()
+  public static async checkNodeType(product: Product) {
+    const nodeType = await Setting.query().where({ key: SettingKeys.NodeType }).first()
+    const isImportedProduct = product.productRef !== undefined
+    if (nodeType?.value === NodeType.Slave && !isImportedProduct)
+      throw new ErrorMsgException(
+        'غير مسموح للفرع اضافة منتجات يمكنك اضافة منتجات من الفرع الرئيسي'
+      )
+  }
+
+  @afterCreate()
+  public static async createProductRef(product: Product) {
+    const isImportedProduct = product.productRef !== undefined
+    if (isImportedProduct) return
+    let productRef = ''
+    switch (product.type) {
+      case ProductType.RawMaterial:
+        productRef = 'R'
+        break
+      case ProductType.Manifactured:
+        productRef = 'M'
+        break
+      case ProductType.Consumable:
+        productRef = 'C'
+        break
+    }
+    productRef += product.id
+    product.productRef = productRef
+    await product.save()
+  }
+
   @afterUpdate()
   public static async updateCosts(product: Product) {
     await product.load('componentOf')
+    // console.log('recalculate costs')
     for (const component of product.componentOf) {
-      console.log(product.name, ' is component of ', component.name)
+      // console.log(product.name, ' is component of ', component.name)
       await Product.recalculateCost(component)
     }
   }
@@ -166,6 +205,17 @@ export default class Product extends BaseModel {
     return this.$extras.salesQuantity
   }
 
+  @computed()
+  public get componentsHash() {
+    return this.components
+      ?.map(
+        (component) => [component.productRef, component.$extras.pivot_quantity] as [string, number]
+      )
+      .sort()
+      .flat()
+      .join('')
+  }
+
   public static async updateInventoryLevel(product: Product, quantity: number) {
     if (product.type === ProductType.Manifactured) {
       const recipe = await this.fullRecipe(product)
@@ -173,11 +223,6 @@ export default class Product extends BaseModel {
         await InventoryItem.query()
           .where('product_id', item.product_id)
           .decrement('quantity', item.quantity * quantity)
-        // if (item.product_id === 58) {
-        //   logger.info(
-        //     `${product.id} - ${item.quantity} - ${quantity} - ${item.quantity * quantity}`
-        //   )
-        // }
       }
     } else {
       await InventoryItem.query().where('product_id', product.id).decrement('quantity', quantity)
@@ -191,9 +236,32 @@ export default class Product extends BaseModel {
       product.components.forEach((component) => {
         cost += component.cost * component.$extras.pivot_quantity
       })
-      console.log(product.components)
+      // console.log(product.components)
       product.cost = cost
       await product.save()
     }
+  }
+
+  public async updateComponents(data: { components: { productId: number; quantity: number }[] }) {
+    const products = await Product.query()
+      .select(['id', 'cost'])
+      .whereIn(
+        'id',
+        data.components!.map((c) => c.productId)
+      )
+    let cost = 0
+    products.forEach((component) => {
+      const quantity = data.components!.find((c) => c.productId === component.id)!.quantity
+      cost += component.cost * quantity
+    })
+    // sync components
+    const componentsSyncData: Record<number, { quantity: number }> = {}
+    data.components.forEach((c) => {
+      componentsSyncData[c.productId] = { quantity: c.quantity }
+    })
+    const product = this as Product
+    product.related('components').sync(componentsSyncData)
+    product.cost = cost
+    await product.save()
   }
 }

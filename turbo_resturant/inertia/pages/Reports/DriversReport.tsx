@@ -1,9 +1,9 @@
 import { router } from '@inertiajs/react'
 import { Button, Col, Row, Table, TableColumnsType } from 'antd'
 import { useState } from 'react'
+import DisplayOrdersStatic from '~/components/Reports/DisplayOrdersStatic.js'
 import EmptyReport from '../../components/EmptyReport.js'
 import ReportHeader from '../../components/ReportHeader.js'
-import DisplayOrders from '../../components/Reports/DisplayOrders.js'
 import useModal from '../../hooks/useModal.js'
 import { Driver, Order } from '../../types/Models.js'
 
@@ -91,10 +91,10 @@ export default function DriversReport({ drivers }: { drivers: Driver[] }) {
         dataSource={dataSource}
       />
 
-      <DisplayOrders
+      <DisplayOrdersStatic
         modal={modal}
         title={`اوردرات ${driver?.name}`}
-        orders={driver ? driver.orders : []}
+        orders={driver ? driver.orders! : []}
       />
       <EmptyReport condition={dataSource.length === 0}>
         <Col span="24" className="isolate">

@@ -40,6 +40,9 @@ class PrinterResource extends Resource
                     ->maxLength(255),
                 Forms\Components\TextInput::make('ip_address')
                     ->label('عنوان IP')
+                    ->helperText(
+                        'أدخل عنوان IP بصيغة صحيحة أو //ip/printerName للطابعة المشتركة عبر USB'
+                    )
                     ->maxLength(255),
             ]);
     }

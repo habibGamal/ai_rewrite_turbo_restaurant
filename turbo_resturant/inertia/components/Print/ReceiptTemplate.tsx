@@ -17,7 +17,7 @@ export default function ReceiptTemplate({
       <p className="text-5xl text-center">Order #{order.orderNumber}</p>
       <p>نوع الطلب : {order.typeString}</p>
       {order.type === OrderType.DineIn && <p>طاولة رقم {order.dineTableNumber}</p>}
-      {order.type === OrderType.Delivery && (
+      {[OrderType.Delivery, OrderType.WebDelivery, OrderType.WebTakeaway].includes(order.type) && (
         <>
           <p>رقم الهاتف : {order.customer?.phone || '-'}</p>
           <p>اسم العميل : {order.customer?.name || '-'}</p>

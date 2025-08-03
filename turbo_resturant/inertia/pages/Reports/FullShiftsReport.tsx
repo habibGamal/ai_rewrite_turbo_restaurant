@@ -1,21 +1,27 @@
 import { router } from '@inertiajs/react'
+import ShiftsReportComponent from '~/components/Reports/ShiftsReportComponent.js'
+import Pagination from '~/types/Pagination.js'
+import { ShiftStat } from '~/types/Types.js'
 import ReportHeader from '../../components/ReportHeader.js'
-import { Shift } from '../../types/Models.js'
-import ShiftsReport from '~/components/Reports/ShiftsReport.js'
+import { Order } from '../../types/Models.js'
 
-export default function FullShiftsReport({ shifts }: { shifts: Shift[] }) {
+export default function FullShiftsReport({
+  statistics,
+  ordersPaginator,
+}: {
+  statistics: ShiftStat
+  ordersPaginator: Pagination<Order>
+}) {
+
   const getResults = (from: string, to: string) => {
-    router.get(
-      `/reports/full-shifts-report`,
-      {
-        from,
-        to,
-      }
-    )
+    router.get(`/reports/full-shifts-report`, {
+      from,
+      to,
+    })
   }
   return (
-    <ShiftsReport
-      shifts={shifts}
+    <ShiftsReportComponent
+      data={{ statistics, ordersPaginator }}
       header={
         <ReportHeader
           title="تقرير شامل للورديات"

@@ -9,6 +9,10 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 import StockLevelsRender from '#render/StockLevelsRender'
+import transmit from '@adonisjs/transmit/services/main'
+import './routes/api.js'
+
+transmit.registerRoutes()
 
 router.on('/inertia').renderInertia('home', { version: 6 })
 
@@ -63,6 +67,11 @@ router
      */
     router
       .group(() => {
+        // master products
+        router.get('/import-from-master', '#controllers/MasterProductsController.show')
+        router.post('/import-products', '#controllers/MasterProductsController.importProducts')
+        router.post('/update-prices', '#controllers/MasterProductsController.updatePrices')
+        router.post('/update-recipes','#controllers/MasterProductsController.updateRecipes')
         // settings
         router.get('/settings', '#controllers/SettingsController.index').as('settings')
         router.get('/scan-printers', '#controllers/SettingsController.scanForPrinters')
@@ -242,6 +251,9 @@ router
           .get('/orders/manage-order/:id', '#controllers/OrdersController.manageOrder')
           .as('manage-order')
         router
+          .get('/orders/manage-web-order/:id', '#controllers/OrdersController.manageWebOrder')
+          .as('manage-web-order')
+        router
           .post('/orders/save-order/:id', '#controllers/OrdersController.saveOrder')
           .as('save-order')
         router
@@ -280,6 +292,25 @@ router
           .post('/fetch-driver-info', '#controllers/DriversController.fetchDriverInfo')
           .as('fetch-driver-info')
         router.post('/quick-driver', '#controllers/DriversController.storeQuick').as('quick-driver')
+
+        // web orders
+
+        router.post('/web-orders/accept-order/:id', '#controllers/WebOrdersController.acceptOrder')
+        router.post('/web-orders/reject-order/:id', '#controllers/WebOrdersController.rejectOrder')
+        router.post('/web-orders/cancel-order/:id', '#controllers/WebOrdersController.cancelOrder')
+        router.post(
+          '/web-orders/complete-order/:id',
+          '#controllers/WebOrdersController.completeOrder'
+        )
+        router.post(
+          '/web-orders/out-for-delivery/:id',
+          '#controllers/WebOrdersController.outForDelivery'
+        )
+        router.post(
+          '/web-orders/make-discount/:id',
+          '#controllers/WebOrdersController.applyDiscount'
+        )
+        router.post('/web-orders/save-order/:id', '#controllers/WebOrdersController.saveOrder')
       })
       .middleware(middleware.inShift())
   })

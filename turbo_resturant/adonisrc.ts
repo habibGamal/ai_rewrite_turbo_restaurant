@@ -39,7 +39,8 @@ export default defineConfig({
     () => import('@adonisjs/auth/auth_provider'),
     () => import('@adonisjs/inertia/inertia_provider'),
     () => import('#providers/app_provider'),
-    () => import('@adonisjs/lock/lock_provider')
+    () => import('@adonisjs/lock/lock_provider'),
+    () => import('@adonisjs/transmit/transmit_provider')
   ],
 
   /*

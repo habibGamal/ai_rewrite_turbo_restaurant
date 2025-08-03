@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\MovementReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Services\StockService;
@@ -45,10 +46,10 @@ class PurchaseService
             })->toArray();
 
             // Add items to stock
-            $success = $this->stockService->processMultipleItems(
+            $success = $this->stockService->addStock(
                 $stockItems,
-                'add',
-                "purchase_invoice_{$invoice->id}"
+                MovementReason::PURCHASE,
+                $invoice
             );
 
             if (!$success) {
@@ -109,10 +110,10 @@ class PurchaseService
             }
 
             // Remove items from stock
-            $success = $this->stockService->processMultipleItems(
+            $success = $this->stockService->removeStock(
                 $stockItems,
-                'remove',
-                "return_purchase_invoice_{$invoice->id}"
+                MovementReason::PURCHASE_RETURN,
+                $invoice
             );
 
             if (!$success) {
