@@ -17,14 +17,32 @@ class OrderPaymentService
 
     public function processPayment(Order $order, PaymentDTO $paymentDTO): Order
     {
-        // Create payment record
-        $payment = $this->paymentRepository->create($paymentDTO);
+        // Calculate remaining balance
+        $totalPaid = $this->paymentRepository->getTotalPaidForOrder($order->id);
+        $remainingBalance = $order->total - $totalPaid;
 
-        // Update order payment status
-        $this->updateOrderPaymentStatus($order);
+        // Cap payment amount to remaining balance
+        $actualPaymentAmount = min($paymentDTO->amount, $remainingBalance);
 
-        // Fire event
-        PaymentProcessed::dispatch($payment, $order);
+        // Only process payment if there's a remaining balance
+        if ($actualPaymentAmount > 0) {
+            // Create adjusted payment DTO
+            $adjustedPaymentDTO = new PaymentDTO(
+                amount: $actualPaymentAmount,
+                method: $paymentDTO->method,
+                orderId: $paymentDTO->orderId,
+                shiftId: $paymentDTO->shiftId
+            );
+
+            // Create payment record
+            $payment = $this->paymentRepository->create($adjustedPaymentDTO);
+
+            // Update order payment status
+            $this->updateOrderPaymentStatus($order);
+
+            // Fire event
+            PaymentProcessed::dispatch($payment, $order);
+        }
 
         return $order->refresh();
     }
@@ -32,12 +50,27 @@ class OrderPaymentService
     public function processMultiplePayments(Order $order, array $paymentsData, int $shiftId): array
     {
         $payments = [];
-        $totalPaid = 0;
+        $totalPaid = $this->paymentRepository->getTotalPaidForOrder($order->id);
+        $remainingBalance = $order->total - $totalPaid;
+
+        // Calculate total of new payments
+        $totalNewPayments = array_sum(array_filter($paymentsData, fn($amount) => $amount > 0));
+
+        // Validate that total payments don't exceed order total
+        if (($totalPaid + $totalNewPayments) > $order->total) {
+            throw new \InvalidArgumentException(
+                "إجمالي المدفوعات ({$totalPaid} + {$totalNewPayments} = " . ($totalPaid + $totalNewPayments) .
+                ") يتجاوز إجمالي الطلب (" . $order->total . ")"
+            );
+        }
 
         foreach ($paymentsData as $method => $amount) {
-            if ($amount > 0) {
+            if ($amount > 0 && $remainingBalance > 0) {
+                // Cap payment amount to remaining balance
+                $actualPaymentAmount = min($amount, $remainingBalance);
+
                 $paymentDTO = new PaymentDTO(
-                    amount: $amount,
+                    amount: $actualPaymentAmount,
                     method: \App\Enums\PaymentMethod::from($method),
                     orderId: $order->id,
                     shiftId: $shiftId
@@ -45,10 +78,17 @@ class OrderPaymentService
 
                 $payment = $this->paymentRepository->create($paymentDTO);
                 $payments[] = $payment;
-                $totalPaid += $amount;
+
+                // Update remaining balance for next payment
+                $remainingBalance -= $actualPaymentAmount;
 
                 // Fire event for each payment
                 PaymentProcessed::dispatch($payment, $order);
+
+                // Break if order is fully paid
+                if ($remainingBalance <= 0) {
+                    break;
+                }
             }
         }
 
