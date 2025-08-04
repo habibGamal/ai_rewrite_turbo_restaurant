@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ExpenseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -46,6 +47,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/print/{order}', [OrderController::class, 'printReceipt'])->name('print');
         Route::post('/print-kitchen/{order}', [OrderController::class, 'printKitchen'])->name('printKitchen');
+    })->middleware(['shift']);
+
+    // Printer Management Routes
+    Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products');
+    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen');
+
+    // Expense Management Routes
+    Route::prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->name('index');
+        Route::post('/', [ExpenseController::class, 'store'])->name('store');
+        Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
+        Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
     })->middleware(['shift']);
 });
 

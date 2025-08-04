@@ -173,7 +173,10 @@ export default function Authenticated({
                 </header>
             )}
 
-            <main>{children}</main>
+            <main>
+                {children}
+
+            </main>
         </div>
     );
 }

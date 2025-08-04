@@ -2,9 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\ProductType;
 use App\Filament\Resources\PrinterResource\Pages;
 use App\Models\Printer;
+use App\Models\Product;
 use Filament\Forms;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -44,6 +48,42 @@ class PrinterResource extends Resource
                         'أدخل عنوان IP بصيغة صحيحة أو //ip/printerName للطابعة المشتركة عبر USB'
                     )
                     ->maxLength(255),
+
+                CheckboxList::make('categories')
+                    ->label('اختر بالفئات ')
+                    ->options(
+                        \App\Models\Category::all()->pluck('name', 'id')
+                    )
+                    ->afterStateUpdated(function (array $state, callable $set) {
+                        $set(
+                            'products',
+                            Product::whereIn('category_id', $state)
+                                ->whereIn('type', [ProductType::Consumable, ProductType::Manufactured])
+                                ->with('category')
+                                ->orderBy('category_id')
+                                ->pluck('id')
+                                ->toArray()
+                        );
+                    })
+                    ->bulkToggleable()
+                    ->reactive()
+                    ->dehydrated(false)
+                    ->columns(3),
+
+                CheckboxList::make('products')
+                    ->label('المنتجات المرتبطة')
+                    ->relationship(
+                        'products',
+                        'name',
+                        function ($query) {
+                            return $query->whereIn('type', [ProductType::Consumable, ProductType::Manufactured])
+                                ->with('category')
+                                ->orderBy('category_id');
+                        }
+                    )
+                    ->getOptionLabelFromRecordUsing(fn(Product $product) => "$product->name ({$product->category?->name})")
+                    ->bulkToggleable()
+                    ->columns(3)
             ]);
     }
 

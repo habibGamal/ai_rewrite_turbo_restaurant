@@ -11,6 +11,8 @@ class Waste extends Model
 
     protected $fillable = [
         'user_id',
+        'total',
+        'closed_at',
         'notes',
     ];
 
@@ -19,8 +21,9 @@ class Waste extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function wastedItems()
+    public function items()
     {
         return $this->hasMany(WastedItem::class);
     }
+
 }

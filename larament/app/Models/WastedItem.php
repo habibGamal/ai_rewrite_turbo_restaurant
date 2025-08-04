@@ -10,9 +10,11 @@ class WastedItem extends Model
     use HasFactory;
 
     protected $fillable = [
+        'waste_id',
         'product_id',
         'quantity',
-        'waste_id',
+        'price',
+        'total',
     ];
 
     public function product()

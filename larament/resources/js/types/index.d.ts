@@ -152,3 +152,19 @@ export interface OrderFilters {
     date_from?: string;
     date_to?: string;
 }
+
+export interface ExpenseType {
+    id: number;
+    name: string;
+}
+
+export interface Expense {
+    id: number;
+    shift_id: number;
+    expence_type_id: number;
+    amount: number;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+    expenceType?: ExpenseType;
+}

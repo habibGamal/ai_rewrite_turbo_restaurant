@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::create('wastes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('total', 10, 2);
+            $table->timestamp('closed_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -16,7 +16,7 @@ class InventoryDailyAggregationService
     /**
      * Aggregate movements for multiple products and dates using the configured approach
      */
-    public function aggregateMultipleMovements(array $productIds, Carbon $date): array
+    public function aggregateMultipleMovements(array $productIds, Carbon $date)
     {
         return DB::transaction(function () use ($productIds, $date) {
             $dateString = $date->toDateString();
@@ -43,7 +43,8 @@ class InventoryDailyAggregationService
     public function bulkAggregateWithInsertSelect(array $productIds, array $dateStrings): void
     {
         // Delete existing records first (or you could use REPLACE INTO equivalent)
-        InventoryItemMovementDaily::whereIn('product_id', $productIds)
+        InventoryItemMovementDaily::
+            whereIn('product_id', $productIds)
             ->whereIn('date', $dateStrings)
             ->delete();
 
@@ -64,7 +65,7 @@ class InventoryDailyAggregationService
                         THEN m.quantity
                         ELSE 0
                     END
-                ) AS sales_return_quantity"),
+                ) AS return_sales_quantity"),
                 DB::raw("SUM(CASE
                     WHEN m.operation = 'out' AND m.reason IN ('order')
                     THEN m.quantity
@@ -93,14 +94,23 @@ class InventoryDailyAggregationService
             })
             ->whereIn('m.product_id', $productIds)
             ->whereIn(DB::raw('DATE(m.created_at)'), $dateStrings)
-            ->groupBy('m.product_id', DB::raw('DATE(m.created_at)'));
-
+            ->groupBy(
+                'm.product_id',
+                'prev.start_quantity',
+                'prev.incoming_quantity',
+                'prev.return_sales_quantity',
+                'prev.sales_quantity',
+                'prev.return_waste_quantity',
+                DB::raw('DATE(m.created_at)')
+            );
+        // dd($aggregationQuery->toRawSql());
         // Insert the aggregated data
         DB::table('inventory_item_movement_daily')->insertUsing([
             'product_id',
             'date',
             'start_quantity',
             'incoming_quantity',
+            'return_sales_quantity',
             'sales_quantity',
             'return_waste_quantity',
             'created_at',

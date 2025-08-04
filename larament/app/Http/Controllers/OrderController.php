@@ -8,6 +8,8 @@ use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\Payment;
 use App\Models\OrderItem;
+use App\Models\Expense;
+use App\Models\ExpenceType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
@@ -54,10 +56,21 @@ class OrderController extends Controller
             ->where('type', OrderType::COMPANIES)
             ->get();
 
+        // Get current shift expenses
+        $expenses = Expense::with('expenceType')
+            ->where('shift_id', $currentShift->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get expense types
+        $expenseTypes = ExpenceType::all();
+
         return Inertia::render('Orders/Index', [
             'orders' => $orders,
             'previousPartialPaidOrders' => $previousPartialPaidOrders,
             'currentShift' => $currentShift,
+            'expenses' => $expenses,
+            'expenseTypes' => $expenseTypes,
         ]);
     }
 
@@ -303,6 +316,58 @@ class OrderController extends Controller
             return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب ']);
         }
 
+    }
+
+    /**
+     * Get printers for products
+     */
+    public function getPrintersOfProducts(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'required|integer|exists:products,id',
+        ]);
+
+        try {
+            $products = \App\Models\Product::with('printers:id')
+                ->whereIn('id', $validated['ids'])
+                ->get(['id']);
+
+            $result = $products->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'printers' => $product->printers->map(function ($printer) {
+                        return ['id' => $printer->id];
+                    })->toArray(),
+                ];
+            });
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء جلب بيانات الطابعات'], 500);
+        }
+    }
+
+    /**
+     * Print kitchen order with multiple printers
+     */
+    public function printInKitchen(Request $request)
+    {
+        $validated = $request->validate([
+            'images' => 'required|array',
+            'images.*.printerId' => 'required|string',
+            'images.*.image' => 'required|string',
+        ]);
+
+        try {
+            foreach ($validated['images'] as $imageData) {
+                $this->printService->printKitchenImage($imageData['printerId'], $imageData['image']);
+            }
+
+            return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ: ' . $e->getMessage()]);
+        }
     }
 
     /**

@@ -22,6 +22,12 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
+    /**
+     * Setting to allow or disallow operations with insufficient stock
+     * Set to false to prevent orders from being completed when stock is insufficient
+     */
+    public const ALLOW_INSUFFICIENT_STOCK = false;
+
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderCreationService $orderCreationService,
@@ -29,6 +35,7 @@ class OrderService
         private readonly OrderCalculationService $orderCalculationService,
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
+        private readonly OrderStockConversionService $orderStockConversionService,
     ) {
     }
 
@@ -156,7 +163,27 @@ class OrderService
                 throw new OrderException('الطلب غير متاح للإكمال');
             }
 
-            return $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
+            // Validate stock availability before completing the order
+            $insufficientItems = $this->orderStockConversionService->validateOrderStockAvailability($order);
+            if (!empty($insufficientItems) && !self::ALLOW_INSUFFICIENT_STOCK) {
+                $itemNames = array_column($insufficientItems, 'product_name');
+                throw new OrderException('مخزون غير كافي للمنتجات: ' . implode(', ', $itemNames));
+            }
+
+            // Complete the order
+            $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
+
+            // Remove stock items after successful completion
+            $stockRemoved = $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
+
+            if (!$stockRemoved) {
+                // Log warning but don't fail the transaction as order is already completed
+                \Illuminate\Support\Facades\Log::warning('Failed to remove stock for completed order', [
+                    'order_id' => $completedOrder->id
+                ]);
+            }
+
+            return $completedOrder;
         });
     }
 
@@ -168,6 +195,9 @@ class OrderService
             if (!$order->status->canBeCancelled()) {
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
             }
+
+            // Store the original status to check if we need to restore stock
+            $wasCompleted = $order->status === OrderStatus::COMPLETED;
 
             // Free table if dine-in
             if ($order->type->requiresTable() && $order->dine_table_number) {
@@ -181,6 +211,17 @@ class OrderService
             ]);
 
             $order->refresh();
+
+            // If order was completed, add stock back
+            if ($wasCompleted) {
+                $stockRestored = $this->orderStockConversionService->addStockForCancelledOrder($order);
+
+                if (!$stockRestored) {
+                    \Illuminate\Support\Facades\Log::warning('Failed to restore stock for cancelled order', [
+                        'order_id' => $order->id
+                    ]);
+                }
+            }
 
             // Fire event
             OrderCancelled::dispatch($order, $reason);
@@ -237,5 +278,21 @@ class OrderService
 
             return $order;
         });
+    }
+
+    public function getOrderStockRequirements(int $orderId): array
+    {
+        $order = $this->orderRepository->findByIdOrFail($orderId);
+        $order->load('items.product');
+
+        return $this->orderStockConversionService->getOrderStockRequirements($order);
+    }
+
+    public function validateOrderStockAvailability(int $orderId): array
+    {
+        $order = $this->orderRepository->findByIdOrFail($orderId);
+        $order->load('items.product');
+
+        return $this->orderStockConversionService->validateOrderStockAvailability($order);
     }
 }

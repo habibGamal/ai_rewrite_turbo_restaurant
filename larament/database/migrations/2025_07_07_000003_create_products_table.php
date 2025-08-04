@@ -16,7 +16,6 @@ return new class extends Migration
             $table->decimal('cost', 10, 2);
             $table->string('type');
             $table->string('unit');
-            $table->foreignId('printer_id')->nullable()->constrained()->onDelete('set null');
             $table->boolean('legacy')->default(false);
             $table->timestamps();
         });

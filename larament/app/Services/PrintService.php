@@ -118,16 +118,64 @@ class PrintService
     }
 
     /**
+     * Print kitchen image to specific printer
+     */
+    public function printKitchenImage(string $printerId, string $base64Image): void
+    {
+        try {
+            $printer = \App\Models\Printer::findOrFail($printerId);
+
+            if (!$printer->ip_address) {
+                \Log::warning("Printer {$printer->name} has no IP address configured");
+                return;
+            }
+
+            $connector = new NetworkPrintConnector($printer->ip_address, 9100);
+            $escposPrinter = new Printer($connector);
+
+            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address})");
+
+            // Remove data URL prefix if present (data:image/png;base64,)
+            $base64Data = preg_replace('/^data:image\/[a-zA-Z]+;base64,/', '', $base64Image);
+
+            // Decode base64 and create GD image
+            $imageData = base64_decode($base64Data);
+            if ($imageData === false) {
+                throw new \InvalidArgumentException('Invalid base64 image data');
+            }
+
+            // Create temporary file
+            $tempFilePath = tempnam(sys_get_temp_dir(), 'kitchen_') . '.png';
+            file_put_contents($tempFilePath, $imageData);
+
+            // Create EscposImage from temporary file
+            $escposImage = EscposImage::load($tempFilePath);
+            $escposPrinter->bitImage($escposImage);
+
+            // Clean up
+            unlink($tempFilePath);
+
+        } catch (\Exception $e) {
+            \Log::error("Error printing kitchen image to printer {$printerId}: " . $e->getMessage());
+            throw $e;
+        } finally {
+            if (isset($escposPrinter)) {
+                $escposPrinter->close();
+            }
+        }
+    }
+
+    /**
      * Print kitchen order
      */
     public function printKitchenOrder(Order $order, array $printData): void
     {
-        $printer = Printer::findOrFail($printData['printer_id']);
+        $printerModel = \App\Models\Printer::findOrFail($printData['printer_id']);
 
         // Filter items to print
         $itemsToPrint = $printData['items'] ?? [];
 
-        \Log::info("Printing kitchen order for order {$order->id} to printer {$printer->name}", [
+        \Log::info("Printing kitchen order for order {$order->id} to printer {$printerModel->name}", [
             'items' => $itemsToPrint
         ]);
 

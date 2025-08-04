@@ -2,6 +2,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  email_verified_at?: string;
   role: string;
 }
 
@@ -19,7 +20,6 @@ export interface Product {
   cost: number;
   type: string;
   unit: string;
-  printer_id?: number;
   legacy: boolean;
 }
 
@@ -93,6 +93,15 @@ export interface OrderItemData {
   initial_quantity?: number;
 }
 
+export interface KitchenItemForPrint {
+  product_id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+  initial_quantity?: number;
+}
+
 export type OrderItemAction =
   | { type: 'add'; orderItem: OrderItemData; user: User }
   | { type: 'remove'; id: number; user: User }
@@ -103,7 +112,7 @@ export type OrderItemAction =
   | { type: 'delete'; id: number; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
-export interface PageProps {
+export type PageProps<T = {}> = T & {
   auth: {
     user: User;
   };
@@ -111,10 +120,26 @@ export interface PageProps {
     success?: string;
     error?: string;
   };
-}
+};
 
 export interface ManageOrderProps extends PageProps {
   order: Order;
   categories: Category[];
   receiptFooter?: string;
+}
+
+export interface ExpenseType {
+  id: number;
+  name: string;
+}
+
+export interface Expense {
+  id: number;
+  shift_id: number;
+  expence_type_id: number;
+  amount: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  expence_type?: ExpenseType;
 }

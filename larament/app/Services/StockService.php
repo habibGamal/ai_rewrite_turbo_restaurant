@@ -15,6 +15,12 @@ use Carbon\Carbon;
 
 class StockService
 {
+    /**
+     * Setting to allow or disallow operations with insufficient stock
+     * Set to false to prevent stock movements that would result in negative inventory
+     */
+    public const ALLOW_INSUFFICIENT_STOCK = false;
+
     private InventoryDailyAggregationService $dailyAggregationService;
 
     public function __construct(InventoryDailyAggregationService $dailyAggregationService)
@@ -132,6 +138,11 @@ class StockService
      */
     private function validateStockAvailabilityOrThrow(array $items): void
     {
+        // Skip validation if insufficient stock operations are allowed
+        if (self::ALLOW_INSUFFICIENT_STOCK) {
+            return;
+        }
+
         $insufficientItems = $this->validateStockAvailability($items);
 
         if (!empty($insufficientItems)) {
@@ -290,7 +301,7 @@ class StockService
         } catch (\Exception $e) {
             // Log error but don't fail the transaction as daily aggregation is not critical
             Log::error("Failed to update daily aggregations: " . $e->getMessage(), [
-                'product_ids' => array_unique(array_map(fn($movement) => $movement->productId, $stockMovements))
+                'product_ids' => array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements))
             ]);
         }
     }

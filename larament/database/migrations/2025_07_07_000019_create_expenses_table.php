@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('expence_type_id')->constrained()->onDelete('cascade');
+            $table->foreignId('shift_id')->constrained()->onDelete('cascade');
             $table->decimal('amount', 10, 2);
             $table->text('notes')->nullable();
             $table->timestamps();

@@ -12,7 +12,10 @@ class StocktakingItem extends Model
     protected $fillable = [
         'stocktaking_id',
         'product_id',
-        'quantity',
+        'stock_quantity',
+        'real_quantity',
+        'price',
+        'total',
     ];
 
     public function stocktaking()

@@ -20,7 +20,6 @@ class Product extends Model
         'cost',
         'type',
         'unit',
-        'printer_id',
         'legacy',
     ];
 
@@ -39,9 +38,9 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function printer(): BelongsTo
+    public function printers(): BelongsToMany
     {
-        return $this->belongsTo(Printer::class);
+        return $this->belongsToMany(Printer::class);
     }
 
     public function inventoryItem(): HasOne
@@ -77,6 +76,11 @@ class Product extends Model
     public function componentOf(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'component_id', 'product_id')->withPivot('quantity');
+    }
+
+    public function productComponents(): HasMany
+    {
+        return $this->hasMany(ProductComponent::class);
     }
 
     public function inventoryMovements(): HasMany

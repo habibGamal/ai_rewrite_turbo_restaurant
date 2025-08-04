@@ -2,13 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\Forms\ProductComponentsImporterAction;
 use App\Filament\Resources\ManufacturedProductResource\Pages;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Printer;
 use App\Enums\ProductType;
+use Awcodes\TableRepeater\Components\TableRepeater;
+use Awcodes\TableRepeater\Header;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Actions;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -43,42 +50,136 @@ class ManufacturedProductResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label('اسم المنتج')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Select::make('category_id')
-                    ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id'))
-                    ->required()
-                    ->searchable(),
-                Forms\Components\TextInput::make('price')
-                    ->label('السعر')
-                    ->required()
-                    ->numeric()
-                    ->prefix('ج.م'),
-                Forms\Components\TextInput::make('cost')
-                    ->label('التكلفة')
-                    ->required()
-                    ->numeric()
-                    ->prefix('ج.م'),
-                Forms\Components\Select::make('unit')
-                    ->label('الوحدة')
-                    ->options([
-                        'packet' => 'حزمة',
-                        'kg' => 'كيلوجرام',
+                Section::make('معلومات المنتج')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('اسم المنتج')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Select::make('category_id')
+                            ->label('الفئة')
+                            ->options(Category::all()->pluck('name', 'id'))
+                            ->required()
+                            ->searchable(),
+                        Forms\Components\TextInput::make('price')
+                            ->label('السعر')
+                            ->required()
+                            ->numeric()
+                            ->prefix('ج.م'),
+                        Forms\Components\TextInput::make('cost')
+                            ->label('التكلفة')
+                            ->required()
+                            ->numeric()
+                            ->prefix('ج.م'),
+                        Forms\Components\Select::make('unit')
+                            ->label('الوحدة')
+                            ->options([
+                                'packet' => 'حزمة',
+                                'kg' => 'كيلوجرام',
+                            ])
+                            ->required(),
+                        Forms\Components\Select::make('printers')
+                            ->label('الطابعات')
+                            ->relationship('printers', 'name')
+                            ->multiple()
+                            ->searchable()
+                            ->preload(),
+                        Forms\Components\Hidden::make('type')
+                            ->default('manufactured'),
+                        Forms\Components\Toggle::make('legacy')
+                            ->label('منتج قديم')
+                            ->default(false),
                     ])
-                    ->required(),
-                Forms\Components\Select::make('printer_id')
-                    ->label('الطابعة')
-                    ->options(Printer::all()->pluck('name', 'id'))
-                    ->required()
-                    ->searchable(),
-                Forms\Components\Hidden::make('type')
-                    ->default('manufactured'),
-                Forms\Components\Toggle::make('legacy')
-                    ->label('منتج قديم')
-                    ->default(false),
+                    ->columns(3),
+
+                Section::make('مكونات المنتج (الوصفة)')
+                    ->extraAttributes([
+                        'x-init' => <<<JS
+                                const updateTotal = () => {
+                                    let items = \$wire.data.productComponents;
+                                    if (!Array.isArray(items)) {
+                                        items = Object.values(items);
+                                    }
+                                    \$wire.data.cost = items.reduce((total, item) => total + (item.quantity * item.cost || 0), 0);
+                                    items.forEach(item => {
+                                        item.total = item.quantity * item.cost || 0;
+                                    });
+                                };
+                                \$watch('\$wire.data', value => {
+                                    updateTotal();
+                                })
+                                updateTotal();
+                            JS
+                    ])
+                    ->schema([
+                        Actions::make([
+                            ProductComponentsImporterAction::make('importComponents')
+                        ])
+                            ->alignStart(),
+
+                        TableRepeater::make('productComponents')
+                            ->label('المكونات')
+                            ->relationship('productComponents', fn($query) => $query->with('component.category'))
+                            ->headers([
+                                Header::make('component_id')->label('المكون')->width('300px'),
+                                Header::make('quantity')->label('الكمية')->width('120px'),
+                                Header::make('cost')->label('التكلفة')->width('120px'),
+                                Header::make('unit')->label('الوحدة')->width('120px'),
+                                Header::make('total')->label('الإجمالي')->width('120px'),
+                                Header::make('category_name')->label('الفئة')->width('200px'),
+
+                            ])
+                            ->schema([
+                                Forms\Components\Hidden::make('component_id'),
+                                Forms\Components\TextInput::make('component_name')
+                                    ->label('اسم المكون')
+                                    ->formatStateUsing(
+                                        fn($record, $state) => $state ?? $record->component->name
+                                    )
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                Forms\Components\TextInput::make('quantity')
+                                    ->label('الكمية')
+                                    ->numeric()
+                                    ->required()
+                                    ->default(1)
+                                    ->minValue(0),
+
+                                Forms\Components\TextInput::make('cost')
+                                    ->label('التكلفة')
+                                    ->formatStateUsing(
+                                        fn($record, $state) => $state ?? $record->component->cost
+                                    )
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                Forms\Components\TextInput::make('unit')
+                                    ->label('الوحدة')
+                                    ->formatStateUsing(
+                                        fn($record, $state) => $state ?? $record->component->unit
+                                    )
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                Forms\Components\TextInput::make('total')
+                                    ->label('الإجمالي')
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                Forms\Components\TextInput::make('category_name')
+                                    ->label('التكلفة')
+                                    ->formatStateUsing(
+                                        fn($record, $state) => $state ?? $record->component->category->name
+                                    )
+                                    ->disabled()
+                                    ->dehydrated(false),
+                            ])
+                            // ->columns(3)
+                            ->defaultItems(0)
+                            ->reorderableWithButtons()
+                            ->collapsible(),
+                    ]),
             ]);
     }
 
@@ -104,13 +205,15 @@ class ManufacturedProductResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit')
                     ->label('الوحدة')
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
                         'packet' => 'حزمة',
                         'kg' => 'كيلوجرام',
                         default => $state,
                     }),
-                Tables\Columns\TextColumn::make('printer.name')
-                    ->label('الطابعة')
+                Tables\Columns\TextColumn::make('printers.name')
+                    ->label('الطابعات')
+                    ->badge()
+                    ->separator(',')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('legacy')
                     ->label('منتج قديم')
@@ -125,9 +228,10 @@ class ManufacturedProductResource extends Resource
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('الفئة')
                     ->options(Category::all()->pluck('name', 'id')),
-                Tables\Filters\SelectFilter::make('printer_id')
+                Tables\Filters\SelectFilter::make('printers')
                     ->label('الطابعة')
-                    ->options(Printer::all()->pluck('name', 'id')),
+                    ->relationship('printers', 'name')
+                    ->multiple(),
                 Tables\Filters\TernaryFilter::make('legacy')
                     ->label('منتج قديم'),
             ])

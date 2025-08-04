@@ -45,7 +45,7 @@ export const calculateOrderTotals = (
 
 export const formatCurrency = (amount: number): string => {
     try {
-        return `${amount.toFixed(1)} ج.م`;
+        return `${Number(amount).toFixed(1)} ج.م`;
     } catch (error) {
         console.error('Error formatting currency:', error);
         return '0.0 ج.م';

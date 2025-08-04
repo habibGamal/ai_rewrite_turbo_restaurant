@@ -16,6 +16,14 @@ class ProductImporterAction extends Action
 {
     protected $products;
 
+    protected $additional;
+
+    public function additionalProps(callable $additional): static
+    {
+        $this->additional = $additional;
+
+        return $this;
+    }
 
 
     public static function getDefaultName(): ?string
@@ -34,7 +42,10 @@ class ProductImporterAction extends Action
                 Select::make('selected_collection')
                     ->label('المنتجات المختارة')
                     ->options(function () {
-                        return Product::all()->pluck('name', 'id');
+                        return Product::whereIn('type', [
+                            \App\Enums\ProductType::RawMaterial,
+                            \App\Enums\ProductType::Consumable,
+                        ])->get()->pluck('name', 'id');
                     })
                     ->multiple(),
                 Select::make('category_filter')
@@ -49,7 +60,10 @@ class ProductImporterAction extends Action
                 CheckboxList::make('selected_products')
                     ->label('اختر المنتجات للاستيراد')
                     ->options(function (Get $get) {
-                        $query = Product::query()->with('category');
+                        $query = Product::query()->whereIn('type', [
+                            \App\Enums\ProductType::RawMaterial,
+                            \App\Enums\ProductType::Consumable,
+                        ])->with('category');
 
                         // Filter by category if selected
                         if ($categoryId = $get('category_filter')) {
@@ -113,13 +127,13 @@ class ProductImporterAction extends Action
                         $price = $product->cost ?? $product->price;
                         $quantity = 1;
                         $total = $quantity * $price;
-
                         $currentItems[] = [
                             'product_id' => $product->id,
                             'product_name' => $product->name,
                             'quantity' => $quantity,
                             'price' => $price,
                             'total' => $total,
+                            ...($this->additional ? ($this->additional)($product) : [])
                         ];
                         $addedCount++;
                     }

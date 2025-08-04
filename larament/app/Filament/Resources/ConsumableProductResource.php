@@ -69,11 +69,12 @@ class ConsumableProductResource extends Resource
                         'kg' => 'كيلوجرام',
                     ])
                     ->required(),
-                Forms\Components\Select::make('printer_id')
-                    ->label('الطابعة')
-                    ->options(Printer::all()->pluck('name', 'id'))
-                    ->required()
-                    ->searchable(),
+                Forms\Components\Select::make('printers')
+                    ->label('الطابعات')
+                    ->relationship('printers', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
                 Forms\Components\Hidden::make('type')
                     ->default('consumable'),
                 Forms\Components\Toggle::make('legacy')
@@ -109,8 +110,10 @@ class ConsumableProductResource extends Resource
                         'kg' => 'كيلوجرام',
                         default => $state,
                     }),
-                Tables\Columns\TextColumn::make('printer.name')
-                    ->label('الطابعة')
+                Tables\Columns\TextColumn::make('printers.name')
+                    ->label('الطابعات')
+                    ->badge()
+                    ->separator(',')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('inventoryItem.quantity')
                     ->label('المخزون')
@@ -129,9 +132,10 @@ class ConsumableProductResource extends Resource
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('الفئة')
                     ->options(Category::all()->pluck('name', 'id')),
-                Tables\Filters\SelectFilter::make('printer_id')
+                Tables\Filters\SelectFilter::make('printers')
                     ->label('الطابعة')
-                    ->options(Printer::all()->pluck('name', 'id')),
+                    ->relationship('printers', 'name')
+                    ->multiple(),
                 Tables\Filters\TernaryFilter::make('legacy')
                     ->label('منتج قديم'),
             ])

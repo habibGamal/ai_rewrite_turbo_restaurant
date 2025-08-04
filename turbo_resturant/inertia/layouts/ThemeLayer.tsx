@@ -128,9 +128,6 @@ function Config(props: { children: JSX.Element }) {
 
   return (
     <div className="relative">
-      <div className="absolute -top-full z-[-1] opacity-0 ">
-        <div id="print_container"></div>
-      </div>
       {loading && (
         <div className="fixed w-full h-screen z-[2000] bg-[#0707074c] dark:bg-[#83838340] grid place-items-center">
           <div className="grid place-items-center gap-8">
