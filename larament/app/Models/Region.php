@@ -13,4 +13,15 @@ class Region extends Model
         'name',
         'delivery_cost',
     ];
+
+    protected $appends = ['deliveryCost'];
+
+    protected $casts = [
+        'delivery_cost' => 'decimal:2',
+    ];
+
+    public function getDeliveryCostAttribute()
+    {
+        return $this->attributes['delivery_cost'] ?? 0;
+    }
 }

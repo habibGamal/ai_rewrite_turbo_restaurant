@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Printer;
+use App\Models\InventoryItem;
 use App\Enums\ProductType;
 
 class ProductSeeder extends Seeder
@@ -24,8 +25,8 @@ class ProductSeeder extends Seeder
                 'cost' => 5.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'كوب',
-                'printer_id' => $printerIds[1] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 100, // Initial stock quantity
             ],
             [
                 'category_id' => $categoryIds[0] ?? 1,
@@ -34,8 +35,8 @@ class ProductSeeder extends Seeder
                 'cost' => 8.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'فنجان',
-                'printer_id' => $printerIds[1] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 100,
             ],
             [
                 'category_id' => $categoryIds[0] ?? 1,
@@ -44,8 +45,8 @@ class ProductSeeder extends Seeder
                 'cost' => 12.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'كوب',
-                'printer_id' => $printerIds[1] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 50,
             ],
 
             // الطعام الرئيسي
@@ -56,8 +57,8 @@ class ProductSeeder extends Seeder
                 'cost' => 80.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'وجبة',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 30,
             ],
             [
                 'category_id' => $categoryIds[1] ?? 1,
@@ -66,8 +67,8 @@ class ProductSeeder extends Seeder
                 'cost' => 100.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'وجبة',
-                'printer_id' => $printerIds[2] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 25,
             ],
             [
                 'category_id' => $categoryIds[1] ?? 1,
@@ -76,8 +77,8 @@ class ProductSeeder extends Seeder
                 'cost' => 120.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'وجبة',
-                'printer_id' => $printerIds[2] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 20,
             ],
 
             // المقبلات
@@ -88,8 +89,8 @@ class ProductSeeder extends Seeder
                 'cost' => 15.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'طبق',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 50,
             ],
             [
                 'category_id' => $categoryIds[2] ?? 1,
@@ -98,8 +99,8 @@ class ProductSeeder extends Seeder
                 'cost' => 18.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'طبق',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 50,
             ],
 
             // الحلويات
@@ -110,8 +111,8 @@ class ProductSeeder extends Seeder
                 'cost' => 20.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'قطعة',
-                'printer_id' => $printerIds[3] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 40,
             ],
             [
                 'category_id' => $categoryIds[3] ?? 1,
@@ -120,8 +121,8 @@ class ProductSeeder extends Seeder
                 'cost' => 35.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'قطعة',
-                'printer_id' => $printerIds[3] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 30,
             ],
 
             // السلطات
@@ -132,8 +133,8 @@ class ProductSeeder extends Seeder
                 'cost' => 12.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'طبق',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 60,
             ],
             [
                 'category_id' => $categoryIds[4] ?? 1,
@@ -142,8 +143,8 @@ class ProductSeeder extends Seeder
                 'cost' => 15.00,
                 'type' => ProductType::Manufactured,
                 'unit' => 'طبق',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 60,
             ],
 
             // Raw Materials
@@ -154,8 +155,8 @@ class ProductSeeder extends Seeder
                 'cost' => 25.00,
                 'type' => ProductType::RawMaterial,
                 'unit' => 'كيلو',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 500,
             ],
             [
                 'category_id' => $categoryIds[0] ?? 1,
@@ -164,8 +165,8 @@ class ProductSeeder extends Seeder
                 'cost' => 12.00,
                 'type' => ProductType::RawMaterial,
                 'unit' => 'كيلو',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 200,
             ],
             [
                 'category_id' => $categoryIds[0] ?? 1,
@@ -174,8 +175,8 @@ class ProductSeeder extends Seeder
                 'cost' => 35.00,
                 'type' => ProductType::RawMaterial,
                 'unit' => 'لتر',
-                'printer_id' => $printerIds[0] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 100,
             ],
 
             // Consumables
@@ -186,8 +187,8 @@ class ProductSeeder extends Seeder
                 'cost' => 1.50,
                 'type' => ProductType::Consumable,
                 'unit' => 'قطعة',
-                'printer_id' => $printerIds[4] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 1000,
             ],
             [
                 'category_id' => $categoryIds[0] ?? 1,
@@ -196,13 +197,29 @@ class ProductSeeder extends Seeder
                 'cost' => 1.00,
                 'type' => ProductType::Consumable,
                 'unit' => 'قطعة',
-                'printer_id' => $printerIds[4] ?? 1,
                 'legacy' => false,
+                'initial_stock' => 1000,
             ],
         ];
 
-        foreach ($products as $product) {
-            Product::create($product);
+        foreach ($products as $index => $productData) {
+            // Extract initial_stock before creating the product
+            $initialStock = $productData['initial_stock'] ?? 0;
+            unset($productData['initial_stock']);
+
+            // Add product_ref to the data
+            $productData['product_ref'] = 'P' . str_pad($index + 1, 6, '0', STR_PAD_LEFT);
+
+            // Create the product (observer will create inventory item with quantity 0)
+            $product = Product::create($productData);
+
+            // Update the inventory item with the initial stock quantity
+            if ($initialStock > 0) {
+                $inventoryItem = InventoryItem::where('product_id', $product->id)->first();
+                if ($inventoryItem) {
+                    $inventoryItem->update(['quantity' => $initialStock]);
+                }
+            }
         }
     }
 }

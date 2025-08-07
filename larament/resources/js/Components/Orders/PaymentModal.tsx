@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
-import { Modal, Form, InputNumber, Radio, Button, Typography, Descriptions, message } from 'antd';
-import { router } from '@inertiajs/react';
-import { Order, OrderItemData } from '@/types';
-import { calculateOrderTotals, formatCurrency } from '@/utils/orderCalculations';
+import React, { useState } from "react";
+import {
+    Modal,
+    Form,
+    InputNumber,
+    Radio,
+    Button,
+    Typography,
+    Descriptions,
+    message,
+} from "antd";
+import { router } from "@inertiajs/react";
+import { Order, OrderItemData } from "@/types";
+import {
+    calculateOrderTotals,
+    formatCurrency,
+} from "@/utils/orderCalculations";
+import useLoading from "@/hooks/useLoading";
 
 interface PaymentModalProps {
     open: boolean;
     onCancel: () => void;
     order: Order;
     orderItems: OrderItemData[];
-    onSkipCustomerInfo: () => void;
 }
 
 export default function PaymentModal({
@@ -17,19 +29,36 @@ export default function PaymentModal({
     onCancel,
     order,
     orderItems,
-    onSkipCustomerInfo
 }: PaymentModalProps) {
     const [onePaymentForm] = Form.useForm();
     const [multiPaymentForm] = Form.useForm();
-    const [paymentMethod, setPaymentMethod] = useState<'one_payment' | 'multi_payment'>('one_payment');
+    const [paymentMethod, setPaymentMethod] = useState<
+        "one_payment" | "multi_payment"
+    >("one_payment");
     const [remaining, setRemaining] = useState<number>(0);
 
     const totals = calculateOrderTotals(order, orderItems);
 
+    const { loading, finish, start } = useLoading();
+
     const onFinish = (values: any) => {
+        // Validation: paid amount(s) must equal total
+        if (paymentMethod === "one_payment") {
+            if (Number(values.paid) < Math.ceil(totals.total)) {
+                message.error("يجب أن يكون المبلغ المدفوع مساويًا للإجمالي");
+                return;
+            }
+        } else {
+            const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
+            if (sum !== Math.ceil(totals.total)) {
+                message.error("يجب أن يكون مجموع المبالغ المدفوعة مساويًا للإجمالي");
+                return;
+            }
+        }
+        start();
         let finalValues = { ...values, print: false };
 
-        if (paymentMethod === 'one_payment') {
+        if (paymentMethod === "one_payment") {
             finalValues = {
                 cash: 0,
                 card: 0,
@@ -41,11 +70,14 @@ export default function PaymentModal({
 
         router.post(`/orders/complete-order/${order.id}`, finalValues, {
             onSuccess: () => {
-                message.success('تم إنهاء الطلب بنجاح');
+                message.success("تم إنهاء الطلب بنجاح");
                 onCancel();
             },
+            onFinish: () => {
+                finish();
+            },
             onError: () => {
-                message.error('حدث خطأ أثناء إنهاء الطلب');
+                message.error("حدث خطأ أثناء إنهاء الطلب");
             },
         });
     };
@@ -65,31 +97,32 @@ export default function PaymentModal({
 
     const paymentItems = [
         {
-            key: '1',
-            label: 'المجموع',
+            key: "1",
+            label: "المجموع",
             children: formatCurrency(totals.subTotal),
         },
         {
-            key: '2',
-            label: 'الضريبة',
+            key: "2",
+            label: "الضريبة",
             children: formatCurrency(totals.tax),
         },
         {
-            key: '3',
-            label: 'الخدمة',
+            key: "3",
+            label: "الخدمة",
             children: formatCurrency(totals.service),
         },
         {
-            key: '4',
-            label: 'الخصم',
+            key: "4",
+            label: "الخصم",
             children: formatCurrency(Number(totals.discount)),
         },
         {
-            key: '5',
-            label: 'الاجمالي',
+            key: "5",
+            label: "الاجمالي",
             children: formatCurrency(totals.total),
         },
     ];
+
 
     return (
         <Modal
@@ -109,15 +142,17 @@ export default function PaymentModal({
                         className="mb-4"
                     >
                         <Radio value="one_payment">الدفع بطريقة واحدة</Radio>
-                        <Radio value="multi_payment">الدفع باكثر من طريقة</Radio>
+                        <Radio value="multi_payment">
+                            الدفع باكثر من طريقة
+                        </Radio>
                     </Radio.Group>
 
-                    {paymentMethod === 'one_payment' && (
+                    {paymentMethod === "one_payment" && (
                         <Form
                             form={onePaymentForm}
                             onFinish={onFinish}
                             initialValues={{
-                                payment_method: 'cash',
+                                payment_method: "cash",
                                 paid: 0,
                             }}
                             layout="vertical"
@@ -125,12 +160,21 @@ export default function PaymentModal({
                             <Form.Item
                                 name="paid"
                                 label="المبلغ المدفوع"
-                                rules={[{ required: true, message: 'المبلغ المدفوع مطلوب' }]}
+                                rules={[
+                                    {
+                                        required: true,
+                                        message: "المبلغ المدفوع مطلوب",
+                                    },
+                                ]}
                             >
                                 <InputNumber
                                     className="w-full"
                                     min={0}
-                                    onChange={(value) => setRemaining(totals.total - (value || 0))}
+                                    onChange={(value) =>
+                                        setRemaining(
+                                            totals.total - (value || 0)
+                                        )
+                                    }
                                 />
                             </Form.Item>
                             <Form.Item>
@@ -143,18 +187,20 @@ export default function PaymentModal({
                                 <Radio.Group>
                                     <Radio value="cash">نقدي</Radio>
                                     <Radio value="card">فيزا</Radio>
-                                    <Radio value="talabat_card">فيزا طلبات</Radio>
+                                    <Radio value="talabat_card">
+                                        فيزا طلبات
+                                    </Radio>
                                 </Radio.Group>
                             </Form.Item>
                             <Form.Item>
-                                <Button htmlType="submit" type="primary">
+                                <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
                                     تم
                                 </Button>
                             </Form.Item>
                         </Form>
                     )}
 
-                    {paymentMethod === 'multi_payment' && (
+                    {paymentMethod === "multi_payment" && (
                         <Form
                             form={multiPaymentForm}
                             onFinish={onFinish}
@@ -171,11 +217,14 @@ export default function PaymentModal({
                             <Form.Item name="card" label="المبلغ المدفوع فيزا">
                                 <InputNumber className="w-full" min={0} />
                             </Form.Item>
-                            <Form.Item name="talabat_card" label="المبلغ المدفوع فيزا طلبات">
+                            <Form.Item
+                                name="talabat_card"
+                                label="المبلغ المدفوع فيزا طلبات"
+                            >
                                 <InputNumber className="w-full" min={0} />
                             </Form.Item>
                             <Form.Item>
-                                <Button htmlType="submit" type="primary">
+                                <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
                                     تم
                                 </Button>
                             </Form.Item>

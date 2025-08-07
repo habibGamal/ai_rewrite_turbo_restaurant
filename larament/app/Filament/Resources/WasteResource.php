@@ -30,9 +30,12 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use \App\Filament\Traits\AdminAccess;
 
 class WasteResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Waste::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-trash';

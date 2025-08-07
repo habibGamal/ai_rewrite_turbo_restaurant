@@ -2,7 +2,11 @@
 
 namespace App\Enums;
 
-enum UserRole: string
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasLabel;
+
+enum UserRole: string implements HasColor, HasIcon, HasLabel
 {
     case ADMIN = 'admin';
     case VIEWER = 'viewer';
@@ -14,6 +18,16 @@ enum UserRole: string
         return match ($this) {
             self::ADMIN => 'مدير',
             self::VIEWER => 'مشاهد',
+            self::CASHIER => 'كاشير',
+            self::WATCHER => 'مراقب',
+        };
+    }
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::ADMIN => 'مدير',
+            self::VIEWER => 'مستخدم',
             self::CASHIER => 'كاشير',
             self::WATCHER => 'مراقب',
         };
@@ -36,6 +50,26 @@ enum UserRole: string
 
     public function canAccessReports(): bool
     {
-        return in_array($this, [self::ADMIN, self::VIEWER, self::WATCHER]);
+        return in_array($this, haystack: [self::ADMIN, self::VIEWER, self::WATCHER]);
+    }
+
+    public function getColor(): string
+    {
+        return match ($this) {
+            self::ADMIN => 'text-red-500',
+            self::VIEWER => 'text-blue-500',
+            self::CASHIER => 'text-green-500',
+            self::WATCHER => 'text-yellow-500',
+        };
+    }
+
+    public function getIcon(): string
+    {
+        return match ($this) {
+            self::ADMIN => 'heroicon-s-shield-check',
+            self::VIEWER => 'heroicon-s-eye',
+            self::CASHIER => 'heroicon-s-cash',
+            self::WATCHER => 'heroicon-s-eye-off',
+        };
     }
 }

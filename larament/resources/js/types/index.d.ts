@@ -116,6 +116,7 @@ export interface PageProps {
     auth: {
         user: User;
     };
+    receiptFooter: string;
 }
 
 export interface OrdersPageProps extends PageProps {

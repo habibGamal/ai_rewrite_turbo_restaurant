@@ -20,9 +20,12 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use \App\Filament\Traits\AdminAccess;
 
 class ManufacturedProductResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Product::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';

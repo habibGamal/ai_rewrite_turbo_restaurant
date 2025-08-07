@@ -29,12 +29,21 @@ export interface Customer {
   phone: string;
   address?: string;
   delivery_cost?: number;
+  hasWhatsapp?: boolean;
+  region?: string;
+  deliveryCost?: number;
 }
 
 export interface Driver {
   id: number;
   name: string;
   phone: string;
+}
+
+export interface Region {
+  id: number;
+  name: string;
+  deliveryCost: number;
 }
 
 export interface OrderItem {
@@ -62,8 +71,8 @@ export interface Order {
   driver_id?: number;
   user_id: number;
   shift_id: number;
-  type: 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat';
-  status: 'processing' | 'completed' | 'cancelled';
+  type: 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat' | 'web_delivery' | 'web_takeaway';
+  status: 'pending' | 'processing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
   sub_total: number;
   tax: number;
   service: number;
@@ -125,7 +134,8 @@ export type PageProps<T = {}> = T & {
 export interface ManageOrderProps extends PageProps {
   order: Order;
   categories: Category[];
-  receiptFooter?: string;
+  drivers: Driver[];
+  regions: Region[];
 }
 
 export interface ExpenseType {

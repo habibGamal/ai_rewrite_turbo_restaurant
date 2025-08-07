@@ -9,9 +9,12 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Traits\AdminAccess;
 
 class SupplierResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Supplier::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';

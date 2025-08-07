@@ -12,6 +12,8 @@ use Filament\Tables\Table;
 
 class CategoryResource extends Resource
 {
+    use \App\Filament\Traits\AdminAccess;
+
     protected static ?string $model = Category::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-tag';

@@ -16,6 +16,7 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'name',
+        'product_ref',
         'price',
         'cost',
         'type',
@@ -27,9 +28,18 @@ class Product extends Model
         'type' => \App\Enums\ProductType::class,
     ];
 
+    protected $appends = [
+        'components_hash',
+    ];
+
     public function getRawTypeAttribute(): string
     {
         return $this->type?->value ?? '';
+    }
+
+    public function getComponentsHashAttribute(): string
+    {
+        return md5(json_encode($this->components->toArray()));
     }
 
 

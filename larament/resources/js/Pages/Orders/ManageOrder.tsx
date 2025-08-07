@@ -9,6 +9,7 @@ import {
     Descriptions,
     Divider,
     Empty,
+    message,
     Popconfirm,
     Row,
     Typography,
@@ -44,13 +45,15 @@ import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import IsAdmin from "@/Components/IsAdmin";
+import LoadingButton from "@/Components/LoadingButton";
 
 export default function ManageOrder({
     order,
     categories,
-    receiptFooter,
+    drivers,
+    regions,
 }: ManageOrderProps) {
-    const { auth } = usePage().props;
+    const { auth, receiptFooter } = usePage().props;
     const user = auth.user as User;
     const { modal } = App.useApp();
 
@@ -98,7 +101,10 @@ export default function ManageOrder({
     // Calculate totals
     const totals = calculateOrderTotals(order, orderItems);
 
-    const save = (callback: (page: any) => void = () => {}) => {
+    const save = (
+        callback: (page: any) => void = () => {},
+        finish: () => void
+    ) => {
         const itemsForApi = orderItems.map((item) => ({
             product_id: item.product_id,
             quantity: item.quantity,
@@ -110,7 +116,11 @@ export default function ManageOrder({
             `/orders/save-order/${order.id}`,
             { items: itemsForApi },
             {
-                onSuccess: (page) => callback(page),
+                onSuccess: (page) => {
+                    message.success("تم حفظ الطلب بنجاح");
+                    callback(page);
+                },
+                onFinish: () => finish(),
             }
         );
     };
@@ -119,7 +129,7 @@ export default function ManageOrder({
         router.post(`/orders/cancel-order/${order.id}`);
     };
 
-    const askForCustomerInfo = () => {
+    const askForCustomerInfo = (finish: () => void) => {
         modal.confirm({
             title: "هل تريد اضافة بيانات العميل؟",
             icon: <UserAddOutlined />,
@@ -127,41 +137,39 @@ export default function ManageOrder({
             okText: "نعم",
             cancelText: "لا",
             onOk: () => setIsCustomerModalOpen(true),
-            onCancel: () => skipCustomerInfo(),
+            onCancel: () => skipCustomerInfo(finish),
         });
     };
 
-    const tryCompleteOrder = () => {
-        if (!order.customer && !customerInfoSkip) {
-            return save(() => askForCustomerInfo());
-        }
-        payment();
+    const tryCompleteOrder = (finish: () => void) => {
+        // if (!order.customer && !customerInfoSkip) {
+        //     return save(() => askForCustomerInfo(finish), finish);
+        // }
+        payment(finish);
     };
 
-    const payment = () => {
-        save(() => setIsPaymentModalOpen(true));
+    const payment = (finish: () => void) => {
+        save(() => setIsPaymentModalOpen(true), finish);
     };
 
-    const skipCustomerInfo = () => {
+    const skipCustomerInfo = (finish: () => void) => {
         setCustomerInfoSkip(true);
         setIsCustomerModalOpen(false);
-        payment();
+        payment(finish);
     };
 
-    const printInKitchen = () => {
-        save(() => setIsPrintInKitchenModalOpen(true));
+    const printInKitchen = (finish: () => void) => {
+        save(() => setIsPrintInKitchenModalOpen(true), finish);
     };
 
-    const printReceipt = () => {
-        save(() =>
-            router.post(`/orders/print/${order.id}`)
-        );
-    };
-
-    const printWithCanvas = async () => {
+    const printWithCanvas = async (finish: () => void) => {
         save(async (page) => {
-             printOrder(page.props.order, orderItems, page.props.receiptFooter || '');
-        });
+            printOrder(
+                page.props.order,
+                orderItems,
+                receiptFooter as string || ""
+            );
+        }, finish);
     };
 
     // Keyboard shortcuts
@@ -169,11 +177,11 @@ export default function ManageOrder({
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "F8") {
                 e.preventDefault();
-                save();
+                // save();
             }
             if (e.key === "F9") {
                 e.preventDefault();
-                printWithCanvas();
+                // printWithCanvas();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -245,21 +253,21 @@ export default function ManageOrder({
                 <Row gutter={[16, 16]} className="mt-8">
                     <Col span={8}>
                         <div className="isolate grid grid-cols-2 gap-4">
-                            <Button
-                                onClick={printWithCanvas}
+                            <LoadingButton
+                                onCustomClick={printWithCanvas}
                                 size="large"
                                 icon={<PrinterOutlined />}
                             >
                                 طباعة الفاتورة
-                            </Button>
-                            <Button
+                            </LoadingButton>
+                            <LoadingButton
                                 disabled={orderCancelled}
-                                onClick={printInKitchen}
+                                onCustomClick={printInKitchen}
                                 size="large"
                                 icon={<PrinterOutlined />}
                             >
                                 طباعة في المطبخ
-                            </Button>
+                            </LoadingButton>
                             <Button
                                 onClick={() => setIsCustomerModalOpen(true)}
                                 disabled={orderCancelled}
@@ -298,11 +306,15 @@ export default function ManageOrder({
                                 تغيير الطلب الى
                             </Button>
                             <IsAdmin>
-                                <Button
+                                <LoadingButton
                                     disabled={disableAllControls}
-                                    onClick={() =>
-                                        save(() =>
-                                            setIsOrderDiscountModalOpen(true)
+                                    onCustomClick={(finish) =>
+                                        save(
+                                            () =>
+                                                setIsOrderDiscountModalOpen(
+                                                    true
+                                                ),
+                                            finish
                                         )
                                     }
                                     size="large"
@@ -310,26 +322,26 @@ export default function ManageOrder({
                                     className="col-span-2"
                                 >
                                     خصم
-                                </Button>
+                                </LoadingButton>
                             </IsAdmin>
-                            <Button
+                            <LoadingButton
                                 disabled={disableAllControls}
-                                onClick={() => save()}
+                                onCustomClick={(finish) => save(undefined,finish)}
                                 size="large"
                                 icon={<SaveOutlined />}
                                 type="primary"
                             >
                                 حفظ
-                            </Button>
-                            <Button
+                            </LoadingButton>
+                            <LoadingButton
                                 disabled={disableAllControls}
-                                onClick={tryCompleteOrder}
+                                onCustomClick={tryCompleteOrder}
                                 size="large"
                                 icon={<CheckCircleOutlined />}
                                 type="primary"
                             >
                                 انهاء الطلب
-                            </Button>
+                            </LoadingButton>
                             {orderCompleted && (
                                 <IsAdmin>
                                     <Popconfirm
@@ -417,7 +429,6 @@ export default function ManageOrder({
                     onCancel={() => setIsPaymentModalOpen(false)}
                     order={order}
                     orderItems={orderItems}
-                    onSkipCustomerInfo={skipCustomerInfo}
                 />
                 <PrintInKitchenModal
                     open={isPrintInKitchenModalOpen}

@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
+use App\Enums\SettingKey;
+use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +31,7 @@ class Order extends Model
         'temp_discount_percent',
         'total',
         'profit',
+        'web_pos_diff',
         'payment_status',
         'dine_table_number',
         'kitchen_notes',
@@ -55,7 +58,12 @@ class Order extends Model
 
     public function getServiceRateAttribute(): float
     {
-        return $this->type === OrderType::DINE_IN ? 0.12 : 0.0; // 12% service charge for dine-in
+        if ($this->type === OrderType::DINE_IN) {
+            $settingsService = app(SettingsService::class);
+            return (float) setting(SettingKey::DINE_IN_SERVICE_CHARGE);
+        }
+
+        return 0.0;
     }
 
     public function customer(): BelongsTo

@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Driver;
+use App\Models\Region;
 use App\Models\Payment;
 use App\Models\OrderItem;
 use App\Models\Expense;
@@ -122,10 +123,17 @@ class OrderController extends Controller
             }
         ])->orderBy('name')->get();
 
+        // Get all drivers for the dropdown
+        $drivers = Driver::orderBy('name')->get();
+
+        // Get all regions for the dropdown
+        $regions = Region::orderBy('name')->get();
+
         return Inertia::render('Orders/ManageOrder', [
             'order' => $order,
             'categories' => $categories,
-            'receiptFooter' => config('app.receipt_footer', ''),
+            'drivers' => $drivers,
+            'regions' => $regions,
         ]);
     }
 
@@ -150,8 +158,11 @@ class OrderController extends Controller
     public function completeOrder(CompleteOrderRequest $request, Order $order)
     {
         try {
-            $paymentsData = $request->validated();
+            $validatedData = $request->validated();
             $shouldPrint = $request->boolean('print');
+
+            // Remove print from payments data
+            $paymentsData = collect($validatedData)->except('print')->toArray();
 
             $this->orderService->completeOrder($order->id, $paymentsData, $shouldPrint);
 
@@ -243,16 +254,162 @@ class OrderController extends Controller
     }
 
     /**
+     * Quick create customer
+     */
+    public function quickCustomer(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'hasWhatsapp' => 'nullable|string|in:0,1',
+            'region' => 'nullable|string|max:255',
+            'deliveryCost' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $customer = Customer::create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'address' => $validated['address'] ?? null,
+                'has_whatsapp' => $validated['hasWhatsapp'] === '1',
+                'region' => $validated['region'] ?? null,
+                'delivery_cost' => $validated['deliveryCost'] ?? null,
+            ]);
+
+            return response()->json($customer);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء إنشاء العميل'], 500);
+        }
+    }
+
+    /**
+     * Quick create driver
+     */
+    public function quickDriver(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+        ]);
+
+        try {
+            $driver = Driver::create($validated);
+
+            return response()->json($driver);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء إنشاء السائق'], 500);
+        }
+    }
+
+    /**
+     * Fetch customer info by phone
+     */
+    public function fetchCustomerInfo(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20',
+        ]);
+
+        try {
+            $customer = Customer::where('phone', $validated['phone'])->first();
+
+            if (!$customer) {
+                return response()->json(['error' => 'لم يتم العثور على العميل'], 404);
+            }
+
+            return response()->json($customer);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء البحث عن العميل'], 500);
+        }
+    }
+
+    /**
+     * Fetch driver info by phone
+     */
+    public function fetchDriverInfo(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20',
+        ]);
+
+        try {
+            $driver = Driver::where('phone', $validated['phone'])->first();
+
+            if (!$driver) {
+                return response()->json(['error' => 'لم يتم العثور على السائق'], 404);
+            }
+
+            return response()->json($driver);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء البحث عن السائق'], 500);
+        }
+    }
+
+    /**
+     * Link customer to order
+     */
+    public function linkCustomer(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'customerId' => 'required|integer|exists:customers,id',
+        ]);
+
+        try {
+            $this->orderService->linkCustomer($order->id, $validated['customerId']);
+
+            // Return in Inertia page props format
+            $updatedOrder = $this->orderService->getOrderDetails($order->id);
+
+            return back()->with([
+                'success' => 'تم ربط العميل بالطلب بنجاح',
+                'order' => $updatedOrder
+            ]);
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'حدث خطأ أثناء ربط العميل']);
+        }
+    }
+
+    /**
+     * Link driver to order
+     */
+    public function linkDriver(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'driverId' => 'required|integer|exists:drivers,id',
+        ]);
+
+        try {
+            $this->orderService->linkDriver($order->id, $validated['driverId']);
+
+            // Return in Inertia page props format
+            $updatedOrder = $this->orderService->getOrderDetails($order->id);
+
+            return back()->with([
+                'success' => 'تم ربط السائق بالطلب بنجاح',
+                'order' => $updatedOrder
+            ]);
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'حدث خطأ أثناء ربط السائق']);
+        }
+    }
+
+    /**
      * Update order type
      */
     public function updateOrderType(Request $request, Order $order)
     {
         $validated = $request->validate([
             'type' => 'required|in:dine_in,takeaway,delivery,companies,talabat',
+            'table_number' => 'nullable|string|max:50',
         ]);
 
         try {
-            $this->orderService->changeOrderType($order->id, $validated['type']);
+            $this->orderService->changeOrderType(
+                $order->id,
+                $validated['type'],
+                $validated['table_number'] ?? null
+            );
 
             return back()->with('success', 'تم تغيير نوع الطلب بنجاح');
         } catch (\Exception $e) {
@@ -371,25 +528,19 @@ class OrderController extends Controller
     }
 
     /**
-     * Print kitchen order
+     * Open the cashier drawer
      */
-    public function printKitchen(Request $request, Order $order)
+    public function openCashierDrawer()
     {
-        $validated = $request->validate([
-            'printer_id' => 'required|exists:printers,id',
-            'items' => 'array',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-        ]);
-
         try {
-            $this->printService->printKitchenOrder($order, $validated);
+            $this->printService->openCashierDrawer();
 
-            return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
+            return back()->with('success', 'تم فتح درج الكاشير بنجاح');
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ']);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء فتح درج الكاشير: ' . $e->getMessage()]);
         }
     }
+
 
     /**
      * Create a new order

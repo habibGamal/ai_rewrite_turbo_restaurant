@@ -20,8 +20,18 @@ class ProductFactory extends Factory
             'cost' => $this->faker->randomFloat(2, 1, 50),
             'type' => 'manufactured',
             'unit' => 'piece',
-            'printer_id' => Printer::factory(),
             'legacy' => $this->faker->boolean,
         ];
+    }
+
+    /**
+     * Attach a printer to the product after creation.
+     */
+    public function withPrinter(): static
+    {
+        return $this->afterCreating(function (Product $product) {
+            $printer = Printer::factory()->create();
+            $product->printers()->attach($printer->id);
+        });
     }
 }

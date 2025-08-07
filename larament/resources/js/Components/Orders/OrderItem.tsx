@@ -17,11 +17,15 @@ interface OrderItemProps {
     dispatch: React.Dispatch<OrderItemAction>;
     disabled?: boolean;
     user: User;
+    forWeb?: boolean; // New prop for web orders
 }
 
-export default function OrderItem({ orderItem, dispatch, disabled, user }: OrderItemProps) {
+export default function OrderItem({ orderItem, dispatch, disabled, user, forWeb }: OrderItemProps) {
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
     const [notes, setNotes] = useState(orderItem.notes || '');
+
+    // For web orders, disable quantity changes but allow notes editing
+    const quantityDisabled = disabled || forWeb;
 
     const onChangeQuantity = (quantity: number | null) => {
         if (quantity !== null) {
@@ -58,21 +62,21 @@ export default function OrderItem({ orderItem, dispatch, disabled, user }: Order
                     <Typography.Paragraph className="!my-0">{orderItem.name}</Typography.Paragraph>
                     <div className="flex gap-2">
                         <Button
-                            disabled={disabled}
+                            disabled={quantityDisabled}
                             onClick={onDecrement}
                             className="icon-button"
                             icon={<MinusCircleOutlined />}
                             size="small"
                         />
                         <InputNumber
-                            disabled={disabled}
+                            disabled={quantityDisabled}
                             min={1}
                             value={orderItem.quantity}
                             onChange={onChangeQuantity}
                             style={{ width: 80 }}
                         />
                         <Button
-                            disabled={disabled}
+                            disabled={quantityDisabled}
                             onClick={onIncrement}
                             className="icon-button"
                             icon={<PlusCircleOutlined />}
@@ -89,7 +93,7 @@ export default function OrderItem({ orderItem, dispatch, disabled, user }: Order
                     </Typography.Text>
                     <div className="flex gap-4">
                         <Button
-                            disabled={disabled}
+                            disabled={quantityDisabled}
                             onClick={onDelete}
                             danger
                             type="primary"
@@ -98,7 +102,7 @@ export default function OrderItem({ orderItem, dispatch, disabled, user }: Order
                             size="small"
                         />
                         <Button
-                            disabled={disabled}
+                            disabled={disabled} // Notes editing should follow the general disabled state
                             onClick={onOpenNotesModal}
                             type="primary"
                             className="icon-button"

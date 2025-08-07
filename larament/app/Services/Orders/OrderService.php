@@ -159,16 +159,16 @@ class OrderService
         return DB::transaction(function () use ($orderId, $paymentsData, $shouldPrint) {
             $order = $this->orderRepository->findByIdOrFail($orderId);
 
-            if ($order->status !== OrderStatus::PROCESSING) {
+            if (!in_array($order->status, [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY])) {
                 throw new OrderException('الطلب غير متاح للإكمال');
             }
 
             // Validate stock availability before completing the order
-            $insufficientItems = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            if (!empty($insufficientItems) && !self::ALLOW_INSUFFICIENT_STOCK) {
-                $itemNames = array_column($insufficientItems, 'product_name');
-                throw new OrderException('مخزون غير كافي للمنتجات: ' . implode(', ', $itemNames));
-            }
+            // $insufficientItems = $this->orderStockConversionService->validateOrderStockAvailability($order);
+            // if (!empty($insufficientItems) && !self::ALLOW_INSUFFICIENT_STOCK) {
+            //     $itemNames = array_column($insufficientItems, 'product_name');
+            //     throw new OrderException('مخزون غير كافي للمنتجات: ' . implode(', ', $itemNames));
+            // }
 
             // Complete the order
             $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
@@ -209,6 +209,9 @@ class OrderService
                 'status' => OrderStatus::CANCELLED,
                 'profit' => 0,
             ]);
+
+            // Delete any payments
+            $order->payments()->delete();
 
             $order->refresh();
 
@@ -268,7 +271,7 @@ class OrderService
             // Update order
             $this->orderRepository->update($order, [
                 'type' => $newOrderType,
-                'table_number' => $newOrderType->requiresTable() ? $tableNumber : null,
+                'dine_table_number' => $newOrderType->requiresTable() ? $tableNumber : null,
             ]);
 
             $order->refresh();

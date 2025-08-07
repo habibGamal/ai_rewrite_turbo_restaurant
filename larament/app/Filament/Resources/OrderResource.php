@@ -13,9 +13,12 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use \App\Filament\Traits\AdminAccess;
 
 class OrderResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Order::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';

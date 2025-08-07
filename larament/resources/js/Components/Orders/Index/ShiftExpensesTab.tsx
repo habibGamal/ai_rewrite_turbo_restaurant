@@ -1,5 +1,5 @@
-import React from 'react';
-import { router, usePage } from '@inertiajs/react';
+import React from "react";
+import { router, usePage } from "@inertiajs/react";
 import {
     Button,
     Form,
@@ -11,23 +11,31 @@ import {
     Select,
     Table,
     TableColumnsType,
-    Typography
-} from 'antd';
-import useModal from '../../../hooks/useModal';
-import { Expense, ExpenseType } from '../../../types';
-import { formatCurrency } from '@/utils/orderCalculations';
+    Typography,
+} from "antd";
+import useModal from "../../../hooks/useModal";
+import { Expense, ExpenseType } from "../../../types";
+import { formatCurrency } from "@/utils/orderCalculations";
+import useLoading from "@/hooks/useLoading";
 
 const ExpenseForm = ({
     initialValues,
     onFinish,
 }: {
     initialValues?: Expense;
-    onFinish: (form: FormInstance<any>, values: any) => void;
+    onFinish: (
+        form: FormInstance<any>,
+        values: any,
+        finish: () => void
+    ) => void;
 }) => {
     const [form] = Form.useForm();
     const expenseTypes = usePage().props.expenseTypes as ExpenseType[];
-    const options = expenseTypes.map((type) => ({ label: type.name, value: type.id }));
-
+    const options = expenseTypes.map((type) => ({
+        label: type.name,
+        value: type.id,
+    }));
+    const { loading, finish, start } = useLoading();
     if (initialValues) {
         form.setFieldsValue({
             amount: initialValues.amount,
@@ -39,12 +47,15 @@ const ExpenseForm = ({
     return (
         <Form
             form={form}
-            onFinish={(values) => onFinish(form, values)}
-            className={`${initialValues ? '' : 'isolate min-w-[500px]'}`}
+            onFinish={(values) => {
+                start();
+                onFinish(form, values, finish);
+            }}
+            className={`${initialValues ? "" : "isolate min-w-[500px]"}`}
             layout="vertical"
         >
             <Typography.Title className="my-0 text-center" level={4}>
-                {initialValues ? 'تعديل مصروف' : 'اضافة مصاريف'}
+                {initialValues ? "تعديل مصروف" : "اضافة مصاريف"}
             </Typography.Title>
             <Form.Item
                 name="amount"
@@ -52,7 +63,7 @@ const ExpenseForm = ({
                 rules={[
                     {
                         required: true,
-                        message: 'المبلغ مطلوب',
+                        message: "المبلغ مطلوب",
                     },
                 ]}
             >
@@ -64,7 +75,7 @@ const ExpenseForm = ({
                 rules={[
                     {
                         required: true,
-                        message: 'نوع المصروف مطلوب',
+                        message: "نوع المصروف مطلوب",
                     },
                 ]}
             >
@@ -76,15 +87,15 @@ const ExpenseForm = ({
                 rules={[
                     {
                         required: true,
-                        message: 'الوصف مطلوب',
+                        message: "الوصف مطلوب",
                     },
                 ]}
             >
                 <Input.TextArea />
             </Form.Item>
             <Form.Item>
-                <Button htmlType="submit" type="primary">
-                    {initialValues ? 'تعديل' : 'اضافة'}
+                <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
+                    {initialValues ? "تعديل" : "اضافة"}
                 </Button>
             </Form.Item>
         </Form>
@@ -94,30 +105,30 @@ const ExpenseForm = ({
 export const ShiftExpensesTab: React.FC = () => {
     const columns: TableColumnsType<Expense> = [
         {
-            title: 'المبلغ',
-            dataIndex: 'amount',
-            key: 'amount',
+            title: "المبلغ",
+            dataIndex: "amount",
+            key: "amount",
             render: (amount: number) => formatCurrency(amount),
         },
         {
-            title: 'الوصف',
-            dataIndex: 'notes',
-            key: 'notes',
+            title: "الوصف",
+            dataIndex: "notes",
+            key: "notes",
         },
         {
-            title: 'نوع المصروف',
-            dataIndex: ['expence_type', 'name'],
-            key: 'expence_type_id',
+            title: "نوع المصروف",
+            dataIndex: ["expence_type", "name"],
+            key: "expence_type_id",
         },
         {
-            title: 'التاريخ',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            render: (date: string) => new Date(date).toLocaleString('ar-EG'),
+            title: "التاريخ",
+            dataIndex: "created_at",
+            key: "created_at",
+            render: (date: string) => new Date(date).toLocaleString("ar-EG"),
         },
         {
-            title: 'التحكم',
-            key: 'control',
+            title: "التحكم",
+            key: "control",
             render: (_, record) => {
                 return (
                     <div className="flex gap-4">
@@ -134,7 +145,9 @@ export const ShiftExpensesTab: React.FC = () => {
                         </Button>
                         <Popconfirm
                             title="هل انت متأكد من حذف هذا المصروف؟"
-                            onConfirm={() => router.delete(`/expenses/${record.id}`)}
+                            onConfirm={() =>
+                                router.delete(`/expenses/${record.id}`)
+                            }
                             okText="نعم"
                             cancelText="لا"
                         >
@@ -151,25 +164,40 @@ export const ShiftExpensesTab: React.FC = () => {
     const modal = useModal();
     const expenses = usePage().props.expenses as Expense[];
 
-    const onAdd = (form: FormInstance<any>, values: any) => {
-        router.post('/expenses', values, {
+    const onAdd = (
+        form: FormInstance<any>,
+        values: any,
+        finish: () => void
+    ) => {
+        router.post("/expenses", values, {
             onSuccess: () => {
                 form.resetFields();
+            },
+            onFinish: () => {
+                finish();
             },
         });
     };
 
-    const onEdit = (form: FormInstance<any>, values: any) => {
+    const onEdit = (
+        form: FormInstance<any>,
+        values: any,
+        finish: () => void
+    ) => {
         router.put(`/expenses/${initialValues?.id}`, values, {
             onSuccess: () => {
                 modal.closeModal();
                 form.resetFields();
             },
+            onFinish: () => {
+                finish();
+            },
         });
     };
 
-    const [initialValues, setInitialValues] = React.useState<Expense | undefined>();
-    console.log(expenses)
+    const [initialValues, setInitialValues] = React.useState<
+        Expense | undefined
+    >();
 
     return (
         <div className="grid items-start grid-cols-3 gap-8 w-full min-h-[50vh]">
@@ -185,8 +213,15 @@ export const ShiftExpensesTab: React.FC = () => {
                 rowKey="id"
                 footer={() => {
                     // sum of expenses
-                    const sum = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-                    return <Typography.Text>المجموع : {formatCurrency(sum)}</Typography.Text>;
+                    const sum = expenses.reduce(
+                        (acc, curr) => acc + curr.amount,
+                        0
+                    );
+                    return (
+                        <Typography.Text>
+                            المجموع : {formatCurrency(sum)}
+                        </Typography.Text>
+                    );
                 }}
             />
         </div>

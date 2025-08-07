@@ -10,6 +10,8 @@ import { CompaniesTab } from '@/Components/Orders/Index/CompaniesTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
 import { ReceiveOrdersPaymentsTab } from '@/Components/Orders/Index/ReceiveOrdersPaymentsTab';
 import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
+import WebDeliveryTab from '@/Components/Orders/Index/WebDeliveryTab';
+import WebTakeawayTab from '@/Components/Orders/Index/WebTakeawayTab';
 import type { Order, User } from '@/types';
 
 interface IndexProps {
@@ -22,7 +24,6 @@ interface IndexProps {
 
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
-    previousPartialPaidOrders,
     auth
 }) => {
     const { user } = auth;
@@ -38,8 +39,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
     const talabatOrders = orders.filter(
         (order) => order.type === 'talabat' && order.status === 'processing'
     );
-    const companiesOrders = orders.filter(
-        (order) => order.type === 'companies' && order.status === 'processing'
+    const webDeliveryOrders = orders.filter(
+        (order) => order.type === 'web_delivery' && ['pending', 'processing', 'out_for_delivery'].includes(order.status)
+    );
+    const webTakeawayOrders = orders.filter(
+        (order) => order.type === 'web_takeaway' && ['pending', 'processing'].includes(order.status)
     );
     const cancelledOrders = orders.filter((order) => order.status === 'cancelled');
     const completedOrders = orders.filter((order) => order.status === 'completed');
@@ -79,14 +83,14 @@ const OrdersIndex: React.FC<IndexProps> = ({
             key: 'talabat',
         },
         {
-            label: 'شركات',
-            children: <CompaniesTab orders={companiesOrders} />,
-            key: 'companies',
+            label: 'ويب ديلفري',
+            children: <WebDeliveryTab orders={webDeliveryOrders} />,
+            key: 'web_delivery',
         },
         {
-            label: 'تسديد اوردرات شركات سابقة',
-            children: <ReceiveOrdersPaymentsTab orders={previousPartialPaidOrders} />,
-            key: 'receive_orders_payments',
+            label: 'ويب تيك اواي',
+            children: <WebTakeawayTab orders={webTakeawayOrders} />,
+            key: 'web_takeaway',
         },
         {
             label: 'مصاريف',

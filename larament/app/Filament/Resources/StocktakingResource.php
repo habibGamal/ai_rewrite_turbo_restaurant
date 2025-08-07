@@ -35,9 +35,12 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use \App\Filament\Traits\AdminAccess;
 
 class StocktakingResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Stocktaking::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Actions\GeneratePasswordAction;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Enums\UserRole;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -15,14 +16,28 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use \App\Filament\Traits\AdminAccess;
 
 class UserResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getModelLabel(): string
+    {
+        return 'مستخدم';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'المستخدمين';
+    }
+
 
     public static function getGloballySearchableAttributes(): array
     {
@@ -45,15 +60,17 @@ class UserResource extends Resource
                 Forms\Components\Section::make()
                     ->schema([
                         Forms\Components\TextInput::make('name')
+                            ->label('اسم المستخدم')
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('email')
+                            ->label('البريد الإلكتروني')
                             ->email()
                             ->unique(ignoreRecord: true)
                             ->required()
                             ->maxLength(255),
                         TextInput::make('password')
-                            ->label(__('filament-panels::pages/auth/edit-profile.form.password.label'))
+                            ->label('كلمة المرور')
                             ->password()
                             ->required(fn ($livewire) => $livewire instanceof Pages\CreateUser)
                             ->revealable(filament()->arePasswordsRevealable())
@@ -67,12 +84,16 @@ class UserResource extends Resource
                                 GeneratePasswordAction::make(),
                             ]),
                         TextInput::make('passwordConfirmation')
-                            ->label(__('filament-panels::pages/auth/edit-profile.form.password_confirmation.label'))
+                            ->label('تأكيد كلمة المرور')
                             ->password()
                             ->revealable(filament()->arePasswordsRevealable())
                             ->required()
                             ->visible(fn (Get $get): bool => filled($get('password')))
                             ->dehydrated(false),
+                        Forms\Components\Select::make('role')
+                            ->label('الدور')
+                            ->options(UserRole::class)
+                            ->required(),
                     ]),
             ]);
     }

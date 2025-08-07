@@ -1,9 +1,22 @@
 <?php
 
+use App\Enums\SettingKey;
+use App\Services\SettingsService;
+
 /*
  * Here you can define your own helper functions.
  * Make sure to use the `function_exists` check to not declare the function twice.
  */
+
+if (! function_exists('setting')) {
+    /**
+     * Get a setting value by key enum
+     */
+    function setting(SettingKey $key): string
+    {
+        return app(SettingsService::class)->get($key->value, $key->defaultValue());
+    }
+}
 
 if (! function_exists('example')) {
     function example(): string

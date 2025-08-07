@@ -19,7 +19,7 @@ class StockService
      * Setting to allow or disallow operations with insufficient stock
      * Set to false to prevent stock movements that would result in negative inventory
      */
-    public const ALLOW_INSUFFICIENT_STOCK = false;
+    public const ALLOW_INSUFFICIENT_STOCK = true;
 
     private InventoryDailyAggregationService $dailyAggregationService;
 

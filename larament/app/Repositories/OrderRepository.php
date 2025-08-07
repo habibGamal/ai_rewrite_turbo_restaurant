@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Repositories\Contracts\OrderRepositoryInterface;
@@ -66,6 +67,7 @@ class OrderRepository implements OrderRepositoryInterface
     public function getNextOrderNumber(int $shiftId): int
     {
         $lastOrder = Order::where('shift_id', $shiftId)
+            ->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
             ->orderBy('order_number', 'desc')
             ->first();
 

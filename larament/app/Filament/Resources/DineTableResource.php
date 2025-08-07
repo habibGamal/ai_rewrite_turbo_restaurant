@@ -8,10 +8,12 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use App\Enums\DineTableStatus;
+use \App\Filament\Traits\AdminAccess;
 
 class DineTableResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = DineTable::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-table-cells';
@@ -76,9 +78,6 @@ class DineTableResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->label('الحالة')
-                    ->options(DineTableStatus::toSelectArray()),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

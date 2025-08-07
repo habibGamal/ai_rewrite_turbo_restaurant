@@ -1,7 +1,11 @@
 export const orderStatus = (status: string) => {
     switch (status) {
+        case 'pending':
+            return { text: 'في الإنتظار', color: 'orange' };
         case 'processing':
             return { text: 'تحت التشغيل', color: 'blue' };
+        case 'out_for_delivery':
+            return { text: 'في طريق التوصيل', color: 'purple' };
         case 'completed':
             return { text: 'مكتمل', color: 'green' };
         case 'cancelled':

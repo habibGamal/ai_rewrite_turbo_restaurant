@@ -11,9 +11,12 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use \App\Filament\Traits\AdminAccess;
 
 class ExpenseResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Expense::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';

@@ -9,9 +9,12 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use \App\Filament\Traits\AdminAccess;
 
 class DriverResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = Driver::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-circle';

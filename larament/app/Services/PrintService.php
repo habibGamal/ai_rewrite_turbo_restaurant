@@ -3,20 +3,48 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Enums\SettingKey;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
+use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
 
 class PrintService
 {
     /**
+     * Create appropriate print connector based on printer IP format
+     */
+    private function createConnector(string $printerIp): NetworkPrintConnector|WindowsPrintConnector
+    {
+        // Check if it's a UNC path (\\hostname\printername or \\ip\sharename)
+        if (preg_match('/^\\\\\\\\[^\\\\]+\\\\[^\\\\]+/', $printerIp)) {
+            return new WindowsPrintConnector($printerIp);
+        }
+
+        // Check if it's just a printer name (e.g., share_cash)
+        if (!filter_var($printerIp, FILTER_VALIDATE_IP)) {
+            return new WindowsPrintConnector($printerIp);
+        }
+
+        // Check if it's an IP address format (xxx.xxx.xxx.xxx)
+        if (filter_var($printerIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return new NetworkPrintConnector($printerIp, 9100);
+        }
+
+        // Default to network connector if format is unclear
+        return new NetworkPrintConnector($printerIp, 9100);
+    }
+
+    /**
      * Print order receipt
      */
     public function printOrderReceipt(Order $order, array $images): void
     {
-        $connector = new NetworkPrintConnector("192.168.1.4", 9100);
+        $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+        $connector = $this->createConnector($printerIp);
         $printer = new Printer($connector);
 
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
         \Log::info("Printing receipt for order {$order->id}");
 
         try {
@@ -42,6 +70,31 @@ class PrintService
             throw $e;
         } finally {
             $printer->close();
+        }
+    }
+
+    /**
+     * Open the cashier drawer
+     */
+    public function openCashierDrawer(): void
+    {
+        try {
+            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $connector = $this->createConnector($printerIp);
+            $printer = new Printer($connector);
+
+            \Log::info("Opening cashier drawer");
+
+            // Send pulse to open the drawer
+            $printer->pulse();
+
+        } catch (\Exception $e) {
+            \Log::error("Error opening cashier drawer: " . $e->getMessage());
+            throw $e;
+        } finally {
+            if (isset($printer)) {
+                $printer->close();
+            }
         }
     }
 
@@ -130,8 +183,9 @@ class PrintService
                 return;
             }
 
-            $connector = new NetworkPrintConnector($printer->ip_address, 9100);
+            $connector = $this->createConnector($printer->ip_address);
             $escposPrinter = new Printer($connector);
+            $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
 
             \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address})");
 
@@ -166,56 +220,40 @@ class PrintService
     }
 
     /**
-     * Print kitchen order
+     * Test cashier printer connection with sample text
      */
-    public function printKitchenOrder(Order $order, array $printData): void
+    public function testCashierPrinter(): void
     {
-        $printerModel = \App\Models\Printer::findOrFail($printData['printer_id']);
+        try {
+            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $connector = $this->createConnector($printerIp);
+            $printer = new Printer($connector);
 
-        // Filter items to print
-        $itemsToPrint = $printData['items'] ?? [];
+            \Log::info("Testing cashier printer connection");
 
-        \Log::info("Printing kitchen order for order {$order->id} to printer {$printerModel->name}", [
-            'items' => $itemsToPrint
-        ]);
+            // Print test text
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
+            $printer->text("Printer Test\n");
+            $printer->selectPrintMode();
+            $printer->text("------------------------\n");
+            $printer->text("Date: " . now()->format('Y-m-d H:i:s') . "\n");
+            $printer->text("IP: {$printerIp}\n");
+            $printer->text("------------------------\n");
+            $printer->text("If you see this text, the printer is working correctly\n");
+            $printer->feed(3);
+            $printer->cut();
 
-        // In a real implementation, you would:
-        // - Format the kitchen ticket
-        // - Send to specific kitchen printer
-        // - Include only items for that printer/station
+            \Log::info("Test print sent successfully to cashier printer");
+
+        } catch (\Exception $e) {
+            \Log::error("Error testing cashier printer: " . $e->getMessage());
+            throw $e;
+        } finally {
+            if (isset($printer)) {
+                $printer->close();
+            }
+        }
     }
 
-    /**
-     * Generate receipt data for frontend printing
-     */
-    public function generateReceiptData(Order $order): array
-    {
-        $order->load(['customer', 'driver', 'items.product', 'payments']);
-
-        return [
-            'order' => $order,
-            'items' => $order->items->map(function ($item) {
-                return [
-                    'name' => $item->product->name,
-                    'quantity' => $item->quantity,
-                    'price' => $item->price,
-                    'total' => $item->quantity * $item->price,
-                    'notes' => $item->notes,
-                ];
-            }),
-            'totals' => [
-                'sub_total' => $order->sub_total,
-                'tax' => $order->tax,
-                'service' => $order->service,
-                'discount' => $order->discount,
-                'total' => $order->total,
-            ],
-            'payments' => $order->payments->map(function ($payment) {
-                return [
-                    'method' => $payment->method->label(),
-                    'amount' => $payment->amount,
-                ];
-            }),
-        ];
-    }
 }

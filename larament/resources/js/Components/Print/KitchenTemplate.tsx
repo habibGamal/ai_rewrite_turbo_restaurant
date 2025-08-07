@@ -33,13 +33,17 @@ export default function KitchenTemplate({
                 return 'شركات';
             case 'talabat':
                 return 'طلبات';
+            case 'web_delivery':
+                return 'اونلاين دليفري';
+            case 'web_takeaway':
+                return 'اونلاين تيك أواي';
             default:
                 return type;
         }
     };
 
     return (
-        <div id={'printer_' + printerId} className="w-[500px] font-bold text-2xl">
+        <div id={'printer_' + printerId} className="w-[500px] font-bold text-2xl space-y-4">
             <p className="text-3xl text-center">Order #{order.order_number}</p>
             <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
             <p>التاريخ : {new Date().toLocaleString('ar-EG', { hour12: true })}</p>

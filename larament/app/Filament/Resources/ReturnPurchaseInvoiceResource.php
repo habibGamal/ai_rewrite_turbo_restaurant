@@ -32,9 +32,12 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use \App\Filament\Traits\AdminAccess;
 
 class ReturnPurchaseInvoiceResource extends Resource
 {
+    use AdminAccess;
+
     protected static ?string $model = ReturnPurchaseInvoice::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-uturn-left';
