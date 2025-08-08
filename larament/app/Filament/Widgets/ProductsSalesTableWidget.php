@@ -18,14 +18,11 @@ class ProductsSalesTableWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected static bool $isLazy = false;
+
+
     protected static ?string $heading = 'تفاصيل أداء المنتجات';
 
-    protected ProductsSalesReportService $productsReportService;
-
-    public function boot(): void
-    {
-        $this->productsReportService = app(ProductsSalesReportService::class);
-    }
 
     public function table(Table $table): Table
     {
@@ -34,7 +31,7 @@ class ProductsSalesTableWidget extends BaseWidget
 
         return $table
             ->query(
-                $this->productsReportService->getProductsSalesPerformanceQuery(
+                app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery(
                     $startDate,
                     $endDate
                 )
