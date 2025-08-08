@@ -74,7 +74,7 @@ class ProductsSalesPerformanceReport extends BaseDashboard
             \App\Filament\Widgets\TopProductsBySalesWidget::class,
             \App\Filament\Widgets\TopProductsByProfitWidget::class,
             \App\Filament\Widgets\OrderTypePerformanceWidget::class,
-            // \App\Filament\Widgets\CategoryPerformanceWidget::class,
+            \App\Filament\Widgets\CategoryPerformanceWidget::class,
             \App\Filament\Widgets\ProductsSalesTableWidget::class,
         ];
     }

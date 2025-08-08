@@ -18,6 +18,8 @@ class CategoryPerformanceWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected static bool $isLazy = false;
+
     protected static ?string $heading = 'أداء التصنيفات';
 
     protected ProductsSalesReportService $productsReportService;

@@ -23,6 +23,15 @@ class ProductsSalesTableWidget extends BaseWidget
 
     protected static ?string $heading = 'تفاصيل أداء المنتجات';
 
+    protected ProductsSalesReportService $productsReportService;
+
+
+    public function boot(): void
+    {
+        $this->productsReportService = app(ProductsSalesReportService::class);
+    }
+
+
 
     public function table(Table $table): Table
     {
@@ -31,7 +40,7 @@ class ProductsSalesTableWidget extends BaseWidget
 
         return $table
             ->query(
-                app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery(
+                $this->productsReportService->getProductsSalesPerformanceQuery(
                     $startDate,
                     $endDate
                 )

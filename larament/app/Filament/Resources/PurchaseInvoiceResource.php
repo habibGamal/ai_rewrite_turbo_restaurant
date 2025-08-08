@@ -307,8 +307,8 @@ class PurchaseInvoiceResource extends Resource
     {
         return [
             'index' => Pages\ListPurchaseInvoices::route('/'),
-            'create' => Pages\CreatePurchaseInvoice::route('/create'),
             'view' => Pages\ViewPurchaseInvoice::route('/{record}'),
+            'create' => Pages\CreatePurchaseInvoice::route('/create'),
             'edit' => Pages\EditPurchaseInvoice::route('/{record}/edit'),
         ];
     }
