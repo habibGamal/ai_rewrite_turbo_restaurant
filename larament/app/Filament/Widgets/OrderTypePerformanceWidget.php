@@ -24,11 +24,10 @@ class OrderTypePerformanceWidget extends ChartWidget
     protected function getData(): array
     {
         $performance = $this->getOrderTypePerformance();
-
+        // dd($performance);
         $labels = [];
         $salesData = [];
         $profitData = [];
-
         foreach ($performance as $type => $data) {
             if ($data['total_sales'] > 0) {
                 $labels[] = $data['label'];

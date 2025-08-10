@@ -23,9 +23,8 @@ class TopProductsBySalesWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $products = $this->getProducts();
+        $topProducts = $this->getProducts();
 
-        $topProducts = $products->sortByDesc('total_sales')->take(10);
 
         $labels = [];
         $data = [];
@@ -116,6 +115,6 @@ class TopProductsBySalesWidget extends ChartWidget
         $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
 
-        return $this->productsReportService->getProductsSalesPerformance($startDate, $endDate);
+        return $this->productsReportService->getProductsSalesPerformanceQuery($startDate, $endDate)->orderBy('total_sales', 'desc')->limit(10)->get();
     }
 }

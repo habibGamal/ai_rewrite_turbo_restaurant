@@ -173,7 +173,7 @@ class MigrateOldDataCommand extends Command
             'wastes',
             'stocktaking_items',
             'stocktakings',
-            'printer_products',
+            'printer_product',
             'return_purchase_invoice_items',
             'return_purchase_invoices',
             'purchase_invoice_items',
@@ -189,7 +189,6 @@ class MigrateOldDataCommand extends Command
             'settings',
             'dine_tables',
             'drivers',
-            'printer_products',
             'product_components',
             'products',
             'printers',
@@ -241,7 +240,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldRegions as $oldRegion) {
             if (!$this->isDryRun) {
-                Region::create([
+                Region::insert([
                     'id' => $oldRegion->id,
                     'name' => $oldRegion->name,
                     'delivery_cost' => $oldRegion->delivery_cost ?? 0,
@@ -293,7 +292,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldSuppliers as $oldSupplier) {
             if (!$this->isDryRun) {
-                Supplier::create([
+                Supplier::insert([
                     'id' => $oldSupplier->id,
                     'name' => $oldSupplier->name,
                     'phone' => $oldSupplier->phone ?? '',
@@ -318,7 +317,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldPrinters as $oldPrinter) {
             if (!$this->isDryRun) {
-                Printer::create([
+                Printer::insert([
                     'id' => $oldPrinter->id,
                     'name' => $oldPrinter->name,
                     'ip_address' => $oldPrinter->ip_address ?? '',
@@ -342,7 +341,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldProducts as $oldProduct) {
             if (!$this->isDryRun) {
-                Product::create([
+                Product::insert([
                     'id' => $oldProduct->id,
                     'category_id' => $oldProduct->category_id,
                     'product_ref' => $oldProduct->product_ref ?? '',
@@ -372,7 +371,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldComponents as $oldComponent) {
             if (!$this->isDryRun) {
-                ProductComponent::create([
+                ProductComponent::insert([
                     'id' => $oldComponent->id,
                     'product_id' => $oldComponent->product_id,
                     'component_id' => $oldComponent->component_id,
@@ -428,11 +427,10 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldDrivers as $oldDriver) {
             if (!$this->isDryRun) {
-                Driver::create([
+                Driver::insert([
                     'id' => $oldDriver->id,
                     'name' => $oldDriver->name,
                     'phone' => $oldDriver->phone ?? '',
-                    'is_active' => $oldDriver->is_active ?? true,
                     'created_at' => $oldDriver->created_at ?? now(),
                     'updated_at' => $oldDriver->updated_at ?? now(),
                 ]);
@@ -454,7 +452,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldExpenseTypes as $oldExpenseType) {
             if (!$this->isDryRun) {
-                ExpenceType::create([
+                ExpenceType::insert([
                     'id' => $oldExpenseType->id,
                     'name' => $oldExpenseType->name,
                     'created_at' => $oldExpenseType->created_at ?? now(),
@@ -477,12 +475,10 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldSettings as $oldSetting) {
             if (!$this->isDryRun) {
-                Setting::create([
+                Setting::insert([
                     'id' => $oldSetting->id,
                     'key' => $oldSetting->key,
                     'value' => $oldSetting->value,
-                    'type' => $oldSetting->type ?? 'string',
-                    'group' => $oldSetting->group ?? 'general',
                     'created_at' => $oldSetting->created_at ?? now(),
                     'updated_at' => $oldSetting->updated_at ?? now(),
                 ]);
@@ -503,7 +499,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldUsers as $oldUser) {
             if (!$this->isDryRun) {
-                User::create([
+                User::insert([
                     'id' => $oldUser->id,
                     'name' => $oldUser->name ?? 'Unknown',
                     'email' => $oldUser->email ?? "user{$oldUser->id}@example.com",
@@ -530,10 +526,10 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldShifts as $oldShift) {
             if (!$this->isDryRun) {
-                Shift::create([
+                Shift::insert([
                     'id' => $oldShift->id,
                     'start_at' => $oldShift->start_at ?? now(),
-                    'end_at' => $oldShift->end_at,
+                    'end_at' => $oldShift->end_at ? Carbon::parse($oldShift->end_at)->format('Y-m-d H:i:s') : null,
                     'user_id' => $oldShift->user_id ?? 1, // Default to first user
                     'start_cash' => $oldShift->start_cash ?? 0,
                     'end_cash' => $oldShift->end_cash,
@@ -541,7 +537,7 @@ class MigrateOldDataCommand extends Command
                     'real_cash' => $oldShift->real_cash,
                     'has_deficit' => $oldShift->has_deficit ?? false,
                     'closed' => $oldShift->closed ?? false,
-                    'created_at' => $oldShift->created_at ?? now(),
+                    'created_at' =>  Carbon::parse($oldShift->end_at)->format('Y-m-d H:i:s'),
                     'updated_at' => $oldShift->updated_at ?? now(),
                 ]);
             }
@@ -563,7 +559,14 @@ class MigrateOldDataCommand extends Command
 
         foreach ($oldOrders as $oldOrder) {
             if (!$this->isDryRun) {
-                Order::create([
+                $exists = Order::where('shift_id', $oldOrder->shift_id ?? 1)
+                    ->where('order_number', $oldOrder->order_number ?? $oldOrder->id)
+                    ->exists();
+                $orderNumber = $oldOrder->order_number;
+                if ($exists) {
+                    $orderNumber = 'FIX-' . rand(1000, 9999);
+                }
+                Order::insert([
                     'id' => $oldOrder->id,
                     'customer_id' => $oldOrder->customer_id,
                     'driver_id' => $oldOrder->driver_id,
@@ -582,9 +585,9 @@ class MigrateOldDataCommand extends Command
                     'dine_table_number' => $oldOrder->dine_table_number,
                     'kitchen_notes' => $oldOrder->kitchen_notes,
                     'order_notes' => $oldOrder->order_notes,
-                    'order_number' => $oldOrder->order_number ?? $oldOrder->id,
+                    'order_number' => $orderNumber,
                     'created_at' => Carbon::parse($oldOrder->created_at),
-                    'updated_at' => $oldOrder->updated_at ,
+                    'updated_at' => $oldOrder->updated_at,
                 ]);
             }
             $migrated++;
@@ -603,7 +606,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldOrderItems as $oldOrderItem) {
             if (!$this->isDryRun) {
-                OrderItem::create([
+                OrderItem::insert([
                     'id' => $oldOrderItem->id,
                     'order_id' => $oldOrderItem->order_id,
                     'product_id' => $oldOrderItem->product_id,
@@ -632,10 +635,10 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldPayments as $oldPayment) {
             if (!$this->isDryRun) {
-                Payment::create([
+                Payment::insert([
                     'id' => $oldPayment->id,
                     'order_id' => $oldPayment->order_id,
-                    'amount' => $oldPayment->amount ?? 0,
+                    'amount' => $oldPayment->paid ?? 0,
                     'method' => $oldPayment->method ?? 'cash',
                     'shift_id' => $oldPayment->shift_id ?? 1, // Default to first shift
                     'created_at' => $oldPayment->created_at ?? now(),
@@ -658,7 +661,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldInventoryItems as $oldInventoryItem) {
             if (!$this->isDryRun) {
-                InventoryItem::create([
+                InventoryItem::insert([
                     'id' => $oldInventoryItem->id,
                     'product_id' => $oldInventoryItem->product_id,
                     'quantity' => $oldInventoryItem->quantity ?? 0,
@@ -682,7 +685,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldExpenses as $oldExpense) {
             if (!$this->isDryRun) {
-                Expense::create([
+                Expense::insert([
                     'id' => $oldExpense->id,
                     'expence_type_id' => $oldExpense->expense_type_id ?? $oldExpense->expence_type_id,
                     'shift_id' => $oldExpense->shift_id ?? 1,
@@ -708,7 +711,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldInvoices as $oldInvoice) {
             if (!$this->isDryRun) {
-                PurchaseInvoice::create([
+                PurchaseInvoice::insert([
                     'id' => $oldInvoice->id,
                     'supplier_id' => $oldInvoice->supplier_id,
                     'total' => $oldInvoice->total ?? 0,
@@ -735,7 +738,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldItems as $oldItem) {
             if (!$this->isDryRun) {
-                PurchaseInvoiceItem::create([
+                PurchaseInvoiceItem::insert([
                     'id' => $oldItem->id,
                     'purchase_invoice_id' => $oldItem->purchase_invoice_id,
                     'product_id' => $oldItem->product_id,
@@ -762,7 +765,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldInvoices as $oldInvoice) {
             if (!$this->isDryRun) {
-                ReturnPurchaseInvoice::create([
+                ReturnPurchaseInvoice::insert([
                     'id' => $oldInvoice->id,
                     'supplier_id' => $oldInvoice->supplier_id,
                     'total' => $oldInvoice->total ?? 0,
@@ -789,7 +792,7 @@ class MigrateOldDataCommand extends Command
         $migrated = 0;
         foreach ($oldItems as $oldItem) {
             if (!$this->isDryRun) {
-                ReturnPurchaseInvoiceItem::create([
+                ReturnPurchaseInvoiceItem::insert([
                     'id' => $oldItem->id,
                     'return_purchase_invoice_id' => $oldItem->return_purchase_invoice_id,
                     'product_id' => $oldItem->product_id,
@@ -816,7 +819,7 @@ class MigrateOldDataCommand extends Command
     //     $migrated = 0;
     //     foreach ($oldStocktakings as $oldStocktaking) {
     //         if (!$this->isDryRun) {
-    //             Stocktaking::create([
+    //             Stocktaking::insert([
     //                 'id' => $oldStocktaking->id,
     //                 'user_id' => $oldStocktaking->user_id ?? 1,
     //                 'notes' => $oldStocktaking->notes ?? '',
@@ -842,7 +845,7 @@ class MigrateOldDataCommand extends Command
     //     $migrated = 0;
     //     foreach ($oldItems as $oldItem) {
     //         if (!$this->isDryRun) {
-    //             StocktakingItem::create([
+    //             StocktakingItem::insert([
     //                 'id' => $oldItem->id,
     //                 'stocktaking_id' => $oldItem->stocktaking_id,
     //                 'inventory_item_id' => $oldItem->inventory_item_id,
@@ -869,7 +872,7 @@ class MigrateOldDataCommand extends Command
     //     $migrated = 0;
     //     foreach ($oldWastes as $oldWaste) {
     //         if (!$this->isDryRun) {
-    //             Waste::create([
+    //             Waste::insert([
     //                 'id' => $oldWaste->id,
     //                 'shift_id' => $oldWaste->shift_id ?? 1,
     //                 'reason' => $oldWaste->reason ?? 'Unknown',
@@ -894,7 +897,7 @@ class MigrateOldDataCommand extends Command
     //     $migrated = 0;
     //     foreach ($oldItems as $oldItem) {
     //         if (!$this->isDryRun) {
-    //             WastedItem::create([
+    //             WastedItem::insert([
     //                 'id' => $oldItem->id,
     //                 'waste_id' => $oldItem->waste_id,
     //                 'inventory_item_id' => $oldItem->inventory_item_id,
@@ -919,7 +922,7 @@ class MigrateOldDataCommand extends Command
     //     $migrated = 0;
     //     foreach ($oldSnapshots as $oldSnapshot) {
     //         if (!$this->isDryRun) {
-    //             DailySnapshot::create([
+    //             DailySnapshot::insert([
     //                 'id' => $oldSnapshot->id,
     //                 'date' => $oldSnapshot->date ?? now(),
     //                 'total_sales' => $oldSnapshot->total_sales ?? 0,

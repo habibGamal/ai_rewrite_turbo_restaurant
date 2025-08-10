@@ -26,13 +26,7 @@ class PeriodShiftDoneOrdersStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $shifts = $this->getShifts();
-
-        if ($shifts->isEmpty()) {
-            return [];
-        }
-
-        $orderTypeStats = $this->shiftsReportService->calculatePeriodOrderTypeStats($shifts);
+        $orderTypeStats = $this->calculatePeriodOrderTypeStats();
 
         $stats = [];
 
@@ -67,11 +61,11 @@ class PeriodShiftDoneOrdersStats extends BaseWidget
         return $stats;
     }
 
-    private function getShifts()
+    private function calculatePeriodOrderTypeStats()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+        $startDate = $this->filters['startDate'] ?? now()->subDays(value: 7)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
 
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
+        return $this->shiftsReportService->calculatePeriodOrderTypeStats($startDate, $endDate);
     }
 }

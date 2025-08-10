@@ -15,22 +15,20 @@ use Carbon\Carbon;
 
 class ProductsSalesReportService
 {
+    public function getOrdersQuery(?string $startDate = null, ?string $endDate = null)
+    {
+        return Order::query()
+            ->where('status', OrderStatus::COMPLETED)
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->where('created_at', '>=', Carbon::parse($startDate)->startOfDay());
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->where('created_at', '<=', Carbon::parse($endDate)->endOfDay());
+            });
+    }
+
     public function getProductsSalesPerformanceQuery(?string $startDate = null, ?string $endDate = null)
     {
-        // Get orders within date range
-        $ordersQuery = Order::query()
-            ->where('status', OrderStatus::COMPLETED);
-
-        if ($startDate) {
-            $ordersQuery->where('created_at', '>=', Carbon::parse($startDate)->startOfDay());
-        }
-
-        if ($endDate) {
-            $ordersQuery->where('created_at', '<=', Carbon::parse($endDate)->endOfDay());
-        }
-
-        $orderIds = $ordersQuery->pluck('id')->toArray();
-
         // Get products with sales data aggregated by order type
         return Product::query()
             ->whereNot('products.type', ProductType::RawMaterial)
@@ -83,12 +81,15 @@ class ProductsSalesReportService
             ])
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
-            ->leftJoin('orders', function ($join) use ($orderIds) {
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
                 $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereIn('orders.id', $orderIds);
+                    ->whereBetween('orders.created_at', [
+                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    ]);
+                ;
             })
-            ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name')
-            ->havingRaw('total_quantity > 0');
+            ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name');
     }
     /**
      * Get products sales performance within a date range
@@ -98,44 +99,61 @@ class ProductsSalesReportService
         return $this->getProductsSalesPerformanceQuery($startDate, $endDate)->get();
     }
 
-    /**
-     * Get top performing products by sales value
-     */
-    public function getTopProductsBySales(?string $startDate = null, ?string $endDate = null, int $limit = 10): Collection
-    {
-        return $this->getProductsSalesPerformance($startDate, $endDate)
-            ->sortByDesc('total_sales')
-            ->take($limit);
-    }
-
-    /**
-     * Get top performing products by profit
-     */
-    public function getTopProductsByProfit(?string $startDate = null, ?string $endDate = null, int $limit = 10): Collection
-    {
-        return $this->getProductsSalesPerformance($startDate, $endDate)
-            ->sortByDesc('total_profit')
-            ->take($limit);
-    }
-
-    /**
-     * Get top performing products by quantity sold
-     */
-    public function getTopProductsByQuantity(?string $startDate = null, ?string $endDate = null, int $limit = 10): Collection
-    {
-        return $this->getProductsSalesPerformance($startDate, $endDate)
-            ->sortByDesc('total_quantity')
-            ->take($limit);
-    }
 
     /**
      * Get period statistics summary
      */
     public function getPeriodSummary(?string $startDate = null, ?string $endDate = null): array
     {
-        $products = $this->getProductsSalesPerformance($startDate, $endDate);
+        $summary = DB::table('products as p')
+            ->select([
+                DB::raw('COUNT(DISTINCT p.id) as total_products'),
+                DB::raw('SUM(order_items.total) as total_sales'),
+                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+                DB::raw('SUM(order_items.quantity) as total_quantity'),
+                DB::raw('AVG((order_items.total - (p.cost * order_items.quantity)) / order_items.total * 100) as avg_profit_margin'),
+                DB::raw('MAX(order_items.total) as best_selling_product_id'),
+            ])
+            ->leftJoin('order_items', 'p.id', '=', 'order_items.product_id')
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->whereBetween('orders.created_at', [
+                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    ]);
+            })
+            ->first();
 
-        if ($products->isEmpty()) {
+        $mostProductQuery = DB::table('products as p')
+            ->select([
+                'p.id',
+                'p.name',
+                DB::raw('SUM(order_items.quantity) as total_quantity'),
+                DB::raw('SUM(order_items.total) as total_sales'),
+                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+            ])
+            ->leftJoin('order_items', 'p.id', '=', 'order_items.product_id')
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->whereBetween('orders.created_at', [
+                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    ]);
+            })
+            ->groupBy('p.id', 'p.name')
+        ;
+
+        $mostProfitableProduct = $mostProductQuery
+            ->orderByDesc('total_profit')
+            ->limit(1)
+            ->first();
+
+        $bestSellingProduct = $mostProductQuery
+            ->orderByDesc('total_sales')
+            ->limit(1)
+            ->first();
+
+        if (!$summary) {
             return [
                 'total_products' => 0,
                 'total_sales' => 0,
@@ -147,20 +165,12 @@ class ProductsSalesReportService
             ];
         }
 
-        $totalSales = $products->sum('total_sales');
-        $totalProfit = $products->sum('total_profit');
-        $totalQuantity = $products->sum('total_quantity');
-        $avgProfitMargin = $totalSales > 0 ? ($totalProfit / $totalSales) * 100 : 0;
-
-        $bestSellingProduct = $products->sortByDesc('total_sales')->first();
-        $mostProfitableProduct = $products->sortByDesc('total_profit')->first();
-
         return [
-            'total_products' => $products->count(),
-            'total_sales' => $totalSales,
-            'total_profit' => $totalProfit,
-            'total_quantity' => $totalQuantity,
-            'avg_profit_margin' => $avgProfitMargin,
+            'total_products' => $summary->total_products,
+            'total_sales' => $summary->total_sales,
+            'total_profit' => $summary->total_profit,
+            'total_quantity' => $summary->total_quantity,
+            'avg_profit_margin' => $summary->avg_profit_margin,
             'best_selling_product' => $bestSellingProduct,
             'most_profitable_product' => $mostProfitableProduct,
         ];
@@ -171,52 +181,41 @@ class ProductsSalesReportService
      */
     public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null): array
     {
-        $products = $this->getProductsSalesPerformance($startDate, $endDate);
 
-        if ($products->isEmpty()) {
-            return [];
-        }
+        $performanceData = DB::table('orders as o')
+            ->select([
+                'o.type',
+                DB::raw('COUNT(DISTINCT o.id) as total_orders'),
+                DB::raw('SUM(oi.quantity) as total_quantity'),
+                DB::raw('SUM(oi.total) as total_sales'),
+                DB::raw('SUM(oi.total - (p.cost * oi.quantity)) as total_profit'),
+            ])
+            ->leftJoin('order_items as oi', 'o.id', '=', 'oi.order_id')
+            ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
+            ->where('o.status', OrderStatus::COMPLETED)
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->where('o.created_at', '>=', Carbon::parse($startDate)->startOfDay());
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->where('o.created_at', '<=', Carbon::parse($endDate)->endOfDay());
+            })
+            ->groupBy('o.type')
+            ->get();
 
-        $orderTypes = [
-            'dine_in' => 'صالة',
-            'takeaway' => 'تيك أواي',
-            'delivery' => 'دليفري',
-            'web_delivery' => 'اونلاين دليفري',
-            'web_takeaway' => 'اونلاين تيك أواي',
-            'talabat' => 'طلبات',
-            'companies' => 'شركات',
-        ];
 
-        $performance = [];
 
-        foreach ($orderTypes as $type => $label) {
-            $salesColumn = $type . '_sales';
-            $profitColumn = $type . '_profit';
-            $quantityColumn = $type . '_quantity';
-
-            $totalSales = $products->sum($salesColumn);
-            $totalProfit = $products->sum($profitColumn);
-            $totalQuantity = $products->sum($quantityColumn);
-            $profitMargin = $totalSales > 0 ? ($totalProfit / $totalSales) * 100 : 0;
-
-            $performance[$type] = [
-                'label' => $label,
-                'total_sales' => $totalSales,
-                'total_profit' => $totalProfit,
-                'total_quantity' => $totalQuantity,
-                'profit_margin' => $profitMargin,
-                'products_count' => $products->filter(function ($product) use ($quantityColumn) {
-                    return $product->$quantityColumn > 0;
-                })->count(),
+        // dd($performanceData);
+        return $performanceData->mapWithKeys(function ($item) {
+            return [
+                $item->type => [
+                    'label' => OrderType::from($item->type)->label(),
+                    'total_orders' => $item->total_orders,
+                    'total_quantity' => $item->total_quantity,
+                    'total_sales' => $item->total_sales,
+                    'total_profit' => $item->total_profit,
+                ],
             ];
-        }
-
-        // Sort by total sales descending
-        uasort($performance, function ($a, $b) {
-            return $b['total_sales'] <=> $a['total_sales'];
-        });
-
-        return $performance;
+        })->toArray();
     }
 
     /**
@@ -224,21 +223,6 @@ class ProductsSalesReportService
      */
     public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null)
     {
-        // Get orders within date range
-        $ordersQuery = Order::query()
-            ->where('status', OrderStatus::COMPLETED);
-
-        if ($startDate) {
-            $ordersQuery->where('created_at', '>=', Carbon::parse($startDate)->startOfDay());
-        }
-
-        if ($endDate) {
-            $ordersQuery->where('created_at', '<=', Carbon::parse($endDate)->endOfDay());
-        }
-
-        $orderIds = $ordersQuery->pluck('id')->toArray();
-
-
         // Get category performance aggregated directly at the database level
         return Category::query()
             ->select([
@@ -254,12 +238,14 @@ class ProductsSalesReportService
                 $join->on('products.id', '=', 'order_items.product_id')
                     ->whereNot('products.type', ProductType::RawMaterial);
             })
-            ->leftJoin('orders', function ($join) use ($orderIds) {
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
                 $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereIn('orders.id', $orderIds);
+                    ->whereBetween('orders.created_at', [
+                        Carbon::parse($startDate)->startOfDay(),
+                        Carbon::parse($endDate)->endOfDay()
+                    ]);
             })
-            ->groupBy('categories.id', 'categories.name')
-            ->havingRaw('total_sales > 0');
+            ->groupBy('categories.id', 'categories.name');
     }
 
     /**

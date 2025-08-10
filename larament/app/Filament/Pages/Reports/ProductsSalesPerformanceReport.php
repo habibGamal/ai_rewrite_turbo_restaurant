@@ -58,12 +58,12 @@ class ProductsSalesPerformanceReport extends BaseDashboard
     {
         $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-        $products = $this->productsReportService->getProductsSalesPerformance(
+        $ordersCount = $this->productsReportService->getOrdersQuery(
             $startDate,
             $endDate
-        );
+        )->count();
 
-        if ($products->isEmpty()) {
+        if ($ordersCount === 0) {
             return [
                 \App\Filament\Widgets\NoProductsSalesInPeriodWidget::class,
             ];

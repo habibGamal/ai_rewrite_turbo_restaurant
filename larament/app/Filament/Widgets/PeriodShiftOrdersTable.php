@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\PeriodShiftOrdersExporter;
+use Carbon\Carbon;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\ExportAction;
@@ -18,6 +19,9 @@ use Illuminate\Database\Eloquent\Builder;
 class PeriodShiftOrdersTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+
+
+    protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -46,23 +50,26 @@ class PeriodShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $shifts = $this->getShifts();
-        $query = $this->shiftsReportService->getOrdersQueryForShifts($shifts);
-
+        $startDate = $this->filters['startDate'];
+        $endDate = $this->filters['endDate'];
         return $table
-            ->query($query)
+            ->query(
+                Order::query()
+                    ->with(['customer', 'user', 'payments', 'shift'])
+                    ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                        $query->whereBetween('created_at', [
+                            Carbon::parse($startDate)->startOfDay(),
+                            Carbon::parse($endDate)->endOfDay()
+                        ]);
+                    })
+            )
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير الاوردرات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(PeriodShiftOrdersExporter::class)
-                    ->modifyQueryUsing(function (Builder $query) {
-                        $shifts = $this->getShifts();
-                        return $this->shiftsReportService->getOrdersQueryForShifts($shifts);
-                    })
-                    ->fileName(fn () => 'period-shift-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
-                    ->visible(fn () => !$this->getShifts()->isEmpty()),
+                    ->fileName(fn() => 'period-shift-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('order_number')
@@ -73,7 +80,7 @@ class PeriodShiftOrdersTable extends BaseWidget
                     ->color('primary'),
 
                 Tables\Columns\TextColumn::make('shift.start_at')
-                    ->label('الشفت')
+                    ->label(label: 'الشفت')
                     ->dateTime('d/m H:i')
                     ->sortable()
                     ->color('gray')
@@ -224,16 +231,6 @@ class PeriodShiftOrdersTable extends BaseWidget
                         false: fn(Builder $query) => $query->where('discount', '<=', 0),
                         blank: fn(Builder $query) => $query,
                     ),
-
-                Tables\Filters\SelectFilter::make('shift_id')
-                    ->label('الشفت')
-                    ->options(function () {
-                        $shifts = $this->getShifts();
-                        return $shifts->pluck('start_at', 'id')
-                            ->map(fn($date) => 'شفت ' . $date->format('d/m/Y H:i'))
-                            ->toArray();
-                    })
-                    ->visible(fn () => $this->getShifts()->count() > 1),
             ])
             ->defaultSort('created_at', 'desc')
             ->striped()
@@ -244,13 +241,5 @@ class PeriodShiftOrdersTable extends BaseWidget
             ->recordAction(null)
             ->recordUrl(null)
             ->bulkActions([]);
-    }
-
-    private function getShifts()
-    {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
     }
 }

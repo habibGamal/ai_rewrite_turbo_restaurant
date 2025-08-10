@@ -110,8 +110,7 @@ class ApiController extends Controller
                 return $category;
             });
 
-        // return response()->json(new BaseResource($categories));
-        return  BaseResource::collection($categories);
+        return BaseResource::collection($categories);
     }
 
     /**
@@ -135,13 +134,42 @@ class ApiController extends Controller
     {
         $categories = Category::select(['id', 'name'])
             ->with(['products' => function ($query) {
-                $query->select(['id', 'name', 'product_ref', 'category_id'])
+                $query->select(['id', 'name', 'product_ref', 'type', 'category_id'])
                     ->where('type', ProductType::Manufactured)
-                    ->with(['components' => function ($query) {
-                        $query->select(['id', 'name', 'product_ref']);
+                    ->with(['components' => function ($subQuery) {
+                        $subQuery->select(['products.id', 'products.name', 'products.product_ref', 'products.type'])
+                            ->with('category:id,name');
                     }]);
             }])
-            ->get();
+            ->get()
+            ->map(function ($category) {
+                $products = $category->products->map(function ($product) {
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'productRef' => $product->product_ref,
+                        'componentsHash' => $product->components_hash,
+                        'components' => $product->components->map(function ($component) {
+                            return [
+                                'id' => $component->id,
+                                'name' => $component->name,
+                                'productRef' => $component->product_ref,
+                                'type' => $component->type,
+                                'category' => $component->category,
+                                'pivot' => [
+                                    'quantity' => $component->pivot->quantity,
+                                ],
+                            ];
+                        }),
+                    ];
+                });
+
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'products' => $products,
+                ];
+            });
 
         return BaseResource::collection($categories);
     }

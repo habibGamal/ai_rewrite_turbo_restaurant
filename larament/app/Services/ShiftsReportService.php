@@ -25,6 +25,53 @@ class ShiftsReportService
             ->first();
     }
 
+
+    /**
+     * Get shifts within a date range
+     */
+    public function getShiftsInPeriodQuery(?string $startDate = null, ?string $endDate = null)
+    {
+        $query = Shift::query()->with(['orders', 'expenses', 'user']);
+
+        if ($startDate) {
+            $query->where('start_at', '>=', Carbon::parse($startDate)->startOfDay());
+        }
+
+        if ($endDate) {
+            $query->where('start_at', '<=', Carbon::parse($endDate)->endOfDay());
+        }
+
+        return $query;
+    }
+    /**
+     * Get shifts within a date range
+     */
+    public function getShiftsCountInPeriod(?string $startDate = null, ?string $endDate = null)
+    {
+        return $this->getShiftsInPeriodQuery()->count();
+    }
+
+
+    /**
+     * Get shifts within a date range
+     */
+    public function getShiftsInfo(?string $startDate = null, ?string $endDate = null)
+    {
+        $query = DB::table('shifts')
+            ->select([
+                DB::raw('COUNT(*) as total_shifts'),
+                DB::raw('COUNT(DISTINCT user_id) as distinct_users'),
+                DB::raw('SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at)) as total_minutes')
+            ])
+            ->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+
+
+        return $query->first();
+    }
+
     /**
      * Get shifts within a date range
      */
@@ -100,44 +147,68 @@ class ShiftsReportService
     /**
      * Calculate aggregated statistics for multiple shifts
      */
-    public function calculatePeriodStats(Collection $shifts): array
+    public function calculatePeriodStats(?string $startDate = null, ?string $endDate = null)
     {
+        $ordersData = DB::table('shifts')
+            ->select([
+                DB::raw('COUNT(orders.id) as total_orders'),
+                DB::raw('SUM(orders.total) as sales'),
+                DB::raw('SUM(orders.profit) as profit'),
+                DB::raw('SUM(orders.discount) as discounts'),
+            ])
+            ->leftJoin(
+                'orders',
+                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                    ->where('orders.status', OrderStatus::COMPLETED)
+            )->whereBetween('shifts.created_at', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay()
+                ])->first();
+
+        $paymentsData = DB::table('shifts')
+            ->select([
+                DB::raw('SUM(CASE WHEN payments.method = "cash" THEN payments.amount ELSE 0 END) as cash_payments'),
+                DB::raw('SUM(CASE WHEN payments.method = "card" THEN payments.amount ELSE 0 END) as card_payments'),
+                DB::raw('SUM(CASE WHEN payments.method = "talabat_card" THEN payments.amount ELSE 0 END) as talabat_card_payments'),
+            ])
+            ->leftJoin(
+                'payments',
+                'shifts.id',
+                '=',
+                'payments.shift_id'
+            )->whereBetween('shifts.created_at', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay()
+                ])->first();
+
+        $expensesData = DB::table('shifts')
+            ->select([
+                DB::raw('SUM(expenses.amount) as expenses'),
+            ])
+            ->leftJoin(
+                'expenses',
+                'shifts.id',
+                '=',
+                'expenses.shift_id'
+            )->whereBetween('shifts.created_at', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay()
+                ])->first();
+
         $totalStats = [
-            'sales' => 0,
-            'profit' => 0,
-            'expenses' => 0,
-            'discounts' => 0,
-            'cashPayments' => 0,
-            'cardPayments' => 0,
-            'talabatCardPayments' => 0,
-            'avgReceiptValue' => 0,
-            'profitPercent' => 0,
-            'totalOrders' => 0,
+            'sales' => $ordersData->sales,
+            'profit' => $ordersData->profit,
+            'expenses' => $expensesData->expenses,
+            'discounts' => $ordersData->discounts,
+
+            'cashPayments' => $paymentsData->cash_payments,
+            'cardPayments' => $paymentsData->card_payments,
+            'talabatCardPayments' => $paymentsData->talabat_card_payments,
+
+            'avgReceiptValue' => $ordersData->total_orders > 0 ? $ordersData->sales / $ordersData->total_orders : 0,
+            'profitPercent' => $ordersData->sales > 0 ? ($ordersData->profit / $ordersData->sales) * 100 : 0,
+            'totalOrders' => $ordersData->total_orders,
         ];
-
-        $totalOrderCount = 0;
-
-        foreach ($shifts as $shift) {
-            $shiftStats = $this->calculateShiftStats($shift);
-
-            $totalStats['sales'] += $shiftStats['sales'];
-            $totalStats['profit'] += $shiftStats['profit'];
-            $totalStats['expenses'] += $shiftStats['expenses'];
-            $totalStats['discounts'] += $shiftStats['discounts'];
-            $totalStats['cashPayments'] += $shiftStats['cashPayments'];
-            $totalStats['cardPayments'] += $shiftStats['cardPayments'];
-            $totalStats['talabatCardPayments'] += $shiftStats['talabatCardPayments'];
-
-            // Count completed orders for this shift
-            $shiftOrderCount = $shift->orders()->where('status', OrderStatus::COMPLETED)->count();
-            $totalOrderCount += $shiftOrderCount;
-        }
-
-        // Calculate averages
-        $totalStats['avgReceiptValue'] = $totalOrderCount > 0 ? $totalStats['sales'] / $totalOrderCount : 0;
-        $totalStats['profitPercent'] = $totalStats['sales'] > 0 ? ($totalStats['profit'] / $totalStats['sales']) * 100 : 0;
-        $totalStats['totalOrders'] = $totalOrderCount;
-
         return $totalStats;
     }
 
@@ -146,18 +217,17 @@ class ShiftsReportService
      */
     public function calculateOrderStats(Shift $shift): array
     {
-        $orders = $shift->orders();
+        $orders = $shift->orders()->get();
 
         $stats = [];
         foreach (OrderStatus::cases() as $status) {
-            $statusOrders = $orders->where('status', $status)->get();
+            $statusOrders = $orders->where('status', $status);
             $stats[$status->value] = [
                 'count' => $statusOrders->count(),
                 'value' => $statusOrders->sum('total'),
                 'profit' => $statusOrders->sum('profit'),
             ];
         }
-
         return $stats;
     }
 
@@ -212,27 +282,35 @@ class ShiftsReportService
     /**
      * Calculate aggregated order statistics for multiple shifts
      */
-    public function calculatePeriodOrderStats(Collection $shifts): array
+    public function calculatePeriodOrderStats(?string $startDate = null, ?string $endDate = null)
     {
+        $ordersData = DB::table('shifts')
+            ->select([
+                'orders.status',
+                DB::raw('COUNT(orders.id) as total_orders'),
+                DB::raw('SUM(orders.total) as sales'),
+                DB::raw('SUM(orders.profit) as profit'),
+            ])
+            ->leftJoin(
+                'orders',
+                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+            )
+            ->whereBetween('shifts.created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ])
+            ->groupBy('orders.status')
+            ->get();
+
         $totalStats = [];
 
         // Initialize stats for all statuses
         foreach (OrderStatus::cases() as $status) {
             $totalStats[$status->value] = [
-                'count' => 0,
-                'value' => 0,
-                'profit' => 0,
+                'count' => $ordersData->where('status', $status->value)->first()->total_orders ?? 0,
+                'value' => $ordersData->where('status', $status->value)->first()->sales ?? 0,
+                'profit' => $ordersData->where('status', $status->value)->first()->profit ?? 0,
             ];
-        }
-
-        foreach ($shifts as $shift) {
-            $shiftStats = $this->calculateOrderStats($shift);
-
-            foreach ($shiftStats as $status => $stats) {
-                $totalStats[$status]['count'] += $stats['count'];
-                $totalStats[$status]['value'] += $stats['value'];
-                $totalStats[$status]['profit'] += $stats['profit'];
-            }
         }
 
         return $totalStats;
@@ -241,8 +319,28 @@ class ShiftsReportService
     /**
      * Calculate aggregated order type statistics for multiple shifts
      */
-    public function calculatePeriodOrderTypeStats(Collection $shifts): array
+    public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null)
     {
+
+        $data = DB::table('shifts')
+            ->select([
+                'orders.type',
+                DB::raw('COUNT(orders.id) as total_orders'),
+                DB::raw('SUM(orders.total) as sales'),
+                DB::raw('SUM(orders.profit) as profit'),
+            ])
+            ->leftJoin(
+                'orders',
+                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                    ->where('orders.status', OrderStatus::COMPLETED)
+            )
+            ->whereBetween('shifts.created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ])
+            ->groupBy('orders.type')
+            ->get();
+
         $totalStats = [];
 
         // Initialize stats for all types using enum values
@@ -254,75 +352,18 @@ class ShiftsReportService
             ];
         }
 
-        // Convert legacy format to enum value format
-        $enumValueMapping = [
-            'dineIn' => 'dine_in',
-            'delivery' => 'delivery',
-            'takeaway' => 'takeaway',
-            'talabat' => 'talabat',
-            'webDelivery' => 'web_delivery',
-            'webTakeaway' => 'web_takeaway',
-            'companies' => 'companies',
-        ];
-
-        foreach ($shifts as $shift) {
-            $shiftStats = $this->calculateOrderTypeStats($shift);
-
-            foreach ($shiftStats as $legacyKey => $stats) {
-                $enumValue = $enumValueMapping[$legacyKey] ?? $legacyKey;
-                if (isset($totalStats[$enumValue])) {
-                    $totalStats[$enumValue]['count'] += $stats['count'];
-                    $totalStats[$enumValue]['value'] += $stats['value'];
-                    $totalStats[$enumValue]['profit'] += $stats['profit'];
-                }
+        foreach ($data as $item) {
+            $type = $item->type;
+            if (isset($totalStats[$type])) {
+                $totalStats[$type]['count'] = $item->total_orders;
+                $totalStats[$type]['value'] = (float) $item->sales;
+                $totalStats[$type]['profit'] = (float) $item->profit;
             }
         }
 
         return $totalStats;
     }
 
-    /**
-     * Get orders query for shifts
-     */
-    public function getOrdersQueryForShifts(Collection $shifts)
-    {
-        if ($shifts->isEmpty()) {
-            return Order::query()->where('id', 0); // Empty query
-        }
-
-        $shiftIds = $shifts->pluck('id')->toArray();
-
-        return Order::query()
-            ->whereIn('shift_id', $shiftIds)
-            ->with(['customer', 'user', 'payments', 'shift'])
-            ->latest();
-    }
-
-    /**
-     * Get expenses query for shifts with aggregation by expense type
-     */
-    public function getExpensesQueryForShifts(Collection $shifts)
-    {
-        if ($shifts->isEmpty()) {
-            return ExpenceType::query()->where('id', 0); // Empty query
-        }
-
-        $shiftIds = $shifts->pluck('id')->toArray();
-
-        return ExpenceType::query()
-            ->select([
-                'expence_types.id',
-                'expence_types.name',
-                DB::raw('COUNT(expenses.id) as expense_count'),
-                DB::raw('COALESCE(SUM(expenses.amount), 0) as total_amount'),
-            ])
-            ->leftJoin('expenses', function($join) use ($shiftIds) {
-                $join->on('expence_types.id', '=', 'expenses.expence_type_id')
-                     ->whereIn('expenses.shift_id', $shiftIds);
-            })
-            ->groupBy('expence_types.id', 'expence_types.name')
-            ->havingRaw('COUNT(expenses.id) > 0'); // Only show types that have expenses
-    }
 
     /**
      * Get period info for display
@@ -336,27 +377,26 @@ class ShiftsReportService
             ];
         }
 
-        $start = $startDate ? Carbon::parse($startDate) : null;
-        $end = $endDate ? Carbon::parse($endDate) : null;
-
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->endOfDay();
         if ($start && $end) {
             return [
                 'title' => 'تقرير الفترة',
                 'description' => sprintf(
                     'من %s إلى %s',
-                    $start->format('d/m/Y'),
-                    $end->format('d/m/Y')
+                    $start->format('d/m/Y h:i A'),
+                    $end->format('d/m/Y h:i A')
                 ),
             ];
         } elseif ($start) {
             return [
                 'title' => 'تقرير من تاريخ محدد',
-                'description' => sprintf('من %s حتى الآن', $start->format('d/m/Y')),
+                'description' => sprintf('من %s حتى الآن', $start->format('d/m/Y h:i A')),
             ];
         } else {
             return [
                 'title' => 'تقرير حتى تاريخ محدد',
-                'description' => sprintf('حتى %s', $end->format('d/m/Y')),
+                'description' => sprintf('حتى %s', $end->format('d/m/Y h:i A')),
             ];
         }
     }

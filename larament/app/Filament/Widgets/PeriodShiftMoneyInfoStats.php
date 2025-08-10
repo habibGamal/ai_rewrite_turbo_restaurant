@@ -25,13 +25,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $shifts = $this->getShifts();
-
-        if ($shifts->isEmpty()) {
-            return [];
-        }
-
-        $stats = $this->shiftsReportService->calculatePeriodStats($shifts);
+        $stats = $this->getPeriodStats();
 
         return [
             Stat::make('المبيعات', number_format($stats['sales'], 2) . ' جنيه')
@@ -109,11 +103,11 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
         ];
     }
 
-    private function getShifts()
+    private function getPeriodStats()
     {
         $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
 
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
+        return $this->shiftsReportService->calculatePeriodStats($startDate, $endDate);
     }
 }

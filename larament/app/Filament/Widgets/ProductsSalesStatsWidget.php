@@ -55,6 +55,14 @@ class ProductsSalesStatsWidget extends BaseWidget
                     'لا توجد مبيعات')
                 ->descriptionIcon('heroicon-m-trophy', IconPosition::Before)
                 ->color('success'),
+
+            Stat::make('أفضل منتج بالربح', $summary['most_profitable_product']?->name ?? 'لا يوجد')
+                ->description($summary['most_profitable_product'] ?
+                    number_format($summary['most_profitable_product']->total_profit, 2) . '
+                    ج.م' :
+                    'لا توجد مبيعات')
+                ->descriptionIcon('heroicon-m-trophy', IconPosition::Before)
+                ->color('success'),
         ];
     }
 

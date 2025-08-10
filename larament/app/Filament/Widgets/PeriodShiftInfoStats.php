@@ -27,38 +27,18 @@ class PeriodShiftInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $shifts = $this->getShifts();
-
-        if ($shifts->isEmpty()) {
-            return [];
-        }
+        $startDate = Carbon::parse($this->filters['startDate'])->startOfDay();
+        $endDate = Carbon::parse($this->filters['endDate'])->endOfDay();
+        $info =  $this->shiftsReportService->getShiftsInfo($startDate, $endDate);
 
         $periodInfo = $this->getPeriodInfo();
-        $totalShifts = $shifts->count();
-        $firstShift = $shifts->last(); // oldest shift (ordered by desc)
-        $lastShift = $shifts->first(); // newest shift
+        $totalShifts = $info->total_shifts;
 
-        $totalDuration = 0;
-        $totalStartCash = 0;
-        $uniqueUsers = [];
+        $totalDuration = $info->total_minutes;
+        $usersCount = $info->distinct_users;
 
-        foreach ($shifts as $shift) {
-            // Calculate duration for closed shifts
-            if ($shift->closed && $shift->end_at) {
-                $start = Carbon::parse($shift->start_at);
-                $end = Carbon::parse($shift->end_at);
-                $totalDuration += $start->diffInMinutes($end);
-            }
-
-            $totalStartCash += (float) $shift->start_cash;
-
-            if ($shift->user) {
-                $uniqueUsers[$shift->user->id] = $shift->user->name;
-            }
-        }
 
         $avgDuration = $totalShifts > 0 ? $totalDuration / $totalShifts : 0;
-        $avgStartCash = $totalShifts > 0 ? $totalStartCash / $totalShifts : 0;
 
         return [
             Stat::make('عدد الشفتات', $totalShifts . ' شفت')
@@ -71,24 +51,11 @@ class PeriodShiftInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-play')
                 ->color('warning'),
 
-            Stat::make('متوسط النقدية البدائية', number_format($avgStartCash, 2) . ' جنيه')
-                ->description('متوسط النقدية في بداية الشفتات')
-                ->descriptionIcon('heroicon-m-banknotes')
-                ->color('success'),
-
-            Stat::make('عدد الموظفين', count($uniqueUsers) . ' موظف')
+            Stat::make('عدد الموظفين', $usersCount . ' موظف')
                 ->description('الموظفون المسؤولون عن الشفتات')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary'),
         ];
-    }
-
-    private function getShifts()
-    {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
     }
 
     private function getPeriodInfo(): array

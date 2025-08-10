@@ -26,13 +26,8 @@ class PeriodShiftOrdersStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $shifts = $this->getShifts();
+        $orderStats = $this->calculatePeriodOrderStats();
 
-        if ($shifts->isEmpty()) {
-            return [];
-        }
-
-        $orderStats = $this->shiftsReportService->calculatePeriodOrderStats($shifts);
 
         return [
             Stat::make('الاوردرات المكتملة', $orderStats['completed']['count'] . ' اوردر')
@@ -73,11 +68,11 @@ class PeriodShiftOrdersStats extends BaseWidget
         ];
     }
 
-    private function getShifts()
+    private function calculatePeriodOrderStats()
     {
         $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
 
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
+        return $this->shiftsReportService->calculatePeriodOrderStats($startDate, $endDate);
     }
 }

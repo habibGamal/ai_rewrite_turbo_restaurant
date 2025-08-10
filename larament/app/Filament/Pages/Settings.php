@@ -5,17 +5,24 @@ namespace App\Filament\Pages;
 use App\Filament\Traits\AdminAccess;
 use App\Services\SettingsService;
 use App\Services\PrintService;
+use App\Services\BranchService;
+use App\Models\Category;
 use App\Enums\SettingKey;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Storage;
 
 class Settings extends Page implements HasForms
 {
@@ -89,6 +96,94 @@ class Settings extends Page implements HasForms
                             ->placeholder(SettingKey::RECEIPT_FOOTER->placeholder())
                             ->rows(3)
                             ->maxLength(500),
+                    ]),
+
+                Section::make('إعدادات المطعم')
+                    ->description('معلومات المطعم الأساسية')
+                    ->icon('heroicon-m-building-storefront')
+                    ->schema([
+                        TextInput::make(SettingKey::RESTAURANT_NAME->value)
+                            ->label(SettingKey::RESTAURANT_NAME->label())
+                            ->helperText(SettingKey::RESTAURANT_NAME->helperText())
+                            ->required()
+                            ->placeholder(SettingKey::RESTAURANT_NAME->placeholder())
+                            ->maxLength(255),
+
+                        Grid::make(2)
+                            ->schema([
+                                FileUpload::make(SettingKey::RESTAURANT_PRINT_LOGO->value)
+                                    ->label(SettingKey::RESTAURANT_PRINT_LOGO->label())
+                                    ->helperText(SettingKey::RESTAURANT_PRINT_LOGO->helperText())
+                                    ->image()
+                                    ->imageEditor()
+                                    ->directory('logos')
+                                    ->visibility('public')
+                                    ->moveFiles()
+                                    ->acceptedFileTypes(['image/png'])
+                                    ->maxSize(2048) // 2MB limit
+                                    ->afterStateUpdated(function ($state) {
+                                        if ($state && is_string($state)) {
+                                            // Copy to public/images/logo.png
+                                            $sourcePath = Storage::disk('public')->path($state);
+                                            $destPath = public_path('images/logo.png');
+
+                                            if (file_exists($sourcePath)) {
+                                                @mkdir(dirname($destPath), 0755, true);
+                                                copy($sourcePath, $destPath);
+                                            }
+                                        }
+                                    }),
+
+                                FileUpload::make(SettingKey::RESTAURANT_OFFICIAL_LOGO->value)
+                                    ->label(SettingKey::RESTAURANT_OFFICIAL_LOGO->label())
+                                    ->helperText(SettingKey::RESTAURANT_OFFICIAL_LOGO->helperText())
+                                    ->image()
+                                    ->imageEditor()
+                                    ->directory('logos')
+                                    ->visibility('public')
+                                    ->moveFiles()
+                                    ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
+                                    ->maxSize(2048) // 2MB limit
+                                    ->afterStateUpdated(function ($state) {
+                                        if ($state && is_string($state)) {
+                                            // Copy to public/images/logo.jpg
+                                            $sourcePath = Storage::disk('public')->path($state);
+                                            $destPath = public_path('images/logo.jpg');
+
+                                            if (file_exists($sourcePath)) {
+                                                @mkdir(dirname($destPath), 0755, true);
+                                                copy($sourcePath, $destPath);
+                                            }
+                                        }
+                                    }),
+                            ]),
+                    ]),
+
+                Section::make('إدارة الفروع')
+                    ->description('إعدادات شبكة الفروع والاتصال')
+                    ->icon('heroicon-m-building-office')
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                Select::make(SettingKey::NODE_TYPE->value)
+                                    ->label(SettingKey::NODE_TYPE->label())
+                                    ->helperText(SettingKey::NODE_TYPE->helperText())
+                                    ->options([
+                                        'master' => 'رئيسية',
+                                        'slave' => 'فرع',
+                                        'independent' => 'مستقلة',
+                                    ])
+                                    ->required()
+                                    ->live(),
+
+                                TextInput::make(SettingKey::MASTER_NODE_LINK->value)
+                                    ->label(SettingKey::MASTER_NODE_LINK->label())
+                                    ->helperText(SettingKey::MASTER_NODE_LINK->helperText())
+                                    ->url()
+                                    ->placeholder(SettingKey::MASTER_NODE_LINK->placeholder())
+                                    ->visible(fn(Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave')
+                                    ->required(fn(Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave'),
+                            ]),
                     ]),
             ])
             ->statePath('data');
@@ -174,10 +269,9 @@ class Settings extends Page implements HasForms
                 ->send();
         }
     }
-
     protected function getFormActions(): array
     {
-        return [
+        $actions = [
             Action::make('save')
                 ->label('حفظ الإعدادات')
                 ->icon('heroicon-m-check')
@@ -199,7 +293,10 @@ class Settings extends Page implements HasForms
                 ->modalDescription('هل أنت متأكد من أنك تريد إعادة تعيين جميع الإعدادات إلى القيم الافتراضية؟ سيتم فقدان التغييرات الحالية.')
                 ->modalSubmitActionLabel('نعم، إعادة تعيين')
                 ->action('resetToDefaults'),
+
         ];
+
+        return $actions;
     }
 
 }

@@ -59,9 +59,9 @@ class PeriodShiftReport extends BaseDashboard
         $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
         $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
 
-        $shifts = $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
+        $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod($startDate, $endDate);
 
-        if ($shifts->isEmpty()) {
+        if ($shiftsCount === 0) {
             return [
                 \App\Filament\Widgets\NoShiftsInPeriodWidget::class,
             ];
@@ -75,21 +75,5 @@ class PeriodShiftReport extends BaseDashboard
             \App\Filament\Widgets\PeriodShiftOrdersTable::class,
             \App\Filament\Widgets\PeriodShiftExpensesTable::class,
         ];
-    }
-
-    public function getShifts()
-    {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-
-        return $this->shiftsReportService->getShiftsInPeriod($startDate, $endDate);
-    }
-
-    public function getPeriodInfo(): array
-    {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-
-        return $this->shiftsReportService->getPeriodInfo($startDate, $endDate);
     }
 }

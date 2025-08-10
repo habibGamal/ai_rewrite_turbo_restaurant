@@ -17,26 +17,26 @@ class PeriodShiftExpensesExporter extends Exporter
             ExportColumn::make('name')
                 ->label('نوع المصروف'),
 
-            ExportColumn::make('expense_count')
+            ExportColumn::make('expenses_count')
                 ->label('عدد المصروفات')
                 ->state(function ($record) {
                     // This will be populated by the widget's query
-                    return $record->expense_count ?? 0;
+                    return $record->expenses_count ?? 0;
                 }),
 
-            ExportColumn::make('total_amount')
+            ExportColumn::make('expenses_sum_amount')
                 ->label('الإجمالي (جنيه)')
                 ->state(function ($record) {
                     // This will be populated by the widget's query
-                    return number_format($record->total_amount ?? 0, 2);
+                    return number_format($record->expenses_sum_amount ?? 0, 2);
                 }),
 
             ExportColumn::make('average_amount')
                 ->label('متوسط المبلغ (جنيه)')
                 ->state(function ($record) {
-                    $count = $record->expense_count ?? 0;
-                    $total = $record->total_amount ?? 0;
-                    $average = $count > 0 ? $total / $count : 0;
+                    $count = $record->expenses_count ?? 0;
+                        $total = $record->expenses_sum_amount ?? 0;
+                        $average = $count > 0 ? $total / $count : 0;
                     return number_format($average, 2);
                 }),
         ];

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->decimal('amount', 10, 2);
             $table->string('method');
-            $table->unsignedBigInteger('shift_id');
+            $table->foreignId('shift_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

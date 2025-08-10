@@ -13,6 +13,11 @@ class SettingsService
     public const CASHIER_PRINTER_IP = 'cashier_printer_ip';
     public const RECEIPT_FOOTER = 'receipt_footer';
     public const DINE_IN_SERVICE_CHARGE = 'dine_in_service_charge';
+    public const RESTAURANT_NAME = 'restaurant_name';
+    public const RESTAURANT_PRINT_LOGO = 'restaurant_print_logo';
+    public const RESTAURANT_OFFICIAL_LOGO = 'restaurant_official_logo';
+    public const NODE_TYPE = 'node_type';
+    public const MASTER_NODE_LINK = 'master_node_link';
 
     /**
      * Get website link from settings
@@ -45,6 +50,46 @@ class SettingsService
     {
         $value = $this->get(SettingKey::DINE_IN_SERVICE_CHARGE->value, SettingKey::DINE_IN_SERVICE_CHARGE->defaultValue());
         return (float) $value;
+    }
+
+    /**
+     * Get restaurant name from settings
+     */
+    public function getRestaurantName(): string
+    {
+        return $this->get(SettingKey::RESTAURANT_NAME->value, SettingKey::RESTAURANT_NAME->defaultValue());
+    }
+
+    /**
+     * Get restaurant print logo path from settings
+     */
+    public function getRestaurantPrintLogo(): string
+    {
+        return $this->get(SettingKey::RESTAURANT_PRINT_LOGO->value, SettingKey::RESTAURANT_PRINT_LOGO->defaultValue());
+    }
+
+    /**
+     * Get restaurant official logo path from settings
+     */
+    public function getRestaurantOfficialLogo(): string
+    {
+        return $this->get(SettingKey::RESTAURANT_OFFICIAL_LOGO->value, SettingKey::RESTAURANT_OFFICIAL_LOGO->defaultValue());
+    }
+
+    /**
+     * Get node type from settings
+     */
+    public function getNodeType(): string
+    {
+        return $this->get(SettingKey::NODE_TYPE->value, SettingKey::NODE_TYPE->defaultValue());
+    }
+
+    /**
+     * Get master node link from settings
+     */
+    public function getMasterNodeLink(): string
+    {
+        return $this->get(SettingKey::MASTER_NODE_LINK->value, SettingKey::MASTER_NODE_LINK->defaultValue());
     }
 
     /**
