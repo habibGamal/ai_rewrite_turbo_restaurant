@@ -65,6 +65,11 @@ class ConsumableProductResource extends Resource
                     ->required()
                     ->numeric()
                     ->prefix('ج.م'),
+                Forms\Components\TextInput::make('min_stock')
+                    ->label('الحد الأدنى للمخزون')
+                    ->required()
+                    ->numeric()
+                    ->default(0),
                 Forms\Components\Select::make('unit')
                     ->label('الوحدة')
                     ->options([
@@ -105,6 +110,10 @@ class ConsumableProductResource extends Resource
                 Tables\Columns\TextColumn::make('cost')
                     ->label('التكلفة')
                     ->money('EGP')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('min_stock')
+                    ->label('الحد الأدنى للمخزون')
+                    ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('unit')
                     ->label('الوحدة')

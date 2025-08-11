@@ -31,11 +31,11 @@ class PeriodShiftExpensesDetailedExporter extends Exporter
             ExportColumn::make('shift.id')
                 ->label('رقم الشفت'),
 
-            ExportColumn::make('shift.start_date')
+            ExportColumn::make('shift.start_at')
                 ->label('تاريخ بداية الشفت')
                 ->formatStateUsing(fn ($state) => $state ? $state->format('Y-m-d H:i:s') : ''),
 
-            ExportColumn::make('shift.end_date')
+            ExportColumn::make('shift.end_at')
                 ->label('تاريخ نهاية الشفت')
                 ->formatStateUsing(fn ($state) => $state ? $state->format('Y-m-d H:i:s') : 'مفتوح'),
 

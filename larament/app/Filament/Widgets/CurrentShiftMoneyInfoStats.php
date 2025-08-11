@@ -56,7 +56,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{has_discount:'1'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
@@ -68,7 +68,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'cash'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('primary'),
@@ -80,7 +80,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'card'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('info'),
@@ -92,7 +92,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'talabat_card'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),

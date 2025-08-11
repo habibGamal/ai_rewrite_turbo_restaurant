@@ -50,28 +50,46 @@ class PeriodShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $startDate = $this->filters['startDate'];
-        $endDate = $this->filters['endDate'];
+        $filterType = $this->filters['filterType'] ?? 'period';
+
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            $query = Order::query()
+                ->with(['customer', 'user', 'payments', 'shift'])
+                ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
+                    return $query->whereIn('shift_id', $shiftIds);
+                });
+        } else {
+            $startDate = $this->filters['startDate'];
+            $endDate = $this->filters['endDate'];
+            $query = Order::query()
+                ->with(['customer', 'user', 'payments', 'shift'])
+                ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [
+                        Carbon::parse($startDate)->startOfDay(),
+                        Carbon::parse($endDate)->endOfDay()
+                    ]);
+                });
+        }
+
         return $table
-            ->query(
-                Order::query()
-                    ->with(['customer', 'user', 'payments', 'shift'])
-                    ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                        $query->whereBetween('created_at', [
-                            Carbon::parse($startDate)->startOfDay(),
-                            Carbon::parse($endDate)->endOfDay()
-                        ]);
-                    })
-            )
+            ->query($query)
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير الاوردرات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(PeriodShiftOrdersExporter::class)
+                    ->extraAttributes([
+                        'id' => 'orders_table',
+                    ])
                     ->fileName(fn() => 'period-shift-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('الرقم المرجعي')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('order_number')
                     ->label('رقم الطلب')
                     ->searchable()
@@ -238,8 +256,15 @@ class PeriodShiftOrdersTable extends BaseWidget
             ->emptyStateHeading('لا توجد طلبات')
             ->emptyStateDescription('لم يتم العثور على أي طلبات في الفترة المحددة.')
             ->emptyStateIcon('heroicon-o-shopping-cart')
-            ->recordAction(null)
-            ->recordUrl(null)
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+                    ->openUrlInNewTab(),
+            ])
+            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordUrl(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
             ->bulkActions([]);
     }
 }

@@ -51,11 +51,17 @@ class InventoryItemResource extends Resource
                     ->numeric()
                     ->sortable()
                     ->badge()
-                    ->color(fn(string $state): string => match (true) {
-                        $state > 50 => 'success',
-                        $state > 20 => 'warning',
+                    ->color(fn($record): string => match (true) {
+                        $record->quantity > ($record->product->min_stock * 2) => 'success',
+                        $record->quantity > $record->product->min_stock => 'warning',
                         default => 'danger',
                     }),
+                Tables\Columns\TextColumn::make('product.min_stock')
+                    ->label('الحد الأدنى للمخزون')
+                    ->numeric()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('product.unit')
                     ->label('الوحدة')
                     ->badge(),
@@ -95,7 +101,10 @@ class InventoryItemResource extends Resource
                     ),
                 Tables\Filters\Filter::make('low_stock')
                     ->label('مخزون منخفض')
-                    ->query(fn($query) => $query->where('quantity', '<=', 20)),
+                    ->query(fn($query) => $query->whereRaw('quantity <= (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
+                Tables\Filters\Filter::make('critical_stock')
+                    ->label('مخزون حرج')
+                    ->query(fn($query) => $query->whereRaw('quantity < (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
                 Tables\Filters\Filter::make('out_of_stock')
                     ->label('نفد المخزون')
                     ->query(fn($query) => $query->where('quantity', '<=', 0)),

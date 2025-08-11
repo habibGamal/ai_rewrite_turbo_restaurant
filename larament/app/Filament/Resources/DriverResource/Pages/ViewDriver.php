@@ -16,4 +16,11 @@ class ViewDriver extends ViewRecord
             Actions\EditAction::make(),
         ];
     }
+
+    public function getRelationManagers(): array
+    {
+        return [
+            \App\Filament\Resources\DriverResource\RelationManagers\OrdersRelationManager::class,
+        ];
+    }
 }

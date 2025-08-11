@@ -24,10 +24,12 @@ class ProductObserver
     public function created(Product $product): void
     {
         // Create inventory item for the product with initial quantity of 0
-        InventoryItem::create([
-            'product_id' => $product->id,
-            'quantity' => 0,
-        ]);
+        if ($product->type !== \App\Enums\ProductType::Manufactured) {
+            InventoryItem::create([
+                'product_id' => $product->id,
+                'quantity' => 0,
+            ]);
+        }
     }
 
     /**

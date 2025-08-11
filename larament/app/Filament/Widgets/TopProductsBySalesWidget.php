@@ -91,21 +91,6 @@ class TopProductsBySalesWidget extends ChartWidget
                         'usePointStyle' => true,
                     ],
                 ],
-                'tooltip' => [
-                    'enabled' => true,
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            const label = context.label || "";
-                            const value = new Intl.NumberFormat("ar-EG", {
-                                style: "currency",
-                                currency: "EGP"
-                            }).format(context.parsed);
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return label + ": " + value + " (" + percentage + "%)";
-                        }'
-                    ]
-                ]
             ],
         ];
     }

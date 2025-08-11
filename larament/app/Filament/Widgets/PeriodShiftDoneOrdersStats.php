@@ -44,14 +44,15 @@ class PeriodShiftDoneOrdersStats extends BaseWidget
         foreach ($statsMapping as $enumValue => $config) {
             if (isset($orderTypeStats[$enumValue]) && $orderTypeStats[$enumValue]['count'] > 0) {
                 $data = $orderTypeStats[$enumValue];
+                $average = $data['count'] > 0 ? $data['value'] / $data['count'] : 0;
                 $stats[] = Stat::make($config['label'], $data['count'] . ' اوردر')
-                    ->description('بقيمة ' . number_format($data['value'], 2) . ' جنيه - ربح ' . number_format($data['profit'], 2) . ' جنيه')
+                    ->description('بقيمة ' . number_format($data['value'], 2) . ' جنيه - ربح ' . number_format($data['profit'], 2) . ' جنيه - متوسط ' . number_format($average, 2) . ' جنيه')
                     ->descriptionIcon($config['icon'])
                     ->extraAttributes([
                         'class' => 'transition hover:scale-105 cursor-pointer',
                         'wire:click' => <<<JS
                             \$dispatch('filterUpdate',{filter:{type:'{$enumValue}'}} )
-                            document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         JS
                     ])
                     ->color($config['color']);
@@ -63,9 +64,15 @@ class PeriodShiftDoneOrdersStats extends BaseWidget
 
     private function calculatePeriodOrderTypeStats()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(value: 7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $filterType = $this->filters['filterType'] ?? 'period';
 
-        return $this->shiftsReportService->calculatePeriodOrderTypeStats($startDate, $endDate);
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            return $this->shiftsReportService->calculatePeriodOrderTypeStats(null, null, $shiftIds);
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(value: 7)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            return $this->shiftsReportService->calculatePeriodOrderTypeStats($startDate, $endDate, null);
+        }
     }
 }

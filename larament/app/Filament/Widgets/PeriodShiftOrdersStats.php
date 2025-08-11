@@ -37,7 +37,7 @@ class PeriodShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'completed'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('success'),
@@ -49,7 +49,7 @@ class PeriodShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'processing'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
@@ -61,7 +61,7 @@ class PeriodShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'cancelled'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('danger'),
@@ -70,9 +70,15 @@ class PeriodShiftOrdersStats extends BaseWidget
 
     private function calculatePeriodOrderStats()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $filterType = $this->filters['filterType'] ?? 'period';
 
-        return $this->shiftsReportService->calculatePeriodOrderStats($startDate, $endDate);
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            return $this->shiftsReportService->calculatePeriodOrderStats(null, null, $shiftIds);
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            return $this->shiftsReportService->calculatePeriodOrderStats($startDate, $endDate, null);
+        }
     }
 }

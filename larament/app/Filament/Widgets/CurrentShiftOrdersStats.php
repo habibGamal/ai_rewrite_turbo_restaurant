@@ -39,7 +39,7 @@ class CurrentShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'completed'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('success'),
@@ -51,7 +51,7 @@ class CurrentShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'processing'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
@@ -63,7 +63,7 @@ class CurrentShiftOrdersStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{status:'cancelled'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('danger'),

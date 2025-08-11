@@ -18,6 +18,7 @@ class ProductFactory extends Factory
             'name' => $this->faker->word,
             'price' => $this->faker->randomFloat(2, 1, 100),
             'cost' => $this->faker->randomFloat(2, 1, 50),
+            'min_stock' => $this->faker->randomFloat(2, 5, 50),
             'type' => 'manufactured',
             'unit' => 'piece',
             'legacy' => $this->faker->boolean,

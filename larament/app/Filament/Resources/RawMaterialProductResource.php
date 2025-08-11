@@ -65,6 +65,11 @@ class RawMaterialProductResource extends Resource
                     ->required()
                     ->numeric()
                     ->prefix('ج.م'),
+                Forms\Components\TextInput::make('min_stock')
+                    ->label('الحد الأدنى للمخزون')
+                    ->required()
+                    ->numeric()
+                    ->default(0),
                 Forms\Components\Select::make('unit')
                     ->label('الوحدة')
                     ->options([
@@ -72,11 +77,6 @@ class RawMaterialProductResource extends Resource
                         'kg' => 'كيلوجرام',
                     ])
                     ->required(),
-                Forms\Components\Select::make('printer_id')
-                    ->label('الطابعة')
-                    ->options(Printer::all()->pluck('name', 'id'))
-                    ->required()
-                    ->searchable(),
                 Forms\Components\Hidden::make('type')
                     ->default('raw_material'),
                 Forms\Components\Toggle::make('legacy')
@@ -105,6 +105,10 @@ class RawMaterialProductResource extends Resource
                     ->label('التكلفة')
                     ->money('EGP')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('min_stock')
+                    ->label('الحد الأدنى للمخزون')
+                    ->numeric()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('unit')
                     ->label('الوحدة')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
@@ -112,9 +116,6 @@ class RawMaterialProductResource extends Resource
                         'kg' => 'كيلوجرام',
                         default => $state,
                     }),
-                Tables\Columns\TextColumn::make('printer.name')
-                    ->label('الطابعة')
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('inventoryItem.quantity')
                     ->label('المخزون')
                     ->sortable()

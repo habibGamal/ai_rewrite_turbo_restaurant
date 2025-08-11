@@ -65,6 +65,9 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(CurrentShiftOrdersExporter::class)
+                    ->extraAttributes([
+                        'id' => 'orders_table',
+                    ])
                     ->modifyQueryUsing(function (Builder $query) {
                         $currentShift = $this->getCurrentShift();
                         if ($currentShift) {
@@ -77,6 +80,10 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->visible(fn () => $this->getCurrentShift() !== null),
             ])
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('الرقم المرجعي')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('order_number')
                     ->label('رقم الطلب')
                     ->searchable()
@@ -240,8 +247,15 @@ class CurrentShiftOrdersTable extends BaseWidget
             ->emptyStateHeading('لا توجد طلبات')
             ->emptyStateDescription('لم يتم العثور على أي طلبات في الشفت الحالي.')
             ->emptyStateIcon('heroicon-o-shopping-cart')
-            ->recordAction(null)
-            ->recordUrl(null)
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+                    ->openUrlInNewTab(),
+            ])
+            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordUrl(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
             ->bulkActions([]);
     }
 

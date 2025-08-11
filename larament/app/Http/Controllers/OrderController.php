@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\OrderItem;
 use App\Models\Expense;
 use App\Models\ExpenceType;
+use App\Models\TableType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
@@ -582,6 +583,32 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             logger()->error('Error creating order: ' . $e->getMessage());
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنشاء الطلب: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get table types
+     */
+    public function getTableTypes()
+    {
+        try {
+            $tableTypes = TableType::orderBy('name')->get();
+
+            // If no table types exist, return default option
+            if ($tableTypes->isEmpty()) {
+                $tableTypes = collect([
+                    (object)[
+                        'id' => null,
+                        'name' => 'صالة',
+                        'created_at' => null,
+                        'updated_at' => null,
+                    ]
+                ]);
+            }
+
+            return response()->json($tableTypes);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء جلب أنواع الطاولات'], 500);
         }
     }
 

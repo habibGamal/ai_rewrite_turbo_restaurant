@@ -79,17 +79,6 @@ class TopProductsByProfitWidget extends ChartWidget
                     'display' => true,
                     'position' => 'top',
                 ],
-                'tooltip' => [
-                    'enabled' => true,
-                    'callbacks' => [
-                        'label' => 'function(context) {
-                            return context.dataset.label + ": " + new Intl.NumberFormat("ar-EG", {
-                                style: "currency",
-                                currency: "EGP"
-                            }).format(context.parsed.y);
-                        }'
-                    ]
-                ]
             ],
             'scales' => [
                 'x' => [
@@ -111,16 +100,6 @@ class TopProductsByProfitWidget extends ChartWidget
                         'display' => true,
                         'color' => 'rgba(0, 0, 0, 0.1)',
                     ],
-                    'ticks' => [
-                        'callback' => 'function(value) {
-                            return new Intl.NumberFormat("ar-EG", {
-                                style: "currency",
-                                currency: "EGP",
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                            }).format(value);
-                        }'
-                    ]
                 ],
             ],
         ];

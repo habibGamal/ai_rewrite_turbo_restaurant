@@ -27,67 +27,67 @@ class ShiftsReportService
 
 
     /**
-     * Get shifts within a date range
+     * Get shifts within a date range or specific shift IDs
      */
-    public function getShiftsInPeriodQuery(?string $startDate = null, ?string $endDate = null)
+    public function getShiftsInPeriodQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
         $query = Shift::query()->with(['orders', 'expenses', 'user']);
 
-        if ($startDate) {
-            $query->where('start_at', '>=', Carbon::parse($startDate)->startOfDay());
-        }
+        if ($shiftIds && !empty($shiftIds)) {
+            $query->whereIn('id', $shiftIds);
+        } else {
+            if ($startDate) {
+                $query->where('start_at', '>=', Carbon::parse($startDate)->startOfDay());
+            }
 
-        if ($endDate) {
-            $query->where('start_at', '<=', Carbon::parse($endDate)->endOfDay());
+            if ($endDate) {
+                $query->where('start_at', '<=', Carbon::parse($endDate)->endOfDay());
+            }
         }
 
         return $query;
     }
     /**
-     * Get shifts within a date range
+     * Get shifts count within a date range or specific shift IDs
      */
-    public function getShiftsCountInPeriod(?string $startDate = null, ?string $endDate = null)
+    public function getShiftsCountInPeriod(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        return $this->getShiftsInPeriodQuery()->count();
+        return $this->getShiftsInPeriodQuery($startDate, $endDate, $shiftIds)->count();
     }
 
 
     /**
-     * Get shifts within a date range
+     * Get shifts info within a date range or specific shift IDs
      */
-    public function getShiftsInfo(?string $startDate = null, ?string $endDate = null)
+    public function getShiftsInfo(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
         $query = DB::table('shifts')
             ->select([
                 DB::raw('COUNT(*) as total_shifts'),
                 DB::raw('COUNT(DISTINCT user_id) as distinct_users'),
                 DB::raw('SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at)) as total_minutes')
-            ])
-            ->whereBetween('created_at', [
+            ]);
+
+        if ($shiftIds && !empty($shiftIds)) {
+            $query->whereIn('id', $shiftIds);
+        } else {
+            $query->whereBetween('created_at', [
                 Carbon::parse($startDate)->startOfDay(),
                 Carbon::parse($endDate)->endOfDay()
             ]);
-
+        }
 
         return $query->first();
     }
 
     /**
-     * Get shifts within a date range
+     * Get shifts within a date range or specific shift IDs
      */
-    public function getShiftsInPeriod(?string $startDate = null, ?string $endDate = null): Collection
+    public function getShiftsInPeriod(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): Collection
     {
-        $query = Shift::query()->with(['orders', 'expenses', 'user']);
-
-        if ($startDate) {
-            $query->where('start_at', '>=', Carbon::parse($startDate)->startOfDay());
-        }
-
-        if ($endDate) {
-            $query->where('start_at', '<=', Carbon::parse($endDate)->endOfDay());
-        }
-
-        return $query->orderBy('start_at', 'desc')->get();
+        return $this->getShiftsInPeriodQuery($startDate, $endDate, $shiftIds)
+            ->orderBy('start_at', 'desc')
+            ->get();
     }
 
     /**
@@ -147,9 +147,20 @@ class ShiftsReportService
     /**
      * Calculate aggregated statistics for multiple shifts
      */
-    public function calculatePeriodStats(?string $startDate = null, ?string $endDate = null)
+    public function calculatePeriodStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $ordersData = DB::table('shifts')
+        $shiftsQuery = DB::table('shifts');
+
+        if ($shiftIds && !empty($shiftIds)) {
+            $shiftsQuery->whereIn('shifts.id', $shiftIds);
+        } else {
+            $shiftsQuery->whereBetween('shifts.created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        }
+
+        $ordersData = (clone $shiftsQuery)
             ->select([
                 DB::raw('COUNT(orders.id) as total_orders'),
                 DB::raw('SUM(orders.total) as sales'),
@@ -160,12 +171,9 @@ class ShiftsReportService
                 'orders',
                 fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
                     ->where('orders.status', OrderStatus::COMPLETED)
-            )->whereBetween('shifts.created_at', [
-                    Carbon::parse($startDate)->startOfDay(),
-                    Carbon::parse($endDate)->endOfDay()
-                ])->first();
+            )->first();
 
-        $paymentsData = DB::table('shifts')
+        $paymentsData = (clone $shiftsQuery)
             ->select([
                 DB::raw('SUM(CASE WHEN payments.method = "cash" THEN payments.amount ELSE 0 END) as cash_payments'),
                 DB::raw('SUM(CASE WHEN payments.method = "card" THEN payments.amount ELSE 0 END) as card_payments'),
@@ -176,12 +184,9 @@ class ShiftsReportService
                 'shifts.id',
                 '=',
                 'payments.shift_id'
-            )->whereBetween('shifts.created_at', [
-                    Carbon::parse($startDate)->startOfDay(),
-                    Carbon::parse($endDate)->endOfDay()
-                ])->first();
+            )->first();
 
-        $expensesData = DB::table('shifts')
+        $expensesData = (clone $shiftsQuery)
             ->select([
                 DB::raw('SUM(expenses.amount) as expenses'),
             ])
@@ -190,24 +195,21 @@ class ShiftsReportService
                 'shifts.id',
                 '=',
                 'expenses.shift_id'
-            )->whereBetween('shifts.created_at', [
-                    Carbon::parse($startDate)->startOfDay(),
-                    Carbon::parse($endDate)->endOfDay()
-                ])->first();
+            )->first();
 
         $totalStats = [
-            'sales' => $ordersData->sales,
-            'profit' => $ordersData->profit,
-            'expenses' => $expensesData->expenses,
-            'discounts' => $ordersData->discounts,
+            'sales' => $ordersData->sales ?? 0,
+            'profit' => $ordersData->profit ?? 0,
+            'expenses' => $expensesData->expenses ?? 0,
+            'discounts' => $ordersData->discounts ?? 0,
 
-            'cashPayments' => $paymentsData->cash_payments,
-            'cardPayments' => $paymentsData->card_payments,
-            'talabatCardPayments' => $paymentsData->talabat_card_payments,
+            'cashPayments' => $paymentsData->cash_payments ?? 0,
+            'cardPayments' => $paymentsData->card_payments ?? 0,
+            'talabatCardPayments' => $paymentsData->talabat_card_payments ?? 0,
 
-            'avgReceiptValue' => $ordersData->total_orders > 0 ? $ordersData->sales / $ordersData->total_orders : 0,
-            'profitPercent' => $ordersData->sales > 0 ? ($ordersData->profit / $ordersData->sales) * 100 : 0,
-            'totalOrders' => $ordersData->total_orders,
+            'avgReceiptValue' => ($ordersData->total_orders ?? 0) > 0 ? ($ordersData->sales ?? 0) / ($ordersData->total_orders ?? 1) : 0,
+            'profitPercent' => ($ordersData->sales ?? 0) > 0 ? (($ordersData->profit ?? 0) / ($ordersData->sales ?? 1)) * 100 : 0,
+            'totalOrders' => $ordersData->total_orders ?? 0,
         ];
         return $totalStats;
     }
@@ -282,9 +284,20 @@ class ShiftsReportService
     /**
      * Calculate aggregated order statistics for multiple shifts
      */
-    public function calculatePeriodOrderStats(?string $startDate = null, ?string $endDate = null)
+    public function calculatePeriodOrderStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $ordersData = DB::table('shifts')
+        $shiftsQuery = DB::table('shifts');
+
+        if ($shiftIds && !empty($shiftIds)) {
+            $shiftsQuery->whereIn('shifts.id', $shiftIds);
+        } else {
+            $shiftsQuery->whereBetween('shifts.created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        }
+
+        $ordersData = $shiftsQuery
             ->select([
                 'orders.status',
                 DB::raw('COUNT(orders.id) as total_orders'),
@@ -295,10 +308,6 @@ class ShiftsReportService
                 'orders',
                 fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
             )
-            ->whereBetween('shifts.created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
-            ])
             ->groupBy('orders.status')
             ->get();
 
@@ -319,10 +328,20 @@ class ShiftsReportService
     /**
      * Calculate aggregated order type statistics for multiple shifts
      */
-    public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null)
+    public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
+        $shiftsQuery = DB::table('shifts');
 
-        $data = DB::table('shifts')
+        if ($shiftIds && !empty($shiftIds)) {
+            $shiftsQuery->whereIn('shifts.id', $shiftIds);
+        } else {
+            $shiftsQuery->whereBetween('shifts.created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        }
+
+        $data = $shiftsQuery
             ->select([
                 'orders.type',
                 DB::raw('COUNT(orders.id) as total_orders'),
@@ -334,10 +353,6 @@ class ShiftsReportService
                 fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
                     ->where('orders.status', OrderStatus::COMPLETED)
             )
-            ->whereBetween('shifts.created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
-            ])
             ->groupBy('orders.type')
             ->get();
 
@@ -368,8 +383,16 @@ class ShiftsReportService
     /**
      * Get period info for display
      */
-    public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
+    public function getPeriodInfo(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
+        if ($shiftIds && !empty($shiftIds)) {
+            $count = count($shiftIds);
+            return [
+                'title' => 'تقرير الشفتات المحددة',
+                'description' => sprintf('تقرير لعدد %d شفت محدد', $count),
+            ];
+        }
+
         if (!$startDate && !$endDate) {
             return [
                 'title' => 'جميع الشفتات',

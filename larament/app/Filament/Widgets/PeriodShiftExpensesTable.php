@@ -35,39 +35,87 @@ class PeriodShiftExpensesTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $startDate = $this->filters['startDate'];
-        $endDate = $this->filters['endDate'];
-        $totalExpensesOverPeriod = Expense::query()
-            ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                $query->whereBetween('created_at', [
-                    Carbon::parse($startDate)->startOfDay(),
-                    Carbon::parse($endDate)->endOfDay()
-                ]);
-            })->sum('amount');
+        $filterType = $this->filters['filterType'] ?? 'period';
+
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            $totalExpensesOverPeriod = Expense::query()
+                ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
+                    return $query->whereIn('shift_id', $shiftIds);
+                })
+                ->sum('amount');
+
+            $expenseTypeQuery = ExpenceType::query()
+                ->withCount([
+                    'expenses' => function ($query) use ($shiftIds) {
+                        $query->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
+                            return $query->whereIn('shift_id', $shiftIds);
+                        });
+                    }
+                ])
+                ->withSum([
+                    'expenses' => function ($query) use ($shiftIds) {
+                        $query->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
+                            return $query->whereIn('shift_id', $shiftIds);
+                        });
+                    }
+                ], 'amount');
+
+            $detailedExportQuery = function (Builder $query) use ($shiftIds) {
+                return Expense::query()
+                    ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
+                        return $query->whereIn('shift_id', $shiftIds);
+                    })
+                    ->with(['expenceType', 'shift'])
+                    ->orderBy('created_at', 'desc');
+            };
+        } else {
+            $startDate = $this->filters['startDate'];
+            $endDate = $this->filters['endDate'];
+            $totalExpensesOverPeriod = Expense::query()
+                ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                    $query->whereBetween('created_at', [
+                        Carbon::parse($startDate)->startOfDay(),
+                        Carbon::parse($endDate)->endOfDay()
+                    ]);
+                })->sum('amount');
+
+            $expenseTypeQuery = ExpenceType::query()
+                ->withCount([
+                    'expenses' => function ($query) use ($startDate, $endDate) {
+                        $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                            $query->whereBetween('created_at', [
+                                Carbon::parse($startDate)->startOfDay(),
+                                Carbon::parse($endDate)->endOfDay()
+                            ]);
+                        });
+                    }
+                ])
+                ->withSum([
+                    'expenses' => function ($query) use ($startDate, $endDate) {
+                        $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                            $query->whereBetween('created_at', [
+                                Carbon::parse($startDate)->startOfDay(),
+                                Carbon::parse($endDate)->endOfDay()
+                            ]);
+                        });
+                    }
+                ], 'amount');
+
+            $detailedExportQuery = function (Builder $query) use ($startDate, $endDate) {
+                return Expense::query()
+                    ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
+                        $query->whereBetween('created_at', [
+                            Carbon::parse($startDate)->startOfDay(),
+                            Carbon::parse($endDate)->endOfDay()
+                        ]);
+                    })->with(['expenceType', 'shift'])
+                    ->orderBy('created_at', 'desc');
+            };
+        }
+
         return $table
-            ->query(
-                ExpenceType::query()
-                    ->withCount([
-                        'expenses' => function ($query, ) use ($startDate, $endDate) {
-                            $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                                $query->whereBetween('created_at', [
-                                    Carbon::parse($startDate)->startOfDay(),
-                                    Carbon::parse($endDate)->endOfDay()
-                                ]);
-                            });
-                        }
-                    ])
-                    ->withSum([
-                        'expenses' => function ($query, ) use ($startDate, $endDate) {
-                            $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                                $query->whereBetween('created_at', [
-                                    Carbon::parse($startDate)->startOfDay(),
-                                    Carbon::parse($endDate)->endOfDay()
-                                ]);
-                            });
-                        }
-                    ], 'amount')
-            )
+            ->query($expenseTypeQuery)
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير ملخص المصروفات')
@@ -81,16 +129,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
                     ->exporter(PeriodShiftExpensesDetailedExporter::class)
-                    ->modifyQueryUsing(function (Builder $query) use ($startDate, $endDate) {
-                        return Expense::query()
-                            ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                                $query->whereBetween('created_at', [
-                                    Carbon::parse($startDate)->startOfDay(),
-                                    Carbon::parse($endDate)->endOfDay()
-                                ]);
-                            })->with(['expenceType', 'shift'])
-                            ->orderBy('created_at', 'desc');
-                    })
+                    ->modifyQueryUsing($detailedExportQuery)
                     ->fileName(fn() => 'period-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([

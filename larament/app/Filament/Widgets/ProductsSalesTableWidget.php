@@ -125,6 +125,35 @@ class ProductsSalesTableWidget extends BaseWidget
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])
-            ->striped();
+            ->striped()
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('عرض المنتج')
+                    ->icon('heroicon-o-eye')
+                    ->url(function ($record): string {
+                        // Determine the appropriate resource based on product type
+                        $resourceRoute = match ($record->type) {
+                            'raw_material' => 'raw-material-products',
+                            'manufactured' => 'manufactured-products',
+                            'consumable' => 'consumable-products',
+                            default => 'consumable-products', // fallback
+                        };
+
+                        return route("filament.admin.resources.{$resourceRoute}.view", $record->id);
+                    })
+                    ->openUrlInNewTab(),
+            ])
+            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordUrl(function ($record): string {
+                // Determine the appropriate resource based on product type
+                $resourceRoute = match ($record->type) {
+                    'raw_material' => 'raw-material-products',
+                    'manufactured' => 'manufactured-products',
+                    'consumable' => 'consumable-products',
+                    default => 'consumable-products', // fallback
+                };
+
+                return route("filament.admin.resources.{$resourceRoute}.view", $record->id);
+            });
     }
 }

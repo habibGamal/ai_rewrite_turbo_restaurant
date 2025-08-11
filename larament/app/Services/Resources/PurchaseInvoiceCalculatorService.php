@@ -82,9 +82,9 @@ class PurchaseInvoiceCalculatorService
                 if (!Array.isArray(items)) {
                     items = Object.values(items);
                 }
-                \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0);
+                \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0).toFixed(2);
                 items.forEach(item => {
-                    item.total = item.quantity * item.price || 0;
+                    item.total = ((item.quantity * item.price) || 0).toFixed(2);
                 });
             })
         JS;

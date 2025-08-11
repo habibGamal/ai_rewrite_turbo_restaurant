@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\ProductImporterAction;
+use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
 use App\Filament\Resources\PurchaseInvoiceResource\Pages;
 use App\Filament\Resources\PurchaseInvoiceResource\RelationManagers;
@@ -104,7 +105,8 @@ class PurchaseInvoiceResource extends Resource
                     ])
                     ->schema([
                         Actions::make([
-                            ProductImporterAction::make('importProducts')
+                            ProductImporterAction::make('importProducts'),
+                            LowStockImporterAction::make('importLowStock')
                         ])
                             ->alignStart(),
 
@@ -164,7 +166,8 @@ class PurchaseInvoiceResource extends Resource
                             })
                             ->collapsible(),
                     ]),
-            ]);
+            ])
+            ;
     }
 
     public static function infolist(Infolist $infolist): Infolist
@@ -307,8 +310,8 @@ class PurchaseInvoiceResource extends Resource
     {
         return [
             'index' => Pages\ListPurchaseInvoices::route('/'),
-            'view' => Pages\ViewPurchaseInvoice::route('/{record}'),
             'create' => Pages\CreatePurchaseInvoice::route('/create'),
+            'view' => Pages\ViewPurchaseInvoice::route('/{record}'),
             'edit' => Pages\EditPurchaseInvoice::route('/{record}/edit'),
         ];
     }

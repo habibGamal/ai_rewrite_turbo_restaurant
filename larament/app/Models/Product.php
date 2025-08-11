@@ -19,6 +19,7 @@ class Product extends Model
         'product_ref',
         'price',
         'cost',
+        'min_stock',
         'type',
         'unit',
         'legacy',
@@ -29,7 +30,7 @@ class Product extends Model
     ];
 
     protected $appends = [
-        'components_hash',
+        // 'components_hash',
     ];
 
     public function getRawTypeAttribute(): string

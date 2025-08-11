@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('price', 10, 2);
             $table->decimal('cost', 10, 2);
+            $table->decimal('min_stock', 10, 2)->default(5);
             $table->string('type');
             $table->string('unit');
             $table->boolean('legacy')->default(false);

@@ -27,16 +27,22 @@ class PeriodShiftInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $startDate = Carbon::parse($this->filters['startDate'])->startOfDay();
-        $endDate = Carbon::parse($this->filters['endDate'])->endOfDay();
-        $info =  $this->shiftsReportService->getShiftsInfo($startDate, $endDate);
+        $filterType = $this->filters['filterType'] ?? 'period';
+
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            $info = $this->shiftsReportService->getShiftsInfo(null, null, $shiftIds);
+        } else {
+            $startDate = Carbon::parse($this->filters['startDate'])->startOfDay();
+            $endDate = Carbon::parse($this->filters['endDate'])->endOfDay();
+            $info = $this->shiftsReportService->getShiftsInfo($startDate, $endDate, null);
+        }
 
         $periodInfo = $this->getPeriodInfo();
         $totalShifts = $info->total_shifts;
 
         $totalDuration = $info->total_minutes;
         $usersCount = $info->distinct_users;
-
 
         $avgDuration = $totalShifts > 0 ? $totalDuration / $totalShifts : 0;
 
@@ -60,10 +66,16 @@ class PeriodShiftInfoStats extends BaseWidget
 
     private function getPeriodInfo(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $filterType = $this->filters['filterType'] ?? 'period';
 
-        return $this->shiftsReportService->getPeriodInfo($startDate, $endDate);
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            return $this->shiftsReportService->getPeriodInfo(null, null, $shiftIds);
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            return $this->shiftsReportService->getPeriodInfo($startDate, $endDate, null);
+        }
     }
 
     private function formatDuration(float $minutes): string

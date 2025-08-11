@@ -50,7 +50,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{has_discount:'1'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
@@ -62,7 +62,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'cash'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('primary'),
@@ -74,7 +74,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'card'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('info'),
@@ -86,7 +86,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => <<<JS
                         \$dispatch('filterUpdate',{filter:{payment_method:'talabat_card'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
@@ -105,9 +105,15 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     private function getPeriodStats()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $filterType = $this->filters['filterType'] ?? 'period';
 
-        return $this->shiftsReportService->calculatePeriodStats($startDate, $endDate);
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            return $this->shiftsReportService->calculatePeriodStats(null, null, $shiftIds);
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            return $this->shiftsReportService->calculatePeriodStats($startDate, $endDate, null);
+        }
     }
 }
