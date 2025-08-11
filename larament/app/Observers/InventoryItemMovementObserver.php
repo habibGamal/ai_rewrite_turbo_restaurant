@@ -11,7 +11,8 @@ class InventoryItemMovementObserver
      */
     public function created(InventoryItemMovement $inventoryItemMovement): void
     {
-        dd('InventoryItemMovement created', $inventoryItemMovement);
+        // Observer logic here
+        // dd('InventoryItemMovement created', $inventoryItemMovement);
     }
 
     /**

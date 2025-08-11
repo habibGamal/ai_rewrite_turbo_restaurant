@@ -295,7 +295,10 @@ class StockService
             $today = Carbon::today();
             $productIds = array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements));
 
-            // Use bulk aggregation for better performance
+            // First ensure the day is opened for all products
+            $this->dailyAggregationService->openDay($today);
+
+            // Then aggregate movements for better performance
             $this->dailyAggregationService->aggregateMultipleMovements($productIds, $today);
 
         } catch (\Exception $e) {

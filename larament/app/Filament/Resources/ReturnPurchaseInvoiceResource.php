@@ -17,6 +17,7 @@ use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Filament\Forms;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -86,7 +87,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ->disabled()
                             ->dehydrated(false)
                             ->default(0),
-                        Forms\Components\TextArea::make('notes')
+                        Textarea::make('notes')
                             ->label('ملاحظات')
                             ->required(false)
                             ->columnSpanFull(),

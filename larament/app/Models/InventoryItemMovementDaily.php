@@ -18,6 +18,7 @@ class InventoryItemMovementDaily extends Model
         'date',
         'start_quantity',
         'incoming_quantity',
+        'return_sales_quantity',
         'sales_quantity',
         'return_waste_quantity',
     ];
