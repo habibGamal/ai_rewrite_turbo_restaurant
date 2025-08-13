@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cd ../
 git reset --hard
 git pull
