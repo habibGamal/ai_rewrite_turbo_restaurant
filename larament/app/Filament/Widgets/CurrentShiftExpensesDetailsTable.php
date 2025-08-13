@@ -4,25 +4,21 @@ namespace App\Filament\Widgets;
 
 use App\Services\ShiftsReportService;
 use App\Models\Expense;
-use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
-use Carbon\Carbon;
+use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
-use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 
-class PeriodShiftExpensesDetailsTable extends BaseWidget
+class CurrentShiftExpensesDetailsTable extends BaseWidget
 {
-    use InteractsWithPageFilters;
-
     protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'تفاصيل المصاريف';
+    protected static ?string $heading = 'تفاصيل مصاريف الشفت الحالي';
 
     protected ShiftsReportService $shiftsReportService;
 
@@ -33,26 +29,13 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $currentShift = $this->getCurrentShift();
 
-        if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
-            $expenseQuery = Expense::query()
-                ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
-                    return $query->whereIn('shift_id', $shiftIds);
-                })
-                ->with(['expenceType', 'shift.user'])
-                ->orderBy('created_at', 'desc');
+        if (!$currentShift) {
+            $expenseQuery = Expense::query()->where('id', 0); // Empty query
         } else {
-            $startDate = $this->filters['startDate'];
-            $endDate = $this->filters['endDate'];
             $expenseQuery = Expense::query()
-                ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
-                        Carbon::parse($startDate)->startOfDay(),
-                        Carbon::parse($endDate)->endOfDay()
-                    ]);
-                })
+                ->where('shift_id', $currentShift->id)
                 ->with(['expenceType', 'shift.user'])
                 ->orderBy('created_at', 'desc');
         }
@@ -64,8 +47,9 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->exporter(PeriodShiftExpensesDetailedExporter::class)
-                    ->fileName(fn() => 'period-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
+                    ->exporter(CurrentShiftExpensesDetailedExporter::class)
+                    ->fileName(fn() => 'current-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
+                    ->visible(fn() => $this->getCurrentShift() !== null),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('id')
@@ -87,21 +71,8 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->money('EGP')
                     ->alignCenter()
                     ->sortable()
-                    ->weight('bold'),
-
-                Tables\Columns\TextColumn::make('shift.id')
-                    ->label('رقم الشفت')
-                    ->sortable()
-                    ->alignCenter()
-                    ->color('warning')
-                    ->formatStateUsing(fn ($state) => "شفت #{$state}"),
-
-                Tables\Columns\TextColumn::make('shift.user.name')
-                    ->label('المستخدم')
-                    ->searchable()
-                    ->sortable()
-                    ->color('secondary')
-                    ->default('غير محدد'),
+                    ->weight('bold')
+                    ->color('danger'),
 
                 Tables\Columns\TextColumn::make('notes')
                     ->label('ملاحظات')
@@ -114,17 +85,25 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('تاريخ الإنشاء')
+                    ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->alignCenter()
                     ->color('gray'),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('آخر تحديث')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->alignCenter()
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->striped()
-            ->paginated([10, 25, 50, 100])
+            ->paginated([10, 25, 50])
             ->defaultSort('created_at', 'desc')
             ->emptyStateHeading('لا توجد مصروفات')
-            ->emptyStateDescription('لم يتم العثور على أي مصروفات في الفترة المحددة.')
+            ->emptyStateDescription('لم يتم تسجيل أي مصروفات في الشفت الحالي.')
             ->emptyStateIcon('heroicon-o-banknotes')
             ->recordAction(null)
             ->recordUrl(null)
@@ -159,7 +138,17 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                                 fn (Builder $query, $maxAmount): Builder => $query->where('amount', '<=', $maxAmount),
                             );
                     }),
+
+                Tables\Filters\Filter::make('today')
+                    ->label('اليوم فقط')
+                    ->query(fn (Builder $query): Builder => $query->whereDate('created_at', today()))
+                    ->toggle(),
             ])
-        ;
+            ->poll('30s'); // Auto-refresh every 30 seconds for live updates
+    }
+
+    private function getCurrentShift()
+    {
+        return $this->shiftsReportService->getCurrentShift();
     }
 }

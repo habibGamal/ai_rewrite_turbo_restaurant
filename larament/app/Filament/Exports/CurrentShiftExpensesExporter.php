@@ -37,25 +37,6 @@ class CurrentShiftExpensesExporter extends Exporter
                     return $record->avg_month_rate ? number_format((float) $record->avg_month_rate, 2) : 'غير محدد';
                 }),
 
-            ExportColumn::make('budget_status')
-                ->label('حالة الميزانية')
-                ->state(function ($record) {
-                    $current = $record->total_amount ?? 0;
-                    $rate = $record->avg_month_rate ?? 0;
-
-                    if ($rate == 0) {
-                        return 'غير محدد';
-                    }
-
-                    // For current shift, compare against monthly budget
-                    if ($current > $rate) {
-                        $excess = $current - $rate;
-                        return 'تجاوز بـ ' . number_format($excess, 2) . ' جنيه';
-                    } else {
-                        $remaining = $rate - $current;
-                        return 'متبقي ' . number_format($remaining, 2) . ' جنيه';
-                    }
-                }),
 
             ExportColumn::make('individual_expenses')
                 ->label('تفاصيل المصروفات')

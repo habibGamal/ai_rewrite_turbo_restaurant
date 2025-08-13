@@ -46,7 +46,7 @@ class WasteResource extends Resource
 
     protected static ?string $pluralModelLabel = 'سجلات التالف';
 
-    protected static ?string $navigationGroup = 'المخزون';
+    protected static ?string $navigationGroup = 'إدارة المخزون';
 
     public static function form(Form $form): Form
     {

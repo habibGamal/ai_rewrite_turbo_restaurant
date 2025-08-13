@@ -25,7 +25,7 @@ class ExcelImport extends Page implements HasForms
     protected static ?string $navigationLabel = 'رفع ملف Excel';
     protected static ?string $title = 'رفع ملف Excel';
     protected static string $view = 'filament.pages.excel-import';
-    protected static ?string $navigationGroup = 'إدارة البيانات';
+    protected static ?string $navigationGroup = 'إدارة النظام';
 
     public ?array $data = [];
     public ?array $analysisResult = null;

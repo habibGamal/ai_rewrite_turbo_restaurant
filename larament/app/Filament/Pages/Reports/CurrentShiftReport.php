@@ -23,7 +23,7 @@ class CurrentShiftReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير اليوم';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     protected ShiftsReportService $shiftsReportService;
 
@@ -48,6 +48,7 @@ class CurrentShiftReport extends BaseDashboard
             \App\Filament\Widgets\CurrentShiftOrdersStats::class,
             \App\Filament\Widgets\CurrentShiftDoneOrdersStats::class,
             \App\Filament\Widgets\CurrentShiftOrdersTable::class,
+            \App\Filament\Widgets\CurrentShiftExpensesDetailsTable::class,
             \App\Filament\Widgets\CurrentShiftExpensesTable::class,
         ];
     }

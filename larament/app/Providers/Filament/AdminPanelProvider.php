@@ -7,6 +7,7 @@ use App\Filament\Pages\Auth\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -36,7 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->databaseNotifications()
             ->sidebarCollapsibleOnDesktop()
-//            ->sidebarFullyCollapsibleOnDesktop()
+            //            ->sidebarFullyCollapsibleOnDesktop()
             ->spa()
             ->profile(Profile::class, false)
             ->viteTheme('resources/css/filament/admin/theme.css')
@@ -54,6 +55,30 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+            ])
+            ->navigationGroups([
+                NavigationGroup::make()
+                    ->label('التقارير')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('إدارة المنتجات')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('المشتريات')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('إدارة المخزون')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('إدارة المصروفات')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('إدارة المطعم')
+                    ->collapsible(),
+                NavigationGroup::make()
+                    ->label('إدارة النظام')
+                    ->collapsible(),
+
             ])
             ->middleware([
                 EncryptCookies::class,

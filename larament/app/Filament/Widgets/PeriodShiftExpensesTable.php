@@ -205,7 +205,7 @@ class PeriodShiftExpensesTable extends BaseWidget
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
-                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                            $monthsInPeriod = max(1, ceil($start->diffInMonths($end, true)));
                         }
 
                         $adjustedBudget = $monthlyRate * $monthsInPeriod;

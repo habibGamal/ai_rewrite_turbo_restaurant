@@ -181,6 +181,7 @@ class PeriodShiftReport extends BaseDashboard
             \App\Filament\Widgets\PeriodShiftOrdersStats::class,
             \App\Filament\Widgets\PeriodShiftDoneOrdersStats::class,
             \App\Filament\Widgets\PeriodShiftOrdersTable::class,
+             \App\Filament\Widgets\PeriodShiftExpensesDetailsTable::class,
             \App\Filament\Widgets\PeriodShiftExpensesTable::class,
         ];
     }
