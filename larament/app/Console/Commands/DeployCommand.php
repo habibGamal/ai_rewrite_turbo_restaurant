@@ -48,7 +48,7 @@ class DeployCommand extends Command
             }
 
             // Execute the deploy script
-            $result = Process::run('bash ' . $deployScriptPath);
+            $result = Process::run('sh ' . $deployScriptPath);
 
             if ($result->failed()) {
                 throw new \Exception('Deployment script failed: ' . $result->errorOutput());
