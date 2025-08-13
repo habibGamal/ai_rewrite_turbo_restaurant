@@ -156,11 +156,11 @@ class CustomersPerformanceTableWidget extends BaseWidget
                     ->sortable()
                     ->toggleable(),
 
-                TextColumn::make('companies_sales')
-                    ->label('شركات')
-                    ->money('EGP')
-                    ->sortable()
-                    ->toggleable(),
+                // TextColumn::make('companies_sales')
+                //     ->label('شركات')
+                //     ->money('EGP')
+                //     ->sortable()
+                //     ->toggleable(),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])

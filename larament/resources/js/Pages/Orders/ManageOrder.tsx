@@ -163,13 +163,22 @@ export default function ManageOrder({
     };
 
     const printWithCanvas = async (finish: () => void) => {
-        save(async (page) => {
+        if (orderInProcess) {
+            save(async (page) => {
+                printOrder(
+                    page.props.order,
+                    orderItems,
+                    (receiptFooter as string) || ""
+                );
+            }, finish);
+        } else {
             printOrder(
-                page.props.order,
+                order,
                 orderItems,
-                receiptFooter as string || ""
+                (receiptFooter as string) || ""
             );
-        }, finish);
+            finish();
+        }
     };
 
     // Keyboard shortcuts
@@ -326,7 +335,9 @@ export default function ManageOrder({
                             </IsAdmin>
                             <LoadingButton
                                 disabled={disableAllControls}
-                                onCustomClick={(finish) => save(undefined,finish)}
+                                onCustomClick={(finish) =>
+                                    save(undefined, finish)
+                                }
                                 size="large"
                                 icon={<SaveOutlined />}
                                 type="primary"

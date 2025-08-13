@@ -137,6 +137,7 @@ class BranchManagement extends Page implements HasForms
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات للاستيراد')
                         ->options($this->getProductOptions($this->newProducts))
+                        ->bulkToggleable()
                         ->required()
                         ->columns(2)
                 ])
@@ -153,6 +154,7 @@ class BranchManagement extends Page implements HasForms
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات لتحديث أسعارها')
                         ->options($this->getPriceOptions($this->changedPrices))
+                        ->bulkToggleable()
                         ->required()
                         ->columns(2)
                 ])
@@ -168,6 +170,7 @@ class BranchManagement extends Page implements HasForms
                 ->form([
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات لتحديث وصفاتها')
+                        ->bulkToggleable()
                         ->options($this->getRecipeOptions($this->changedRecipes))
                         ->required()
                         ->columns(2)

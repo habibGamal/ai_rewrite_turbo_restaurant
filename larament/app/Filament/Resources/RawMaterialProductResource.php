@@ -55,11 +55,6 @@ class RawMaterialProductResource extends Resource
                     ->options(Category::all()->pluck('name', 'id'))
                     ->required()
                     ->searchable(),
-                Forms\Components\TextInput::make('price')
-                    ->label('السعر')
-                    ->required()
-                    ->numeric()
-                    ->prefix('ج.م'),
                 Forms\Components\TextInput::make('cost')
                     ->label('التكلفة')
                     ->required()

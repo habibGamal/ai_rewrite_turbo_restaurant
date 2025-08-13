@@ -22,8 +22,9 @@ class ClosePurchaseInvoiceAction
             ->modalDescription('هل أنت متأكد من إغلاق هذه الفاتورة؟ سيتم إضافة جميع الأصناف إلى المخزون ولن يمكن تعديل الفاتورة بعد ذلك.')
             ->modalSubmitActionLabel('إغلاق الفاتورة')
             ->modalCancelActionLabel('إلغاء')
-            ->action(function (PurchaseInvoice $record) {
+            ->action(function (PurchaseInvoice $record, $livewire) {
                 try {
+                    $livewire->save(true);
                     $purchaseService = app(PurchaseService::class);
                     $purchaseService->closePurchaseInvoice($record);
 

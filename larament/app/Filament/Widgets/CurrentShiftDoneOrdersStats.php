@@ -11,6 +11,9 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CurrentShiftDoneOrdersStats extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     protected ShiftsReportService $shiftsReportService;
 
     public function boot(): void

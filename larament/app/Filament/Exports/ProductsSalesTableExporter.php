@@ -85,11 +85,11 @@ class ProductsSalesTableExporter extends Exporter
                     return number_format($record->talabat_sales ?? 0, 2);
                 }),
 
-            ExportColumn::make('companies_sales')
-                ->label('شركات (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->companies_sales ?? 0, 2);
-                }),
+            // ExportColumn::make('companies_sales')
+            //     ->label('شركات (ج.م)')
+            //     ->state(function ($record) {
+            //         return number_format($record->companies_sales ?? 0, 2);
+            //     }),
 
             // Additional performance metrics
             ExportColumn::make('unit_price')

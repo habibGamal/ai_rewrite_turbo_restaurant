@@ -11,6 +11,11 @@ class ExpenceType extends Model
 
     protected $fillable = [
         'name',
+        'avg_month_rate',
+    ];
+
+    protected $casts = [
+        'avg_month_rate' => 'decimal:2',
     ];
 
     public function expenses()

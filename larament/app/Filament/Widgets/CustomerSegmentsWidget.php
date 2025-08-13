@@ -8,6 +8,9 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class CustomerSegmentsWidget extends ChartWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected static ?string $heading = 'تقسيم العملاء حسب الأداء';

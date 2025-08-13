@@ -40,7 +40,11 @@ class Product extends Model
 
     public function getComponentsHashAttribute(): string
     {
-        return md5(json_encode($this->components->toArray()));
+        return $this->components
+            ->map(fn($component) => [$component->product_ref, $component->pivot->quantity])
+            ->sort()
+            ->flatten()
+            ->join('');
     }
 
 
@@ -102,5 +106,13 @@ class Product extends Model
     public function dailyMovements(): HasMany
     {
         return $this->hasMany(InventoryItemMovementDaily::class);
+    }
+
+    public function updateManufacturedCost()
+    {
+        if ($this->type === \App\Enums\ProductType::Manufactured) {
+            $this->cost = $this->components()->sum(\DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
+            $this->save();
+        }
     }
 }

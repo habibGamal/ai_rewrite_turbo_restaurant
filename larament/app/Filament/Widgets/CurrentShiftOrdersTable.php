@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CurrentShiftOrdersTable extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'الاوردرات';

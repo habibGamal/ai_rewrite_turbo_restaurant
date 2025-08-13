@@ -8,6 +8,9 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class OrderTypePerformanceWidget extends ChartWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected static ?string $heading = 'أداء المبيعات حسب نوع الطلب';

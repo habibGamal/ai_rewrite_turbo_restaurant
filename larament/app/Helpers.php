@@ -14,7 +14,7 @@ if (! function_exists('setting')) {
      */
     function setting(SettingKey $key): string
     {
-        return app(SettingsService::class)->get($key->value, $key->defaultValue());
+        return app(abstract: SettingsService::class)->get($key->value, $key->defaultValue());
     }
 }
 
@@ -22,5 +22,17 @@ if (! function_exists('example')) {
     function example(): string
     {
         return 'This is an example function you can use in your project.';
+    }
+}
+
+if (! function_exists('shouldDayBeOpen')) {
+    /**
+     * Check if the current day is marked as closed
+     */
+    function shouldDayBeOpen(): bool
+    {
+        if (app(\App\Services\InventoryDailyAggregationService::class)->dayStatus() === null)
+            throw new \Exception('يجب فتح اليوم قبل إجراء أي عمليات على المخزون');
+        return true;
     }
 }

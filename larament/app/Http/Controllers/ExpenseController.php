@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\ExpenceType;
 use App\Services\ShiftService;
+use App\Services\ShiftLoggingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -12,7 +13,8 @@ use Inertia\Inertia;
 class ExpenseController extends Controller
 {
     public function __construct(
-        private ShiftService $shiftService
+        private ShiftService $shiftService,
+        private ShiftLoggingService $loggingService
     ) {
     }
 
@@ -57,16 +59,37 @@ class ExpenseController extends Controller
             return redirect()->route('shifts.start');
         }
 
-        DB::transaction(function () use ($request, $currentShift) {
-            Expense::create([
-                'shift_id' => $currentShift->id,
-                'expence_type_id' => $request->expenseTypeId,
-                'amount' => $request->amount,
-                'notes' => $request->description,
-            ]);
-        });
+        try {
+            DB::transaction(function () use ($request, $currentShift) {
+                $expenseType = ExpenceType::find($request->expenseTypeId);
 
-        return back()->with('success', 'تم إضافة المصروف بنجاح');
+                $expense = Expense::create([
+                    'shift_id' => $currentShift->id,
+                    'expence_type_id' => $request->expenseTypeId,
+                    'amount' => $request->amount,
+                    'notes' => $request->description,
+                ]);
+
+                // Log expense creation
+                $this->loggingService->logExpenseAction('create', [
+                    'id' => $expense->id,
+                    'expense_type_name' => $expenseType->name,
+                    'amount' => $request->amount,
+                    'description' => $request->description,
+                ]);
+            });
+
+            return back()->with('success', 'تم إضافة المصروف بنجاح');
+        } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إضافة مصروف', [
+                'expense_type_id' => $request->expenseTypeId,
+                'amount' => $request->amount,
+                'description' => $request->description,
+                'error' => $e->getMessage(),
+            ], 'error');
+
+            return back()->withErrors(['message' => 'حدث خطأ أثناء إضافة المصروف: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -86,15 +109,47 @@ class ExpenseController extends Controller
             return back()->withErrors(['message' => 'لا يمكن تعديل هذا المصروف']);
         }
 
-        DB::transaction(function () use ($request, $expense) {
-            $expense->update([
-                'expence_type_id' => $request->expenseTypeId,
-                'amount' => $request->amount,
-                'notes' => $request->description,
-            ]);
-        });
+        try {
+            DB::transaction(function () use ($request, $expense) {
+                $oldExpenseType = $expense->expenceType;
+                $newExpenseType = ExpenceType::find($request->expenseTypeId);
 
-        return back()->with('success', 'تم تعديل المصروف بنجاح');
+                $oldData = [
+                    'expense_type_name' => $oldExpenseType->name,
+                    'amount' => $expense->amount,
+                    'description' => $expense->notes,
+                ];
+
+                $expense->update([
+                    'expence_type_id' => $request->expenseTypeId,
+                    'amount' => $request->amount,
+                    'notes' => $request->description,
+                ]);
+
+                // Log expense update
+                $this->loggingService->logExpenseAction('update', [
+                    'id' => $expense->id,
+                    'old_data' => $oldData,
+                    'new_data' => [
+                        'expense_type_name' => $newExpenseType->name,
+                        'amount' => $request->amount,
+                        'description' => $request->description,
+                    ],
+                ]);
+            });
+
+            return back()->with('success', 'تم تعديل المصروف بنجاح');
+        } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في تعديل مصروف', [
+                'expense_id' => $expense->id,
+                'expense_type_id' => $request->expenseTypeId,
+                'amount' => $request->amount,
+                'description' => $request->description,
+                'error' => $e->getMessage(),
+            ], 'error');
+
+            return back()->withErrors(['message' => 'حدث خطأ أثناء تعديل المصروف: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -108,10 +163,29 @@ class ExpenseController extends Controller
             return back()->withErrors(['message' => 'لا يمكن حذف هذا المصروف']);
         }
 
-        DB::transaction(function () use ($expense) {
-            $expense->delete();
-        });
+        try {
+            DB::transaction(function () use ($expense) {
+                $expenseData = [
+                    'id' => $expense->id,
+                    'expense_type_name' => $expense->expenceType->name,
+                    'amount' => $expense->amount,
+                    'description' => $expense->notes,
+                ];
 
-        return back()->with('success', 'تم حذف المصروف بنجاح');
+                $expense->delete();
+
+                // Log expense deletion
+                $this->loggingService->logExpenseAction('delete', $expenseData);
+            });
+
+            return back()->with('success', 'تم حذف المصروف بنجاح');
+        } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في حذف مصروف', [
+                'expense_id' => $expense->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
+            return back()->withErrors(['message' => 'حدث خطأ أثناء حذف المصروف: ' . $e->getMessage()]);
+        }
     }
 }

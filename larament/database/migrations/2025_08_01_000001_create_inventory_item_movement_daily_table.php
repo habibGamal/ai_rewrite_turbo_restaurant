@@ -20,6 +20,8 @@ return new class extends Migration
             $table->decimal('return_sales_quantity', 10, 2)->default(0);
             $table->decimal('sales_quantity', 10, 2)->default(0);
             $table->decimal('return_waste_quantity', 10, 2)->default(0);
+            $table->decimal('end_quantity', 10, 2)->default(0);
+            $table->dateTime('closed_at')->nullable();
             $table->timestamps();
 
             // Unique constraint for product_id and date

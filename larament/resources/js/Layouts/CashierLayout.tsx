@@ -142,6 +142,21 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         };
     }, []);
 
+
+  useEffect(() => {
+    // refetch the page when the user clicks the back button
+    const handlePopState = (event: PopStateEvent) => {
+      event.stopImmediatePropagation()
+      router.reload({
+        replace: true,
+      })
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
     return (
         <Layout className="min-h-screen" dir="rtl">
             <FloatButton.Group shape="circle" style={{ left: 24 }}>

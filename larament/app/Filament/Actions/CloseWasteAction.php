@@ -22,8 +22,9 @@ class CloseWasteAction
             ->modalDescription('هل أنت متأكد من إغلاق سجل التالف؟ سيتم خصم جميع الأصناف من المخزون ولن يمكن تعديل السجل بعد ذلك.')
             ->modalSubmitActionLabel('إغلاق السجل')
             ->modalCancelActionLabel('إلغاء')
-            ->action(function (Waste $record) {
+            ->action(function (Waste $record, $livewire) {
                 try {
+                    $livewire->save(true);
                     $wasteService = app(WasteService::class);
                     $wasteService->closeWaste($record);
 

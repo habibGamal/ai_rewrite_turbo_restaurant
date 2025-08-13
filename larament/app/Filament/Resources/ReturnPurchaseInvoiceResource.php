@@ -66,7 +66,7 @@ class ReturnPurchaseInvoiceResource extends Resource
 
                         Select::make('supplier_id')
                             ->label('المورد')
-                            ->options(Supplier::all()->pluck('name', 'id'))
+                            ->relationship('supplier', 'name')
                             ->searchable()
                             ->required()
                             ->createOptionForm([

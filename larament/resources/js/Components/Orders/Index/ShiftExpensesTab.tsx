@@ -51,7 +51,7 @@ const ExpenseForm = ({
                 start();
                 onFinish(form, values, finish);
             }}
-            className={`${initialValues ? "" : "isolate min-w-[500px]"}`}
+            className={`${initialValues ? "" : "isolate "}`}
             layout="vertical"
         >
             <Typography.Title className="my-0 text-center" level={4}>
@@ -200,7 +200,7 @@ export const ShiftExpensesTab: React.FC = () => {
     >();
 
     return (
-        <div className="grid items-start grid-cols-3 gap-8 w-full min-h-[50vh]">
+        <div className="grid items-start grid-cols-1 xl:grid-cols-3 gap-8 w-full min-h-[50vh]">
             <ExpenseForm onFinish={onAdd} />
             <Modal {...modal} title="تعديل مصروف" footer={null}>
                 <ExpenseForm initialValues={initialValues} onFinish={onEdit} />

@@ -6,16 +6,21 @@ use App\Enums\MovementReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Services\StockService;
+use App\Services\ProductCostManagementService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PurchaseService
 {
     protected StockService $stockService;
+    protected ProductCostManagementService $costManagementService;
 
-    public function __construct(StockService $stockService)
-    {
+    public function __construct(
+        StockService $stockService,
+        ProductCostManagementService $costManagementService
+    ) {
         $this->stockService = $stockService;
+        $this->costManagementService = $costManagementService;
     }
 
     /**
@@ -26,6 +31,8 @@ class PurchaseService
         if ($invoice->closed_at) {
             throw new \Exception('هذه الفاتورة مغلقة بالفعل');
         }
+
+        shouldDayBeOpen();
 
         try {
             DB::beginTransaction();
@@ -45,6 +52,9 @@ class PurchaseService
                 ];
             })->toArray();
 
+            // Update product costs using average cost strategy
+            $this->costManagementService->updateProductCostsWithAverage($invoice->items);
+
             // Add items to stock
             $success = $this->stockService->addStock(
                 $stockItems,
@@ -61,7 +71,7 @@ class PurchaseService
 
             DB::commit();
 
-            Log::info("Purchase invoice {$invoice->id} closed successfully");
+            Log::info("Purchase invoice {$invoice->id} closed successfully with cost updates");
             return true;
 
         } catch (\Exception $e) {
@@ -79,6 +89,8 @@ class PurchaseService
         if ($invoice->closed_at) {
             throw new \Exception('هذه الفاتورة مغلقة بالفعل');
         }
+
+        shouldDayBeOpen();
 
         try {
             DB::beginTransaction();
@@ -101,13 +113,13 @@ class PurchaseService
             // Check stock availability
             $insufficientItems = $this->stockService->validateStockAvailability($stockItems);
 
-            if (!empty($insufficientItems)) {
-                $errorMessage = 'مخزون غير كافي للمنتجات التالية: ';
-                foreach ($insufficientItems as $item) {
-                    $errorMessage .= "\n- {$item['product_name']}: متوفر {$item['available_quantity']}, مطلوب {$item['required_quantity']}";
-                }
-                throw new \Exception($errorMessage);
-            }
+            // if (!empty($insufficientItems)) {
+            //     $errorMessage = 'مخزون غير كافي للمنتجات التالية: ';
+            //     foreach ($insufficientItems as $item) {
+            //         $errorMessage .= "\n- {$item['product_name']}: متوفر {$item['available_quantity']}, مطلوب {$item['required_quantity']}";
+            //     }
+            //     throw new \Exception($errorMessage);
+            // }
 
             // Remove items from stock
             $success = $this->stockService->removeStock(

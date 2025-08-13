@@ -26,6 +26,8 @@ class WasteService
             throw new Exception('سجل التالف مغلق بالفعل');
         }
 
+        shouldDayBeOpen();
+
         DB::beginTransaction();
 
         try {

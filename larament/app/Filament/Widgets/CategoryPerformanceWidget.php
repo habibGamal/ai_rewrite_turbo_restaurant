@@ -19,6 +19,7 @@ class CategoryPerformanceWidget extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
 
     protected static ?string $heading = 'أداء التصنيفات';
 
@@ -76,24 +77,21 @@ class CategoryPerformanceWidget extends BaseWidget
                         return $record->total_sales > 0
                             ? number_format(($record->total_profit / $record->total_sales) * 100, 1) . '%'
                             : '0%';
-                    })
-                    ->sortable(),
+                    }),
 
                 TextColumn::make('avg_sales_per_product')
-                    ->label('متوسط المبيعات/منتج')
+                    ->label('متوسط المبيعات')
                     ->getStateUsing(function ($record) {
-                        $avg = $record->products_count > 0 ? $record->total_sales / $record->products_count : 0;
+                        $avg = $record->total_quantity > 0 ? $record->total_sales / $record->total_quantity : 0;
                         return number_format($avg, 2) . ' ج.م';
-                    })
-                    ->sortable(),
+                    }),
 
                 TextColumn::make('avg_profit_per_product')
-                    ->label('متوسط الربح/منتج')
+                    ->label('متوسط الربح')
                     ->getStateUsing(function ($record) {
-                        $avg = $record->products_count > 0 ? $record->total_profit / $record->products_count : 0;
+                        $avg = $record->total_quantity > 0 ? $record->total_profit / $record->total_quantity : 0;
                         return number_format($avg, 2) . ' ج.م';
-                    })
-                    ->sortable(),
+                    }),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([5, 10, 25])

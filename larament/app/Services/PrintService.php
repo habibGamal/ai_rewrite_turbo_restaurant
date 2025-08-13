@@ -60,6 +60,8 @@ class PrintService
             // Create EscposImage from temporary file
             $escposImage = EscposImage::load($tempFilePath);
             $printer->bitImage($escposImage);
+            $printer->feed(3);
+            $printer->cut();
 
             // Clean up resources
             // imagedestroy($combinedImage);
@@ -205,6 +207,8 @@ class PrintService
             // Create EscposImage from temporary file
             $escposImage = EscposImage::load($tempFilePath);
             $escposPrinter->bitImage($escposImage);
+            $escposPrinter->feed(3);
+            $escposPrinter->cut();
 
             // Clean up
             unlink($tempFilePath);

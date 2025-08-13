@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
 
 class DriverPerformanceTable extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected ShiftsReportService $shiftsReportService;

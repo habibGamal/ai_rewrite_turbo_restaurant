@@ -194,15 +194,19 @@ class BranchService
 
         $changedPricesProducts = $products->filter(function ($masterProduct) use ($localProducts) {
             $localProduct = $localProducts->get($masterProduct['productRef']);
-            if (!$localProduct) {
+            if (!$localProduct)
                 return false;
-            }
-            $priceChanged = isset($masterProduct['price']) &&
-                           abs((float)$localProduct->price - (float)$masterProduct['price']) > 0.01;
-            $costChanged = isset($masterProduct['cost']) &&
-                          abs((float)$localProduct->cost - (float)$masterProduct['cost']) > 0.01;
 
-            return $priceChanged || $costChanged;
+            $isRawProduct = $localProduct->type === ProductType::RawMaterial;
+            if ($isRawProduct)
+                return false;
+
+            $priceChanged = isset($masterProduct['price']) &&
+                abs((float) $localProduct->price - (float) $masterProduct['price']) > 0.01;
+            // $costChanged = isset($masterProduct['cost']) &&
+            //     abs((float) $localProduct->cost - (float) $masterProduct['cost']) > 0.01;
+
+            return $priceChanged;
         })->pluck('productRef')->toArray();
 
         // Filter master categories to only include products with changed prices
@@ -320,6 +324,12 @@ class BranchService
             foreach ($rawProducts as $rawProduct) {
                 $localCategory = $localCategories->get($rawProduct['category']['name']);
                 if ($localCategory) {
+                    if ($rawProduct['type'] === 'manifactured') {
+                        logger()->error('Raw product type is "manifactured", which is not valid for raw materials.', [
+                            'data' => $rawProduct,
+                        ]);
+                        continue; // Skip invalid raw product types
+                    }
                     Product::updateOrCreate(
                         ['product_ref' => $rawProduct['productRef']],
                         [
@@ -335,10 +345,17 @@ class BranchService
                 }
             }
 
+            // dd($products);
             // Create main products
             foreach ($products as $productData) {
                 $localCategory = $localCategories->get($productData['category']['name']);
-                if ($localCategory) {
+                $type = match ($productData['type']) {
+                    ProductType::Manufactured->value, 'manifactured' => ProductType::Manufactured,
+                    ProductType::RawMaterial->value => ProductType::RawMaterial,
+                    ProductType::Consumable->value => ProductType::Consumable,
+                    default => throw new Exception('نوع المنتج غير معروف: ' . $productData['type']),
+                };
+                if ($localCategory && $type === ProductType::RawMaterial) {
                     $product = Product::updateOrCreate(
                         ['product_ref' => $productData['productRef']],
                         [
@@ -347,14 +364,43 @@ class BranchService
                             'cost' => $productData['cost'] ?? 0,
                             'unit' => $productData['unit'] ?? 'piece',
                             'category_id' => $localCategory->id,
-                            'type' => ProductType::Manufactured,
+                            'type' => $type,
+                            'product_ref' => $productData['productRef'],
+                        ]
+                    );
+                } else if ($localCategory && $type === ProductType::Consumable) {
+                    $product = Product::updateOrCreate(
+                        ['product_ref' => $productData['productRef']],
+                        [
+                            'name' => $productData['name'],
+                            'price' => $productData['price'] ?? 0,
+                            'cost' => $productData['cost'] ?? 0,
+                            'unit' => $productData['unit'] ?? 'piece',
+                            'category_id' => $localCategory->id,
+                            'type' => $type,
+                            'product_ref' => $productData['productRef'],
+                        ]
+                    );
+                } else if ($localCategory && $type === ProductType::Manufactured) {
+
+                    $product = Product::updateOrCreate(
+                        ['product_ref' => $productData['productRef']],
+                        [
+                            'name' => $productData['name'],
+                            'price' => $productData['price'] ?? 0,
+                            'cost' => $productData['cost'] ?? 0,
+                            'unit' => $productData['unit'] ?? 'piece',
+                            'category_id' => $localCategory->id,
+                            'type' => $type,
                             'product_ref' => $productData['productRef'],
                         ]
                     );
 
                     // Handle product components for manufactured products
-                    if (($productData['type'] ?? ProductType::Manufactured) === ProductType::Manufactured &&
-                        !empty($productData['components'])) {
+                    if (
+                        $type === ProductType::Manufactured
+                        && !empty($productData['components'])
+                    ) {
 
                         // First, delete existing components
                         $product->components()->detach();
@@ -364,7 +410,7 @@ class BranchService
                             $componentProduct = Product::where('product_ref', $component['productRef'])->first();
                             if ($componentProduct) {
                                 $product->components()->attach($componentProduct->id, [
-                                    'quantity' => $component['pivot']['quantity'] ?? 1,
+                                    'quantity' => $component['meta']['pivot_quantity'],
                                 ]);
                             }
                         }
@@ -426,19 +472,9 @@ class BranchService
                             }
                             break;
 
-                        case ProductType::RawMaterial->value:
-                            if (isset($productData['cost'])) {
-                                $updateData['price'] = $productData['cost'];
-                                $updateData['cost'] = $productData['cost'];
-                            }
-                            break;
-
                         case ProductType::Consumable->value:
                             if (isset($productData['price'])) {
                                 $updateData['price'] = $productData['price'];
-                            }
-                            if (isset($productData['cost'])) {
-                                $updateData['cost'] = $productData['cost'];
                             }
                             break;
                     }

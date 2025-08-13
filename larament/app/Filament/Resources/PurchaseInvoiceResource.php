@@ -72,9 +72,10 @@ class PurchaseInvoiceResource extends Resource
 
                         Select::make('supplier_id')
                             ->label('المورد')
-                            ->options(Supplier::all()->pluck('name', 'id'))
+                            ->relationship('supplier', 'name')
                             ->searchable()
                             ->required()
+                            ->preload()
                             ->createOptionForm([
                                 TextInput::make('name')
                                     ->label('اسم المورد')

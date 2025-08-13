@@ -41,6 +41,13 @@ class ExpenseTypeResource extends Resource
                     ->label('اسم نوع المصروف')
                     ->required()
                     ->maxLength(255),
+                Forms\Components\TextInput::make('avg_month_rate')
+                    ->label('متوسط الميزانية الشهرية (جنيه)')
+                    ->numeric()
+                    ->step(0.01)
+                    ->suffix('جنيه')
+                    ->helperText('متوسط المبلغ المتوقع شهرياً لهذا النوع من المصروفات')
+                    ->nullable(),
             ]);
     }
 
@@ -52,6 +59,11 @@ class ExpenseTypeResource extends Resource
                     ->label('اسم نوع المصروف')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('avg_month_rate')
+                    ->label('متوسط الميزانية الشهرية')
+                    ->money('EGP')
+                    ->sortable()
+                    ->placeholder('غير محدد'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()

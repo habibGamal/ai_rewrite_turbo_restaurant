@@ -151,7 +151,163 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->money('EGP')
                     ->alignCenter()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->color(function ($record) use ($filterType) {
+                        $current = $record->expenses_sum_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'success';
+                        }
+
+                        // Calculate number of months in the period
+                        $monthsInPeriod = 1; // Default to 1 month
+
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                        }
+
+                        $adjustedBudget = $monthlyRate * $monthsInPeriod;
+
+                        if ($current > $adjustedBudget) {
+                            return 'danger';
+                        }
+                        return 'success';
+                    }),
+
+                Tables\Columns\TextColumn::make('avg_month_rate')
+                    ->label('الميزانية الشهرية')
+                    ->money('EGP')
+                    ->alignCenter()
+                    ->placeholder('غير محدد')
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('adjusted_budget')
+                    ->label('ميزانية الفترة')
+                    ->state(function ($record) use ($filterType) {
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'غير محدد';
+                        }
+
+                        // Calculate number of months in the period
+                        $monthsInPeriod = 1; // Default to 1 month
+
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                        }
+
+                        $adjustedBudget = $monthlyRate * $monthsInPeriod;
+                        return number_format($adjustedBudget, 2) . ' جنيه';
+                    })
+                    ->alignCenter()
+                    ->color('warning')
+                    ->tooltip(function ($record) use ($filterType) {
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+
+                            return "الميزانية الشهرية × {$monthsInPeriod} شهر";
+                        }
+                        return 'ميزانية الفترة المحددة';
+                    }),
+
+                Tables\Columns\TextColumn::make('budget_status')
+                    ->label('حالة الميزانية')
+                    ->state(function ($record) use ($filterType) {
+                        $current = $record->expenses_sum_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'غير محدد';
+                        }
+
+                        // Calculate number of months in the period
+                        $monthsInPeriod = 1; // Default to 1 month
+
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                        }
+
+                        $adjustedBudget = $monthlyRate * $monthsInPeriod;
+
+                        if ($current > $adjustedBudget) {
+                            $excess = $current - $adjustedBudget;
+                            return 'تجاوز بـ ' . number_format($excess, 2) . ' جنيه';
+                        } else {
+                            $remaining = $adjustedBudget - $current;
+                            return 'متبقي ' . number_format($remaining, 2) . ' جنيه';
+                        }
+                    })
+                    ->color(function ($record) use ($filterType) {
+                        $current = $record->expenses_sum_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'gray';
+                        }
+
+                        // Calculate number of months in the period
+                        $monthsInPeriod = 1; // Default to 1 month
+
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                        }
+
+                        $adjustedBudget = $monthlyRate * $monthsInPeriod;
+
+                        return $current > $adjustedBudget ? 'danger' : 'success';
+                    })
+                    ->alignCenter()
+                    ->icon(function ($record) use ($filterType) {
+                        $current = $record->expenses_sum_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'heroicon-o-question-mark-circle';
+                        }
+
+                        // Calculate number of months in the period
+                        $monthsInPeriod = 1; // Default to 1 month
+
+                        if ($filterType === 'period') {
+                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+
+                            $start = Carbon::parse($startDate);
+                            $end = Carbon::parse($endDate);
+                            $monthsInPeriod = max(1, $start->diffInMonths($end, true));
+                        }
+
+                        $adjustedBudget = $monthlyRate * $monthsInPeriod;
+
+                        return $current > $adjustedBudget ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle';
+                    }),
 
                 Tables\Columns\TextColumn::make('average_amount')
                     ->label('متوسط المبلغ')

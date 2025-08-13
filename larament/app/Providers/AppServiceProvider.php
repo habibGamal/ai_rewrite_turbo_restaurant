@@ -15,6 +15,8 @@ use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Filament\Actions\Action;
+use Illuminate\Support\Facades\Date;
+use Carbon\Carbon;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -41,7 +43,9 @@ class AppServiceProvider extends ServiceProvider
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-            fn(): View => view('filament.to-cashier'),
+            fn(): View => view('filament.global-actions'),
         );
+
+
     }
 }

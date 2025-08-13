@@ -19,6 +19,9 @@ use Illuminate\Support\HtmlString;
 
 class CurrentShiftExpensesTable extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'اجمالي المصاريف';
@@ -42,6 +45,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                 ->select([
                     'expence_types.id',
                     'expence_types.name',
+                    'expence_types.avg_month_rate',
                     DB::raw('COUNT(expenses.id) as expense_count'),
                     DB::raw('COALESCE(SUM(expenses.amount), 0) as total_amount'),
                 ])
@@ -49,7 +53,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                     $join->on('expence_types.id', '=', 'expenses.expence_type_id')
                          ->where('expenses.shift_id', '=', $currentShift->id);
                 })
-                ->groupBy('expence_types.id', 'expence_types.name')
+                ->groupBy('expence_types.id', 'expence_types.name', 'expence_types.avg_month_rate')
                 ->havingRaw('COUNT(expenses.id) > 0'); // Only show types that have expenses
         }
 
@@ -68,6 +72,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                                 ->select([
                                     'expence_types.id',
                                     'expence_types.name',
+                                    'expence_types.avg_month_rate',
                                     DB::raw('COUNT(expenses.id) as expense_count'),
                                     DB::raw('COALESCE(SUM(expenses.amount), 0) as total_amount'),
                                 ])
@@ -75,7 +80,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                                     $join->on('expence_types.id', '=', 'expenses.expence_type_id')
                                          ->where('expenses.shift_id', '=', $currentShift->id);
                                 })
-                                ->groupBy('expence_types.id', 'expence_types.name')
+                                ->groupBy('expence_types.id', 'expence_types.name', 'expence_types.avg_month_rate')
                                 ->havingRaw('COUNT(expenses.id) > 0');
                         }
                         return ExpenceType::query()->where('id', 0);
@@ -119,8 +124,65 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->weight('bold')
-                    ->color('danger')
-                    ->alignCenter(),
+                    ->alignCenter()
+                    ->color(function ($record) {
+                        $current = $record->total_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+                        if ($monthlyRate > 0 && $current > $monthlyRate) {
+                            return 'danger';
+                        }
+                        return 'success';
+                    }),
+
+                Tables\Columns\TextColumn::make('avg_month_rate')
+                    ->label('الميزانية الشهرية')
+                    ->numeric(decimalPlaces: 2)
+                    ->suffix(' جنيه')
+                    ->alignCenter()
+                    ->placeholder('غير محدد')
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('budget_status')
+                    ->label('حالة الميزانية')
+                    ->state(function ($record) {
+                        $current = $record->total_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'غير محدد';
+                        }
+
+                        // For current shift, we compare against monthly budget
+                        // since expenses should be tracked daily/per shift against monthly budget
+                        if ($current > $monthlyRate) {
+                            $excess = $current - $monthlyRate;
+                            return 'تجاوز بـ ' . number_format($excess, 2) . ' ج';
+                        } else {
+                            $remaining = $monthlyRate - $current;
+                            return 'متبقي ' . number_format($remaining, 2) . ' ج';
+                        }
+                    })
+                    ->color(function ($record) {
+                        $current = $record->total_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'gray';
+                        }
+
+                        return $current > $monthlyRate ? 'danger' : 'success';
+                    })
+                    ->alignCenter()
+                    ->icon(function ($record) {
+                        $current = $record->total_amount ?? 0;
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+
+                        if ($monthlyRate == 0) {
+                            return 'heroicon-o-question-mark-circle';
+                        }
+
+                        return $current > $monthlyRate ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle';
+                    }),
             ])
             ->defaultSort('total_amount', 'desc')
             ->striped()

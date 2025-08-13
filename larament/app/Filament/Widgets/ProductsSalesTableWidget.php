@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\ProductType;
 use App\Services\ProductsSalesReportService;
 use App\Filament\Exports\ProductsSalesTableExporter;
 use Filament\Tables;
@@ -118,10 +119,10 @@ class ProductsSalesTableWidget extends BaseWidget
                     ->money('EGP')
                     ->sortable(),
 
-                TextColumn::make('companies_sales')
-                    ->label('شركات')
-                    ->money('EGP')
-                    ->sortable(),
+                // TextColumn::make('companies_sales')
+                //     ->label('شركات')
+                //     ->money('EGP')
+                //     ->sortable(),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])
@@ -133,9 +134,9 @@ class ProductsSalesTableWidget extends BaseWidget
                     ->url(function ($record): string {
                         // Determine the appropriate resource based on product type
                         $resourceRoute = match ($record->type) {
-                            'raw_material' => 'raw-material-products',
-                            'manufactured' => 'manufactured-products',
-                            'consumable' => 'consumable-products',
+                            ProductType::RawMaterial => 'raw-material-products',
+                            ProductType::Manufactured => 'manufactured-products',
+                            ProductType::Consumable => 'consumable-products',
                             default => 'consumable-products', // fallback
                         };
 

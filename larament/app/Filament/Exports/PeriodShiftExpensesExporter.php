@@ -31,6 +31,36 @@ class PeriodShiftExpensesExporter extends Exporter
                     return number_format($record->expenses_sum_amount ?? 0, 2);
                 }),
 
+            ExportColumn::make('avg_month_rate')
+                ->label('الميزانية الشهرية (جنيه)')
+                ->state(function ($record) {
+                    return $record->avg_month_rate ? number_format((float) $record->avg_month_rate, 2) : 'غير محدد';
+                }),
+
+            ExportColumn::make('budget_status')
+                ->label('حالة الميزانية')
+                ->state(function ($record) {
+                    $current = $record->expenses_sum_amount ?? 0;
+                    $rate = $record->avg_month_rate ?? 0;
+
+                    if ($rate == 0) {
+                        return 'غير محدد';
+                    }
+
+                    // For period exports, we need to estimate months
+                    // This is a simplified calculation - you might want to pass the actual period dates
+                    $monthsInPeriod = 1; // Default assumption
+                    $adjustedBudget = $rate * $monthsInPeriod;
+
+                    if ($current > $adjustedBudget) {
+                        $excess = $current - $adjustedBudget;
+                        return 'تجاوز بـ ' . number_format($excess, 2) . ' جنيه';
+                    } else {
+                        $remaining = $adjustedBudget - $current;
+                        return 'متبقي ' . number_format($remaining, 2) . ' جنيه';
+                    }
+                }),
+
             ExportColumn::make('average_amount')
                 ->label('متوسط المبلغ (جنيه)')
                 ->state(function ($record) {

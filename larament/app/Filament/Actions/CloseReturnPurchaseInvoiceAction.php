@@ -22,8 +22,9 @@ class CloseReturnPurchaseInvoiceAction
             ->modalDescription('هل أنت متأكد من إغلاق هذا المرتجع؟ سيتم خصم جميع الأصناف من المخزون ولن يمكن تعديل المرتجع بعد ذلك.')
             ->modalSubmitActionLabel('إغلاق المرتجع')
             ->modalCancelActionLabel('إلغاء')
-            ->action(function (ReturnPurchaseInvoice $record) {
+            ->action(function (ReturnPurchaseInvoice $record, $livewire) {
                 try {
+                    $livewire->save(true);
                     $purchaseService = app(PurchaseService::class);
                     $purchaseService->closeReturnPurchaseInvoice($record);
 

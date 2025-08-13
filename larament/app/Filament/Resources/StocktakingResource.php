@@ -96,7 +96,7 @@ class StocktakingResource extends Resource
                             ->relationship('items', fn($query) => $query->with('product'))
                             ->headers([
                                 Header::make('product_id')->label('المنتج')->width('150px'),
-                                Header::make('stock_quantity')->label('الكمية المخزنة')->width('120px'),
+                                // Header::make('stock_quantity')->label('الكمية المخزنة')->width('120px'),
                                 Header::make('real_quantity')->label('الكمية الفعلية')->width('120px'),
                                 Header::make('price')->label('سعر الوحدة (ج.م)')->width('120px'),
                                 Header::make('total')->label('الفرق (ج.م)')->width('120px'),
@@ -112,13 +112,10 @@ class StocktakingResource extends Resource
                                     ->dehydrated(false)
                                     ->disabled(),
 
-                                TextInput::make('stock_quantity')
+                                Hidden::make('stock_quantity')
                                     ->label('الكمية المخزنة')
-                                    ->numeric()
                                     ->required()
                                     ->default(0)
-                                    ->minValue(0)
-                                    ->disabled()
                                     ->dehydrated(true),
 
                                 TextInput::make('real_quantity')

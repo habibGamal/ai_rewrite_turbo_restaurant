@@ -6,6 +6,8 @@ use App\Filament\Resources\InventoryItemResource\Pages;
 use App\Filament\Resources\InventoryItemResource\RelationManagers;
 use App\Models\InventoryItem;
 use Filament\Forms\Components\Select;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -118,6 +120,29 @@ class InventoryItemResource extends Resource
             ])
             ->defaultSort('quantity', 'asc'); // Show low stock items first
     }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Infolists\Components\Section::make('معلومات المنتج')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('product.name')
+                            ->label('اسم المنتج'),
+                        Infolists\Components\TextEntry::make('product.category.name')
+                            ->label('الفئة'),
+                        Infolists\Components\TextEntry::make('product.unit')
+                            ->label('الوحدة'),
+                        Infolists\Components\TextEntry::make('product.cost')
+                            ->label('التكلفة'),
+                        Infolists\Components\TextEntry::make('product.type')
+                            ->label('نوع المنتج'),
+                    ])
+                    ->columns(3)
+            ]);
+    }
+
+
 
     public static function getRelations(): array
     {

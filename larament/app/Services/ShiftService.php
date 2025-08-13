@@ -25,6 +25,8 @@ class ShiftService
      */
     public function startShift(float $startCash, ?User $user = null): Shift
     {
+        shouldDayBeOpen();
+
         // Check if user already has an active shift
         $activeShift = $this->getCurrentShift();
         if ($activeShift) {
@@ -54,11 +56,11 @@ class ShiftService
 
         // Check if there are any orders in processing
         $processingOrders = $currentShift->orders()
-            ->where('status', OrderStatus::PROCESSING)
+            ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
             ->exists();
 
         if ($processingOrders) {
-            throw new \Exception('Cannot end shift while there are orders in processing');
+            throw new \Exception('لا يمكن إنهاء الشيفت لوجود طلبات قيد المعالجة');
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {

@@ -26,6 +26,9 @@ class StocktakingService
             throw new Exception('الجرد مغلق بالفعل');
         }
 
+
+        shouldDayBeOpen();
+
         DB::beginTransaction();
 
         try {

@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Region;
 use App\Services\WebApiService;
 use App\Services\Orders\OrderService;
+use App\Services\ShiftLoggingService;
 use App\Enums\OrderType;
 use App\Enums\OrderStatus;
 use Illuminate\Http\Request;
@@ -21,11 +22,13 @@ class WebOrderController extends Controller
 {
     protected WebApiService $webApiService;
     protected OrderService $orderService;
+    protected ShiftLoggingService $loggingService;
 
-    public function __construct(WebApiService $webApiService, OrderService $orderService)
+    public function __construct(WebApiService $webApiService, OrderService $orderService, ShiftLoggingService $loggingService)
     {
         $this->webApiService = $webApiService;
         $this->orderService = $orderService;
+        $this->loggingService = $loggingService;
     }
 
     /**
@@ -61,8 +64,16 @@ class WebOrderController extends Controller
         try {
             $this->webApiService->acceptOrder($order->id);
 
+            // Log web order acceptance
+            $this->loggingService->logWebOrderAction('accept', $order->id);
+
             return Redirect::back()->with('success', 'تم قبول الطلب بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في قبول طلب ويب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في قبول الطلب: ' . $e->getMessage());
         }
     }
@@ -80,9 +91,19 @@ class WebOrderController extends Controller
                 // Sync with external API
                 $this->webApiService->rejectOrder($order->id);
 
+                // Log web order rejection
+                $this->loggingService->logWebOrderAction('reject', $order->id, [
+                    'reason' => 'تم رفض الطلب من واجهة الويب'
+                ]);
+
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
             });
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في رفض طلب ويب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في إلغاء الطلب: ' . $e->getMessage());
         }
     }
@@ -100,9 +121,19 @@ class WebOrderController extends Controller
                 // Sync with external API
                 $this->webApiService->rejectOrder($order->id);
 
+                // Log web order cancellation
+                $this->loggingService->logWebOrderAction('cancel', $order->id, [
+                    'reason' => 'تم إلغاء الطلب من واجهة الويب'
+                ]);
+
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
             });
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إلغاء طلب ويب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في إلغاء الطلب: ' . $e->getMessage());
         }
     }
@@ -115,8 +146,16 @@ class WebOrderController extends Controller
         try {
             $this->webApiService->outForDelivery($order->id);
 
+            // Log web order out for delivery
+            $this->loggingService->logWebOrderAction('out_for_delivery', $order->id);
+
             return Redirect::back()->with('success', 'تم تحديد الطلب كخارج للتوصيل');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في تحديد طلب ويب كخارج للتوصيل', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في تحديث حالة الطلب: ' . $e->getMessage());
         }
     }
@@ -159,13 +198,28 @@ class WebOrderController extends Controller
 
                 // Use OrderService to complete the order locally
                 $completedOrder = $this->orderService->completeOrder($order->id, $paymentsData, $shouldPrint);
+
                 // Sync with external API
                 $this->webApiService->completeOrder($order->id);
+
+                // Log web order completion
+                $this->loggingService->logWebOrderAction('complete', $order->id, [
+                    'payment_data' => $paymentsData,
+                    'total_amount' => $completedOrder->total,
+                    'should_print' => $shouldPrint,
+                ]);
+
                 $message = $shouldPrint ? 'تم إكمال الطلب وطباعة الفاتورة' : 'تم إكمال الطلب بنجاح';
 
                 return Redirect::back()->with('success', $message);
             });
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إكمال طلب ويب', [
+                'order_id' => $order->id,
+                'payment_data' => $request->all(),
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في إكمال الطلب: ' . $e->getMessage());
         }
     }
@@ -187,8 +241,21 @@ class WebOrderController extends Controller
                 $request->get('discountType')
             );
 
+            // Log web order discount application
+            $this->loggingService->logWebOrderAction('apply_discount', $order->id, [
+                'discount' => $request->get('discount'),
+                'discount_type' => $request->get('discountType'),
+            ]);
+
             return Redirect::back()->with('success', 'تم تطبيق الخصم');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في تطبيق خصم على طلب ويب', [
+                'order_id' => $order->id,
+                'discount' => $request->get('discount'),
+                'discount_type' => $request->get('discountType'),
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في تطبيق الخصم: ' . $e->getMessage());
         }
     }
@@ -207,6 +274,7 @@ class WebOrderController extends Controller
         try {
             $order->load('items');
 
+            $updatedItems = [];
             foreach ($request->get('items') as $itemData) {
                 if (empty($itemData['notes'])) {
                     continue;
@@ -214,13 +282,32 @@ class WebOrderController extends Controller
 
                 $orderItem = $order->items->firstWhere('product_id', $itemData['product_id']);
                 if ($orderItem) {
+                    $oldNotes = $orderItem->notes;
                     $orderItem->notes = $itemData['notes'];
                     $orderItem->save();
+
+                    $updatedItems[] = [
+                        'product_name' => $orderItem->product->name ?? "المنتج رقم {$itemData['product_id']}",
+                        'old_notes' => $oldNotes,
+                        'new_notes' => $itemData['notes'],
+                    ];
                 }
             }
 
+            // Log web order save
+            $this->loggingService->logWebOrderAction('save', $order->id, [
+                'updated_items' => $updatedItems,
+                'changes_count' => count($updatedItems),
+            ]);
+
             return Redirect::back()->with('success', 'تم حفظ الطلب');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في حفظ طلب ويب', [
+                'order_id' => $order->id,
+                'items_data' => $request->get('items'),
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return Redirect::back()->with('error', 'فشل في حفظ الطلب: ' . $e->getMessage());
         }
     }

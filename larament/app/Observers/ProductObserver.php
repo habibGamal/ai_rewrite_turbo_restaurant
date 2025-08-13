@@ -41,6 +41,25 @@ class ProductObserver
         if (empty($product->product_ref)) {
             $product->product_ref = $this->generateProductRef();
         }
+
+        // set price of raw material = its cost
+        if ($product->type === \App\Enums\ProductType::RawMaterial) {
+            $product->price = $product->cost;
+        }
+    }
+
+    /**
+     * Handle the Product "saving" event.
+     */
+    public function saved(Product $product): void
+    {
+        // Auto-assign product_ref if not provided (fallback for mass assignment)
+        if ($product->type !== \App\Enums\ProductType::Manufactured) {
+            $product->load('componentOf');
+            $product->componentOf->each(function ($component) {
+                $component->updateManufacturedCost();
+            });
+        }
     }
 
     /**

@@ -115,7 +115,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
 
             <div className="p-4">
                 <div className="flex justify-between">
-                    <Descriptions>
+                    <Descriptions data-testid="user-info">
                         <Descriptions.Item label="الموظف">{user?.email}</Descriptions.Item>
                     </Descriptions>
 

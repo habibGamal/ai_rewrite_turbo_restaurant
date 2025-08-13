@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class CustomerActivityTrendWidget extends ChartWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected static ?string $heading = 'اتجاه نشاط العملاء الجدد مقابل المعادين';

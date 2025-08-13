@@ -295,9 +295,6 @@ class StockService
             $today = Carbon::today();
             $productIds = array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements));
 
-            // First ensure the day is opened for all products
-            $this->dailyAggregationService->openDay($today);
-
             // Then aggregate movements for better performance
             $this->dailyAggregationService->aggregateMultipleMovements($productIds, $today);
 
@@ -310,13 +307,7 @@ class StockService
     }
 
 
-    /**
-     * Get daily movement summary for products
-     */
-    public function getDailyMovementSummary(int $productId, Carbon $startDate, Carbon $endDate): array
-    {
-        return $this->dailyAggregationService->getDailySummary($productId, $startDate, $endDate);
-    }
+
 
     /**
      * Log the operation

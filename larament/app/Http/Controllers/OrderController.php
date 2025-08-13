@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProductType;
 use App\Models\Order;
 use App\Models\Category;
 use App\Models\Customer;
@@ -21,6 +22,7 @@ use App\DTOs\Orders\PaymentDTO;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\ShiftService;
+use App\Services\ShiftLoggingService;
 use App\Http\Requests\SaveOrderRequest;
 use App\Http\Requests\CompleteOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
@@ -35,7 +37,8 @@ class OrderController extends Controller
     public function __construct(
         private OrderService $orderService,
         private PrintService $printService,
-        private ShiftService $shiftService
+        private ShiftService $shiftService,
+        private ShiftLoggingService $loggingService
     ) {
     }
 
@@ -96,16 +99,28 @@ class OrderController extends Controller
         $validated = $request->validate([
             'start_cash' => 'required|numeric|min:0',
         ]);
-
         try {
+
             if (!$this->shiftService->canStartShift()) {
                 return redirect()->route('orders.index')->with('info', 'لديك وردية نشطة بالفعل');
             }
 
-            $this->shiftService->startShift($validated['start_cash']);
+            $shift = $this->shiftService->startShift($validated['start_cash']);
+
+            // Log shift start
+            $this->loggingService->logShiftAction('start', [
+                'id' => $shift->id,
+                'start_cash' => $validated['start_cash'],
+                'date' => $shift->created_at->format('Y-m-d H:i:s'),
+            ]);
 
             return redirect()->route('orders.index')->with('success', 'تم بدء الوردية بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في بدء الوردية', [
+                'error' => $e->getMessage(),
+                'start_cash' => $validated['start_cash'],
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء بدء الوردية: ' . $e->getMessage()]);
         }
     }
@@ -120,7 +135,9 @@ class OrderController extends Controller
 
         $categories = Category::with([
             'products' => function ($query) {
-                $query->where('legacy', false)->orderBy('name');
+                $query
+                ->whereNot('type',ProductType::RawMaterial)
+                ->where('legacy', false)->orderBy('name');
             }
         ])->orderBy('name')->get();
 
@@ -144,11 +161,38 @@ class OrderController extends Controller
     public function saveOrder(SaveOrderRequest $request, Order $order)
     {
         try {
+            // Get current order items for comparison
+            $oldItems = $order->items()->with('product')->get()->map(function ($item) {
+                return [
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product->name,
+                    'quantity' => $item->quantity,
+                    'notes' => $item->notes,
+                ];
+            })->toArray();
+
             $itemsData = $request->validated('items') ?: [];
+
+            // Add product names to new items for logging
+            $newItems = collect($itemsData)->map(function ($item) {
+                $product = \App\Models\Product::find($item['product_id']);
+                return array_merge($item, [
+                    'product_name' => $product?->name ?? "المنتج رقم {$item['product_id']}",
+                ]);
+            })->toArray();
+
             $this->orderService->updateOrderItems($order->id, $itemsData);
+
+            // Log the changes
+            $this->loggingService->logOrderSave($order->id, $oldItems, $newItems);
 
             return back()->with('success', 'تم حفظ الطلب بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في حفظ الطلب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ الطلب: ' . $e->getMessage()]);
         }
     }
@@ -165,11 +209,20 @@ class OrderController extends Controller
             // Remove print from payments data
             $paymentsData = collect($validatedData)->except('print')->toArray();
 
-            $this->orderService->completeOrder($order->id, $paymentsData, $shouldPrint);
+            $completedOrder = $this->orderService->completeOrder($order->id, $paymentsData, $shouldPrint);
+
+            // Log order completion
+            $this->loggingService->logOrderCompletion($order->id, $paymentsData, $completedOrder->total);
 
             return redirect()->route('orders.index', ['type' => $order->type->value])
                 ->with('success', 'تم إنهاء الطلب بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إتمام الطلب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'payment_data' => $request->validated(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الطلب: ' . $e->getMessage()]);
         }
     }
@@ -186,8 +239,16 @@ class OrderController extends Controller
         try {
             $this->orderService->cancelOrder($order->id);
 
+            // Log order cancellation
+            $this->loggingService->logOrderCancellation($order->id, 'إلغاء من قبل المدير');
+
             return back()->with('success', 'تم إلغاء الطلب بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إلغاء الطلب', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء إلغاء الطلب: ' . $e->getMessage()]);
         }
     }
@@ -210,16 +271,28 @@ class OrderController extends Controller
             if ($order->customer) {
                 $order->customer->update($validated);
                 $customer = $order->customer;
+                $actionType = 'update';
             } else {
                 $customer = Customer::create($validated);
                 $this->orderService->linkCustomer($order->id, $customer->id);
+                $actionType = 'create';
             }
+
+            // Log customer action
+            $this->loggingService->logCustomerAction($actionType, $validated, $order->id);
 
             DB::commit();
 
             return back()->with('success', 'تم حفظ بيانات العميل بنجاح');
         } catch (\Exception $e) {
             DB::rollBack();
+
+            $this->loggingService->logAction('فشل في حفظ بيانات العميل', [
+                'order_id' => $order->id,
+                'customer_data' => $validated,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ بيانات العميل']);
         }
     }
@@ -240,16 +313,28 @@ class OrderController extends Controller
             if ($order->driver) {
                 $order->driver->update($validated);
                 $driver = $order->driver;
+                $actionType = 'update';
             } else {
                 $driver = Driver::create($validated);
                 $this->orderService->linkDriver($order->id, $driver->id);
+                $actionType = 'create';
             }
+
+            // Log driver action
+            $this->loggingService->logDriverAction($actionType, $validated, $order->id);
 
             DB::commit();
 
             return back()->with('success', 'تم حفظ بيانات السائق بنجاح');
         } catch (\Exception $e) {
             DB::rollBack();
+
+            $this->loggingService->logAction('فشل في حفظ بيانات السائق', [
+                'order_id' => $order->id,
+                'driver_data' => $validated,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ بيانات السائق']);
         }
     }
@@ -278,8 +363,21 @@ class OrderController extends Controller
                 'delivery_cost' => $validated['deliveryCost'] ?? null,
             ]);
 
+            // Log customer creation
+            $this->loggingService->logCustomerAction('create', [
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'address' => $customer->address,
+                'delivery_cost' => $customer->delivery_cost,
+            ]);
+
             return response()->json($customer);
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إنشاء عميل جديد', [
+                'customer_data' => $validated,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return response()->json(['error' => 'حدث خطأ أثناء إنشاء العميل'], 500);
         }
     }
@@ -297,8 +395,19 @@ class OrderController extends Controller
         try {
             $driver = Driver::create($validated);
 
+            // Log driver creation
+            $this->loggingService->logDriverAction('create', [
+                'name' => $driver->name,
+                'phone' => $driver->phone,
+            ]);
+
             return response()->json($driver);
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إنشاء سائق جديد', [
+                'driver_data' => $validated,
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return response()->json(['error' => 'حدث خطأ أثناء إنشاء السائق'], 500);
         }
     }
@@ -357,7 +466,15 @@ class OrderController extends Controller
         ]);
 
         try {
+            $customer = Customer::find($validated['customerId']);
             $this->orderService->linkCustomer($order->id, $validated['customerId']);
+
+            // Log customer linking
+            $this->loggingService->logCustomerAction('link', [
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'address' => $customer->address,
+            ], $order->id);
 
             // Return in Inertia page props format
             $updatedOrder = $this->orderService->getOrderDetails($order->id);
@@ -367,6 +484,12 @@ class OrderController extends Controller
                 'order' => $updatedOrder
             ]);
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في ربط العميل بالطلب', [
+                'order_id' => $order->id,
+                'customer_id' => $validated['customerId'],
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء ربط العميل']);
         }
     }
@@ -381,7 +504,14 @@ class OrderController extends Controller
         ]);
 
         try {
+            $driver = Driver::find($validated['driverId']);
             $this->orderService->linkDriver($order->id, $validated['driverId']);
+
+            // Log driver linking
+            $this->loggingService->logDriverAction('link', [
+                'name' => $driver->name,
+                'phone' => $driver->phone,
+            ], $order->id);
 
             // Return in Inertia page props format
             $updatedOrder = $this->orderService->getOrderDetails($order->id);
@@ -391,6 +521,12 @@ class OrderController extends Controller
                 'order' => $updatedOrder
             ]);
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في ربط السائق بالطلب', [
+                'order_id' => $order->id,
+                'driver_id' => $validated['driverId'],
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء ربط السائق']);
         }
     }
@@ -453,8 +589,18 @@ class OrderController extends Controller
         try {
             $this->orderService->applyDiscount($order->id, $validated['discount'], $validated['discount_type']);
 
+            // Log discount application
+            $this->loggingService->logDiscountApplication($order->id, $validated['discount'], $validated['discount_type']);
+
             return back()->with('success', 'تم تطبيق الخصم بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في تطبيق الخصم', [
+                'order_id' => $order->id,
+                'discount' => $validated['discount'],
+                'discount_type' => $validated['discount_type'],
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء تطبيق الخصم: ' . $e->getMessage()]);
         }
     }
@@ -579,6 +725,13 @@ class OrderController extends Controller
 
             $order = $this->orderService->createOrder($createOrderDTO);
 
+            // Log order creation
+            $this->loggingService->logOrderCreation(
+                $order->id,
+                $validated['type'],
+                $validated['table_number'] ?? null
+            );
+
             return redirect()->route('orders.manage', $order);
         } catch (\Exception $e) {
             logger()->error('Error creating order: ' . $e->getMessage());
@@ -630,12 +783,25 @@ class OrderController extends Controller
                 return back()->withErrors(['error' => 'لا يوجد شيفت نشط']);
             }
 
-            $this->shiftService->endShift(
-                $validated['real_end_cash']
-            );
+            $currentShift = $this->shiftService->getCurrentShift();
+            $endedShift = $this->shiftService->endShift($validated['real_end_cash']);
+
+            // Log shift end
+            $this->loggingService->logShiftAction('end', [
+                'id' => $endedShift->id,
+                'start_cash' => $endedShift->start_cash,
+                'end_cash' => $endedShift->end_cash,
+                'real_end_cash' => $validated['real_end_cash'],
+                'date' => $endedShift->updated_at->format('Y-m-d H:i:s'),
+            ]);
 
             return redirect()->route('shifts.start')->with('success', 'تم إنهاء الشيفت بنجاح');
         } catch (\Exception $e) {
+            $this->loggingService->logAction('فشل في إنهاء الوردية', [
+                'real_end_cash' => $validated['real_end_cash'],
+                'error' => $e->getMessage(),
+            ], 'error');
+
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الشيفت: ' . $e->getMessage()]);
         }
     }

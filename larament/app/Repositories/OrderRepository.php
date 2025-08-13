@@ -70,8 +70,11 @@ class OrderRepository implements OrderRepositoryInterface
             ->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
             ->orderBy('order_number', 'desc')
             ->first();
-
-        return $lastOrder ? $lastOrder->order_number + 1 : 1;
+        $nextNumber = $lastOrder ? $lastOrder->order_number + 1 : 1;
+        while (Order::where('shift_id', $shiftId)->where('order_number', $nextNumber)->exists()) {
+            $nextNumber++;
+        }
+        return $nextNumber;
     }
 
     public function update(Order $order, array $data): bool

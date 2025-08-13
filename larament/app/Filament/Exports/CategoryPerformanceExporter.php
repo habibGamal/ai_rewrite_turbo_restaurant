@@ -55,18 +55,18 @@ class CategoryPerformanceExporter extends Exporter
             ExportColumn::make('avg_sales_per_product')
                 ->label('متوسط المبيعات/منتج (ج.م)')
                 ->state(function ($record) {
-                    $productsCount = $record->products_count ?? 0;
+                    $quantity = $record->total_quantity ?? 0;
                     $totalSales = $record->total_sales ?? 0;
-                    $avg = $productsCount > 0 ? $totalSales / $productsCount : 0;
+                    $avg = $quantity > 0 ? $totalSales / $quantity : 0;
                     return number_format($avg, 2);
                 }),
 
             ExportColumn::make('avg_profit_per_product')
                 ->label('متوسط الربح/منتج (ج.م)')
                 ->state(function ($record) {
-                    $productsCount = $record->products_count ?? 0;
+                    $quantity = $record->total_quantity ?? 0;
                     $totalProfit = $record->total_profit ?? 0;
-                    $avg = $productsCount > 0 ? $totalProfit / $productsCount : 0;
+                    $avg = $quantity > 0 ? $totalProfit / $quantity : 0;
                     return number_format($avg, 2);
                 }),
 

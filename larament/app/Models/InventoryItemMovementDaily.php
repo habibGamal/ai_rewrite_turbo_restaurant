@@ -21,6 +21,8 @@ class InventoryItemMovementDaily extends Model
         'return_sales_quantity',
         'sales_quantity',
         'return_waste_quantity',
+        'end_quantity',
+        'closed_at',
     ];
 
     protected $casts = [
@@ -30,6 +32,8 @@ class InventoryItemMovementDaily extends Model
         'return_sales_quantity' => 'decimal:2',
         'sales_quantity' => 'decimal:2',
         'return_waste_quantity' => 'decimal:2',
+        'end_quantity' => 'decimal:2',
+        'closed_at' => 'datetime',
     ];
 
     /**
@@ -38,14 +42,6 @@ class InventoryItemMovementDaily extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
-    }
-
-    /**
-     * Calculate the end quantity for the day
-     */
-    public function getEndQuantityAttribute(): float
-    {
-        return $this->start_quantity + $this->incoming_quantity - $this->sales_quantity - $this->return_waste_quantity;
     }
 
     /**
@@ -94,5 +90,13 @@ class InventoryItemMovementDaily extends Model
     public function scopeLatest($query)
     {
         return $query->orderBy('date', 'desc');
+    }
+
+    /**
+     * Scope to filter open days (where closed_at is null)
+     */
+    public function scopeOpen($query)
+    {
+        return $query->whereNull('closed_at');
     }
 }

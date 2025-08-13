@@ -22,8 +22,9 @@ class CloseStocktakingAction
             ->modalDescription('هل أنت متأكد من إغلاق هذا الجرد؟ سيتم تحديث كميات المخزون بناءً على الكميات الفعلية ولن يمكن تعديل الجرد بعد ذلك.')
             ->modalSubmitActionLabel('إغلاق الجرد')
             ->modalCancelActionLabel('إلغاء')
-            ->action(function (Stocktaking $record) {
+            ->action(function (Stocktaking $record, $livewire) {
                 try {
+                    $livewire->save(true);
                     $stocktakingService = app(StocktakingService::class);
                     $stocktakingService->closeStocktaking($record);
 

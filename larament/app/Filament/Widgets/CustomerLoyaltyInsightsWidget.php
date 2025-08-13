@@ -10,6 +10,9 @@ use Filament\Support\Enums\IconPosition;
 
 class CustomerLoyaltyInsightsWidget extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected CustomersPerformanceReportService $customersReportService;

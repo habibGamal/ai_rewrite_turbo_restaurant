@@ -8,6 +8,9 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class NoProductsSalesInPeriodWidget extends Widget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected static string $view = 'filament.widgets.no-products-sales-in-period';

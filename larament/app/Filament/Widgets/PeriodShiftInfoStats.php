@@ -10,6 +10,9 @@ use Carbon\Carbon;
 
 class PeriodShiftInfoStats extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected ShiftsReportService $shiftsReportService;

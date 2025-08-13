@@ -5,6 +5,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WebOrderController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\InventoryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -83,6 +84,12 @@ Route::middleware('auth')->group(function () {
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
     })->middleware(['shift']);
+
+    // Inventory Management Routes
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/day-status', [InventoryController::class, 'dayStatus'])->name('dayStatus');
+        Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay');
+    });
 });
 
 require __DIR__ . '/auth.php';

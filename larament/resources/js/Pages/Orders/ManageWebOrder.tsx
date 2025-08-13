@@ -38,6 +38,7 @@ import WebPaymentModal from "@/Components/Orders/WebPaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import OrderItem from "@/Components/Orders/OrderItem";
 import IsAdmin from "@/Components/IsAdmin";
+import LoadingButton from "@/Components/LoadingButton";
 
 interface ManageWebOrderProps {
     order: any;
@@ -88,7 +89,10 @@ export default function ManageWebOrder({
         );
     };
 
-    const save = (callback: (page: any) => void = () => {}) => {
+    const save = (
+        callback: (page: any) => void = () => {},
+        finish: () => void = () => {}
+    ) => {
         // For web orders, we can only update item notes, not quantities
         const itemsWithNotes = orderItems
             .map((item) => ({
@@ -108,6 +112,7 @@ export default function ManageWebOrder({
                     callback(page);
                 },
                 onError: () => message.error("فشل في حفظ الطلب"),
+                onFinish: () => finish(),
             }
         );
     };
@@ -135,12 +140,16 @@ export default function ManageWebOrder({
         );
     };
 
-    const payment = () => {
-        save(() => paymentModal.showModal());
+    const payment = (finish: () => void = () => {}) => {
+        save(() => paymentModal.showModal(), finish);
     };
 
-    const printInKitchen = () => {
-        save(() => printInKitchenModal.showModal());
+    const printInKitchen = (finish: () => void = () => {}) => {
+        save(() => printInKitchenModal.showModal(), finish);
+    };
+
+    const openDiscountModal = (finish: () => void = () => {}) => {
+        save(() => orderDiscountModal.showModal(), finish);
     };
 
     // Keyboard shortcuts
@@ -159,14 +168,14 @@ export default function ManageWebOrder({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [orderItems]);
 
-    const printWithCanvas = async () => {
+    const printWithCanvas = async (finish: () => void = () => {}) => {
         save(async (page) => {
             await printOrder(
                 page.props.order,
                 orderItems,
                 page.props.receiptFooter?.[0]?.value
             );
-        });
+        }, finish);
     };
 
     const getOrderStatus = (status: string) => {
@@ -346,8 +355,8 @@ export default function ManageWebOrder({
                 <Row gutter={[16, 16]} className="mt-8">
                     <Col span={8}>
                         <div className="isolate grid grid-cols-2 gap-4">
-                            <Button
-                                onClick={() => printWithCanvas()}
+                            <LoadingButton
+                                onCustomClick={printWithCanvas}
                                 disabled={
                                     !btnsState[order.status]?.includes(
                                         "printReceipt"
@@ -357,20 +366,20 @@ export default function ManageWebOrder({
                                 icon={<PrinterOutlined />}
                             >
                                 طباعة الفاتورة
-                            </Button>
+                            </LoadingButton>
 
-                            <Button
+                            <LoadingButton
+                                onCustomClick={printInKitchen}
                                 disabled={
                                     !btnsState[order.status]?.includes(
                                         "printKitchen"
                                     )
                                 }
-                                onClick={() => printInKitchen()}
                                 size="large"
                                 icon={<PrinterOutlined />}
                             >
                                 طباعة في المطبخ
-                            </Button>
+                            </LoadingButton>
 
                             {isDelivery && (
                                 <Button
@@ -400,32 +409,30 @@ export default function ManageWebOrder({
                             </Button>
 
                             <IsAdmin>
-                                <Button
+                                <LoadingButton
+                                    onCustomClick={openDiscountModal}
                                     disabled={
                                         !btnsState[order.status]?.includes(
                                             "discount"
                                         )
-                                    }
-                                    onClick={() =>
-                                        orderDiscountModal.showModal()
                                     }
                                     size="large"
                                     icon={<PercentageOutlined />}
                                     className="col-span-2"
                                 >
                                     خصم
-                                </Button>
+                                </LoadingButton>
                             </IsAdmin>
 
-                            <Button
+                            <LoadingButton
+                                onCustomClick={(finish) => save(undefined, finish)}
                                 disabled={disableAllControls}
-                                onClick={() => save()}
                                 size="large"
                                 icon={<SaveOutlined />}
                                 type="primary"
                             >
                                 حفظ
-                            </Button>
+                            </LoadingButton>
 
                             {actionBtn.accept && (
                                 <Popconfirm
@@ -466,7 +473,7 @@ export default function ManageWebOrder({
                                     title="تأكيد؟"
                                     okText="نعم"
                                     cancelText="لا"
-                                    onConfirm={payment}
+                                    onConfirm={() => payment()}
                                 >
                                     <Button
                                         type="primary"

@@ -9,6 +9,9 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class ShiftExpensesDetailsTable extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     public $shiftId;
 
     public $expenceTypeId;

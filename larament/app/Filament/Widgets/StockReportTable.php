@@ -15,9 +15,13 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use App\Enums\ProductType;
 
 class StockReportTable extends BaseWidget
 {
+    protected static bool $isLazy = false;
+    protected static ?string $pollingInterval = null;
+
     use InteractsWithPageFilters;
 
     protected int|string|array $columnSpan = 'full';
@@ -32,19 +36,38 @@ class StockReportTable extends BaseWidget
         return $table
             ->query(
                 Product::query()
+                    ->whereNot('type', ProductType::Manufactured)
                     ->with(['category'])
                     ->addSelect([
                         'products.id',
                         'products.name',
                         'products.category_id',
                         'products.cost',
+                        'inventory_items.id as inventory_item_id',
                         'inventory_items.quantity as actual_remaining_quantity',
-                        // DB::raw('COALESCE(startDailyMovements.start_quantity + startDailyMovements.incoming_quantity + startDailyMovements.return_sales_quantity - startDailyMovements.return_waste_quantity - startDailyMovements.sales_quantity, 0) as start_quantity'),
-                        DB::raw('COALESCE(SUM(startDailyMovements.start_quantity + startDailyMovements.incoming_quantity + startDailyMovements.return_sales_quantity - startDailyMovements.return_waste_quantity - startDailyMovements.sales_quantity), 0) as start_quantity'),
+                        // end quantity of the previous day
+                        DB::raw('COALESCE(SUM(startDailyMovements.end_quantity), 0) as start_quantity'),
                         DB::raw('COALESCE(SUM(dailyMovements.incoming_quantity), 0) as incoming'),
-                        DB::raw('COALESCE(SUM(dailyMovements.sales_quantity), 0) as sales'),
+                        DB::raw('COALESCE(SUM(dailyMovements.sales_quantity), 0) - COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as sales'),
                         DB::raw('COALESCE(SUM(dailyMovements.return_waste_quantity), 0) as return_waste'),
-                        DB::raw('COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as return_sales'),
+                        // DB::raw('COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as return_sales'),
+                        // Created at of startDailyMovements
+                        DB::raw('MAX(startDailyMovements.created_at) as start_created_at'),
+
+                        DB::raw("(SELECT dm.created_at
+                                            FROM inventory_item_movement_daily dm
+                                            WHERE dm.product_id = products.id
+                                                AND dm.date BETWEEN '{$startDate}' AND '{$endDate}'
+                                            ORDER BY dm.date ASC, dm.id ASC
+                                            LIMIT 1) as start_created_at"),
+
+                        // Last closed_at using subquery (will return NULL if the last record is NULL)
+                        DB::raw("(SELECT dm.closed_at
+                                            FROM inventory_item_movement_daily dm
+                                            WHERE dm.product_id = products.id
+                                                AND dm.date BETWEEN '{$startDate}' AND '{$endDate}'
+                                            ORDER BY dm.date DESC, dm.id DESC
+                                            LIMIT 1) as last_closed_at"),
                     ])
                     ->leftJoin('inventory_items', function ($join) {
                         $join->on('products.id', '=', 'inventory_items.product_id');
@@ -68,7 +91,7 @@ class StockReportTable extends BaseWidget
                         'products.category_id',
                         'products.cost',
                         'inventory_items.quantity',
-                        // 'start_quantity',
+                        'inventory_items.id',
                     ])
             )
             ->columns([
@@ -92,7 +115,9 @@ class StockReportTable extends BaseWidget
                     ->numeric()
                     ->sortable()
                     ->default(0)
-                    ->color(function ($state) { return $state > 0 ? 'success' : 'gray'; })
+                    ->color(function ($state) {
+                        return $state > 0 ? 'success' : 'gray';
+                    })
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('incoming')
@@ -101,25 +126,26 @@ class StockReportTable extends BaseWidget
                     ->sortable()
                     ->default(0)
                     ->toggleable()
-                    ->color(function ($state) { return $state > 0 ? 'info' : 'gray'; })
+                    ->color(function ($state) {
+                        return $state > 0 ? 'info' : 'gray';
+                    })
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('return_sales')
-                    ->label('مرتجع المبيعات')
-                    ->numeric()
-                    ->sortable()
-                    ->default(0)
-                    ->toggleable()
-                    ->color(function ($state) { return $state > 0 ? 'warning' : 'gray'; })
-                    ->alignCenter(),
+                // Tables\Columns\TextColumn::make('return_sales')
+                //     ->label('مرتجع المبيعات')
+                //     ->numeric()
+                //     ->sortable()
+                //     ->default(0)
+                //     ->toggleable()
+                //     ->color(function ($state) { return $state > 0 ? 'warning' : 'gray'; })
+                //     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('total_quantity')
                     ->label('الكمية الكلية')
                     ->numeric()
-                    ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
-                        return ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        return ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                     })
                     ->color('success')
                     ->weight('bold')
@@ -131,7 +157,9 @@ class StockReportTable extends BaseWidget
                     ->sortable()
                     ->default(0)
                     ->toggleable()
-                    ->color(function ($state) { return $state > 0 ? 'danger' : 'gray'; })
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('return_waste')
@@ -140,13 +168,14 @@ class StockReportTable extends BaseWidget
                     ->sortable()
                     ->default(0)
                     ->toggleable()
-                    ->color(function ($state) { return $state > 0 ? 'danger' : 'gray'; })
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('total_consumed')
                     ->label('الكمية الكلية المنصرفة')
                     ->numeric()
-                    ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
                         return ($record->sales ?? 0) + ($record->return_waste ?? 0);
@@ -161,7 +190,7 @@ class StockReportTable extends BaseWidget
                     ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
-                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
                         return $totalQuantity - $totalConsumed;
                     })
@@ -176,7 +205,7 @@ class StockReportTable extends BaseWidget
                     ->toggleable()
                     ->default(0)
                     ->color(function ($state, $record) {
-                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
                         $idealRemaining = $totalQuantity - $totalConsumed;
 
@@ -191,13 +220,10 @@ class StockReportTable extends BaseWidget
                     ->weight('bold')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('average_cost')
+                Tables\Columns\TextColumn::make('cost')
                     ->label('متوسط التكلفة')
                     ->numeric(decimalPlaces: 2)
                     ->sortable()
-                    ->getStateUsing(function ($record) {
-                        return $record->cost ?? 0;
-                    })
                     ->color('info')
                     ->toggleable()
                     ->suffix(' جنيه')
@@ -206,10 +232,9 @@ class StockReportTable extends BaseWidget
                 Tables\Columns\TextColumn::make('deviation')
                     ->label('الانحراف')
                     ->numeric()
-                    ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
-                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
                         $idealRemaining = $totalQuantity - $totalConsumed;
                         $actualRemaining = $record->actual_remaining_quantity ?? 0;
@@ -217,7 +242,8 @@ class StockReportTable extends BaseWidget
                         return $actualRemaining - $idealRemaining;
                     })
                     ->color(function ($state) {
-                        if ($state == 0) return 'success';
+                        if ($state == 0)
+                            return 'success';
                         return $state < 0 ? 'danger' : 'warning';
                     })
                     ->weight('medium')
@@ -226,10 +252,9 @@ class StockReportTable extends BaseWidget
                 Tables\Columns\TextColumn::make('deviation_value')
                     ->label('قيمة الانحراف')
                     ->numeric(decimalPlaces: 2)
-                    ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
-                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
                         $idealRemaining = $totalQuantity - $totalConsumed;
                         $actualRemaining = $record->actual_remaining_quantity ?? 0;
@@ -237,28 +262,32 @@ class StockReportTable extends BaseWidget
 
                         return abs($deviation) * ($record->cost ?? 0);
                     })
-                    ->color(function ($state) { return $state > 0 ? 'danger' : 'success'; })
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'success';
+                    })
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('deviation_percentage')
                     ->label('نسبة الانحراف')
                     ->numeric(decimalPlaces: 1)
-                    ->sortable()
                     ->toggleable()
                     ->getStateUsing(function ($record) {
-                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
+                        $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
                         $idealRemaining = $totalQuantity - $totalConsumed;
                         $actualRemaining = $record->actual_remaining_quantity ?? 0;
                         $deviation = $actualRemaining - $idealRemaining;
 
-                        if ($idealRemaining == 0) return 0;
+                        if ($idealRemaining == 0)
+                            return 0;
                         return ($deviation / $idealRemaining) * 100;
                     })
                     ->color(function ($state) {
-                        if (abs($state) <= 5) return 'success';
-                        if (abs($state) <= 15) return 'warning';
+                        if (abs($state) <= 5)
+                            return 'success';
+                        if (abs($state) <= 15)
+                            return 'warning';
                         return 'danger';
                     })
                     ->suffix('%')
@@ -286,7 +315,9 @@ class StockReportTable extends BaseWidget
                                     $q->where('quantity', '<=', 0);
                                 });
                         },
-                        blank: function (Builder $query) { return $query; },
+                        blank: function (Builder $query) {
+                            return $query;
+                        },
                     ),
 
                 Tables\Filters\TernaryFilter::make('has_movements')
@@ -302,7 +333,9 @@ class StockReportTable extends BaseWidget
                                 $q->whereBetween('date', [$startDate, $endDate]);
                             });
                         },
-                        blank: function (Builder $query) { return $query; },
+                        blank: function (Builder $query) {
+                            return $query;
+                        },
                     ),
 
                 SelectFilter::make('cost_range')
@@ -315,19 +348,27 @@ class StockReportTable extends BaseWidget
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['value'] === 'low',
-                            function (Builder $query): Builder { return $query->where('products.cost', '<', 10); },
+                            function (Builder $query): Builder {
+                                return $query->where('products.cost', '<', 10);
+                            },
                         )->when(
-                            $data['value'] === 'medium',
-                            function (Builder $query): Builder { return $query->whereBetween('products.cost', [10, 50]); },
-                        )->when(
-                            $data['value'] === 'high',
-                            function (Builder $query): Builder { return $query->where('products.cost', '>', 50); },
-                        );
+                                $data['value'] === 'medium',
+                                function (Builder $query): Builder {
+                                    return $query->whereBetween('products.cost', [10, 50]);
+                                },
+                            )->when(
+                                $data['value'] === 'high',
+                                function (Builder $query): Builder {
+                                    return $query->where('products.cost', '>', 50);
+                                },
+                            );
                     }),
 
                 Filter::make('zero_cost')
                     ->label('المنتجات بدون تكلفة محددة')
-                    ->query(function (Builder $query): Builder { return $query->whereNull('products.cost')->orWhere('products.cost', 0); }),
+                    ->query(function (Builder $query): Builder {
+                        return $query->whereNull('products.cost')->orWhere('products.cost', 0);
+                    }),
             ])
             ->defaultSort('name')
             ->striped()
@@ -336,6 +377,24 @@ class StockReportTable extends BaseWidget
             ->emptyStateHeading('لا توجد منتجات')
             ->emptyStateDescription('لم يتم العثور على أي منتجات لعرضها في التقرير.')
             ->emptyStateIcon('heroicon-o-cube')
+            ->actions([
+                Tables\Actions\Action::make('view_product')
+                    ->label('عرض المنتج')
+                    ->icon('heroicon-o-eye')
+                    ->url(function ($record) {
+                        return route('filament.admin.resources.inventory-items.view', [
+                            'record' => $record->inventory_item_id,
+                            'tableFilters' => [
+                                'created_at' => [
+                                    'created_from' => $record->start_created_at,
+                                    'created_until' => $record->last_closed_at,
+                                ],
+                            ],
+                        ]);
+                    })
+                    ->openUrlInNewTab()
+                    ->color('primary'),
+            ])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير التقرير')
@@ -345,7 +404,7 @@ class StockReportTable extends BaseWidget
                     // ->modifyQueryUsing(function (Builder $query) use ($startDate, $endDate) {
                     //     return $query;
                     // })
-                    ->fileName(fn () => 'stock-report-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
+                    ->fileName(fn() => 'stock-report-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
             ])
             ->recordAction(null)
             ->recordUrl(null)
