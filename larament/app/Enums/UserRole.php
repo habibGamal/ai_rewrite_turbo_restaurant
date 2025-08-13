@@ -17,7 +17,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::ADMIN => 'مدير',
-            self::VIEWER => 'مشاهد',
+            self::VIEWER => 'متابع تقارير',
             self::CASHIER => 'كاشير',
             self::WATCHER => 'مراقب',
         };
@@ -27,7 +27,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::ADMIN => 'مدير',
-            self::VIEWER => 'مستخدم',
+            self::VIEWER => 'متابع تقارير',
             self::CASHIER => 'كاشير',
             self::WATCHER => 'مراقب',
         };
