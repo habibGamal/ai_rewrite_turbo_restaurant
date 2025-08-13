@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use Filament\Pages\Page;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
@@ -12,7 +13,7 @@ use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 
 class StockReport extends BaseDashboard
 {
-    use HasFiltersForm ,AdminAccess;
+    use HasFiltersForm ,ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
 

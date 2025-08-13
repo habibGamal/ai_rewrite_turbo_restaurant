@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TableTypeResource\Pages;
 use App\Filament\Resources\TableTypeResource\RelationManagers;
+use App\Filament\Traits\AdminAccess;
 use App\Models\TableType;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TableTypeResource extends Resource
 {
+    use AdminAccess;
     protected static ?string $model = TableType::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-table-cells';

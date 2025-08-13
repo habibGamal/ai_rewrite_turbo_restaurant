@@ -61,6 +61,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === UserRole::ADMIN;
     }
 
+    public function isViewer(): bool
+    {
+        return $this->role === UserRole::VIEWER;
+    }
+
     public function canManageOrders(): bool
     {
         return $this->role?->canManageOrders() ?? false;

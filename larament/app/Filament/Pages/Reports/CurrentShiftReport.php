@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Page;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -11,7 +12,7 @@ use App\Models\Shift;
 
 class CurrentShiftReport extends BaseDashboard
 {
-    use HasFiltersForm, AdminAccess;
+    use HasFiltersForm ,ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 

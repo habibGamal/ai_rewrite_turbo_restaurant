@@ -82,8 +82,26 @@ class ManufacturedProductResource extends Resource
                         Forms\Components\Select::make('unit')
                             ->label('الوحدة')
                             ->options([
-                                'packet' => 'حزمة',
+                                'packet' => 'باكت',
                                 'kg' => 'كيلوجرام',
+                                'gram' => 'جرام',
+                                'liter' => 'لتر',
+                                'ml' => 'ميليلتر',
+                                'piece' => 'قطعة',
+                                'box' => 'صندوق',
+                                'bag' => 'كيس',
+                                'bottle' => 'زجاجة',
+                                'can' => 'علبة',
+                                'cup' => 'كوب',
+                                'tablespoon' => 'ملعقة كبيرة',
+                                'teaspoon' => 'ملعقة صغيرة',
+                                'dozen' => 'دستة',
+                                'meter' => 'متر',
+                                'cm' => 'سنتيمتر',
+                                'roll' => 'رول',
+                                'sheet' => 'ورقة',
+                                'slice' => 'شريحة',
+                                'loaf' => 'رغيف',
                             ])
                             ->required(),
                         Forms\Components\Select::make('printers')
@@ -95,7 +113,7 @@ class ManufacturedProductResource extends Resource
                         Forms\Components\Hidden::make('type')
                             ->default('manufactured'),
                         Forms\Components\Toggle::make('legacy')
-                            ->label('منتج قديم')
+                            ->label('غير نشط')
                             ->default(false),
                     ])
                     ->columns(3),
@@ -218,8 +236,26 @@ class ManufacturedProductResource extends Resource
                 Tables\Columns\TextColumn::make('unit')
                     ->label('الوحدة')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'packet' => 'حزمة',
+                        'packet' => 'باكت',
                         'kg' => 'كيلوجرام',
+                        'gram' => 'جرام',
+                        'liter' => 'لتر',
+                        'ml' => 'ميليلتر',
+                        'piece' => 'قطعة',
+                        'box' => 'صندوق',
+                        'bag' => 'كيس',
+                        'bottle' => 'زجاجة',
+                        'can' => 'علبة',
+                        'cup' => 'كوب',
+                        'tablespoon' => 'ملعقة كبيرة',
+                        'teaspoon' => 'ملعقة صغيرة',
+                        'dozen' => 'دستة',
+                        'meter' => 'متر',
+                        'cm' => 'سنتيمتر',
+                        'roll' => 'رول',
+                        'sheet' => 'ورقة',
+                        'slice' => 'شريحة',
+                        'loaf' => 'رغيف',
                         default => $state,
                     }),
                 Tables\Columns\TextColumn::make('printers.name')
@@ -228,7 +264,7 @@ class ManufacturedProductResource extends Resource
                     ->separator(',')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('legacy')
-                    ->label('منتج قديم')
+                    ->label('غير نشط')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -245,7 +281,7 @@ class ManufacturedProductResource extends Resource
                     ->relationship('printers', 'name')
                     ->multiple(),
                 Tables\Filters\TernaryFilter::make('legacy')
-                    ->label('منتج قديم'),
+                    ->label('غير نشط'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

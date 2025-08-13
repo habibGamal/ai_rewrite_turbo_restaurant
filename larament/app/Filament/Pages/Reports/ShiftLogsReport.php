@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use App\Models\Shift;
 use App\Services\ShiftLoggingService;
 use Filament\Forms\Components\Select;
@@ -19,7 +20,7 @@ use Carbon\Carbon;
 
 class ShiftLogsReport extends Page implements HasForms
 {
-    use InteractsWithForms, AdminAccess;
+    use InteractsWithForms, ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
@@ -69,7 +70,7 @@ class ShiftLogsReport extends Page implements HasForms
                             ->searchable()
                             ->placeholder('اختر الوردية')
                             ->live()
-                            ->afterStateUpdated(fn () => $this->loadLogs()),
+                            ->afterStateUpdated(fn() => $this->loadLogs()),
 
                         Select::make('log_level')
                             ->label('مستوى السجل')
@@ -80,7 +81,7 @@ class ShiftLogsReport extends Page implements HasForms
                             ])
                             ->default('all')
                             ->live()
-                            ->afterStateUpdated(fn () => $this->loadLogs()),
+                            ->afterStateUpdated(fn() => $this->loadLogs()),
 
                         Select::make('action_filter')
                             ->label('نوع النشاط')
@@ -97,14 +98,14 @@ class ShiftLogsReport extends Page implements HasForms
                             ])
                             ->default('all')
                             ->live()
-                            ->afterStateUpdated(fn () => $this->loadLogs()),
+                            ->afterStateUpdated(fn() => $this->loadLogs()),
 
                         TextInput::make('order_id')
                             ->label('رقم الطلب')
                             ->placeholder('اختياري - اتركه فارغ لعرض جميع الطلبات')
                             ->numeric()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn () => $this->loadLogs()),
+                            ->afterStateUpdated(fn() => $this->loadLogs()),
                     ])
                     ->columns(4),
             ])
@@ -156,7 +157,8 @@ class ShiftLogsReport extends Page implements HasForms
         $entries = [];
 
         foreach ($lines as $line) {
-            if (empty(trim($line))) continue;
+            if (empty(trim($line)))
+                continue;
 
             // Parse Laravel log format: [timestamp] environment.level: message {context}
             if (preg_match('/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+(\w+)\.(\w+):\s*(.+)$/', $line, $matches)) {
@@ -439,7 +441,8 @@ class ShiftLogsReport extends Page implements HasForms
         $lines = explode("\n", $content);
 
         foreach ($lines as $index => $line) {
-            if (empty(trim($line))) continue;
+            if (empty(trim($line)))
+                continue;
 
             echo "Line " . ($index + 1) . ":\n";
             echo "Raw: " . $line . "\n";
@@ -461,7 +464,8 @@ class ShiftLogsReport extends Page implements HasForms
             }
             echo "---\n";
 
-            if ($index > 2) break; // Just show first few lines for debugging
+            if ($index > 2)
+                break; // Just show first few lines for debugging
         }
 
         dd('Debug complete');

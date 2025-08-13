@@ -68,14 +68,32 @@ class RawMaterialProductResource extends Resource
                 Forms\Components\Select::make('unit')
                     ->label('الوحدة')
                     ->options([
-                        'packet' => 'حزمة',
+                        'packet' => 'باكت',
                         'kg' => 'كيلوجرام',
+                        'gram' => 'جرام',
+                        'liter' => 'لتر',
+                        'ml' => 'ميليلتر',
+                        'piece' => 'قطعة',
+                        'box' => 'صندوق',
+                        'bag' => 'كيس',
+                        'bottle' => 'زجاجة',
+                        'can' => 'علبة',
+                        'cup' => 'كوب',
+                        'tablespoon' => 'ملعقة كبيرة',
+                        'teaspoon' => 'ملعقة صغيرة',
+                        'dozen' => 'دستة',
+                        'meter' => 'متر',
+                        'cm' => 'سنتيمتر',
+                        'roll' => 'رول',
+                        'sheet' => 'ورقة',
+                        'slice' => 'شريحة',
+                        'loaf' => 'رغيف',
                     ])
                     ->required(),
                 Forms\Components\Hidden::make('type')
                     ->default('raw_material'),
                 Forms\Components\Toggle::make('legacy')
-                    ->label('مادة قديمة')
+                    ->label('غير نشط')
                     ->default(false),
             ]);
     }
@@ -107,8 +125,26 @@ class RawMaterialProductResource extends Resource
                 Tables\Columns\TextColumn::make('unit')
                     ->label('الوحدة')
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'packet' => 'حزمة',
+                        'packet' => 'باكت',
                         'kg' => 'كيلوجرام',
+                        'gram' => 'جرام',
+                        'liter' => 'لتر',
+                        'ml' => 'ميليلتر',
+                        'piece' => 'قطعة',
+                        'box' => 'صندوق',
+                        'bag' => 'كيس',
+                        'bottle' => 'زجاجة',
+                        'can' => 'علبة',
+                        'cup' => 'كوب',
+                        'tablespoon' => 'ملعقة كبيرة',
+                        'teaspoon' => 'ملعقة صغيرة',
+                        'dozen' => 'دستة',
+                        'meter' => 'متر',
+                        'cm' => 'سنتيمتر',
+                        'roll' => 'رول',
+                        'sheet' => 'ورقة',
+                        'slice' => 'شريحة',
+                        'loaf' => 'رغيف',
                         default => $state,
                     }),
                 Tables\Columns\TextColumn::make('inventoryItem.quantity')
@@ -116,7 +152,7 @@ class RawMaterialProductResource extends Resource
                     ->sortable()
                     ->default('0'),
                 Tables\Columns\IconColumn::make('legacy')
-                    ->label('مادة قديمة')
+                    ->label('غير نشط')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -132,7 +168,7 @@ class RawMaterialProductResource extends Resource
                     ->label('الطابعة')
                     ->options(Printer::all()->pluck('name', 'id')),
                 Tables\Filters\TernaryFilter::make('legacy')
-                    ->label('مادة قديمة'),
+                    ->label('غير نشط'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

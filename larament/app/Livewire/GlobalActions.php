@@ -23,6 +23,7 @@ class GlobalActions extends Component implements HasForms, HasActions
             ->icon('heroicon-o-computer-desktop')
             ->color('primary')
             ->url(route('orders.index'))
+            ->visible(auth()->user()->isAdmin())
             ->openUrlInNewTab();
     }
 
@@ -34,7 +35,7 @@ class GlobalActions extends Component implements HasForms, HasActions
             ->label('فتح اليوم')
             ->icon('heroicon-o-lock-open')
             ->color('success')
-            ->visible($isDayClosed)
+            ->visible($isDayClosed && auth()->user()->isAdmin())
             ->action(function () {
                 $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
                 if (!$isDayClosed) {
@@ -56,7 +57,7 @@ class GlobalActions extends Component implements HasForms, HasActions
             ->label('إغلاق اليوم')
             ->icon('heroicon-o-lock-closed')
             ->color('danger')
-            ->visible(!$isDayClosed)
+            ->visible(!$isDayClosed && auth()->user()->isAdmin())
             ->action(function () {
                 try {
                     $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;

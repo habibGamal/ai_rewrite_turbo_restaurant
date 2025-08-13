@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use App\Services\ProductsSalesReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
@@ -14,7 +15,7 @@ use Filament\Forms\Components\Select;
 
 class ProductsSalesPerformanceReport extends BaseDashboard
 {
-    use HasFiltersForm, AdminAccess;
+    use HasFiltersForm, ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
@@ -103,13 +104,13 @@ class ProductsSalesPerformanceReport extends BaseDashboard
                             ->label('تاريخ البداية')
                             ->default(now()->subDays(29)->startOfDay())
                             ->maxDate(now())
-                            ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
+                            ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
                             ->live(),
                         DatePicker::make('endDate')
                             ->label('تاريخ النهاية')
                             ->default(now()->endOfDay())
                             ->maxDate(now())
-                            ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
+                            ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
                             ->live(),
                     ])
                     ->columns(3),

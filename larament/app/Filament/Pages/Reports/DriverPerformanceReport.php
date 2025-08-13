@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Forms\Components\Radio;
@@ -16,7 +17,7 @@ use Filament\Forms\Components\DatePicker;
 
 class DriverPerformanceReport extends BaseDashboard
 {
-    use HasFiltersForm, AdminAccess;
+    use HasFiltersForm, ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
 
@@ -75,7 +76,7 @@ class DriverPerformanceReport extends BaseDashboard
                             ->multiple()
                             ->preload(),
                     ])
-                    ->visible(fn (callable $get) => $get('filterType') === 'shifts'),
+                    ->visible(fn(callable $get) => $get('filterType') === 'shifts'),
 
                 Section::make('فترة التقرير')
                     ->description('اختر الفترة الزمنية لعرض تقارير أداء السائقين')
@@ -141,17 +142,17 @@ class DriverPerformanceReport extends BaseDashboard
                             ->label('تاريخ البداية')
                             ->default(now()->subDays(6)->startOfDay())
                             ->maxDate(now())
-                            ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
+                            ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
                             ->live(),
                         DatePicker::make('endDate')
                             ->label('تاريخ النهاية')
                             ->default(now()->endOfDay())
                             ->maxDate(now())
-                            ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
+                            ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
                             ->live(),
                     ])
                     ->columns(3)
-                    ->visible(fn (callable $get) => $get('filterType') === 'period'),
+                    ->visible(fn(callable $get) => $get('filterType') === 'period'),
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Traits\AdminAccess;
 use Filament\Forms\Components\ViewField;
 use Filament\Pages\Page;
 use Filament\Forms\Form;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ExcelImport extends Page implements HasForms
 {
-    use InteractsWithForms;
+    use InteractsWithForms , AdminAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'رفع ملف Excel';

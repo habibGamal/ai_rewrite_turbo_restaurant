@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Traits\ViewerAccess;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Forms\Components\Radio;
@@ -16,7 +17,7 @@ use Filament\Forms\Components\DatePicker;
 
 class ExpensesReport extends BaseDashboard
 {
-    use HasFiltersForm, AdminAccess;
+    use HasFiltersForm,ViewerAccess;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
