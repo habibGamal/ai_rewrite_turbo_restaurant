@@ -1,5 +1,7 @@
 #!/bin/bash
+cd ../
 git pull
+cd larament
 composer install
 npm install
 npm run build
