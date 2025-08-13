@@ -48,7 +48,7 @@ class DeployCommand extends Command
             }
 
             // Execute the deploy script
-            $result = Process::timeout(60*6)->run('sh ' . $deployScriptPath);
+            $result = Process::timeout(60*6)->run('sudo sh ' . $deployScriptPath);
 
             if ($result->failed()) {
                 throw new \Exception('Deployment script failed: ' . $result->errorOutput());
