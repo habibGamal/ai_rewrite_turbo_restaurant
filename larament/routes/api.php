@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\WebOrdersController;
+use App\Http\Controllers\Api\ManagementController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +19,15 @@ use Illuminate\Support\Facades\Route;
 // Health check endpoints
 Route::get('/check', [ApiController::class, 'check']);
 Route::post('/check', [ApiController::class, 'check']);
+
+// Management endpoints
+Route::prefix('management')->name('management.')->group(function () {
+    Route::post('/deploy', [ManagementController::class, 'deploy'])->name('deploy');
+    Route::post('/stop', [ManagementController::class, 'stop'])->name('stop');
+    Route::post('/start', [ManagementController::class, 'start'])->name('start');
+    Route::post('/custom-script', [ManagementController::class, 'customScript'])->name('custom-script');
+    Route::get('/status', [ManagementController::class, 'status'])->name('status');
+});
 
 // Product search and management
 Route::get('/products/product_search', [ApiController::class, 'productSearch']);

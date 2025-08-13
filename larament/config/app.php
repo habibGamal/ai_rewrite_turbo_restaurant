@@ -56,6 +56,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Instance Management
+    |--------------------------------------------------------------------------
+    |
+    | These values are used for managing multiple application instances
+    | through the management operations system.
+    |
+    */
+
+    'id' => env('APP_ID', 'larament_default'),
+    'external_url' => env('APP_EXTERNAL_URL', env('APP_URL', 'http://localhost')),
+    'manage_operations_url' => env('MANAGE_OPERATIONS_URL', 'http://localhost:8009'),
+    'management_secret_key' => env('MANAGEMENT_SECRET_KEY', 'default-secret-key'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
