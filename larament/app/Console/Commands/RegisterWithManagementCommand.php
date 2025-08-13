@@ -36,11 +36,26 @@ class RegisterWithManagementCommand extends Command
                 return Command::FAILURE;
             }
 
+            // Ask for user input
+            $appId = $this->ask('Enter App ID', config('app.id'));
+            $externalUrl = $this->ask('Enter External URL', config('app.external_url'));
+
+            // Generate management secret key
+            $managementSecretKey = base64_encode(random_bytes(32));
+
+            // Update .env file
+            $this->updateEnvFile($appId, $externalUrl, $managementSecretKey);
+
+            // Clear config cache to reload updated values
+            $this->call('config:clear');
+
+            $this->info('✅ Updated .env file with new configuration');
+
             $registrationData = [
-                'app_id' => config('app.id'),
+                'app_id' => $appId,
                 'app_name' => config('app.name'),
-                'external_url' => config('app.external_url'),
-                'management_secret_key' => config('app.management_secret_key'),
+                'external_url' => $externalUrl,
+                'management_secret_key' => $managementSecretKey,
                 'server_info' => [
                     'php_version' => PHP_VERSION,
                     'laravel_version' => app()->version(),
@@ -80,5 +95,42 @@ class RegisterWithManagementCommand extends Command
             ]);
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * Update the .env file with new configuration values
+     */
+    private function updateEnvFile(string $appId, string $externalUrl, string $managementSecretKey): void
+    {
+        $envPath = base_path('.env');
+
+        if (!file_exists($envPath)) {
+            throw new \Exception('.env file not found');
+        }
+
+        $envContent = file_get_contents($envPath);
+
+        // Update APP_ID
+        if (preg_match('/^APP_ID=.*/m', $envContent)) {
+            $envContent = preg_replace('/^APP_ID=.*/m', "APP_ID={$appId}", $envContent);
+        } else {
+            $envContent .= "\nAPP_ID={$appId}";
+        }
+
+        // Update APP_EXTERNAL_URL
+        if (preg_match('/^APP_EXTERNAL_URL=.*/m', $envContent)) {
+            $envContent = preg_replace('/^APP_EXTERNAL_URL=.*/m', "APP_EXTERNAL_URL={$externalUrl}", $envContent);
+        } else {
+            $envContent .= "\nAPP_EXTERNAL_URL={$externalUrl}";
+        }
+
+        // Update MANAGEMENT_SECRET_KEY
+        if (preg_match('/^MANAGEMENT_SECRET_KEY=.*/m', $envContent)) {
+            $envContent = preg_replace('/^MANAGEMENT_SECRET_KEY=.*/m', "MANAGEMENT_SECRET_KEY={$managementSecretKey}", $envContent);
+        } else {
+            $envContent .= "\nMANAGEMENT_SECRET_KEY={$managementSecretKey}";
+        }
+
+        file_put_contents($envPath, $envContent);
     }
 }
