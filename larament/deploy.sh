@@ -1,5 +1,6 @@
 #!/bin/sh
 cd ../
+git reset --hard
 git pull
 cd larament
 composer install
