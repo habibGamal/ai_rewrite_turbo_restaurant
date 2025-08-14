@@ -1,4 +1,5 @@
 import { Order, OrderItemData } from "@/types";
+import { usePage } from "@inertiajs/react";
 
 export default function ReceiptTemplate({
     order,
@@ -22,6 +23,8 @@ export default function ReceiptTemplate({
         return typeMap[type as keyof typeof typeMap] || type;
     };
 
+    const { user } = usePage().props.auth;
+
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
             <img
@@ -30,6 +33,16 @@ export default function ReceiptTemplate({
                 alt=""
             />
             <p className="text-5xl text-center">Order #{order.order_number}</p>
+
+            <p>البريد الإلكتروني : {user.email}</p>
+            <p>
+                تاريخ الطلب :{" "}
+                {new Date(order.created_at).toLocaleDateString("ar-EG")}
+            </p>
+            <p>
+                تاريخ الطباعة :{" "}
+                {new Date().toLocaleString("ar-EG", { hour12: true })}
+            </p>
             <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
             {order.type === "dine_in" && (
                 <p>طاولة رقم {order.dine_table_number}</p>

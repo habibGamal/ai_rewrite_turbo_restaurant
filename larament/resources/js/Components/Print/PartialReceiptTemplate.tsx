@@ -1,4 +1,5 @@
 import { Order, OrderItemData } from "@/types";
+import { usePage } from "@inertiajs/react";
 
 export enum PartType {
     Header,
@@ -19,6 +20,7 @@ export default function PartialReceiptTemplate({
     partType: PartType;
     index: number;
 }) {
+    const {user} = usePage().props.auth;
     const getOrderTypeString = (type: string) => {
         const typeMap = {
             dine_in: "صالة",
@@ -47,6 +49,9 @@ export default function PartialReceiptTemplate({
                     <p className="text-5xl text-center">
                         Order #{order.order_number}
                     </p>
+                    <p>البريد الإلكتروني : {user.email}</p>
+                    <p>تاريخ الطلب : {new Date(order.created_at).toLocaleDateString("ar-EG")}</p>
+                    <p>تاريخ الطباعة : {new Date().toLocaleString("ar-EG", { hour12: true })}</p>
                     <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
                     {order.type === "dine_in" && (
                         <p>طاولة رقم {order.dine_table_number}</p>

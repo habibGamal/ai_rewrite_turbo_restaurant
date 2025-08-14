@@ -108,7 +108,7 @@ export default function Categories({ categories, dispatch, disabled, user }: Cat
                         key={product.id}
                         type="primary"
                         onClick={() => onAddProduct(product)}
-                        className="w-full h-full min-h-[100px] text-base whitespace-normal"
+                        className="w-full h-full min-h-[100px] text-base text-2xl whitespace-normal"
                         style={{ height: 'auto', minHeight: '100px' }}
                     >
                         {product.name}

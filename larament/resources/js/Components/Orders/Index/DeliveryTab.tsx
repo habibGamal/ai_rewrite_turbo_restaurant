@@ -53,6 +53,9 @@ export const DeliveryTab: React.FC<DeliveryTabProps> = ({ orders }) => {
                                     <Typography.Title level={4}>
                                         # طلب رقم {order.order_number}
                                     </Typography.Title>
+                                    <Typography.Text>
+                                        السائق: {order.driver?.name || "غير معروف"}
+                                    </Typography.Text>
                                     <Typography.Title
                                         className="flex items-center gap-2"
                                         level={5}
