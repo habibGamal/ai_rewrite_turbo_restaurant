@@ -665,7 +665,11 @@ class OrderController extends Controller
 
         try {
             foreach ($validated['images'] as $imageData) {
-                $this->printService->printKitchenImage($imageData['printerId'], $imageData['image']);
+                try{
+                    $this->printService->printKitchenImage($imageData['printerId'], $imageData['image']);
+                }catch(\Exception $e){
+                    // TODO: Handle individual printer errors if needed
+                }
             }
 
             return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
