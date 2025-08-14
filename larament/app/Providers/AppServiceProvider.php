@@ -17,6 +17,8 @@ use Illuminate\Contracts\View\View;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Date;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\URL;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -46,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
             fn(): View => view('filament.global-actions'),
         );
 
-
+        if (request()->isSecure() || request()->header('X-Forwarded-Proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
 }

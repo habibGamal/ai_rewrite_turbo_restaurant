@@ -18,4 +18,9 @@ class Login extends BasePage
             ]);
         }
     }
+
+    protected function rateLimit($maxAttempts, $decaySeconds = 60, $method = null, $component = null)
+    {
+
+    }
 }
