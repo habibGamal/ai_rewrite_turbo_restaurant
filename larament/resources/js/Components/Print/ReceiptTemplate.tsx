@@ -23,7 +23,6 @@ export default function ReceiptTemplate({
         return typeMap[type as keyof typeof typeMap] || type;
     };
 
-    const { user } = usePage().props.auth;
 
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
@@ -34,7 +33,7 @@ export default function ReceiptTemplate({
             />
             <p className="text-5xl text-center">Order #{order.order_number}</p>
 
-            <p>البريد الإلكتروني : {user.email}</p>
+            <p>الكاشير : {order.user?.email}</p>
             <p>
                 تاريخ الطلب :{" "}
                 {new Date(order.created_at).toLocaleDateString("ar-EG")}

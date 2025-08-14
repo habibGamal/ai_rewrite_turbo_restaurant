@@ -91,6 +91,7 @@ export interface Order {
   driver?: Driver;
   items: OrderItem[];
   payments: Payment[];
+  user?: User;
 }
 
 export interface OrderItemData {

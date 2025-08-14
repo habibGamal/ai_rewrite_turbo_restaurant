@@ -23,8 +23,7 @@ class GlobalActions extends Component implements HasForms, HasActions
             ->icon('heroicon-o-computer-desktop')
             ->color('primary')
             ->url(route('orders.index'))
-            ->visible(auth()->user()->isAdmin())
-            ->openUrlInNewTab();
+            ->visible(auth()->user()->isAdmin());
     }
 
     public function openDayAction()

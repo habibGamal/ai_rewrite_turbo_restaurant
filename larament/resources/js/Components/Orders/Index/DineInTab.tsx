@@ -56,7 +56,7 @@ export const DineInTab: React.FC<DineInTabProps> = ({ orders }) => {
                     <Col span={6} key={order.id}>
                         <Link href={`/orders/manage/${order.id}`}>
                             <Badge.Ribbon {...orderStatus(order.status)}>
-                                <div className="isolate grid place-items-center gap-4 rounded p-4 border h-32">
+                                <div className="isolate grid place-items-center rounded p-4 border h-32">
                                     <Typography.Title level={4}>
                                         طاولة{" "}
                                         {order.dine_table_number || "غير محدد"}

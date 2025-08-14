@@ -22,7 +22,7 @@ class PeriodShiftExpensesDetailedExporter extends Exporter
 
             ExportColumn::make('amount')
                 ->label('المبلغ')
-                ->formatStateUsing(fn ($state) => number_format($state, 2) . ' جنيه'),
+                ->formatStateUsing(fn ($state) => (float) $state),
 
             ExportColumn::make('notes')
                 ->label('الملاحظات')

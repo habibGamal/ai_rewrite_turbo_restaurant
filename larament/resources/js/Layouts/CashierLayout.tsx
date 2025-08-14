@@ -172,6 +172,10 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         // refetch the page when the user clicks the back button
         const handlePopState = (event: PopStateEvent) => {
             event.stopImmediatePropagation();
+            if (window.location.href.includes("admin")) {
+                window.location.reload();
+                return;
+            }
             router.reload({
                 replace: true,
             });

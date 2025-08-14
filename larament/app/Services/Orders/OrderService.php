@@ -54,7 +54,7 @@ class OrderService
     public function getOrderDetails(int $orderId): Order
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load(['items.product', 'customer', 'driver', 'table', 'payments']);
+        $order->load(['items.product','user', 'customer', 'driver', 'table', 'payments']);
 
         return $order;
     }
