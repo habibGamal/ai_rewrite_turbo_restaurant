@@ -36,7 +36,7 @@ export default function ReceiptTemplate({
             <p>الكاشير : {order.user?.email}</p>
             <p>
                 تاريخ الطلب :{" "}
-                {new Date(order.created_at).toLocaleDateString("ar-EG")}
+                {new Date(order.created_at).toLocaleString("ar-EG", { hour12: true })}
             </p>
             <p>
                 تاريخ الطباعة :{" "}

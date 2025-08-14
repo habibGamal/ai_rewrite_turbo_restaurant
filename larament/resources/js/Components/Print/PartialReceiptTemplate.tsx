@@ -20,7 +20,6 @@ export default function PartialReceiptTemplate({
     partType: PartType;
     index: number;
 }) {
-    const { user } = usePage().props.auth;
     const getOrderTypeString = (type: string) => {
         const typeMap = {
             dine_in: "صالة",
@@ -33,7 +32,6 @@ export default function PartialReceiptTemplate({
         };
         return typeMap[type as keyof typeof typeMap] || type;
     };
-
     return (
         <div
             id={`receipt_${index}`}
@@ -52,7 +50,9 @@ export default function PartialReceiptTemplate({
                     <p>الكاشير : {order.user?.email}</p>
                     <p>
                         تاريخ الطلب :{" "}
-                        {new Date(order.created_at).toLocaleDateString("ar-EG")}
+                        {new Date(order.created_at).toLocaleString("ar-EG", {
+                            hour12: true,
+                        })}
                     </p>
                     <p>
                         تاريخ الطباعة :{" "}
