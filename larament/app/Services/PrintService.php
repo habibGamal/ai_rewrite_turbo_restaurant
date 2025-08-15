@@ -200,6 +200,11 @@ class PrintService
 
             Browsershot::html($html)
                 ->windowSize(572, 100) // Kitchen receipt width
+                ->setOption('executablePath', '/usr/bin/chromium-browser')
+                ->setEnvironmentOptions([
+                    'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
+                    'HOME' => base_path('.puppeteer')             // fallback
+                ])
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
                 ->waitUntilNetworkIdle()
@@ -303,7 +308,11 @@ class PrintService
 
             Browsershot::html($html)
                 ->windowSize(567, 1200) // Thermal printer width (72mm ≈ 576px at 203dpi)
-                // ->setDelay(1000) // Wait for fonts to load
+                ->setOption('executablePath', '/usr/bin/chromium-browser')
+                ->setEnvironmentOptions([
+                    'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
+                    'HOME' => base_path('.puppeteer')             // fallback
+                ])
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
                 ->waitUntilNetworkIdle()
