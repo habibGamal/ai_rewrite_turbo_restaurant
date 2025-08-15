@@ -84,59 +84,20 @@ export default function PrintInKitchenModal({
         message.loading('جاري الطباعة');
 
         try {
-            const result = await axios.post<{
-                id: number; // product id
-                printers: {
-                    id: number;
-                }[];
-            }[]>('/printers-of-products', {
-                ids: itemsToPrint.map((item) => item.product_id),
+            // Send items data directly to backend for server-side processing
+            await axios.post('/print-in-kitchen', {
+                orderId: order.id,
+                items: itemsToPrint.map(item => ({
+                    product_id: item.product_id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    notes: item.notes || null,
+                })),
+                // Keep images for backward compatibility (not used in new implementation)
+                images: [],
             });
 
-            const itemsByPrinterMap: {
-                [key: string]: {
-                    items: typeof itemsToPrint;
-                };
-            } = {};
-
-            for (const item of itemsToPrint) {
-                const productPrinters = result.data.find((product) => product.id === item.product_id);
-                if (productPrinters) {
-                    for (const printer of productPrinters.printers) {
-                        if (!itemsByPrinterMap[printer.id]) {
-                            itemsByPrinterMap[printer.id] = {
-                                items: [],
-                            };
-                        }
-                        itemsByPrinterMap[printer.id].items.push(item);
-                    }
-                }
-            }
-
-            const images: {
-                printerId: string;
-                image: string;
-            }[] = [];
-
-            for (const [printerId, printer] of Object.entries(itemsByPrinterMap)) {
-                const image = await printTemplate(
-                    'printer_' + printerId,
-                    <KitchenTemplate
-                        key={printerId}
-                        printerId={printerId}
-                        order={order}
-                        orderItems={printer.items}
-                    />
-                );
-                images.push({
-                    printerId,
-                    image,
-                });
-            }
-            console.log(images);
-            axios.post('/print-in-kitchen', {
-                images,
-            });
+            message.success('تم إرسال الطلب للمطبخ بنجاح');
         } catch (error) {
             message.error('حدث خطأ أثناء إرسال الطلب للمطبخ');
         }

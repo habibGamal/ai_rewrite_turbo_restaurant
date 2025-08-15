@@ -25,7 +25,7 @@ enum SettingKey: string
             self::RECEIPT_FOOTER => 'شكراً لزيارتكم، نتطلع لخدمتكم مرة أخرى',
             self::DINE_IN_SERVICE_CHARGE => '0.12',
             self::RESTAURANT_NAME => 'مطعم توربو',
-            self::RESTAURANT_PRINT_LOGO => '/images/logo.png',
+            self::RESTAURANT_PRINT_LOGO => '',
             self::RESTAURANT_OFFICIAL_LOGO => '/images/logo.jpg',
             self::NODE_TYPE => 'independent',
             self::MASTER_NODE_LINK => 'http://127.0.0.1:38794',

@@ -14,6 +14,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class CurrentShiftOrdersTable extends BaseWidget
 {
@@ -79,8 +80,8 @@ class CurrentShiftOrdersTable extends BaseWidget
                         }
                         return $query->where('id', 0);
                     })
-                    ->fileName(fn () => 'current-shift-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
-                    ->visible(fn () => $this->getCurrentShift() !== null),
+                    ->fileName(fn() => 'current-shift-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
+                    ->visible(fn() => $this->getCurrentShift() !== null),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('id')
@@ -177,29 +178,29 @@ class CurrentShiftOrdersTable extends BaseWidget
                     })
                     ->color('primary')
                     ->toggleable(),
-                    Tables\Columns\TextColumn::make('card')
-                        ->label('مدفوع فيزا')
-                        ->state(function ($record) {
-                            $methods = $record->payments
-                                ->where('method', PaymentMethod::CARD)
-                                ->pluck('amount')
-                                ->sum();
-                            return $methods ?: 'غير محدد';
-                        })
-                        ->color('primary')
-                        ->toggleable(),
+                Tables\Columns\TextColumn::make('card')
+                    ->label('مدفوع فيزا')
+                    ->state(function ($record) {
+                        $methods = $record->payments
+                            ->where('method', PaymentMethod::CARD)
+                            ->pluck('amount')
+                            ->sum();
+                        return $methods ?: 'غير محدد';
+                    })
+                    ->color('primary')
+                    ->toggleable(),
 
-                    Tables\Columns\TextColumn::make('talabat_card')
-                        ->label('مدفوع بطاقة طلبات')
-                        ->state(function ($record) {
-                            $methods = $record->payments
-                                ->where('method', PaymentMethod::TALABAT_CARD)
-                                ->pluck('amount')
-                                ->sum();
-                            return $methods ?: 'غير محدد';
-                        })
-                        ->color('primary')
-                        ->toggleable(),
+                Tables\Columns\TextColumn::make('talabat_card')
+                    ->label('مدفوع بطاقة طلبات')
+                    ->state(function ($record) {
+                        $methods = $record->payments
+                            ->where('method', PaymentMethod::TALABAT_CARD)
+                            ->pluck('amount')
+                            ->sum();
+                        return $methods ?: 'غير محدد';
+                    })
+                    ->color('primary')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('الموظف')
@@ -254,11 +255,18 @@ class CurrentShiftOrdersTable extends BaseWidget
                 Tables\Actions\ViewAction::make()
                     ->label('عرض')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+                    ->url(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
                     ->openUrlInNewTab(),
+                Tables\Actions\Action::make('print')
+                    ->label('طباعة')
+                    ->icon('heroicon-o-printer')
+                    ->color('primary')
+                    ->action(function ($record) {
+                        app(\App\Services\PrintService::class)->printOrderReceipt($record, []);
+                    })
             ])
             ->recordAction(Tables\Actions\ViewAction::class)
-            ->recordUrl(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+            ->recordUrl(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
             ->bulkActions([]);
     }
 

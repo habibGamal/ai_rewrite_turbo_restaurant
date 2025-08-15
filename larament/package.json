@@ -36,6 +36,7 @@
     "dependencies": {
         "@ant-design/icons": "^6.0.0",
         "antd": "^5.26.7",
-        "html2canvas": "^1.4.1"
+        "html2canvas": "^1.4.1",
+        "puppeteer": "^24.16.2"
     }
 }

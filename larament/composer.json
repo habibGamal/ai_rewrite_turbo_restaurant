@@ -19,6 +19,7 @@
         "bezhansalleh/filament-language-switch": "^3.1",
         "filament/filament": "^3.3",
         "inertiajs/inertia-laravel": "^2.0",
+        "khaled.alshamaa/ar-php": "^7.0",
         "laravel/framework": "^11.9",
         "laravel/pail": "^1.2",
         "laravel/pulse": "^1.4",
@@ -27,6 +28,7 @@
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1",
         "mike42/escpos-php": "^4.0",
+        "spatie/browsershot": "^5.0",
         "tightenco/ziggy": "^2.0",
         "timokoerber/laravel-one-time-operations": "^1.4"
     },

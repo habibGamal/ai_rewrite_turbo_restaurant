@@ -2,12 +2,17 @@
 
 namespace App\Services;
 
+use App\Enums\OrderType;
 use App\Models\Order;
 use App\Enums\SettingKey;
+use App\Jobs\PrintKitchenOrder;
+use App\Jobs\PrintOrderReceipt;
+use Illuminate\Support\Facades\Storage;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
+use Spatie\Browsershot\Browsershot;
 
 class PrintService
 {
@@ -40,39 +45,15 @@ class PrintService
      */
     public function printOrderReceipt(Order $order, array $images): void
     {
-        $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
-        $connector = $this->createConnector($printerIp);
-        $printer = new Printer($connector);
+        PrintOrderReceipt::dispatch($order);
+    }
 
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        \Log::info("Printing receipt for order {$order->id}");
-
-        try {
-            // Combine all base64 images into one image
-            $combinedImage = $this->combineBase64Images($images);
-
-            // Create temporary file
-            $tempFilePath = tempnam(sys_get_temp_dir(), 'receipt_') . '.png';
-
-            // Save combined image to temporary file
-            imagepng($combinedImage, $tempFilePath);
-            // dd($tempFilePath);
-            // Create EscposImage from temporary file
-            $escposImage = EscposImage::load($tempFilePath);
-            $printer->bitImage($escposImage);
-            $printer->feed(3);
-            $printer->cut();
-
-            // Clean up resources
-            // imagedestroy($combinedImage);
-            // unlink($tempFilePath);
-
-        } catch (\Exception $e) {
-            \Log::error("Error printing receipt for order {$order->id}: " . $e->getMessage());
-            throw $e;
-        } finally {
-            $printer->close();
-        }
+    /**
+     * Print order receipt
+     */
+    public function printKitchenReceipt($orderId, $items): void
+    {
+        $this->printKitchenViaBrowsershotQueued($orderId, $items);
     }
 
     /**
@@ -101,81 +82,106 @@ class PrintService
     }
 
     /**
-     * Combine multiple base64 images into one vertical image
+     * Print kitchen order via Browsershot (dispatched to queue)
      */
-    private function combineBase64Images(array $base64Images): \GdImage
+    private function printKitchenViaBrowsershotQueued($orderId, $items): void
     {
-        if (empty($base64Images)) {
-            throw new \InvalidArgumentException('No images provided');
-        }
+        try {
+            \Log::info("Starting kitchen printing via queue for order {$orderId}");
 
-        $gdImages = [];
-        $totalHeight = 0;
-        $maxWidth = 0;
+            // Load order with relationships
+            $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
 
-        // Convert base64 images to GD resources and calculate dimensions
-        foreach ($base64Images as $base64Image) {
-            // Remove data URL prefix if present (data:image/png;base64,)
-            $base64Data = preg_replace('/^data:image\/[a-zA-Z]+;base64,/', '', $base64Image);
+            // Validate and prepare items data
+            $preparedItems = $this->prepareKitchenItems($items);
 
-            // Decode base64 and create GD image
-            $imageData = base64_decode($base64Data);
-            if ($imageData === false) {
-                throw new \InvalidArgumentException('Invalid base64 image data');
+            if (empty($preparedItems)) {
+                throw new \Exception('لا توجد منتجات للطباعة');
             }
 
-            $gdImage = imagecreatefromstring($imageData);
-            if ($gdImage === false) {
-                throw new \InvalidArgumentException('Could not create image from string');
+            // Get product IDs from items to find their printers
+            $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
+
+            // Get products with their printers
+            $products = \App\Models\Product::with('printers:id')
+                ->whereIn('id', $productIds)
+                ->get(['id']);
+
+            // Map items to printers
+            $itemsByPrinterMap = [];
+
+            foreach ($preparedItems as $item) {
+                $product = $products->firstWhere('id', $item['product_id']);
+
+                if ($product && $product->printers->isNotEmpty()) {
+                    foreach ($product->printers as $printer) {
+                        if (!isset($itemsByPrinterMap[$printer->id])) {
+                            $itemsByPrinterMap[$printer->id] = [];
+                        }
+
+                        // Add item to this printer's list
+                        $itemsByPrinterMap[$printer->id][] = $item;
+                    }
+                }
             }
 
-            $gdImages[] = $gdImage;
-            $width = imagesx($gdImage);
-            $height = imagesy($gdImage);
-
-            $totalHeight += $height;
-            $maxWidth = max($maxWidth, $width);
-        }
-
-        // Create combined image canvas
-        $combinedImage = imagecreatetruecolor($maxWidth, $totalHeight);
-        if ($combinedImage === false) {
-            // Clean up created images
-            foreach ($gdImages as $gdImage) {
-                imagedestroy($gdImage);
+            // Dispatch print jobs to queue for each printer
+            foreach ($itemsByPrinterMap as $printerId => $printerItems) {
+                PrintKitchenOrder::dispatch($order, $printerItems, $printerId);
             }
-            throw new \RuntimeException('Could not create combined image canvas');
+
+            if (empty($itemsByPrinterMap)) {
+                \Log::warning("No printers found for order {$orderId} items");
+                throw new \Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+            }
+
+            \Log::info("Kitchen printing jobs dispatched successfully for order {$orderId}");
+
+        } catch (\Exception $e) {
+            \Log::error("Error dispatching kitchen printing jobs for order {$orderId}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+
+    /**
+     * Prepare and validate kitchen items data
+     */
+    private function prepareKitchenItems(array $items): array
+    {
+        $preparedItems = [];
+
+        foreach ($items as $item) {
+            // Validate required fields
+            if (!isset($item['product_id']) || !isset($item['quantity'])) {
+                \Log::warning('Invalid item data: missing product_id or quantity', $item);
+                continue;
+            }
+
+            $preparedItem = [
+                'product_id' => (int) $item['product_id'],
+                'quantity' => (int) $item['quantity'],
+                'notes' => $item['notes'] ?? null,
+            ];
+
+            // Get product name if not provided
+            if (isset($item['name'])) {
+                $preparedItem['name'] = $item['name'];
+            } else {
+                $product = \App\Models\Product::find($item['product_id']);
+                $preparedItem['name'] = $product ? $product->name : "المنتج رقم {$item['product_id']}";
+            }
+
+            $preparedItems[] = $preparedItem;
         }
 
-        // Set white background
-        $white = imagecolorallocate($combinedImage, 255, 255, 255);
-        imagefill($combinedImage, 0, 0, $white);
-
-        // Copy each image to the combined canvas
-        $currentY = 0;
-        foreach ($gdImages as $gdImage) {
-            $width = imagesx($gdImage);
-            $height = imagesy($gdImage);
-
-            // Center the image horizontally if it's smaller than maxWidth
-            $x = ($maxWidth - $width) / 2;
-
-            // Copy image to combined canvas
-            imagecopy($combinedImage, $gdImage, $x, $currentY, 0, 0, $width, $height);
-
-            $currentY += $height;
-
-            // Clean up individual image
-            imagedestroy($gdImage);
-        }
-
-        return $combinedImage;
+        return $preparedItems;
     }
 
     /**
-     * Print kitchen image to specific printer
+     * Print kitchen order to a specific printer
      */
-    public function printKitchenImage(string $printerId, string $base64Image): void
+    public function printKitchenToPrinter(Order $order, array $orderItems, int $printerId): void
     {
         try {
             $printer = \App\Models\Printer::findOrFail($printerId);
@@ -184,43 +190,54 @@ class PrintService
                 \Log::warning("Printer {$printer->name} has no IP address configured");
                 return;
             }
+            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address})");
 
+            // ---------- 1. Generate HTML content using kitchen template ----------
+            $html = $this->generateKitchenHtml($order, $orderItems);
+            // ---------- 2. Convert HTML to image using Browsershot ----------
+            $tempImagePath = tempnam(sys_get_temp_dir(), 'kitchen_browsershot_') . '.png';
+
+
+            Browsershot::html($html)
+                ->windowSize(572, 100) // Kitchen receipt width
+                ->dismissDialogs()
+                ->ignoreHttpsErrors()
+                ->waitUntilNetworkIdle()
+                ->fullPage()
+                ->save($tempImagePath);
+            // ---------- 3. Print via escpos-php ----------
             $connector = $this->createConnector($printer->ip_address);
             $escposPrinter = new Printer($connector);
             $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
 
-            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address})");
-
-            // Remove data URL prefix if present (data:image/png;base64,)
-            $base64Data = preg_replace('/^data:image\/[a-zA-Z]+;base64,/', '', $base64Image);
-
-            // Decode base64 and create GD image
-            $imageData = base64_decode($base64Data);
-            if ($imageData === false) {
-                throw new \InvalidArgumentException('Invalid base64 image data');
-            }
-
-            // Create temporary file
-            $tempFilePath = tempnam(sys_get_temp_dir(), 'kitchen_') . '.png';
-            file_put_contents($tempFilePath, $imageData);
-
-            // Create EscposImage from temporary file
-            $escposImage = EscposImage::load($tempFilePath);
+            // Load and print image
+            $escposImage = EscposImage::load($tempImagePath);
             $escposPrinter->bitImage($escposImage);
             $escposPrinter->feed(3);
             $escposPrinter->cut();
 
             // Clean up
-            unlink($tempFilePath);
+            unlink($tempImagePath);
+            $escposPrinter->close();
+
+            \Log::info("Kitchen order printed successfully to printer {$printer->name}");
 
         } catch (\Exception $e) {
-            \Log::error("Error printing kitchen image to printer {$printerId}: " . $e->getMessage());
+            \Log::error("Error printing kitchen order to printer {$printerId}: " . $e->getMessage());
             throw $e;
-        } finally {
-            if (isset($escposPrinter)) {
-                $escposPrinter->close();
-            }
         }
+    }
+
+    /**
+     * Generate HTML content for kitchen receipt printing
+     */
+    private function generateKitchenHtml(Order $order, array $orderItems): string
+    {
+        // Use Blade view to render the kitchen receipt
+        return view('print.kitchen-template', [
+            'order' => $order,
+            'orderItems' => $orderItems,
+        ])->render();
     }
 
     /**
@@ -259,5 +276,74 @@ class PrintService
             }
         }
     }
+
+    /**
+     * Test direct Arabic text printing using Browsershot and escpos-php
+     * Generates Arabic receipt HTML then converts to image
+     */
+    public function printOrderViaBrowsershot(Order $order): void
+    {
+        try {
+
+            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $connector = $this->createConnector($printerIp);
+            $printer = new Printer($connector);
+
+            \Log::info("Testing Browsershot Arabic text printing for order {$order->id}");
+
+            // Load order with relationships
+            $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
+
+
+            // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
+            $html = $this->generateReceiptHtml($order);
+
+            // ---------- 2. Convert HTML to image using Browsershot ----------
+            $tempImagePath = tempnam(sys_get_temp_dir(), 'receipt_browsershot_') . '.png';
+
+            Browsershot::html($html)
+                ->windowSize(567, 1200) // Thermal printer width (72mm ≈ 576px at 203dpi)
+                // ->setDelay(1000) // Wait for fonts to load
+                ->dismissDialogs()
+                ->ignoreHttpsErrors()
+                ->waitUntilNetworkIdle()
+                ->fullPage()
+                ->save($tempImagePath);
+
+            // ---------- 3. Print via escpos-php ----------
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+
+            // Load and print image
+            $escposImage = EscposImage::load($tempImagePath);
+            $printer->bitImage($escposImage);
+            $printer->feed(3);
+            $printer->cut();
+
+            // Clean up
+            unlink($tempImagePath);
+
+            \Log::info("Browsershot Arabic text printing completed successfully for order {$order->id}");
+
+        } catch (\Exception $e) {
+            \Log::error("Error in Browsershot Arabic text printing for order {$order->id}: " . $e->getMessage());
+            throw $e;
+        } finally {
+            if (isset($printer)) {
+                $printer->close();
+            }
+        }
+    }
+
+    /**
+     * Generate HTML content for receipt printing
+     */
+    private function generateReceiptHtml(Order $order): string
+    {
+        // Use Blade view to render the receipt with minimal data
+        return view('print.receipt-template', [
+            'order' => $order,
+        ])->render();
+    }
+
 
 }

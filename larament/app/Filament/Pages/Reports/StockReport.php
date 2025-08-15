@@ -4,9 +4,8 @@ namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Components\PeriodFilterFormComponent;
 use Filament\Pages\Page;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
@@ -32,19 +31,11 @@ class StockReport extends BaseDashboard
     {
         return $form
             ->schema([
-                Section::make('فترة التقرير')
-                    ->description('اختر الفترة الزمنية لتحليل الطلبات')
-                    ->schema([
-                        DatePicker::make('startDate')
-                            ->label('تاريخ البداية')
-                            ->default(now()->subMonth())
-                            ->maxDate(now()),
-                        DatePicker::make('endDate')
-                            ->label('تاريخ النهاية')
-                            ->default(now())
-                            ->maxDate(now()),
-                    ])
-                    ->columns(3),
+                PeriodFilterFormComponent::make(
+                    'اختر الفترة الزمنية لتحليل المخزون',
+                    'last_30_days',
+                    29
+                ),
             ]);
     }
 

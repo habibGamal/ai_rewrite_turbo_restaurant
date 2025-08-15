@@ -97,10 +97,8 @@ class SettingsService
      */
     public function get(string $key, mixed $default = null): mixed
     {
-        return Cache::remember("settings.{$key}", 3600, function () use ($key, $default) {
-            $setting = Setting::where('key', $key)->first();
-            return $setting?->value ?? $default;
-        });
+        $setting = Setting::where('key', $key)->first();
+        return $setting?->value !== null && $setting->value !== '' ? $setting->value : $default;
     }
 
     /**

@@ -260,11 +260,18 @@ class PeriodShiftOrdersTable extends BaseWidget
                 Tables\Actions\ViewAction::make()
                     ->label('عرض')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+                    ->url(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
                     ->openUrlInNewTab(),
+                Tables\Actions\Action::make('print')
+                    ->label('طباعة')
+                    ->icon('heroicon-o-printer')
+                    ->color('primary')
+                    ->action(function ($record) {
+                        app(\App\Services\PrintService::class)->printOrderReceipt($record, []);
+                    })
             ])
             ->recordAction(Tables\Actions\ViewAction::class)
-            ->recordUrl(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
+            ->recordUrl(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
             ->bulkActions([]);
     }
 }

@@ -136,8 +136,8 @@ class OrderController extends Controller
         $categories = Category::with([
             'products' => function ($query) {
                 $query
-                ->whereNot('type',ProductType::RawMaterial)
-                ->where('legacy', false)->orderBy('name');
+                    ->whereNot('type', ProductType::RawMaterial)
+                    ->where('legacy', false)->orderBy('name');
             }
         ])->orderBy('name')->get();
 
@@ -658,19 +658,20 @@ class OrderController extends Controller
     public function printInKitchen(Request $request)
     {
         $validated = $request->validate([
-            'images' => 'required|array',
-            'images.*.printerId' => 'required|string',
-            'images.*.image' => 'required|string',
+            'orderId' => 'required|integer|exists:orders,id',
+            'items' => 'nullable|array',
+            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.name' => 'required|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string|max:500',
         ]);
 
         try {
-            foreach ($validated['images'] as $imageData) {
-                try{
-                    $this->printService->printKitchenImage($imageData['printerId'], $imageData['image']);
-                }catch(\Exception $e){
-                    // TODO: Handle individual printer errors if needed
-                }
-            }
+            // Use the new Browsershot implementation
+            $this->printService->printKitchenReceipt(
+                $validated['orderId'],
+                $validated['items'] ?? []
+            );
 
             return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
         } catch (\Exception $e) {
@@ -754,7 +755,7 @@ class OrderController extends Controller
             // If no table types exist, return default option
             if ($tableTypes->isEmpty()) {
                 $tableTypes = collect([
-                    (object)[
+                    (object) [
                         'id' => null,
                         'name' => 'صالة',
                         'created_at' => null,
