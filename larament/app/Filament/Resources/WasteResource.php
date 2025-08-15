@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\CloseWasteAction;
+use App\Filament\Actions\PrintWasteAction;
+use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\WasteResource\Pages;
 use App\Models\Waste;
 use App\Models\Product;
@@ -92,6 +94,8 @@ class WasteResource extends Resource
                         ])
                             ->alignStart(),
 
+                        ProductSelector::make()
+                            ->columnSpanFull(),
                         TableRepeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn($query) => $query->with('product.inventoryItem'))
@@ -272,6 +276,7 @@ class WasteResource extends Resource
             ])
             ->actions([
                 CloseWasteAction::table(),
+                PrintWasteAction::table(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

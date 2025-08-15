@@ -52,7 +52,7 @@ class OrderRepository implements OrderRepositoryInterface
     {
         return Order::where('shift_id', $shiftId)
             ->with(['customer', 'driver', 'table', 'items.product'])
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
     }
 

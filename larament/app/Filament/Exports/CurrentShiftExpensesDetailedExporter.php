@@ -14,28 +14,28 @@ class CurrentShiftExpensesDetailedExporter extends Exporter
     public static function getColumns(): array
     {
         return [
+            ExportColumn::make('amount')
+                ->label('المبلغ (جنيه)')
+                ->formatStateUsing(fn($state) => number_format((float) $state, 2)),
+
             ExportColumn::make('expenceType.name')
                 ->label('نوع المصروف'),
 
-            ExportColumn::make('amount')
-                ->label('المبلغ (جنيه)')
-                ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
-
             ExportColumn::make('notes')
                 ->label('الملاحظات')
-                ->formatStateUsing(fn ($state) => $state ?: 'لا توجد ملاحظات'),
+                ->formatStateUsing(fn($state) => $state ?: 'لا توجد ملاحظات'),
 
             ExportColumn::make('shift.start_at')
                 ->label('بداية الشفت')
-                ->formatStateUsing(fn ($state) => $state?->format('d/m/Y H:i:s') ?? ''),
+                ->formatStateUsing(fn($state) => $state?->format('d/m/Y H:i:s') ?? ''),
 
             ExportColumn::make('created_at')
                 ->label('وقت الإنشاء')
-                ->formatStateUsing(fn ($state) => $state?->format('d/m/Y H:i:s') ?? ''),
+                ->formatStateUsing(fn($state) => $state?->format('d/m/Y H:i:s') ?? ''),
 
             ExportColumn::make('updated_at')
                 ->label('آخر تحديث')
-                ->formatStateUsing(fn ($state) => $state?->format('d/m/Y H:i:s') ?? ''),
+                ->formatStateUsing(fn($state) => $state?->format('d/m/Y H:i:s') ?? ''),
         ];
     }
 

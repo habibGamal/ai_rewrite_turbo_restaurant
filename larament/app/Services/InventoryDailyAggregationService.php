@@ -109,6 +109,30 @@ class InventoryDailyAggregationService
             throw new \Exception('لا يمكن إغلاق اليوم أثناء وجود شيفت مفتوح');
         }
 
+        // Check for open purchase invoices
+        $openPurchases = \App\Models\PurchaseInvoice::whereNull('closed_at')->count();
+        if ($openPurchases > 0) {
+            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openPurchases} فاتورة شراء مفتوحة");
+        }
+
+        // Check for open return purchase invoices
+        $openReturnPurchases = \App\Models\ReturnPurchaseInvoice::whereNull('closed_at')->count();
+        if ($openReturnPurchases > 0) {
+            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openReturnPurchases} فاتورة مرتجع شراء مفتوحة");
+        }
+
+        // Check for open wastes
+        $openWastes = \App\Models\Waste::whereNull('closed_at')->count();
+        if ($openWastes > 0) {
+            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openWastes} سجل هالك مفتوح");
+        }
+
+        // Check for open stocktaking
+        $openStocktaking = \App\Models\Stocktaking::whereNull('closed_at')->count();
+        if ($openStocktaking > 0) {
+            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openStocktaking} جرد مفتوح");
+        }
+
         return DB::transaction(function () {
             try {
                 // Get all open day records (where closed_at is null)

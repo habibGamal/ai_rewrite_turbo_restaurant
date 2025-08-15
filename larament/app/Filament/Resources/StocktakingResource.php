@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\StocktakingProductImporterAction;
 use App\Filament\Actions\CloseStocktakingAction;
+use App\Filament\Actions\PrintStocktakingAction;
+use App\Filament\Components\Forms\StocktakingProductSelector;
 use App\Filament\Resources\StocktakingResource\Pages;
 use App\Filament\Resources\StocktakingResource\RelationManagers;
 use App\Models\Stocktaking;
@@ -91,7 +93,8 @@ class StocktakingResource extends Resource
                             StocktakingProductImporterAction::make('importProducts'),
                         ])
                             ->alignStart(),
-
+                        StocktakingProductSelector::make()
+                            ->columnSpanFull(),
                         TableRepeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn($query) => $query->with('product'))
@@ -107,7 +110,7 @@ class StocktakingResource extends Resource
 
                                 TextInput::make('product_name')
                                     ->label('المنتج')
-                                    ->formatStateUsing(function ($record,$state) {
+                                    ->formatStateUsing(function ($record, $state) {
                                         return $state ?? ($record->product?->name ?? 'غير محدد');
                                     })
                                     ->dehydrated(false)
@@ -266,13 +269,14 @@ class StocktakingResource extends Resource
                     ->trueLabel('مغلق')
                     ->falseLabel('مفتوح')
                     ->queries(
-                        true: fn (Builder $query) => $query->whereNotNull('closed_at'),
-                        false: fn (Builder $query) => $query->whereNull('closed_at'),
-                        blank: fn (Builder $query) => $query,
+                        true: fn(Builder $query) => $query->whereNotNull('closed_at'),
+                        false: fn(Builder $query) => $query->whereNull('closed_at'),
+                        blank: fn(Builder $query) => $query,
                     ),
             ])
             ->actions([
                 CloseStocktakingAction::table(),
+                PrintStocktakingAction::table(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

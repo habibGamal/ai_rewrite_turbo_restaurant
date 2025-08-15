@@ -30,6 +30,7 @@ import {
     calculateOrderTotals,
     getOrderStatusConfig,
     formatCurrency,
+    getOrderTypeLabel,
 } from "@/utils/orderCalculations";
 import CashierLayout from "@/Layouts/CashierLayout";
 import { printOrder } from "../../helpers/printTemplate";
@@ -172,11 +173,7 @@ export default function ManageOrder({
                 );
             }, finish);
         } else {
-            printOrder(
-                order,
-                orderItems,
-                (receiptFooter as string) || ""
-            );
+            printOrder(order, orderItems, (receiptFooter as string) || "");
             finish();
         }
     };
@@ -199,11 +196,16 @@ export default function ManageOrder({
 
     const orderStatusConfig = getOrderStatusConfig(order.status);
     const breadcrumbItems = [
+        // {
+        //     title: "الطلبات",
+        // },
         {
-            title: "الطلبات",
+            title: `${getOrderTypeLabel(order.type)} ${
+                order.dine_table_number ?? ""
+            }`,
         },
         {
-            title: `طلب رقم ${order.order_number}`,
+            title: `طلب رقم ${order.order_number} `,
         },
     ];
 

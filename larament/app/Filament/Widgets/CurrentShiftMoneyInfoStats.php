@@ -50,6 +50,13 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
             Stat::make('المصروفات', number_format($stats['expenses'], 2) . ' جنيه')
                 ->description('إجمالي مصروفات الشفت')
                 ->descriptionIcon('heroicon-m-arrow-down-circle')
+                ->extraAttributes([
+                    'class' => 'transition hover:scale-105 cursor-pointer',
+                    'wire:click' => <<<JS
+                        \$dispatch()
+                        document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    JS
+                ])
                 ->color('danger'),
 
             Stat::make('الخصومات', number_format($stats['discounts'], 2) . ' جنيه')

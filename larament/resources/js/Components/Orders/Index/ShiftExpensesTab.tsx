@@ -108,7 +108,7 @@ export const ShiftExpensesTab: React.FC = () => {
             title: "المبلغ",
             dataIndex: "amount",
             key: "amount",
-            render: (amount: number) => formatCurrency(amount),
+            render: (amount: number) => Number(amount).toFixed(0),
         },
         {
             title: "الوصف",

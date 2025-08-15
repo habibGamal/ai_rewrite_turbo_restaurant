@@ -56,12 +56,12 @@ export const getOrderStatusConfig = (status: string) => {
   switch (status) {
     case 'processing':
       return {
-        color: 'blue',
+        color: 'green',
         text: 'تحت التشغيل',
       };
     case 'completed':
       return {
-        color: 'green',
+        color: 'grey',
         text: 'مكتمل',
       };
     case 'cancelled':

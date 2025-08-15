@@ -72,6 +72,7 @@ export default function PaymentModal({
             onSuccess: () => {
                 message.success("تم إنهاء الطلب بنجاح");
                 onCancel();
+                router.get(route("orders.index") + `#${order.type}`);
             },
             onFinish: () => {
                 finish();

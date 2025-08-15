@@ -17,35 +17,35 @@ class PeriodShiftExpensesDetailedExporter extends Exporter
             ExportColumn::make('id')
                 ->label('رقم المصروف'),
 
+            ExportColumn::make('amount')
+                ->label('المبلغ')
+                ->formatStateUsing(fn($state) => (float) $state),
+
             ExportColumn::make('expenceType.name')
                 ->label('نوع المصروف'),
 
-            ExportColumn::make('amount')
-                ->label('المبلغ')
-                ->formatStateUsing(fn ($state) => (float) $state),
-
             ExportColumn::make('notes')
                 ->label('الملاحظات')
-                ->formatStateUsing(fn ($state) => $state ?? 'لا توجد ملاحظات'),
+                ->formatStateUsing(fn($state) => $state ?? 'لا توجد ملاحظات'),
 
             ExportColumn::make('shift.id')
                 ->label('رقم الشفت'),
 
             ExportColumn::make('shift.start_at')
                 ->label('تاريخ بداية الشفت')
-                ->formatStateUsing(fn ($state) => $state ? $state->format('Y-m-d H:i:s') : ''),
+                ->formatStateUsing(fn($state) => $state ? $state->format('Y-m-d H:i:s') : ''),
 
             ExportColumn::make('shift.end_at')
                 ->label('تاريخ نهاية الشفت')
-                ->formatStateUsing(fn ($state) => $state ? $state->format('Y-m-d H:i:s') : 'مفتوح'),
+                ->formatStateUsing(fn($state) => $state ? $state->format('Y-m-d H:i:s') : 'مفتوح'),
 
             ExportColumn::make('created_at')
                 ->label('تاريخ الإنشاء')
-                ->formatStateUsing(fn ($state) => $state->format('Y-m-d H:i:s')),
+                ->formatStateUsing(fn($state) => $state->format('Y-m-d H:i:s')),
 
             ExportColumn::make('updated_at')
                 ->label('تاريخ التحديث')
-                ->formatStateUsing(fn ($state) => $state->format('Y-m-d H:i:s')),
+                ->formatStateUsing(fn($state) => $state->format('Y-m-d H:i:s')),
         ];
     }
 

@@ -119,7 +119,7 @@ class StocktakingProductImporterAction extends Action
                     if ($product) {
                         $price = $product->cost ?? $product->price ?? 0;
                         $stockQuantity = $product->inventoryItem ? $product->inventoryItem->quantity : 0;
-                        $realQuantity = $stockQuantity; // Default to same as stock
+                        $realQuantity = 0; // Default to zero
                         $total = ($realQuantity - $stockQuantity) * $price; // Will be 0 initially
 
                         $currentItems[] = [

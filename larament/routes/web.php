@@ -6,6 +6,7 @@ use App\Http\Controllers\WebOrderController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\InvoicePrintController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -90,6 +91,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/day-status', [InventoryController::class, 'dayStatus'])->name('dayStatus');
         Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay');
     });
+
+    // Invoice Print Routes
+    Route::get('/print/invoice/{type}/{id}', [InvoicePrintController::class, 'show'])
+        ->name('invoice.print')
+        ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+']);
 });
 
 require __DIR__ . '/auth.php';

@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
+use App\Filament\Actions\PrintPurchaseInvoiceAction;
+use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\PurchaseInvoiceResource\Pages;
 use App\Filament\Resources\PurchaseInvoiceResource\RelationManagers;
 use App\Models\PurchaseInvoice;
@@ -111,6 +113,8 @@ class PurchaseInvoiceResource extends Resource
                             LowStockImporterAction::make('importLowStock')
                         ])
                             ->alignStart(),
+                        ProductSelector::make()
+                            ->columnSpanFull(),
 
                         TableRepeater::make('items')
                             ->label('الأصناف')
@@ -284,6 +288,7 @@ class PurchaseInvoiceResource extends Resource
             ])
             ->actions([
                 ClosePurchaseInvoiceAction::table(),
+                PrintPurchaseInvoiceAction::table(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

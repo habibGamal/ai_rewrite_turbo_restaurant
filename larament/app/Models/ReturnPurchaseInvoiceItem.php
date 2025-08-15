@@ -12,6 +12,7 @@ class ReturnPurchaseInvoiceItem extends Model
     protected $fillable = [
         'return_purchase_invoice_id',
         'product_id',
+        'product_name',
         'quantity',
         'price',
         'total',

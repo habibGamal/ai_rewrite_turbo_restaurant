@@ -212,7 +212,7 @@
                 </tr>
                 <tr>
                     <td>الاجمالي النهائي</td>
-                    <td>{{ number_format($order->total, 2) }}</td>
+                    <td>{{ ceil($order->total) }}</td>
                 </tr>
             </tbody>
         </table>

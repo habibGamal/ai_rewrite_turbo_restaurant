@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
+use App\Filament\Actions\PrintReturnPurchaseInvoiceAction;
+use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\ReturnPurchaseInvoiceResource\Pages;
 use App\Filament\Resources\ReturnPurchaseInvoiceResource\RelationManagers;
 use App\Models\ReturnPurchaseInvoice;
@@ -103,7 +105,8 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ProductImporterAction::make('importProducts')
                         ])
                             ->alignStart(),
-
+                        ProductSelector::make()
+                            ->columnSpanFull(),
                         TableRepeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn($query) => $query->with('product'))
@@ -286,6 +289,7 @@ class ReturnPurchaseInvoiceResource extends Resource
             ])
             ->actions([
                 CloseReturnPurchaseInvoiceAction::table(),
+                PrintReturnPurchaseInvoiceAction::table(),
                 Tables\Actions\ViewAction::make(),
 
                 Tables\Actions\EditAction::make()

@@ -214,7 +214,7 @@ class OrderController extends Controller
             // Log order completion
             $this->loggingService->logOrderCompletion($order->id, $paymentsData, $completedOrder->total);
 
-            return redirect()->route('orders.index', ['type' => $order->type->value])
+            return redirect()->to(route('orders.index') .'#' . $order->type->value)
                 ->with('success', 'تم إنهاء الطلب بنجاح');
         } catch (\Exception $e) {
             $this->loggingService->logAction('فشل في إتمام الطلب', [

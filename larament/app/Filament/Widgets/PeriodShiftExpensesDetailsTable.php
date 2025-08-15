@@ -64,6 +64,9 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
+                    ->extraAttributes([
+                        'id' => 'expenses_table',
+                    ])
                     ->exporter(PeriodShiftExpensesDetailedExporter::class)
                     ->fileName(fn() => 'period-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
