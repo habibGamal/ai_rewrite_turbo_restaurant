@@ -205,6 +205,7 @@ class PrintService
                     'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
                     'HOME' => base_path('.puppeteer')             // fallback
                 ])
+                ->setRemoteInstance('localhost', 9222)
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
                 ->waitUntilNetworkIdle()
@@ -305,7 +306,7 @@ class PrintService
 
             // ---------- 2. Convert HTML to image using Browsershot ----------
             $tempImagePath = tempnam(sys_get_temp_dir(), 'receipt_browsershot_') . '.png';
-
+            $start = microtime(true);
             Browsershot::html($html)
                 ->windowSize(567, 1200) // Thermal printer width (72mm ≈ 576px at 203dpi)
                 ->setOption('executablePath', '/usr/bin/chromium-browser')
@@ -313,12 +314,13 @@ class PrintService
                     'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
                     'HOME' => base_path('.puppeteer')             // fallback
                 ])
+                ->setRemoteInstance('localhost', 9222) // Use remote instance for Puppeteer
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
-                ->waitUntilNetworkIdle()
                 ->fullPage()
                 ->save($tempImagePath);
-
+            $end = microtime(true);
+            \Log::info("Browsershot processing time: " . ($end - $start) . " seconds");
             // ---------- 3. Print via escpos-php ----------
             $printer->setJustification(Printer::JUSTIFY_CENTER);
 
