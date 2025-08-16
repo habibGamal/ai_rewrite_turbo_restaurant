@@ -47,7 +47,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Receipt</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;700&display=swap');
+        /* @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;700&display=swap'); */
 
         * {
             margin: 0;
@@ -56,7 +56,7 @@
         }
 
         body {
-            font-family: 'Cairo', 'Amiri', serif;
+            /* font-family: 'Cairo', 'Amiri', serif; */
             font-size: 18px;
             font-weight: bold;
             line-height: 1.4;

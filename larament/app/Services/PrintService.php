@@ -205,7 +205,7 @@ class PrintService
                     'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
                     'HOME' => base_path('.puppeteer')             // fallback
                 ])
-                ->setRemoteInstance('localhost', 9222)
+                ->setRemoteInstance('127.0.0.1', 9222)
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
                 ->fullPage()
@@ -313,9 +313,10 @@ class PrintService
                     'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
                     'HOME' => base_path('.puppeteer')             // fallback
                 ])
-                ->setRemoteInstance('localhost', 9222) // Use remote instance for Puppeteer
+                ->setRemoteInstance('127.0.0.1', 9222) // Use remote instance for Puppeteer
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
+                // ->waitUntilNetworkIdle()
                 ->fullPage()
                 ->save($tempImagePath);
             $end = microtime(true);
