@@ -208,7 +208,6 @@ class PrintService
                 ->setRemoteInstance('localhost', 9222)
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
-                ->waitUntilNetworkIdle()
                 ->fullPage()
                 ->save($tempImagePath);
             // ---------- 3. Print via escpos-php ----------
