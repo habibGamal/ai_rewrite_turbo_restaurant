@@ -57,8 +57,7 @@ class CurrentShiftOrdersTable extends BaseWidget
         } else {
             $query = Order::query()
                 ->where('shift_id', $currentShift->id)
-                ->with(['customer', 'user', 'payments'])
-                ->latest();
+                ->with(['customer', 'user', 'payments']);
         }
 
         return $table

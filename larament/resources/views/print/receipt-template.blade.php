@@ -1,6 +1,7 @@
 @php
     use App\Enums\SettingKey;
     use Illuminate\Support\Facades\Storage;
+    use App\Enums\OrderType;
 
     // Order type mapping
     $getOrderTypeString = function ($type) {
@@ -158,10 +159,10 @@
         <p>الكاشير : {{ $order->user?->email }}</p>
         <p>تاريخ الطلب : {{ $orderDate }}</p>
         <p>تاريخ الطباعة : {{ $printDate }}</p>
-        <p>نوع الطلب : {{ $getOrderTypeString($order->type) }}</p>
+        <p>نوع الطلب : {{ $getOrderTypeString($order->type) }} </p>
 
         {{-- Conditional fields based on order type --}}
-        @if ($order->type === 'dine_in' && $order->dine_table_number)
+        @if ($order->type === OrderType::DINE_IN && $order->dine_table_number)
             <p>طاولة رقم {{ $order->dine_table_number }}</p>
         @endif
 

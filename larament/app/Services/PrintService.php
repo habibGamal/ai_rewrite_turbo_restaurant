@@ -316,7 +316,6 @@ class PrintService
                 ->setRemoteInstance('127.0.0.1', 9222) // Use remote instance for Puppeteer
                 ->dismissDialogs()
                 ->ignoreHttpsErrors()
-                // ->waitUntilNetworkIdle()
                 ->fullPage()
                 ->save($tempImagePath);
             $end = microtime(true);
