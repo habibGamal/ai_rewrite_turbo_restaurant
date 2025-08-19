@@ -166,7 +166,14 @@
             <p>طاولة رقم {{ $order->dine_table_number }}</p>
         @endif
 
-        @if (in_array($order->type->value, ['delivery', 'web_delivery', 'web_takeaway']))
+        {{-- Takeaway: show customer name and phone --}}
+        @if (in_array($order->type->value, ['takeaway', 'web_takeaway']))
+            <p>اسم العميل : {{ $order->customer?->name ?? '-' }}</p>
+            <p>رقم الهاتف : {{ $order->customer?->phone ?? '-' }}</p>
+        @endif
+
+        {{-- Delivery: show phone, name, address, driver --}}
+        @if (in_array($order->type->value, ['delivery', 'web_delivery']))
             <p>رقم الهاتف : {{ $order->customer?->phone ?? '-' }}</p>
             <p>اسم العميل : {{ $order->customer?->name ?? '-' }}</p>
             <p>العنوان : {{ $order->customer?->address ?? '-' }}</p>
@@ -175,9 +182,9 @@
 
         <table>
             <thead>
-                <tr>
-                    <th>المنتج</th>
-                    <th>الكمية</th>
+            <tr>
+                <th>المنتج</th>
+                <th>الكمية</th>
                     <th>السعر</th>
                     <th>الاجمالي</th>
                 </tr>
