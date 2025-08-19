@@ -17,6 +17,7 @@ class Product extends Model
         'category_id',
         'name',
         'product_ref',
+        'barcode',
         'price',
         'cost',
         'min_stock',

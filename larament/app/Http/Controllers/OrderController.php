@@ -662,7 +662,7 @@ class OrderController extends Controller
             'items' => 'nullable|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.name' => 'required|string',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.notes' => 'nullable|string|max:500',
         ]);
 

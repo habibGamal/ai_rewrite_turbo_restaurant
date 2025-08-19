@@ -14,9 +14,9 @@ class TableTypeSeeder extends Seeder
     public function run(): void
     {
         $tableTypes = [
-            ['name' => 'VIP'],
-            ['name' => 'كلاسيك'],
-            ['name' => 'بدوي'],
+            ['name' => 'صالة'],
+            // ['name' => 'كلاسيك'],
+            // ['name' => 'بدوي'],
         ];
 
         foreach ($tableTypes as $tableType) {

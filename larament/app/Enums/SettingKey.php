@@ -24,7 +24,7 @@ enum SettingKey: string
             self::CASHIER_PRINTER_IP => '192.168.1.100',
             self::RECEIPT_FOOTER => 'شكراً لزيارتكم، نتطلع لخدمتكم مرة أخرى',
             self::DINE_IN_SERVICE_CHARGE => '0.12',
-            self::RESTAURANT_NAME => 'مطعم توربو',
+            self::RESTAURANT_NAME => '-------',
             self::RESTAURANT_PRINT_LOGO => '',
             self::RESTAURANT_OFFICIAL_LOGO => '/images/logo.jpg',
             self::NODE_TYPE => 'independent',

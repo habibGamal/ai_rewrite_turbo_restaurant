@@ -70,7 +70,9 @@ export default function OrderItem({ orderItem, dispatch, disabled, user, forWeb 
                         />
                         <InputNumber
                             disabled={quantityDisabled}
-                            min={1}
+                            min={0.001}
+                            step={0.001}
+                            precision={3}
                             value={orderItem.quantity}
                             onChange={onChangeQuantity}
                             style={{ width: 80 }}

@@ -47,6 +47,11 @@ import PaymentModal from "@/Components/Orders/PaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
+import { useSymbologyScanner } from "@use-symbology-scanner/react";
+import {
+    STANDARD_SYMBOLOGY_KEYS,
+    StandardSymbologyKey,
+} from "@use-symbology-scanner/core/symbologies";
 
 export default function ManageOrder({
     order,
@@ -57,6 +62,26 @@ export default function ManageOrder({
     const { auth, receiptFooter } = usePage().props;
     const user = auth.user as User;
     const { modal } = App.useApp();
+    const barcodeScanner = (symbol: string) => {
+        const barcode = symbol;
+
+        // Use dispatch to add item by barcode
+        dispatch({
+            type: 'addByBarcode',
+            barcode: barcode,
+            products: products,
+            user: user
+        });
+    };
+    const symbologies = ["EAN 13"] as StandardSymbologyKey[];
+    useSymbologyScanner(barcodeScanner, {
+        symbologies,
+        scannerOptions: {
+            prefix: "",
+            suffix: "",
+            maxDelay: 50,
+        },
+    });
 
     // Create initial order items from the order
     const products = categories.flatMap((category) => category.products);

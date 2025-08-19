@@ -16,7 +16,7 @@ class SaveOrderRequest extends FormRequest
         return [
             // 'items' => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.notes' => 'nullable|string|max:500',
         ];
@@ -29,7 +29,7 @@ class SaveOrderRequest extends FormRequest
             'items.*.product_id.required' => 'معرف المنتج مطلوب',
             'items.*.product_id.exists' => 'المنتج غير موجود',
             'items.*.quantity.required' => 'الكمية مطلوبة',
-            'items.*.quantity.integer' => 'الكمية يجب أن تكون رقم صحيح',
+            'items.*.quantity.numeric' => 'الكمية يجب أن تكون رقم',
             'items.*.quantity.min' => 'الكمية يجب أن تكون أكبر من صفر',
             'items.*.price.required' => 'السعر مطلوب',
             'items.*.price.numeric' => 'السعر يجب أن يكون رقم',

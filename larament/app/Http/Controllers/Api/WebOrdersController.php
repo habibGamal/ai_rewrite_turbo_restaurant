@@ -63,11 +63,11 @@ class WebOrdersController extends Controller
             'order.total' => 'required|numeric',
             'order.note' => 'nullable|string',
             'order.items' => 'required|array',
-            'order.items.*.quantity' => 'required|integer|min:1',
+            'order.items.*.quantity' => 'required|numeric|min:0.001',
             'order.items.*.notes' => 'nullable|string',
             'order.items.*.posRefObj' => 'required|array',
             'order.items.*.posRefObj.*.productRef' => 'required|string',
-            'order.items.*.posRefObj.*.quantity' => 'required|integer|min:1',
+            'order.items.*.posRefObj.*.quantity' => 'required|numeric|min:0.001',
         ]);
 
         if ($validator->fails()) {

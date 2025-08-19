@@ -1,4 +1,33 @@
-import { OrderItemData, OrderItemAction, User } from '@/types';
+import { OrderItemData, OrderItemAction, User, Product } from '@/types';
+
+// Barcode parser function
+const parseBarcode = (barcode: string): { productBarcode: string; weightKg: number; checksum: number } | null => {
+    // Remove any whitespace and validate length
+    const cleanBarcode = barcode.trim();
+
+    if (cleanBarcode.length !== 13) {
+        return null;
+    }
+
+    // Validate that all characters are digits
+    if (!/^\d+$/.test(cleanBarcode)) {
+        return null;
+    }
+
+    // Extract components
+    const productBarcode = cleanBarcode.substr(0, 7);
+    const weightGrams = cleanBarcode.substr(7, 5);
+    const checksum = cleanBarcode.substr(12, 1);
+
+    // Convert weight from grams to kilograms
+    const weightKg = parseInt(weightGrams) / 1000;
+
+    return {
+        productBarcode,
+        weightKg,
+        checksum: parseInt(checksum)
+    };
+};
 
 export const orderItemsReducer = (
     state: OrderItemData[],
@@ -7,7 +36,7 @@ export const orderItemsReducer = (
     let canChange = true;
     let limit = 0;
 
-    if (action.type !== 'add' && action.type !== 'init') {
+    if (action.type !== 'add' && action.type !== 'init' && action.type !== 'addByBarcode') {
         const isAdmin = action.user.role === 'admin';
         const orderItem = action.id
             ? state.find((item) => item.product_id === action.id!)
@@ -68,9 +97,7 @@ export const orderItemsReducer = (
             }
             return state.map((item) => {
                 if (item.product_id !== action.id) return item;
-                if (action.quantity !== null) {
-                    action.quantity = Math.floor(action.quantity);
-                }
+                // Remove Math.floor to allow decimal quantities
                 return { ...item, quantity: action.quantity };
             });
         }
@@ -89,6 +116,44 @@ export const orderItemsReducer = (
 
         case 'init':
             return action.orderItems;
+
+        case 'addByBarcode': {
+            const parsedBarcode = parseBarcode(action.barcode);
+            if (!parsedBarcode) {
+                // Invalid barcode format
+                return state;
+            }
+
+            // Find product by barcode
+            const product = action.products.find(p => p.barcode === parsedBarcode.productBarcode);
+            if (!product) {
+                // Product not found
+                return state;
+            }
+
+            // Check if the order item already exists
+            const existingItemIndex = state.findIndex(item => item.product_id === product.id);
+
+            if (existingItemIndex !== -1) {
+                // If it exists, add the weight to the existing quantity
+                return state.map((item, index) =>
+                    index === existingItemIndex
+                        ? { ...item, quantity: item.quantity + parsedBarcode.weightKg }
+                        : item
+                );
+            } else {
+                // Add new item
+                const newItem: OrderItemData = {
+                    product_id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: parsedBarcode.weightKg,
+                    notes: ``,
+                    initial_quantity: undefined,
+                };
+                return [...state, newItem];
+            }
+        }
 
         default:
             throw new Error('Action not found');

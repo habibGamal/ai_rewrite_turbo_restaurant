@@ -21,6 +21,7 @@ export interface Product {
   type: string;
   unit: string;
   legacy: boolean;
+  barcode?: string;
 }
 
 export interface Customer {
@@ -120,6 +121,7 @@ export type OrderItemAction =
   | { type: 'changeQuantity'; id: number; quantity: number; user: User }
   | { type: 'changeNotes'; id: number; notes: string; user: User }
   | { type: 'delete'; id: number; user: User }
+  | { type: 'addByBarcode'; barcode: string; products: Product[]; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
 export type PageProps<T = {}> = T & {

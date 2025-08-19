@@ -6,7 +6,7 @@ class OrderItemDTO
 {
     public function __construct(
         public readonly int $productId,
-        public readonly int $quantity,
+        public readonly float $quantity,
         public readonly float $price,
         public readonly float $cost,
         public readonly ?string $notes = null,

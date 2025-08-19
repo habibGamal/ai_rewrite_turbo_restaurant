@@ -50,6 +50,10 @@ class RawMaterialProductResource extends Resource
                     ->label('اسم المادة الخام')
                     ->required()
                     ->maxLength(255),
+                Forms\Components\TextInput::make('barcode')
+                    ->label('الباركود')
+                    ->maxLength(255)
+                    ->placeholder('اختياري'),
                 Forms\Components\Select::make('category_id')
                     ->label('الفئة')
                     ->options(Category::all()->pluck('name', 'id'))
@@ -106,6 +110,10 @@ class RawMaterialProductResource extends Resource
                     ->label('اسم المادة الخام')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('barcode')
+                    ->label('الباركود')
+                    ->searchable()
+                    ->placeholder('غير محدد'),
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('الفئة')
                     ->sortable()

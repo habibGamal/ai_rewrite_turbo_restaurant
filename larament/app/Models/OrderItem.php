@@ -20,6 +20,13 @@ class OrderItem extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'quantity' => 'double',
+        'price' => 'decimal:2',
+        'cost' => 'decimal:2',
+        'total' => 'decimal:2',
+    ];
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
