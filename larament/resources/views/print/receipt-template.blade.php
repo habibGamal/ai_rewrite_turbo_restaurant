@@ -220,7 +220,9 @@
         </table>
 
         <p class="reference">الرقم المرجعي - {{ $order->id }}</p>
-
+        @if ($order->order_notes)
+            <p>ملاحظات الطلب : {{ $order->order_notes }}</p>
+        @endif
         <p class="footer-text">{{ $receiptFooter }}</p>
 
         <img class="turbo-logo" src="{{ $footerLogo }}" alt="Turbo Logo" />
