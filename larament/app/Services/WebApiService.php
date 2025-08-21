@@ -140,16 +140,21 @@ class WebApiService
     {
         $order->load('items');
 
-        $order->sub_total = $webOrder['subTotal'];
+        $order->sub_total = $order->items->sum('total');
 
         // Calculate POS subtotal
-        $posSubTotal = $order->items->sum('total');
-        $order->web_pos_diff = $webOrder['subTotal'] - $posSubTotal;
+        // $order->web_pos_diff = $webOrder['subTotal'] - $order->sub_total;
 
         $order->tax = $webOrder['tax'];
         $order->service = $webOrder['service'];
-        $order->discount = $webOrder['discount'];
+
         $order->total = $webOrder['total'];
+
+        // pos total
+        $realPosTotal = $order->sub_total + $order->tax + $order->service;
+
+        $order->web_pos_diff = $order->total - $realPosTotal;
+        $order->discount = $realPosTotal - $order->total;
 
         // Calculate profit
         $cost = $order->items->sum(fn($item) => $item->cost * $item->quantity);

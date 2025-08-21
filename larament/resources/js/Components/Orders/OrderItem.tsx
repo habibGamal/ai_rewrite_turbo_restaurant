@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Button, InputNumber, Tag, Typography, Modal, Input } from 'antd';
+import React, { useState } from "react";
+import { Button, InputNumber, Tag, Typography, Modal, Input } from "antd";
 import {
     MinusCircleOutlined,
     PlusCircleOutlined,
     DeleteOutlined,
     EditOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 
-import { OrderItemData, OrderItemAction, User } from '@/types';
-import { formatCurrency } from '@/utils/orderCalculations';
+import { OrderItemData, OrderItemAction, User } from "@/types";
+import { formatCurrency } from "@/utils/orderCalculations";
 
 const { TextArea } = Input;
 
@@ -20,38 +20,54 @@ interface OrderItemProps {
     forWeb?: boolean; // New prop for web orders
 }
 
-export default function OrderItem({ orderItem, dispatch, disabled, user, forWeb }: OrderItemProps) {
+export default function OrderItem({
+    orderItem,
+    dispatch,
+    disabled,
+    user,
+    forWeb,
+}: OrderItemProps) {
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
-    const [notes, setNotes] = useState(orderItem.notes || '');
+    const [notes, setNotes] = useState(orderItem.notes || "");
 
     // For web orders, disable quantity changes but allow notes editing
     const quantityDisabled = disabled || forWeb;
 
     const onChangeQuantity = (quantity: number | null) => {
         if (quantity !== null) {
-            dispatch({ type: 'changeQuantity', id: orderItem.product_id, quantity, user });
+            dispatch({
+                type: "changeQuantity",
+                id: orderItem.product_id,
+                quantity,
+                user,
+            });
         }
     };
 
     const onIncrement = () => {
-        dispatch({ type: 'increment', id: orderItem.product_id, user });
+        dispatch({ type: "increment", id: orderItem.product_id, user });
     };
 
     const onDecrement = () => {
-        dispatch({ type: 'decrement', id: orderItem.product_id, user });
+        dispatch({ type: "decrement", id: orderItem.product_id, user });
     };
 
     const onDelete = () => {
-        dispatch({ type: 'delete', id: orderItem.product_id, user });
+        dispatch({ type: "delete", id: orderItem.product_id, user });
     };
 
     const onSaveNotes = () => {
-        dispatch({ type: 'changeNotes', id: orderItem.product_id, notes, user });
+        dispatch({
+            type: "changeNotes",
+            id: orderItem.product_id,
+            notes,
+            user,
+        });
         setIsNotesModalOpen(false);
     };
 
     const onOpenNotesModal = () => {
-        setNotes(orderItem.notes || '');
+        setNotes(orderItem.notes || "");
         setIsNotesModalOpen(true);
     };
 
@@ -59,7 +75,19 @@ export default function OrderItem({ orderItem, dispatch, disabled, user, forWeb 
         <>
             <div className="isolate-3 flex flex-col gap-4 my-4">
                 <div className="flex justify-between items-center">
-                    <Typography.Paragraph className="!my-0">{orderItem.name}</Typography.Paragraph>
+                    <div className="flex flex-col">
+                        <Typography.Paragraph className="!my-0">
+                            {orderItem.name}
+                        </Typography.Paragraph>
+                        {forWeb && orderItem.notes && (
+                            <Typography.Paragraph
+                                className="!my-0 !text-sm text-gray-500 ltr"
+                                ellipsis={{ rows: 2 }}
+                            >
+                                {orderItem.notes}
+                            </Typography.Paragraph>
+                        )}
+                    </div>
                     <div className="flex gap-2">
                         <Button
                             disabled={quantityDisabled}
@@ -89,8 +117,14 @@ export default function OrderItem({ orderItem, dispatch, disabled, user, forWeb 
                 <div className="flex justify-between items-center">
                     <Typography.Text>
                         السعر :
-                        <Tag className="mx-4 text-lg" bordered={false} color="success">
-                            {formatCurrency(orderItem.price * orderItem.quantity)}
+                        <Tag
+                            className="mx-4 text-lg"
+                            bordered={false}
+                            color="success"
+                        >
+                            {formatCurrency(
+                                orderItem.price * orderItem.quantity
+                            )}
                         </Tag>
                     </Typography.Text>
                     <div className="flex gap-4">

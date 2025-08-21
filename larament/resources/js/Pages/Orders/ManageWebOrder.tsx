@@ -52,13 +52,10 @@ export default function ManageWebOrder({
     const { auth } = usePage().props;
     const user = auth.user as User;
     const products = categories.flatMap((category) => category.products);
-
     const initOrderItems: OrderItemData[] =
         order.items?.map((orderItem: any) => ({
             product_id: orderItem.product_id,
-            name:
-                products.find((product) => product.id === orderItem.product_id)
-                    ?.name || "",
+            name: orderItem.product.name,
             price: parseFloat(orderItem.price.toString()),
             quantity: orderItem.quantity,
             notes: orderItem.notes,
@@ -94,12 +91,10 @@ export default function ManageWebOrder({
         finish: () => void = () => {}
     ) => {
         // For web orders, we can only update item notes, not quantities
-        const itemsWithNotes = orderItems
-            .map((item) => ({
-                product_id: item.product_id,
-                notes: item.notes,
-            }));
-
+        const itemsWithNotes = orderItems.map((item) => ({
+            product_id: item.product_id,
+            notes: item.notes,
+        }));
 
         router.post(
             `/web-orders/save-order/${order.id}`,
@@ -201,7 +196,9 @@ export default function ManageWebOrder({
     const isDelivery = order.type === "web_delivery";
 
     // For web orders, we should allow notes editing even when other controls are disabled
-    const disableNotesEditing = !["pending", "processing"].includes(order.status);
+    const disableNotesEditing = !["pending", "processing"].includes(
+        order.status
+    );
 
     // Button states logic from original
     const btnsState: Record<
@@ -425,7 +422,9 @@ export default function ManageWebOrder({
                             </IsAdmin>
 
                             <LoadingButton
-                                onCustomClick={(finish) => save(undefined, finish)}
+                                onCustomClick={(finish) =>
+                                    save(undefined, finish)
+                                }
                                 disabled={disableAllControls}
                                 size="large"
                                 icon={<SaveOutlined />}

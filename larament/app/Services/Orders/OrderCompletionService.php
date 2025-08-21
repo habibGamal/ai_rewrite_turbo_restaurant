@@ -19,7 +19,9 @@ class OrderCompletionService
         $order->load('items');
 
         // Calculate final totals
-        $this->orderCalculationService->calculateOrderTotals($order);
+        if (! $order->type->isWebOrder()) {
+            $this->orderCalculationService->calculateOrderTotals($order);
+        }
 
         // Process payments - use single or multiple payment based on array content
         $validPayments = array_filter($paymentsData, fn($amount) => $amount > 0);

@@ -33,8 +33,9 @@ class ApiController extends Controller
             ->where('name', 'like', "%{$search}%")
             ->where('type', '!=', ProductType::RawMaterial)
             ->get();
-
-        return BaseResource::collection($products)->additional(['products' => true]);
+        return response()->json([
+            'products' => $products,
+        ]);
     }
 
     /**
