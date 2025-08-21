@@ -64,7 +64,7 @@ export default function ManageOrder({
     const { modal } = App.useApp();
     const barcodeScanner = (symbol: string) => {
         const barcode = symbol;
-
+        console.log("Scanned barcode:", barcode);
         // Use dispatch to add item by barcode
         dispatch({
             type: 'addByBarcode',
@@ -75,11 +75,11 @@ export default function ManageOrder({
     };
     const symbologies = ["EAN 13"] as StandardSymbologyKey[];
     useSymbologyScanner(barcodeScanner, {
-        symbologies,
+        // symbologies,
         scannerOptions: {
             prefix: "",
             suffix: "",
-            maxDelay: 50,
+            maxDelay: 10,
         },
     });
 
