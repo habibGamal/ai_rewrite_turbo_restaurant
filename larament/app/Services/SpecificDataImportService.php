@@ -348,6 +348,9 @@ class SpecificDataImportService extends ExcelImportService
                 $categoryId = $category->id;
             }
 
+            // Get barcode if exists
+            $barcode = $data['barcode'] ?? null;
+
             $product = Product::updateOrCreate(
                 ['name' => $productName],
                 [
@@ -357,12 +360,13 @@ class SpecificDataImportService extends ExcelImportService
                     'unit' => 'باكت',
                     'category_id' => $categoryId,
                     'type' => \App\Enums\ProductType::Manufactured,
+                    'barcode' => $barcode,
                 ]
             );
 
             return [
                 'success' => true,
-                'data' => ['product_id' => $product->id, 'name' => $product->name, 'type' => 'production'],
+                'data' => ['product_id' => $product->id, 'name' => $product->name, 'type' => 'production', 'barcode' => $barcode],
             ];
 
         } catch (Exception $e) {
@@ -389,6 +393,9 @@ class SpecificDataImportService extends ExcelImportService
                 $categoryId = $category->id;
             }
 
+            // Get barcode if exists
+            $barcode = $data['barcode'] ?? null;
+
             $product = Product::updateOrCreate(
                 ['name' => $productName],
                 [
@@ -398,12 +405,13 @@ class SpecificDataImportService extends ExcelImportService
                     'unit' => $data['الوحدة'] ?? null,
                     'category_id' => $categoryId,
                     'type' => \App\Enums\ProductType::Consumable,
+                    'barcode' => $barcode,
                 ]
             );
 
             return [
                 'success' => true,
-                'data' => ['product_id' => $product->id, 'name' => $product->name, 'type' => 'consumable'],
+                'data' => ['product_id' => $product->id, 'name' => $product->name, 'type' => 'consumable', 'barcode' => $barcode],
             ];
 
         } catch (Exception $e) {

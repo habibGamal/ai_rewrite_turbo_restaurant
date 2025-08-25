@@ -59,17 +59,18 @@ export default function ManageOrder({
     drivers,
     regions,
 }: ManageOrderProps) {
-    const { auth, receiptFooter } = usePage().props;
+    const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
     const user = auth.user as User;
     const { modal } = App.useApp();
-    const barcodeScanner = (symbol: string) => {
+    const barcodeScanner = (symbol: string,type:any) => {
         const barcode = symbol;
-        console.log("Scanned barcode:", barcode);
+        console.log("Scanned barcode:", barcode,type);
         // Use dispatch to add item by barcode
         dispatch({
             type: 'addByBarcode',
             barcode: barcode,
             products: products,
+            scalePrefix: scaleBarcodePrefix as string,
             user: user
         });
     };
@@ -79,7 +80,7 @@ export default function ManageOrder({
         scannerOptions: {
             prefix: "",
             suffix: "",
-            maxDelay: 10,
+            maxDelay: 50,
         },
     });
 

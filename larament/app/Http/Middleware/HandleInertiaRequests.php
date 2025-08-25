@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'receiptFooter' => $settingsService->getReceiptFooter(),
+            'scaleBarcodePrefix' => $settingsService->getScaleBarcodePrefix(),
         ];
     }
 }

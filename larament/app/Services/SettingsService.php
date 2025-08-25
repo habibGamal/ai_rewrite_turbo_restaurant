@@ -93,6 +93,14 @@ class SettingsService
     }
 
     /**
+     * Get scale barcode prefix from settings
+     */
+    public function getScaleBarcodePrefix(): string
+    {
+        return $this->get(SettingKey::SCALE_BARCODE_PREFIX->value, SettingKey::SCALE_BARCODE_PREFIX->defaultValue());
+    }
+
+    /**
      * Get a setting value by key
      */
     public function get(string $key, mixed $default = null): mixed

@@ -121,7 +121,7 @@ export type OrderItemAction =
   | { type: 'changeQuantity'; id: number; quantity: number; user: User }
   | { type: 'changeNotes'; id: number; notes: string; user: User }
   | { type: 'delete'; id: number; user: User }
-  | { type: 'addByBarcode'; barcode: string; products: Product[]; user: User }
+  | { type: 'addByBarcode'; barcode: string; products: Product[]; scalePrefix?: string; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
 export type PageProps<T = {}> = T & {
@@ -132,6 +132,8 @@ export type PageProps<T = {}> = T & {
     success?: string;
     error?: string;
   };
+  receiptFooter?: string;
+  scaleBarcodePrefix?: string;
 };
 
 export interface ManageOrderProps extends PageProps {
