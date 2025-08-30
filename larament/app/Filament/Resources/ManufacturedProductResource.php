@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\Forms\ProductComponentsImporterAction;
+use App\Filament\Components\Forms\ProductComponentSelector;
 use App\Filament\Resources\ManufacturedProductResource\Pages;
 use App\Models\Product;
 use App\Models\Category;
@@ -147,6 +148,8 @@ class ManufacturedProductResource extends Resource
                         ])
                             ->alignStart(),
 
+                        ProductComponentSelector::make()
+                            ->columnSpanFull(),
                         TableRepeater::make('productComponents')
                             ->label('المكونات')
                             ->relationship('productComponents', fn($query) => $query->with('component.category'))

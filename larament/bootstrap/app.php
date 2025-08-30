@@ -22,7 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     'shift' => \App\Http\Middleware\ShiftMiddleware::class,
                 ]);
 
-
+        // Allow management/start route during maintenance mode
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'api/management/start'
+        ]);
 
         //
     })
