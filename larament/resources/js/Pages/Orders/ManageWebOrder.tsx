@@ -37,6 +37,7 @@ import OrderNotesModal from "@/Components/Orders/OrderNotesModal";
 import WebPaymentModal from "@/Components/Orders/WebPaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import OrderItem from "@/Components/Orders/OrderItem";
+import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
 
@@ -405,7 +406,7 @@ export default function ManageWebOrder({
                                 ملاحظات الطلب
                             </Button>
 
-                            <IsAdmin>
+                            <CanAccess permission="discounts">
                                 <LoadingButton
                                     onCustomClick={openDiscountModal}
                                     disabled={
@@ -419,7 +420,7 @@ export default function ManageWebOrder({
                                 >
                                     خصم
                                 </LoadingButton>
-                            </IsAdmin>
+                            </CanAccess>
 
                             <LoadingButton
                                 onCustomClick={(finish) =>

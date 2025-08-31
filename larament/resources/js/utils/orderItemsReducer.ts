@@ -64,12 +64,13 @@ export const orderItemsReducer = (
 
     if (action.type !== 'add' && action.type !== 'init' && action.type !== 'addByBarcode') {
         const isAdmin = action.user.role === 'admin';
+        const canChangeItems = action.user.canChangeOrderItems ?? false;
         const orderItem = action.id
             ? state.find((item) => item.product_id === action.id!)
             : null;
         const itemSavedBefore = orderItem?.initial_quantity !== null && orderItem?.initial_quantity !== undefined;
 
-        if (!isAdmin && itemSavedBefore) {
+        if (!isAdmin && !canChangeItems && itemSavedBefore) {
             canChange = false;
             limit = orderItem.initial_quantity!;
         }

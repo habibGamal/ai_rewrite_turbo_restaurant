@@ -15,7 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
@@ -49,7 +49,16 @@ class Settings extends Page implements HasForms
         // Override with existing settings, ensuring they are strings
         foreach ($settings as $key => $value) {
             if (in_array($key, array_keys($defaults))) {
-                $this->data[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                // Convert boolean settings appropriately
+                if (in_array($key, [
+                    SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
+                    SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
+                    SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
+                ])) {
+                    $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+                } else {
+                    $this->data[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                }
             }
         }
 
@@ -163,6 +172,18 @@ class Settings extends Page implements HasForms
                                             }
                                         }
                                     }),
+
+                                FileUpload::make(SettingKey::RESTAURANT_QR_LOGO->value)
+                                    ->label(SettingKey::RESTAURANT_QR_LOGO->label())
+                                    ->helperText(SettingKey::RESTAURANT_QR_LOGO->helperText())
+                                    ->image()
+                                    ->imageEditor()
+                                    ->directory('logos')
+                                    ->visibility('public')
+                                    ->moveFiles()
+                                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg'])
+                                    ->maxSize(2048) // 2MB limit
+                                    ->columnSpanFull(),
                             ]),
                     ]),
 
@@ -192,6 +213,29 @@ class Settings extends Page implements HasForms
                                     ->required(fn(Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave'),
                             ]),
                     ]),
+
+                Section::make('صلاحيات الكاشير')
+                    ->description('تحديد الصلاحيات الإضافية للكاشير في إدارة الطلبات')
+                    ->icon('heroicon-m-user-group')
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                Toggle::make(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
+                                    ->label(SettingKey::ALLOW_CASHIER_DISCOUNTS->label())
+                                    ->helperText(SettingKey::ALLOW_CASHIER_DISCOUNTS->helperText())
+                                    ->inline(false),
+
+                                Toggle::make(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
+                                    ->label(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->label())
+                                    ->helperText(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->helperText())
+                                    ->inline(false),
+                            ]),
+
+                        Toggle::make(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)
+                            ->label(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->label())
+                            ->helperText(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->helperText())
+                            ->inline(false),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -204,7 +248,16 @@ class Settings extends Page implements HasForms
             // Ensure all values are strings before saving
             $cleanData = [];
             foreach ($data as $key => $value) {
-                $cleanData[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                // Handle boolean settings
+                if (in_array($key, [
+                    SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
+                    SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
+                    SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
+                ])) {
+                    $cleanData[$key] = $value ? 'true' : 'false';
+                } else {
+                    $cleanData[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                }
             }
 
             $settingsService = app(SettingsService::class);

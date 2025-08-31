@@ -16,6 +16,7 @@ class SettingsService
     public const RESTAURANT_NAME = 'restaurant_name';
     public const RESTAURANT_PRINT_LOGO = 'restaurant_print_logo';
     public const RESTAURANT_OFFICIAL_LOGO = 'restaurant_official_logo';
+    public const RESTAURANT_QR_LOGO = 'restaurant_qr_logo';
     public const NODE_TYPE = 'node_type';
     public const MASTER_NODE_LINK = 'master_node_link';
 
@@ -77,6 +78,14 @@ class SettingsService
     }
 
     /**
+     * Get restaurant QR logo path from settings
+     */
+    public function getRestaurantQrLogo(): string
+    {
+        return $this->get(SettingKey::RESTAURANT_QR_LOGO->value, SettingKey::RESTAURANT_QR_LOGO->defaultValue());
+    }
+
+    /**
      * Get node type from settings
      */
     public function getNodeType(): string
@@ -98,6 +107,33 @@ class SettingsService
     public function getScaleBarcodePrefix(): string
     {
         return $this->get(SettingKey::SCALE_BARCODE_PREFIX->value, SettingKey::SCALE_BARCODE_PREFIX->defaultValue());
+    }
+
+    /**
+     * Check if cashiers are allowed to apply discounts
+     */
+    public function isCashierDiscountsAllowed(): bool
+    {
+        $value = $this->get(SettingKey::ALLOW_CASHIER_DISCOUNTS->value, SettingKey::ALLOW_CASHIER_DISCOUNTS->defaultValue());
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Check if cashiers are allowed to cancel orders
+     */
+    public function isCashierCancelOrdersAllowed(): bool
+    {
+        $value = $this->get(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value, SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->defaultValue());
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Check if cashiers are allowed to change order items after saving
+     */
+    public function isCashierItemChangesAllowed(): bool
+    {
+        $value = $this->get(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value, SettingKey::ALLOW_CASHIER_ITEM_CHANGES->defaultValue());
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

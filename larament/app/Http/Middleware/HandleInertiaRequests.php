@@ -32,11 +32,21 @@ class HandleInertiaRequests extends Middleware
     {
         $settingsService = app(SettingsService::class);
 
+        $user = $request->user();
+        $authData = ['user' => $user];
+
+        // Add permission flags if user is authenticated
+        if ($user) {
+            $authData['user'] = array_merge($user->toArray(), [
+                'canApplyDiscounts' => $user->canApplyDiscounts(),
+                'canCancelOrders' => $user->canCancelOrders(),
+                'canChangeOrderItems' => $user->canChangeOrderItems(),
+            ]);
+        }
+
         return [
             ...parent::share($request),
-            'auth' => [
-                'user' => $request->user(),
-            ],
+            'auth' => $authData,
             'receiptFooter' => $settingsService->getReceiptFooter(),
             'scaleBarcodePrefix' => $settingsService->getScaleBarcodePrefix(),
         ];

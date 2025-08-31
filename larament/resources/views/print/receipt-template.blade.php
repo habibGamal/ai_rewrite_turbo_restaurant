@@ -22,6 +22,11 @@
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
             ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
             : null;
+    
+    $qrLogoPath =
+        setting(SettingKey::RESTAURANT_QR_LOGO) !== ''
+            ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
+            : null;
 
     // Format dates
     $orderDate = $order->created_at->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');
@@ -137,6 +142,19 @@
             max-width: 50mm;
         }
 
+        .footer-logos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .footer-logos img {
+            width: 150px;
+            max-width: 40mm;
+        }
+
         .company-info {
             text-align: center;
             font-size: 18px;
@@ -232,7 +250,12 @@
         @endif
         <p class="footer-text">{{ $receiptFooter }}</p>
 
-        <img class="turbo-logo" src="{{ $footerLogo }}" alt="Turbo Logo" />
+        <div class="footer-logos">
+            @if ($qrLogoPath)
+                <img src="{{ $imgToDataUri($qrLogoPath) }}" alt="Restaurant QR Logo" />
+            @endif
+            <img src="{{ $footerLogo }}" alt="Turbo Logo" />
+        </div>
 
         <p class="company-info">Turbo Software Space</p>
         <p class="center">{{ $printDate }}</p>

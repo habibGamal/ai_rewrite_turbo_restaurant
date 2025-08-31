@@ -4,6 +4,9 @@ export interface User {
   email: string;
   email_verified_at?: string;
   role: string;
+  canApplyDiscounts?: boolean;
+  canCancelOrders?: boolean;
+  canChangeOrderItems?: boolean;
 }
 
 export interface Category {

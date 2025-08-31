@@ -73,12 +73,41 @@ class User extends Authenticatable implements FilamentUser
 
     public function canCancelOrders(): bool
     {
+        if ($this->role === UserRole::ADMIN) {
+            return true;
+        }
+
+        if ($this->role === UserRole::CASHIER) {
+            return app(\App\Services\SettingsService::class)->isCashierCancelOrdersAllowed();
+        }
+
         return $this->role?->canCancelOrders() ?? false;
     }
 
     public function canApplyDiscounts(): bool
     {
+        if ($this->role === UserRole::ADMIN) {
+            return true;
+        }
+
+        if ($this->role === UserRole::CASHIER) {
+            return app(\App\Services\SettingsService::class)->isCashierDiscountsAllowed();
+        }
+
         return $this->role?->canApplyDiscounts() ?? false;
+    }
+
+    public function canChangeOrderItems(): bool
+    {
+        if ($this->role === UserRole::ADMIN) {
+            return true;
+        }
+
+        if ($this->role === UserRole::CASHIER) {
+            return app(\App\Services\SettingsService::class)->isCashierItemChangesAllowed();
+        }
+
+        return true; // Default for other roles
     }
     public function shifts()
     {

@@ -45,6 +45,7 @@ import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
 import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
+import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
 import { useSymbologyScanner } from "@use-symbology-scanner/react";
@@ -342,7 +343,7 @@ export default function ManageOrder({
                             >
                                 تغيير الطلب الى
                             </Button>
-                            <IsAdmin>
+                            <CanAccess permission="discounts">
                                 <LoadingButton
                                     disabled={disableAllControls}
                                     onCustomClick={(finish) =>
@@ -360,7 +361,7 @@ export default function ManageOrder({
                                 >
                                     خصم
                                 </LoadingButton>
-                            </IsAdmin>
+                            </CanAccess>
                             <LoadingButton
                                 disabled={disableAllControls}
                                 onCustomClick={(finish) =>
@@ -382,7 +383,7 @@ export default function ManageOrder({
                                 انهاء الطلب
                             </LoadingButton>
                             {orderCompleted && (
-                                <IsAdmin>
+                                <CanAccess permission="cancelOrders">
                                     <Popconfirm
                                         title="هل انت متأكد من الغاء الطلب؟"
                                         okText="نعم"
@@ -398,7 +399,7 @@ export default function ManageOrder({
                                             الغاء
                                         </Button>
                                     </Popconfirm>
-                                </IsAdmin>
+                                </CanAccess>
                             )}
                         </div>
 
