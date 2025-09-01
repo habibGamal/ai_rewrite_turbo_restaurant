@@ -129,7 +129,7 @@ class WasteResource extends Resource
                                     ->numeric()
                                     ->required()
                                     ->default(1)
-                                    ->minValue(1),
+                                    ->minValue(0),
 
 
                                 TextInput::make('price')

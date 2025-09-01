@@ -20,13 +20,13 @@
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
     $logoPath =
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
-            ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
-            : null;
-    
+        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
+        : null;
+
     $qrLogoPath =
         setting(SettingKey::RESTAURANT_QR_LOGO) !== ''
-            ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
-            : null;
+        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
+        : null;
 
     // Format dates
     $orderDate = $order->created_at->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');
@@ -200,9 +200,9 @@
 
         <table>
             <thead>
-            <tr>
-                <th>المنتج</th>
-                <th>الكمية</th>
+                <tr>
+                    <th>المنتج</th>
+                    <th>الكمية</th>
                     <th>السعر</th>
                     <th>الاجمالي</th>
                 </tr>
@@ -253,8 +253,9 @@
         <div class="footer-logos">
             @if ($qrLogoPath)
                 <img src="{{ $imgToDataUri($qrLogoPath) }}" alt="Restaurant QR Logo" />
+            @else
+                <img src="{{ $footerLogo }}" alt="Turbo Logo" />
             @endif
-            <img src="{{ $footerLogo }}" alt="Turbo Logo" />
         </div>
 
         <p class="company-info">Turbo Software Space</p>
