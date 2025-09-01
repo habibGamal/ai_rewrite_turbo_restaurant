@@ -139,6 +139,13 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
+                    ->state(function ($record) {
+                        $monthlyRate = $record->avg_month_rate ?? 0;
+                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        // show budget distributed over days of the month (amount per day)
+                        $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
+                        return $monthlyRate > 0 ? number_format($monthlyRate, 2) : 'غير محدد';
+                    })
                     ->placeholder('غير محدد')
                     ->color('info'),
 
@@ -147,6 +154,9 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->state(function ($record) {
                         $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
+                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        // compare against budget distributed over days of the month (amount per day)
+                        $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
                         if ($monthlyRate == 0) {
                             return 'غير محدد';
