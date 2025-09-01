@@ -1,11 +1,14 @@
-import { OrderItemData, OrderItemAction, User, Product } from '@/types';
+import { OrderItemData, OrderItemAction, User, Product } from "@/types";
 
 // Barcode parser function
-const parseBarcode = (barcode: string, scalePrefix: string = '23'): {
+const parseBarcode = (
+    barcode: string,
+    scalePrefix: string = "23"
+): {
     productBarcode: string;
     weightKg?: number;
     checksum: number;
-    isScaleBarcode: boolean
+    isScaleBarcode: boolean;
 } | null => {
     // Remove any whitespace and validate length
     const cleanBarcode = barcode.trim();
@@ -40,7 +43,7 @@ const parseBarcode = (barcode: string, scalePrefix: string = '23'): {
             productBarcode: productCode,
             weightKg,
             checksum: parseInt(checksum),
-            isScaleBarcode: true
+            isScaleBarcode: true,
         };
     } else {
         // Standard EAN-13 product barcode
@@ -50,7 +53,7 @@ const parseBarcode = (barcode: string, scalePrefix: string = '23'): {
         return {
             productBarcode,
             checksum: parseInt("1"),
-            isScaleBarcode: false
+            isScaleBarcode: false,
         };
     }
 };
@@ -62,13 +65,19 @@ export const orderItemsReducer = (
     let canChange = true;
     let limit = 0;
 
-    if (action.type !== 'add' && action.type !== 'init' && action.type !== 'addByBarcode') {
-        const isAdmin = action.user.role === 'admin';
+    if (
+        action.type !== "add" &&
+        action.type !== "init" &&
+        action.type !== "addByBarcode"
+    ) {
+        const isAdmin = action.user.role === "admin";
         const canChangeItems = action.user.canChangeOrderItems ?? false;
         const orderItem = action.id
             ? state.find((item) => item.product_id === action.id!)
             : null;
-        const itemSavedBefore = orderItem?.initial_quantity !== null && orderItem?.initial_quantity !== undefined;
+        const itemSavedBefore =
+            orderItem?.initial_quantity !== null &&
+            orderItem?.initial_quantity !== undefined;
 
         if (!isAdmin && !canChangeItems && itemSavedBefore) {
             canChange = false;
@@ -77,7 +86,7 @@ export const orderItemsReducer = (
     }
 
     switch (action.type) {
-        case 'add': {
+        case "add": {
             // Check if the order item already exists
             const existingItem = state.find(
                 (item) => item.product_id === action.orderItem.product_id
@@ -93,21 +102,24 @@ export const orderItemsReducer = (
             return [...state, action.orderItem];
         }
 
-        case 'remove':
+        case "remove":
             return canChange
                 ? state.filter((item) => item.product_id !== action.id)
                 : state;
 
-        case 'increment':
+        case "increment":
             return state.map((item) =>
                 item.product_id === action.id
                     ? { ...item, quantity: item.quantity + 1 }
                     : item
             );
 
-        case 'decrement': {
-            const orderItem = state.find((item) => item.product_id === action.id);
-            if (!canChange && orderItem && orderItem.quantity === limit) return state;
+        case "decrement": {
+            const orderItem = state.find(
+                (item) => item.product_id === action.id
+            );
+            if (!canChange && orderItem && orderItem.quantity === limit)
+                return state;
 
             return state.map((item) => {
                 if (item.product_id !== action.id) return item;
@@ -118,7 +130,7 @@ export const orderItemsReducer = (
             });
         }
 
-        case 'changeQuantity': {
+        case "changeQuantity": {
             if (!canChange && action.quantity < limit) {
                 action.quantity = limit;
             }
@@ -129,23 +141,26 @@ export const orderItemsReducer = (
             });
         }
 
-        case 'changeNotes': {
+        case "changeNotes": {
             return state.map((item) => {
                 if (item.product_id !== action.id) return item;
                 return { ...item, notes: action.notes };
             });
         }
 
-        case 'delete':
+        case "delete":
             return canChange
                 ? state.filter((item) => item.product_id !== action.id)
                 : state;
 
-        case 'init':
+        case "init":
             return action.orderItems;
 
-        case 'addByBarcode': {
-            const parsedBarcode = parseBarcode(action.barcode, action.scalePrefix);
+        case "addByBarcode": {
+            const parsedBarcode = parseBarcode(
+                action.barcode,
+                action.scalePrefix
+            );
             if (!parsedBarcode) {
                 // Invalid barcode format
                 return state;
@@ -156,10 +171,14 @@ export const orderItemsReducer = (
 
             if (parsedBarcode.isScaleBarcode) {
                 // For scale barcodes, find product by PLU/product code
-                product = action.products.find(p => p.barcode === parsedBarcode.productBarcode);
+                product = action.products.find(
+                    (p) => p.barcode === parsedBarcode.productBarcode
+                );
             } else {
                 // For standard barcodes, find product by full barcode
-                product = action.products.find(p => p.barcode === parsedBarcode.productBarcode);
+                product = action.products.find(
+                    (p) => p.barcode === parsedBarcode.productBarcode
+                );
             }
 
             if (!product) {
@@ -168,13 +187,16 @@ export const orderItemsReducer = (
             }
 
             // Check if the order item already exists
-            const existingItemIndex = state.findIndex(item => item.product_id === product.id);
+            const existingItemIndex = state.findIndex(
+                (item) => item.product_id === product.id
+            );
 
             if (existingItemIndex !== -1) {
                 // If it exists, add the weight/quantity to the existing quantity
-                const quantityToAdd = parsedBarcode.isScaleBarcode && parsedBarcode.weightKg
-                    ? parsedBarcode.weightKg
-                    : 1;
+                const quantityToAdd =
+                    parsedBarcode.isScaleBarcode && parsedBarcode.weightKg
+                        ? parsedBarcode.weightKg
+                        : 1;
 
                 return state.map((item, index) =>
                     index === existingItemIndex
@@ -183,9 +205,10 @@ export const orderItemsReducer = (
                 );
             } else {
                 // Add new item
-                const quantity = parsedBarcode.isScaleBarcode && parsedBarcode.weightKg
-                    ? parsedBarcode.weightKg
-                    : 1;
+                const quantity =
+                    parsedBarcode.isScaleBarcode && parsedBarcode.weightKg
+                        ? parsedBarcode.weightKg
+                        : 1;
 
                 const newItem: OrderItemData = {
                     product_id: product.id,
@@ -194,12 +217,13 @@ export const orderItemsReducer = (
                     quantity: quantity,
                     notes: ``,
                     initial_quantity: undefined,
+                    product: product,
                 };
                 return [...state, newItem];
             }
         }
 
         default:
-            throw new Error('Action not found');
+            throw new Error("Action not found");
     }
 };

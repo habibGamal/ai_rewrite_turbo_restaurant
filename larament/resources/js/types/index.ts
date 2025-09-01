@@ -105,6 +105,7 @@ export interface OrderItemData {
   quantity: number;
   notes?: string;
   initial_quantity?: number;
+  product: Product;
 }
 
 export interface KitchenItemForPrint {

@@ -39,6 +39,7 @@ export default function Categories({ categories, dispatch, disabled, user }: Cat
                 price: product.price,
                 quantity: 1,
                 initial_quantity: undefined,
+                product,
             },
             user,
         });

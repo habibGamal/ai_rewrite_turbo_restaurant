@@ -175,6 +175,9 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->color(function ($record) {
                         $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
+                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        // compare against budget distributed over days of the month (amount per day)
+                        $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
                         if ($monthlyRate == 0) {
                             return 'gray';
@@ -184,8 +187,11 @@ class CurrentShiftExpensesTable extends BaseWidget
                     })
                     ->alignCenter()
                     ->icon(function ($record) {
-                        $current = $record->total_amount ?? 0;
+                         $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
+                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        // compare against budget distributed over days of the month (amount per day)
+                        $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
                         if ($monthlyRate == 0) {
                             return 'heroicon-o-question-mark-circle';

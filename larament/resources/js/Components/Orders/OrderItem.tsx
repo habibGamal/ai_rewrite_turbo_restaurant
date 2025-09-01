@@ -70,7 +70,10 @@ export default function OrderItem({
         setNotes(orderItem.notes || "");
         setIsNotesModalOpen(true);
     };
-
+    console.log("Rendering OrderItem:", orderItem);
+    const quantityCanBeFraction = ["kg", "كجم", "كيلوجرام"].includes(
+        orderItem.product.unit
+    );
     return (
         <>
             <div className="isolate-3 flex flex-col gap-4 my-4">
@@ -99,8 +102,8 @@ export default function OrderItem({
                         <InputNumber
                             disabled={quantityDisabled}
                             min={0.001}
-                            step={0.001}
-                            precision={3}
+                            step={1}
+                            precision={quantityCanBeFraction ? 3 : 0}
                             value={orderItem.quantity}
                             onChange={onChangeQuantity}
                             style={{ width: 80 }}

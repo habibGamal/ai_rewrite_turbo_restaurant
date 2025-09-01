@@ -63,16 +63,16 @@ export default function ManageOrder({
     const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
     const user = auth.user as User;
     const { modal } = App.useApp();
-    const barcodeScanner = (symbol: string,type:any) => {
+    const barcodeScanner = (symbol: string, type: any) => {
         const barcode = symbol;
-        console.log("Scanned barcode:", barcode,type);
+        console.log("Scanned barcode:", barcode, type);
         // Use dispatch to add item by barcode
         dispatch({
-            type: 'addByBarcode',
+            type: "addByBarcode",
             barcode: barcode,
             products: products,
             scalePrefix: scaleBarcodePrefix as string,
-            user: user
+            user: user,
         });
     };
     const symbologies = ["EAN 13"] as StandardSymbologyKey[];
@@ -96,6 +96,9 @@ export default function ManageOrder({
         quantity: orderItem.quantity,
         notes: orderItem.notes,
         initial_quantity: orderItem.quantity,
+        product: products.find(
+            (product) => product.id === orderItem.product_id
+        )!,
     }));
 
     const [orderItems, dispatch] = useReducer(orderItemsReducer, []);
