@@ -61,6 +61,9 @@ export default function ManageWebOrder({
             quantity: orderItem.quantity,
             notes: orderItem.notes,
             initial_quantity: orderItem.quantity,
+            product: products.find(
+                (product) => product.id === orderItem.product_id
+            )!,
         })) || [];
 
     const [orderItems, dispatch] = useReducer(orderItemsReducer, []);
