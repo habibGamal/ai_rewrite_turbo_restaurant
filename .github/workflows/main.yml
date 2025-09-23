@@ -1,0 +1,28 @@
+name: Build Larament
+
+on:
+  push:
+    branches: [ "main" ] # or your deployment branch
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # use your required Node.js version
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: larament
+
+      - name: Build project
+        run: npm run build
+        working-directory: larament
