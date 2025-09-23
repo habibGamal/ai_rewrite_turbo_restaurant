@@ -3,6 +3,15 @@ set -e
 cd /var/www/turbo_restaurant
 git reset --hard
 git pull
+if [ ! -x /usr/local/bin/wkhtmltoimage ]; then
+    if [ -f ./wkhtmltoimage ]; then
+        echo "Installing wkhtmltoimage to /usr/local/bin"
+        cp ./wkhtmltoimage /usr/local/bin/wkhtmltoimage
+        chmod +x /usr/local/bin/wkhtmltoimage
+    else
+        echo "Warning: ./wkhtmltoimage not found, skipping installation"
+    fi
+fi
 cd /var/www/turbo_restaurant/larament
 composer install
 npm install
