@@ -63,8 +63,8 @@
         }
 
         body {
-            font-family: sans-serif;
-            font-size: 26px;
+            /* font-family: sans-serif; */
+            font-size: 22px;
             font-weight: bold;
             line-height: 1.4;
             color: black;
