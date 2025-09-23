@@ -46,7 +46,7 @@ class WkhtmltoimagePrintStrategy implements PrintStrategyInterface
             // Build wkhtmltoimage command
             $command = [
                 // 'wkhtmltoimage',
-                "C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltoimage.exe",
+                $this->getWkhtmltoimagePath(),
                 '--width', (string) $width,
                 // '--height', (string) $height,
                 '--format', 'png',
