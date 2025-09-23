@@ -7,15 +7,37 @@ use App\Models\Order;
 use App\Enums\SettingKey;
 use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
+use App\Services\PrintStrategies\PrintStrategyInterface;
+use App\Services\PrintStrategies\BrowsershotPrintStrategy;
+use App\Services\PrintStrategies\WkhtmltoimagePrintStrategy;
+use App\Services\PrintStrategies\PrintStrategyFactory;
 use Illuminate\Support\Facades\Storage;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
-use Spatie\Browsershot\Browsershot;
 
 class PrintService
 {
+    private const USE_QUEUE = false;
+    private PrintStrategyInterface $printStrategy;
+
+    public function __construct()
+    {
+        $this->printStrategy = $this->createPrintStrategy();
+    }
+
+    /**
+     * Create the appropriate print strategy
+     * You can modify this method to switch between strategies programmatically
+     */
+    private function createPrintStrategy(): PrintStrategyInterface
+    {
+        // Use factory to get the best available strategy
+        $strategy = PrintStrategyFactory::create('wkhtmltoimage');
+        \Log::info("Using print strategy: " . $strategy->getName());
+        return $strategy;
+    }
     /**
      * Create appropriate print connector based on printer IP format
      */
@@ -45,15 +67,27 @@ class PrintService
      */
     public function printOrderReceipt(Order $order, array $images): void
     {
-        PrintOrderReceipt::dispatch($order);
+        if (self::USE_QUEUE) {
+            \Log::info("Dispatching order receipt to queue for order {$order->id}");
+            PrintOrderReceipt::dispatch($order);
+        } else {
+            \Log::info("Printing order receipt directly for order {$order->id}");
+            $this->printOrderProcess($order);
+        }
     }
 
     /**
-     * Print order receipt
+     * Print kitchen receipt
      */
     public function printKitchenReceipt($orderId, $items): void
     {
-        $this->printKitchenViaBrowsershotQueued($orderId, $items);
+        if (self::USE_QUEUE) {
+            \Log::info("Dispatching kitchen receipt to queue for order {$orderId}");
+            $this->printKitchenQueued($orderId, $items);
+        } else {
+            \Log::info("Printing kitchen receipt directly for order {$orderId}");
+            $this->printKitchenDirect($orderId, $items);
+        }
     }
 
     /**
@@ -82,9 +116,71 @@ class PrintService
     }
 
     /**
-     * Print kitchen order via Browsershot (dispatched to queue)
+     * Print kitchen order directly (synchronous)
      */
-    private function printKitchenViaBrowsershotQueued($orderId, $items): void
+    private function printKitchenDirect($orderId, $items): void
+    {
+        try {
+            \Log::info("Starting direct kitchen printing for order {$orderId}");
+
+            // Load order with relationships
+            $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
+
+            // Validate and prepare items data
+            $preparedItems = $this->prepareKitchenItems($items);
+
+            if (empty($preparedItems)) {
+                throw new \Exception('لا توجد منتجات للطباعة');
+            }
+
+            // Get product IDs from items to find their printers
+            $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
+
+            // Get products with their printers
+            $products = \App\Models\Product::with('printers:id')
+                ->whereIn('id', $productIds)
+                ->get(['id']);
+
+            // Map items to printers
+            $itemsByPrinterMap = [];
+
+            foreach ($preparedItems as $item) {
+                $product = $products->firstWhere('id', $item['product_id']);
+
+                if ($product && $product->printers->isNotEmpty()) {
+                    foreach ($product->printers as $printer) {
+                        if (!isset($itemsByPrinterMap[$printer->id])) {
+                            $itemsByPrinterMap[$printer->id] = [];
+                        }
+
+                        // Add item to this printer's list
+                        $itemsByPrinterMap[$printer->id][] = $item;
+                    }
+                }
+            }
+
+            // Print directly to each printer
+            foreach ($itemsByPrinterMap as $printerId => $printerItems) {
+                $this->printKitchenProcess($order, $printerItems, $printerId);
+            }
+
+            if (empty($itemsByPrinterMap)) {
+                \Log::warning("No printers found for order {$orderId} items");
+                throw new \Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+            }
+
+            \Log::info("Kitchen printing completed directly for order {$orderId}");
+
+        } catch (\Exception $e) {
+            \Log::error("Error in direct kitchen printing for order {$orderId}: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Print kitchen order via queue (asynchronous)
+     */
+    private function printKitchenQueued($orderId, $items): void
     {
         try {
             \Log::info("Starting kitchen printing via queue for order {$orderId}");
@@ -181,7 +277,7 @@ class PrintService
     /**
      * Print kitchen order to a specific printer
      */
-    public function printKitchenToPrinter(Order $order, array $orderItems, int $printerId): void
+    public function printKitchenProcess(Order $order, array $orderItems, int $printerId): void
     {
         try {
             $printer = \App\Models\Printer::findOrFail($printerId);
@@ -190,26 +286,14 @@ class PrintService
                 \Log::warning("Printer {$printer->name} has no IP address configured");
                 return;
             }
-            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address})");
+            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
 
             // ---------- 1. Generate HTML content using kitchen template ----------
             $html = $this->generateKitchenHtml($order, $orderItems);
-            // ---------- 2. Convert HTML to image using Browsershot ----------
-            $tempImagePath = tempnam(sys_get_temp_dir(), 'kitchen_browsershot_') . '.png';
 
+            // ---------- 2. Convert HTML to image using current strategy ----------
+            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
 
-            Browsershot::html($html)
-                ->windowSize(572, 100) // Kitchen receipt width
-                ->setOption('executablePath', '/usr/bin/chromium-browser')
-                ->setEnvironmentOptions([
-                    'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
-                    'HOME' => base_path('.puppeteer')             // fallback
-                ])
-                ->setRemoteInstance('127.0.0.1', 9222)
-                ->dismissDialogs()
-                ->ignoreHttpsErrors()
-                ->fullPage()
-                ->save($tempImagePath);
             // ---------- 3. Print via escpos-php ----------
             $connector = $this->createConnector($printer->ip_address);
             $escposPrinter = new Printer($connector);
@@ -283,10 +367,9 @@ class PrintService
     }
 
     /**
-     * Test direct Arabic text printing using Browsershot and escpos-php
-     * Generates Arabic receipt HTML then converts to image
+     * Print order receipt using the current strategy
      */
-    public function printOrderViaBrowsershot(Order $order): void
+    public function printOrderProcess(Order $order): void
     {
         try {
 
@@ -294,7 +377,7 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            \Log::info("Testing Browsershot Arabic text printing for order {$order->id}");
+            \Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
 
             // Load order with relationships
             $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
@@ -303,23 +386,9 @@ class PrintService
             // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
             $html = $this->generateReceiptHtml($order);
 
-            // ---------- 2. Convert HTML to image using Browsershot ----------
-            $tempImagePath = tempnam(sys_get_temp_dir(), 'receipt_browsershot_') . '.png';
-            $start = microtime(true);
-            Browsershot::html($html)
-                ->windowSize(567, 1200) // Thermal printer width (72mm ≈ 576px at 203dpi)
-                ->setOption('executablePath', '/usr/bin/chromium-browser')
-                ->setEnvironmentOptions([
-                    'XDG_CONFIG_HOME' => base_path('.puppeteer'), // custom cache dir
-                    'HOME' => base_path('.puppeteer')             // fallback
-                ])
-                ->setRemoteInstance('127.0.0.1', 9222) // Use remote instance for Puppeteer
-                ->dismissDialogs()
-                ->ignoreHttpsErrors()
-                ->fullPage()
-                ->save($tempImagePath);
-            $end = microtime(true);
-            \Log::info("Browsershot processing time: " . ($end - $start) . " seconds");
+            // ---------- 2. Convert HTML to image using current strategy ----------
+            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
+
             // ---------- 3. Print via escpos-php ----------
             $printer->setJustification(Printer::JUSTIFY_CENTER);
 
@@ -332,10 +401,10 @@ class PrintService
             // Clean up
             unlink($tempImagePath);
 
-            \Log::info("Browsershot Arabic text printing completed successfully for order {$order->id}");
+            \Log::info("Order receipt printing completed successfully for order {$order->id}");
 
         } catch (\Exception $e) {
-            \Log::error("Error in Browsershot Arabic text printing for order {$order->id}: " . $e->getMessage());
+            \Log::error("Error printing order receipt for order {$order->id}: " . $e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -355,5 +424,71 @@ class PrintService
         ])->render();
     }
 
+    /**
+     * Set the print strategy programmatically by name
+     */
+    public function setPrintStrategyByName(string $strategyName): void
+    {
+        $this->printStrategy = PrintStrategyFactory::create($strategyName);
+        \Log::info("Print strategy changed to: " . $this->printStrategy->getName());
+    }
 
+    /**
+     * Set the print strategy programmatically
+     */
+    public function setPrintStrategy(PrintStrategyInterface $strategy): void
+    {
+        $this->printStrategy = $strategy;
+        \Log::info("Print strategy changed to: " . $strategy->getName());
+    }
+
+    /**
+     * Get the current print strategy
+     */
+    public function getPrintStrategy(): PrintStrategyInterface
+    {
+        return $this->printStrategy;
+    }
+
+    /**
+     * Get all available print strategies
+     */
+    public function getAvailableStrategies(): array
+    {
+        return PrintStrategyFactory::getAvailableStrategies();
+    }
+
+    /**
+     * Check if a specific strategy is available
+     */
+    public function isStrategyAvailable(string $strategyName): bool
+    {
+        try {
+            $strategy = PrintStrategyFactory::create($strategyName);
+            return $strategy->isAvailable();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get the current queue usage setting
+     */
+    public function isUsingQueue(): bool
+    {
+        return self::USE_QUEUE;
+    }
+
+    /**
+     * Get queue and strategy status information
+     */
+    public function getStatusInfo(): array
+    {
+        return [
+            'using_queue' => self::USE_QUEUE,
+            'current_strategy' => $this->printStrategy->getName(),
+            'strategy_available' => $this->printStrategy->isAvailable(),
+            'available_strategies' => array_keys($this->getAvailableStrategies()),
+        ];
+    }
 }

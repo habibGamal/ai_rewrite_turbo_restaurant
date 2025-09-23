@@ -39,7 +39,7 @@ class PrintKitchenOrder implements ShouldQueue
             Log::info("Processing kitchen print job for order {$this->order->id} to printer {$this->printerId}");
 
             // Call the private method from PrintService
-            $printService->printKitchenToPrinter($this->order, $this->orderItems, $this->printerId);
+            $printService->printKitchenProcess($this->order, $this->orderItems, $this->printerId);
 
             Log::info("Kitchen print job completed successfully for order {$this->order->id}");
         } catch (\Exception $e) {

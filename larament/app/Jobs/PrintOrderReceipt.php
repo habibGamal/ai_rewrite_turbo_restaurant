@@ -37,7 +37,7 @@ class PrintOrderReceipt implements ShouldQueue
         try {
             Log::info("Processing order receipt print job for order {$this->order->id}");
 
-            $printService->printOrderViaBrowsershot($this->order);
+            $printService->printOrderProcess($this->order);
 
             Log::info("Order receipt print job completed successfully for order {$this->order->id}");
         } catch (\Exception $e) {
