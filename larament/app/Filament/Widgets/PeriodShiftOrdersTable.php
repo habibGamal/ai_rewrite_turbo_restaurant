@@ -267,7 +267,7 @@ class PeriodShiftOrdersTable extends BaseWidget
                     ->icon('heroicon-o-printer')
                     ->color('primary')
                     ->action(function ($record) {
-                        app(\App\Services\PrintService::class)->printOrderReceipt($record, []);
+                        app(\App\Services\PrintService::class)->printOrderReceipt($record);
                     })
             ])
             ->recordAction(Tables\Actions\ViewAction::class)

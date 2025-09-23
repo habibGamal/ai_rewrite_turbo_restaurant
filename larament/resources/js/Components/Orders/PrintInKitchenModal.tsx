@@ -4,8 +4,7 @@ import { router } from '@inertiajs/react';
 import { CheckboxChangeEvent } from 'antd/es/checkbox';
 import axios from 'axios';
 import { Order, OrderItemData } from '@/types';
-import printTemplate from '@/helpers/printTemplate';
-import KitchenTemplate, { KitchenItemForPrint } from '../Print/KitchenTemplate';
+import { KitchenItemForPrint } from '../Print/KitchenTemplate';
 
 type CheckboxValueType = string | number | boolean;
 

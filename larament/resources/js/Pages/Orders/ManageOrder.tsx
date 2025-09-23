@@ -196,14 +196,10 @@ export default function ManageOrder({
     const printWithCanvas = async (finish: () => void) => {
         if (orderInProcess) {
             save(async (page) => {
-                printOrder(
-                    page.props.order,
-                    orderItems,
-                    (receiptFooter as string) || ""
-                );
+                printOrder(page.props.order);
             }, finish);
         } else {
-            printOrder(order, orderItems, (receiptFooter as string) || "");
+            printOrder(order);
             finish();
         }
     };

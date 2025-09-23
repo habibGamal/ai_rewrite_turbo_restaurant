@@ -63,8 +63,8 @@
         }
 
         body {
-            /* font-family: 'Cairo', 'Amiri', serif; */
-            font-size: 18px;
+            font-family: sans-serif;
+            font-size: 26px;
             font-weight: bold;
             line-height: 1.4;
             color: black;
@@ -147,7 +147,8 @@
             justify-content: center;
             align-items: center;
             gap: 20px;
-            margin: 20px 0;
+            margin: 20px auto;
+            text-align: center;
         }
 
         .footer-logos img {

@@ -51,7 +51,7 @@ class WkhtmltoimagePrintStrategy implements PrintStrategyInterface
                 // '--height', (string) $height,
                 '--format', 'png',
                 '--quiet',
-                '--quality', '80',
+                '--quality', '100',
                 '--encoding', 'UTF-8',
                 '--disable-smart-width',
                 '--disable-javascript',

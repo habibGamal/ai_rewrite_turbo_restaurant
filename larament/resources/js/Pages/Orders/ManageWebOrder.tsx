@@ -169,11 +169,7 @@ export default function ManageWebOrder({
 
     const printWithCanvas = async (finish: () => void = () => {}) => {
         save(async (page) => {
-            await printOrder(
-                page.props.order,
-                orderItems,
-                page.props.receiptFooter?.[0]?.value
-            );
+            printOrder(page.props.order);
         }, finish);
     };
 

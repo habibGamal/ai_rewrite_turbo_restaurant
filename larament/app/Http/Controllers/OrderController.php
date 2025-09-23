@@ -613,7 +613,7 @@ class OrderController extends Controller
         $order = $this->orderService->getOrderDetails($order->id);
 
         try {
-            $this->printService->printOrderReceipt($order, $request->input('images'));
+            $this->printService->printOrderReceipt($order);
 
             return back()->with('success', 'تم إرسال طباعة الطلب بنجاح');
         } catch (\Exception $e) {

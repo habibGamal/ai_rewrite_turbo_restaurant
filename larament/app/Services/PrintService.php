@@ -65,7 +65,7 @@ class PrintService
     /**
      * Print order receipt
      */
-    public function printOrderReceipt(Order $order, array $images): void
+    public function printOrderReceipt(Order $order): void
     {
         if (self::USE_QUEUE) {
             \Log::info("Dispatching order receipt to queue for order {$order->id}");
