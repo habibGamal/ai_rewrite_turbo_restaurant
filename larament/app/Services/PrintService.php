@@ -34,7 +34,7 @@ class PrintService
     private function createPrintStrategy(): PrintStrategyInterface
     {
         // Use factory to get the best available strategy
-        $strategy = PrintStrategyFactory::create('browsershot');
+        $strategy = PrintStrategyFactory::create('wkhtmltoimage');
         \Log::info("Using print strategy: " . $strategy->getName());
         return $strategy;
     }

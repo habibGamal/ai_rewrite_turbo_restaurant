@@ -12,6 +12,13 @@ if [ ! -x /usr/local/bin/wkhtmltoimage ]; then
         echo "Warning: ./wkhtmltoimage not found, skipping installation"
     fi
 fi
+if ! apk info -e font-dejavu > /dev/null 2>&1; then
+  echo "🖋 Installing font-dejavu..."
+  apk update && apk add font-dejavu
+  echo "✅ font-dejavu installed successfully."
+else
+  echo "✔ font-dejavu is already installed."
+fi
 cd /var/www/turbo_restaurant/larament
 composer install
 npm install
