@@ -153,6 +153,18 @@ export const orderItemsReducer = (
                 ? state.filter((item) => item.product_id !== action.id)
                 : state;
 
+        case "changeItemDiscount": {
+            return state.map((item) => {
+                if (item.product_id !== action.id) return item;
+                return {
+                    ...item,
+                    item_discount: action.discount,
+                    item_discount_type: action.discountType,
+                    item_discount_percent: action.discountPercent,
+                };
+            });
+        }
+
         case "init":
             return action.orderItems;
 

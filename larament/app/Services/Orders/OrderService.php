@@ -70,17 +70,45 @@ class OrderService
 
             $productIds = array_column($itemsData, 'product_id');
             $products = Product::select(['id', 'cost', 'price'])->whereIn('id', $productIds)->get();
+
+            // Check if using item-level discounts and clear order-level discount if needed
+            $hasItemDiscounts = collect($itemsData)->some(fn($item) => ($item['item_discount'] ?? 0) > 0);
+            if ($hasItemDiscounts && ($order->discount > 0 || $order->temp_discount_percent > 0)) {
+                $this->orderRepository->update($order, [
+                    'discount' => 0,
+                    'temp_discount_percent' => 0,
+                ]);
+            }
+
             $itemsData = array_map(function ($item) use ($products) {
                 $product = $products->firstWhere('id', $item['product_id']);
                 if (!$product) {
                     throw new OrderException('المنتج غير موجود');
                 }
+
+                // Calculate item discount
+                $itemDiscount = 0;
+                $itemDiscountType = $item['item_discount_type'] ?? null;
+                $itemDiscountPercent = $item['item_discount_percent'] ?? null;
+
+                if ($itemDiscountType === 'percent' && $itemDiscountPercent) {
+                    $itemSubtotal = $product->price * $item['quantity'];
+                    $itemDiscount = $itemSubtotal * ($itemDiscountPercent / 100);
+                    $itemDiscount = min($itemDiscount, $itemSubtotal); // Cap at subtotal
+                } elseif (isset($item['item_discount'])) {
+                    $itemSubtotal = $product->price * $item['quantity'];
+                    $itemDiscount = min($item['item_discount'], $itemSubtotal); // Cap at subtotal
+                }
+
                 return [
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'price' => (float) $product->price,
                     'cost' => (float) $product->cost,
                     'notes' => $item['notes'] ?? null,
+                    'item_discount' => $itemDiscount,
+                    'item_discount_type' => $itemDiscountType,
+                    'item_discount_percent' => $itemDiscountPercent,
                 ];
             }, $itemsData);
 

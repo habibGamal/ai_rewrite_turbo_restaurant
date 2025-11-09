@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Button, InputNumber, Tag, Typography, Modal, Input } from "antd";
+import { Button, InputNumber, Tag, Typography, Modal, Input, Radio, Form } from "antd";
 import {
     MinusCircleOutlined,
     PlusCircleOutlined,
     DeleteOutlined,
     EditOutlined,
+    PercentageOutlined,
 } from "@ant-design/icons";
 
 import { OrderItemData, OrderItemAction, User } from "@/types";
@@ -28,7 +29,9 @@ export default function OrderItem({
     forWeb,
 }: OrderItemProps) {
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+    const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
     const [notes, setNotes] = useState(orderItem.notes || "");
+    const [discountForm] = Form.useForm();
 
     // For web orders, disable quantity changes but allow notes editing
     const quantityDisabled = disabled || forWeb;
@@ -70,6 +73,50 @@ export default function OrderItem({
         setNotes(orderItem.notes || "");
         setIsNotesModalOpen(true);
     };
+
+    const onOpenDiscountModal = () => {
+        discountForm.setFieldsValue({
+            discount_type: orderItem.item_discount_type || 'value',
+            discount: orderItem.item_discount_type === 'percent'
+                ? orderItem.item_discount_percent || 0
+                : orderItem.item_discount || 0,
+        });
+        setIsDiscountModalOpen(true);
+    };
+
+    const onSaveDiscount = () => {
+        discountForm.validateFields().then((values) => {
+            const discountType = values.discount_type;
+            const discountValue = values.discount || 0;
+
+            let itemDiscount = 0;
+            let itemDiscountPercent = undefined;
+
+            if (discountType === 'percent') {
+                itemDiscountPercent = discountValue;
+                // Calculate actual discount amount for display
+                const itemSubtotal = orderItem.price * orderItem.quantity;
+                itemDiscount = itemSubtotal * (discountValue / 100);
+            } else {
+                itemDiscount = discountValue;
+            }
+
+            dispatch({
+                type: 'changeItemDiscount',
+                id: orderItem.product_id,
+                discount: itemDiscount,
+                discountType: discountType,
+                discountPercent: itemDiscountPercent,
+                user,
+            });
+            setIsDiscountModalOpen(false);
+        });
+    };
+
+    const itemSubtotal = orderItem.price * orderItem.quantity;
+    const itemDiscount = orderItem.item_discount || 0;
+    const itemTotal = itemSubtotal - itemDiscount;
+
     console.log("Rendering OrderItem:", orderItem);
     const quantityCanBeFraction = ["kg", "كجم", "كيلوجرام"].includes(
         orderItem.product.unit
@@ -118,18 +165,45 @@ export default function OrderItem({
                     </div>
                 </div>
                 <div className="flex justify-between items-center">
-                    <Typography.Text>
-                        السعر :
-                        <Tag
-                            className="mx-4 text-lg"
-                            bordered={false}
-                            color="success"
-                        >
-                            {formatCurrency(
-                                orderItem.price * orderItem.quantity
-                            )}
-                        </Tag>
-                    </Typography.Text>
+                    <div className="flex flex-col gap-1">
+                        <Typography.Text>
+                            السعر :
+                            <Tag
+                                className="mx-4 text-lg"
+                                bordered={false}
+                                color="success"
+                            >
+                                {formatCurrency(itemSubtotal)}
+                            </Tag>
+                        </Typography.Text>
+                        {itemDiscount > 0 && (
+                            <>
+                                <Typography.Text>
+                                    الخصم :
+                                    <Tag
+                                        className="mx-4 text-lg"
+                                        bordered={false}
+                                        color="error"
+                                    >
+                                        {formatCurrency(itemDiscount)}
+                                        {orderItem.item_discount_type === 'percent' &&
+                                            ` (${orderItem.item_discount_percent}%)`
+                                        }
+                                    </Tag>
+                                </Typography.Text>
+                                <Typography.Text strong>
+                                    الإجمالي :
+                                    <Tag
+                                        className="mx-4 text-lg"
+                                        bordered={false}
+                                        color="blue"
+                                    >
+                                        {formatCurrency(itemTotal)}
+                                    </Tag>
+                                </Typography.Text>
+                            </>
+                        )}
+                    </div>
                     <div className="flex gap-4">
                         <Button
                             disabled={quantityDisabled}
@@ -140,6 +214,16 @@ export default function OrderItem({
                             icon={<DeleteOutlined />}
                             size="small"
                         />
+                        {user.canApplyDiscounts && (
+                            <Button
+                                disabled={disabled}
+                                onClick={onOpenDiscountModal}
+                                type="default"
+                                className="icon-button"
+                                icon={<PercentageOutlined />}
+                                size="small"
+                            />
+                        )}
                         <Button
                             disabled={disabled} // Notes editing should follow the general disabled state
                             onClick={onOpenNotesModal}
@@ -166,6 +250,61 @@ export default function OrderItem({
                     placeholder="اكتب ملاحظات الصنف هنا..."
                     rows={4}
                 />
+            </Modal>
+
+            <Modal
+                title="خصم الصنف"
+                open={isDiscountModalOpen}
+                onOk={onSaveDiscount}
+                onCancel={() => setIsDiscountModalOpen(false)}
+                okText="تطبيق"
+                cancelText="إلغاء"
+            >
+                <Form
+                    form={discountForm}
+                    layout="vertical"
+                    initialValues={{
+                        discount_type: 'value',
+                        discount: 0,
+                    }}
+                >
+                    <Form.Item name="discount_type" label="نوع الخصم">
+                        <Radio.Group>
+                            <Radio value="value">مبلغ ثابت</Radio>
+                            <Radio value="percent">نسبة مئوية</Radio>
+                        </Radio.Group>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="discount"
+                        label="قيمة الخصم"
+                        rules={[
+                            { required: true, message: 'قيمة الخصم مطلوبة' },
+                            {
+                                validator: (_, value) => {
+                                    const discountType = discountForm.getFieldValue('discount_type');
+                                    if (discountType === 'percent' && value > 100) {
+                                        return Promise.reject('نسبة الخصم يجب ألا تتجاوز 100%');
+                                    }
+                                    if (discountType === 'value' && value > itemSubtotal) {
+                                        return Promise.reject('قيمة الخصم يجب ألا تتجاوز المجموع');
+                                    }
+                                    return Promise.resolve();
+                                },
+                            },
+                        ]}
+                    >
+                        <InputNumber
+                            min={0}
+                            style={{ width: '100%' }}
+                            placeholder="0"
+                        />
+                    </Form.Item>
+
+                    <Typography.Text type="secondary">
+                        مجموع الصنف: {formatCurrency(itemSubtotal)}
+                    </Typography.Text>
+                </Form>
             </Modal>
         </>
     );

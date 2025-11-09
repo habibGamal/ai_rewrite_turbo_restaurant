@@ -212,12 +212,34 @@
             </thead>
             <tbody>
                 @foreach ($order->items as $item)
+                    @php
+                        $itemSubtotal = $item->quantity * $item->price;
+                        $itemDiscount = $item->item_discount ?? 0;
+                        $itemTotal = $itemSubtotal - $itemDiscount;
+                    @endphp
                     <tr>
                         <td class="product-cell">{{ $item->product->name }}</td>
                         <td>{{ $item->quantity }}</td>
                         <td>{{ number_format($item->price, 2) }}</td>
-                        <td>{{ number_format($item->quantity * $item->price, 2) }}</td>
+                        <td>{{ number_format($itemSubtotal, 2) }}</td>
                     </tr>
+                    @if ($itemDiscount > 0)
+                        <tr>
+                            <td colspan="3" class="product-cell" style="text-align: left; padding-right: 20px;">
+                                خصم الصنف
+                                @if ($item->item_discount_type === 'percent' && $item->item_discount_percent)
+                                    ({{ number_format($item->item_discount_percent, 0) }}%)
+                                @endif
+                            </td>
+                            <td style="color: red;">-{{ number_format($itemDiscount, 2) }}</td>
+                        </tr>
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="3" class="product-cell" style="text-align: left; padding-right: 20px; font-weight: bold;">
+                                صافي الصنف
+                            </td>
+                            <td style="font-weight: bold;">{{ number_format($itemTotal, 2) }}</td>
+                        </tr>
+                    @endif
                 @endforeach
             </tbody>
         </table>

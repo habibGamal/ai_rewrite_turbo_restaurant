@@ -25,11 +25,36 @@ export const calculateOrderTotals = (
   } else if (order.type === 'dine_in') {
     service = subTotal * order.service_rate!;
   }
+
   let discount = 0;
-  if (order.temp_discount_percent > 0) {
-    discount = subTotal * (order.temp_discount_percent / 100);
+
+  // Check if using item-level discounts
+  const hasItemDiscounts = orderItems.some(item => (item.item_discount ?? 0) > 0);
+
+  if (hasItemDiscounts) {
+    // Calculate total discount from item-level discounts
+    discount = orderItems.reduce((acc, item) => {
+      const itemSubtotal = item.price * item.quantity;
+      let itemDiscount = 0;
+
+      if (item.item_discount_type === 'percent' && item.item_discount_percent) {
+        itemDiscount = itemSubtotal * (item.item_discount_percent / 100);
+      } else {
+        itemDiscount = item.item_discount ?? 0;
+      }
+
+      // Ensure discount doesn't exceed item subtotal
+      itemDiscount = Math.min(itemDiscount, itemSubtotal);
+
+      return acc + itemDiscount;
+    }, 0);
   } else {
-    discount = order.discount;
+    // Use order-level discount
+    if (order.temp_discount_percent > 0) {
+      discount = subTotal * (order.temp_discount_percent / 100);
+    } else {
+      discount = order.discount;
+    }
   }
 
   const total = Math.ceil(subTotal + tax + service - discount);

@@ -12,6 +12,7 @@ import {
     message,
     Popconfirm,
     Row,
+    Tag,
     Typography,
 } from "antd";
 import {
@@ -96,6 +97,9 @@ export default function ManageOrder({
         quantity: orderItem.quantity,
         notes: orderItem.notes,
         initial_quantity: orderItem.quantity,
+        item_discount: orderItem.item_discount || 0,
+        item_discount_type: orderItem.item_discount_type,
+        item_discount_percent: orderItem.item_discount_percent,
         product: products.find(
             (product) => product.id === orderItem.product_id
         )!,
@@ -132,6 +136,10 @@ export default function ManageOrder({
     // Calculate totals
     const totals = calculateOrderTotals(order, orderItems);
 
+    // Check if using item-level discounts
+    const hasItemDiscounts = orderItems.some(item => (item.item_discount ?? 0) > 0);
+    const hasOrderDiscount = order.discount > 0 || order.temp_discount_percent > 0;
+
     const save = (
         callback: (page: any) => void = () => {},
         finish: () => void
@@ -141,6 +149,9 @@ export default function ManageOrder({
             quantity: item.quantity,
             price: item.price,
             notes: item.notes || null,
+            item_discount: item.item_discount || 0,
+            item_discount_type: item.item_discount_type || null,
+            item_discount_percent: item.item_discount_percent || null,
         }));
 
         router.post(
@@ -344,21 +355,29 @@ export default function ManageOrder({
                             </Button>
                             <CanAccess permission="discounts">
                                 <LoadingButton
-                                    disabled={disableAllControls}
-                                    onCustomClick={(finish) =>
-                                        save(
-                                            () =>
-                                                setIsOrderDiscountModalOpen(
-                                                    true
-                                                ),
-                                            finish
-                                        )
-                                    }
+                                    disabled={disableAllControls || hasItemDiscounts}
+                                    onCustomClick={(finish) => {
+                                        if (hasItemDiscounts) {
+                                            modal.warning({
+                                                title: 'تنبيه',
+                                                content: 'لا يمكن تطبيق خصم على الطلب عند وجود خصومات على الأصناف. يرجى إزالة خصومات الأصناف أولاً.',
+                                            });
+                                            finish();
+                                        } else {
+                                            save(
+                                                () =>
+                                                    setIsOrderDiscountModalOpen(
+                                                        true
+                                                    ),
+                                                finish
+                                            );
+                                        }
+                                    }}
                                     size="large"
                                     icon={<PercentageOutlined />}
                                     className="col-span-2"
                                 >
-                                    خصم
+                                    خصم الطلب
                                 </LoadingButton>
                             </CanAccess>
                             <LoadingButton
@@ -405,6 +424,11 @@ export default function ManageOrder({
                         <div className="isolate mt-4">
                             <Typography.Title className="mt-0" level={5}>
                                 تفاصيل الطلب
+                                {hasItemDiscounts && (
+                                    <Tag color="orange" className="mr-2">
+                                        خصومات على الأصناف
+                                    </Tag>
+                                )}
                             </Typography.Title>
                             {orderItems.length === 0 && (
                                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />

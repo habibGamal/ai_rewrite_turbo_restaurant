@@ -53,6 +53,15 @@ class OrderCalculationService
     {
         $order->load('items');
 
+        // Clear all item-level discounts when applying order-level discount
+        foreach ($order->items as $item) {
+            $item->update([
+                'item_discount' => 0,
+                'item_discount_type' => null,
+                'item_discount_percent' => null,
+            ]);
+        }
+
         // Reset existing discounts
         $updateData = [
             'discount' => 0,
@@ -93,6 +102,27 @@ class OrderCalculationService
 
     private function calculateDiscount(Order $order, float $subtotal): float
     {
+        // Check if any items have item-level discounts
+        $hasItemDiscounts = $order->items->some(fn($item) => ($item->item_discount ?? 0) > 0);
+
+        if ($hasItemDiscounts) {
+            // Calculate total discount from item-level discounts
+            return $order->items->sum(function ($item) {
+                $itemSubtotal = $item->price * $item->quantity;
+                $itemDiscount = 0;
+
+                if ($item->item_discount_type === 'percent' && $item->item_discount_percent) {
+                    $itemDiscount = $itemSubtotal * ($item->item_discount_percent / 100);
+                } else {
+                    $itemDiscount = $item->item_discount ?? 0;
+                }
+
+                // Ensure discount doesn't exceed item subtotal
+                return min($itemDiscount, $itemSubtotal);
+            });
+        }
+
+        // Use order-level discount if no item discounts
         if ($order->temp_discount_percent > 0) {
             return ($order->temp_discount_percent / 100) * $subtotal;
         }
