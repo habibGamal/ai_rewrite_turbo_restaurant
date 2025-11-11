@@ -20,13 +20,13 @@
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
     $logoPath =
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
-        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
-        : null;
+            ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
+            : null;
 
     $qrLogoPath =
         setting(SettingKey::RESTAURANT_QR_LOGO) !== ''
-        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
-        : null;
+            ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
+            : null;
 
     // Format dates
     $orderDate = $order->created_at->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');
@@ -208,6 +208,8 @@
                     <th>الكمية</th>
                     <th>السعر</th>
                     <th>الاجمالي</th>
+                    <th>الخصم</th>
+                    <th>الصافي</th>
                 </tr>
             </thead>
             <tbody>
@@ -222,24 +224,17 @@
                         <td>{{ $item->quantity }}</td>
                         <td>{{ number_format($item->price, 2) }}</td>
                         <td>{{ number_format($itemSubtotal, 2) }}</td>
+                        <td class="product-cell" style="text-align: left; padding-right: 20px;">
+                            @if ($item->item_discount_type === 'percent' && $item->item_discount_percent)
+                                ({{ number_format($item->item_discount_percent, 0) }}%)
+                            @endif
+                            {{ number_format($itemDiscount, 2) }}
+                        </td>
+
+                        <td style="background-color: #f9f9f9;">
+                            {{ number_format($itemTotal, 2) }}
+                        </td>
                     </tr>
-                    @if ($itemDiscount > 0)
-                        <tr>
-                            <td colspan="3" class="product-cell" style="text-align: left; padding-right: 20px;">
-                                خصم الصنف
-                                @if ($item->item_discount_type === 'percent' && $item->item_discount_percent)
-                                    ({{ number_format($item->item_discount_percent, 0) }}%)
-                                @endif
-                            </td>
-                            <td style="color: red;">-{{ number_format($itemDiscount, 2) }}</td>
-                        </tr>
-                        <tr style="background-color: #f9f9f9;">
-                            <td colspan="3" class="product-cell" style="text-align: left; padding-right: 20px; font-weight: bold;">
-                                صافي الصنف
-                            </td>
-                            <td style="font-weight: bold;">{{ number_format($itemTotal, 2) }}</td>
-                        </tr>
-                    @endif
                 @endforeach
             </tbody>
         </table>
