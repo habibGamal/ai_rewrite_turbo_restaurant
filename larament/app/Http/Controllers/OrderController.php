@@ -435,6 +435,26 @@ class OrderController extends Controller
     }
 
     /**
+     * Search customers by name
+     */
+    public function searchCustomersByName(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $customers = Customer::where('name', 'LIKE', '%' . $validated['name'] . '%')
+                ->limit(10)
+                ->get();
+
+            return response()->json($customers);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'حدث خطأ أثناء البحث عن العميل'], 500);
+        }
+    }
+
+    /**
      * Fetch driver info by phone
      */
     public function fetchDriverInfo(Request $request)

@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react'
 import { Button, Form, Input, InputNumber, Modal, Radio, Select, message } from 'antd'
 import axios from 'axios'
-import React from 'react'
+import React, { useState } from 'react'
 import { Customer, Order, Region } from '@/types'
 
 interface CustomerModalProps {
@@ -18,6 +18,8 @@ export default function CustomerModal({
   const [form] = Form.useForm()
   const pageProps = usePage().props as any
   const regions = pageProps.regions as Region[] || []
+  const [customerOptions, setCustomerOptions] = useState<Customer[]>([])
+  const [searchingCustomers, setSearchingCustomers] = useState(false)
 
   const saveCustomer = async (values: any) => {
     try {
@@ -72,6 +74,40 @@ export default function CustomerModal({
     }
   }
 
+  const searchCustomersByName = async (searchValue: string) => {
+    if (!searchValue || searchValue.trim() === '') {
+      setCustomerOptions([])
+      return
+    }
+
+    setSearchingCustomers(true)
+    try {
+      const response = await axios.post<Customer[]>('/search-customers-by-name', {
+        name: searchValue.trim(),
+      })
+      setCustomerOptions(response.data)
+    } catch (e: any) {
+      console.error('Error searching customers:', e)
+      setCustomerOptions([])
+    } finally {
+      setSearchingCustomers(false)
+    }
+  }
+
+  const handleCustomerSelect = (customerId: number) => {
+    const selectedCustomer = customerOptions.find((c) => c.id === customerId)
+    if (selectedCustomer) {
+      form.setFieldsValue({
+        phone: selectedCustomer.phone,
+        name: selectedCustomer.name,
+        address: selectedCustomer.address,
+        hasWhatsapp: selectedCustomer.hasWhatsapp ? '1' : '0',
+        region: selectedCustomer.region,
+        deliveryCost: selectedCustomer.deliveryCost,
+      })
+    }
+  }
+
 
   const initialValues = () => {
     if (order.customer) {
@@ -106,9 +142,27 @@ export default function CustomerModal({
             <Input onPressEnter={fetchCustomerInfo} placeholder="رقم العميل" />
           </Form.Item>
           <Button onClick={fetchCustomerInfo} type="primary">
-            بحث
+            بحث برقم الهاتف
           </Button>
         </div>
+        <Form.Item label="بحث بالاسم">
+          <Select
+            showSearch
+            placeholder="ابحث عن عميل بالاسم"
+            filterOption={false}
+            onSearch={searchCustomersByName}
+            onChange={handleCustomerSelect}
+            notFoundContent={searchingCustomers ? 'جاري البحث...' : 'لا توجد نتائج'}
+            loading={searchingCustomers}
+            allowClear
+          >
+            {customerOptions.map((customer) => (
+              <Select.Option key={customer.id} value={customer.id}>
+                {customer.name} - {customer.phone}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
         <Form.Item name="hasWhatsapp" label="What's app">
           <Radio.Group>
             <Radio value="1">نعم</Radio>

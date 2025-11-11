@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift']);
     Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['shift']);
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift']);
+    Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift']);
     Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift']);
     Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift']);
 
