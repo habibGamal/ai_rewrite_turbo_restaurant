@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Filament\Resources\CustomerResource\RelationManagers;
 use App\Filament\Traits\AdminAccess;
+use App\Filament\Imports\CustomerImporter;
 use App\Models\Customer;
 use App\Models\Region;
 use Filament\Forms;
@@ -98,6 +99,18 @@ class CustomerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([
+                Tables\Actions\ImportAction::make()
+                    ->importer(CustomerImporter::class)
+                    ->label('استيراد عملاء')
+                    ->modalHeading('استيراد عملاء من ملف CSV')
+                    ->modalSubmitActionLabel('استيراد')
+                    ->modalCancelActionLabel('إلغاء')
+                    ->color('success')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->maxRows(10000)
+                    ->chunkSize(100),
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('اسم العميل')
