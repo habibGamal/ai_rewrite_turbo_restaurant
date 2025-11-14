@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
+use App\Enums\ReturnStatus;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Infolists;
@@ -84,6 +85,12 @@ class OrderResource extends Resource
                     ->badge()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('return_status')
+                    ->label('حالة الإرجاع')
+                    ->badge()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 Tables\Columns\TextColumn::make('total')
                     ->label('الإجمالي')
                     ->money('EGP')
@@ -117,6 +124,10 @@ class OrderResource extends Resource
                 Tables\Filters\SelectFilter::make('payment_status')
                     ->label('حالة الدفع')
                     ->options(PaymentStatus::class),
+
+                Tables\Filters\SelectFilter::make('return_status')
+                    ->label('حالة الإرجاع')
+                    ->options(ReturnStatus::class),
 
                 Tables\Filters\Filter::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -166,6 +177,10 @@ class OrderResource extends Resource
 
                         Infolists\Components\TextEntry::make('payment_status')
                             ->label('حالة الدفع')
+                            ->badge(),
+
+                        Infolists\Components\TextEntry::make('return_status')
+                            ->label('حالة الإرجاع')
                             ->badge(),
 
                         Infolists\Components\TextEntry::make('dine_table_number')
@@ -246,6 +261,12 @@ class OrderResource extends Resource
                         Infolists\Components\TextEntry::make('profit')
                             ->label('الربح')
                             ->money('EGP'),
+
+                        Infolists\Components\TextEntry::make('total_refunded')
+                            ->label('إجمالي المرتجع')
+                            ->money('EGP')
+                            ->color('danger')
+                            ->visible(fn($record) => $record->total_refunded > 0),
                     ])
                     ->columns(3),
 
@@ -287,6 +308,7 @@ class OrderResource extends Resource
         return [
             RelationManagers\ItemsRelationManager::class,
             RelationManagers\PaymentsRelationManager::class,
+            RelationManagers\OrderReturnsRelationManager::class,
         ];
     }
 
@@ -301,6 +323,6 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items']);
+            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns']);
     }
 }

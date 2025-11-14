@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
+use App\Enums\ReturnStatus;
 use App\Enums\SettingKey;
 use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,6 +34,7 @@ class Order extends Model
         'profit',
         'web_pos_diff',
         'payment_status',
+        'return_status',
         'dine_table_number',
         'kitchen_notes',
         'order_notes',
@@ -47,6 +49,7 @@ class Order extends Model
         'type' => OrderType::class,
         'status' => OrderStatus::class,
         'payment_status' => PaymentStatus::class,
+        'return_status' => ReturnStatus::class,
         'sub_total' => 'decimal:2',
         'tax' => 'decimal:2',
         'service' => 'decimal:2',
@@ -101,6 +104,11 @@ class Order extends Model
         return $this->hasOne(DineTable::class);
     }
 
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class);
+    }
+
     // Computed attributes
     public function getTypeStringAttribute(): string
     {
@@ -140,5 +148,15 @@ class Order extends Model
     public function getCanBeCancelledAttribute(): bool
     {
         return $this->status->canBeCancelled();
+    }
+
+    public function getTotalRefundedAttribute(): float
+    {
+        return $this->returns->sum('total_refund');
+    }
+
+    public function getReturnStatusStringAttribute(): string
+    {
+        return $this->return_status ? $this->return_status->label() : ReturnStatus::NONE->label();
     }
 }
