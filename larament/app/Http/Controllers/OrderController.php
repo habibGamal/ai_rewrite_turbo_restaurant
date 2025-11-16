@@ -105,14 +105,37 @@ class OrderController extends Controller
                 return redirect()->route('orders.index')->with('info', 'لديك وردية نشطة بالفعل');
             }
 
+            // Get web orders count before starting shift
+            $settingsService = app(\App\Services\SettingsService::class);
+            $transferredOrdersCount = 0;
+
+            if ($settingsService->isWebOrdersShiftTransferAllowed()) {
+                $lastShift = \App\Models\Shift::where('closed', true)
+                    ->orderBy('end_at', 'desc')
+                    ->first();
+
+                if ($lastShift) {
+                    $transferredOrdersCount = \App\Models\Order::where('shift_id', $lastShift->id)
+                        ->whereIn('type', [\App\Enums\OrderType::WEB_DELIVERY, \App\Enums\OrderType::WEB_TAKEAWAY])
+                        ->whereIn('status', [\App\Enums\OrderStatus::PROCESSING, \App\Enums\OrderStatus::OUT_FOR_DELIVERY, \App\Enums\OrderStatus::PENDING])
+                        ->count();
+                }
+            }
+
             $shift = $this->shiftService->startShift($validated['start_cash']);
 
-            // Log shift start
-            $this->loggingService->logShiftAction('start', [
+            // Log shift start with transfer info
+            $logData = [
                 'id' => $shift->id,
                 'start_cash' => $validated['start_cash'],
                 'date' => $shift->created_at->format('Y-m-d H:i:s'),
-            ]);
+            ];
+
+            if ($transferredOrdersCount > 0) {
+                $logData['transferred_web_orders'] = $transferredOrdersCount;
+            }
+
+            $this->loggingService->logShiftAction('start', $logData);
 
             return redirect()->route('orders.index')->with('success', 'تم بدء الوردية بنجاح');
         } catch (\Exception $e) {

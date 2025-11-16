@@ -18,6 +18,7 @@ enum SettingKey: string
     case ALLOW_CASHIER_DISCOUNTS = 'allow_cashier_discounts';
     case ALLOW_CASHIER_CANCEL_ORDERS = 'allow_cashier_cancel_orders';
     case ALLOW_CASHIER_ITEM_CHANGES = 'allow_cashier_item_changes';
+    case ALLOW_WEB_ORDERS_SHIFT_TRANSFER = 'allow_web_orders_shift_transfer';
 
     /**
      * Get default value for this setting
@@ -39,6 +40,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => 'false',
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'false',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'false',
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'false',
         };
     }
 
@@ -62,6 +64,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => ['required', 'boolean'],
             self::ALLOW_CASHIER_CANCEL_ORDERS => ['required', 'boolean'],
             self::ALLOW_CASHIER_ITEM_CHANGES => ['required', 'boolean'],
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => ['required', 'boolean'],
         };
     }
 
@@ -85,6 +88,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => 'السماح للكاشير بتطبيق الخصومات',
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'السماح للكاشير بإلغاء الطلبات',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'السماح للكاشير بتعديل الطلبات المحفوظة',
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'نقل طلبات الويب المفتوحة إلى الوردية التالية',
         };
     }
 
@@ -108,6 +112,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => 'يسمح للكاشير بتطبيق خصومات على الطلبات',
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'يسمح للكاشير بإلغاء الطلبات المكتملة',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'يسمح للكاشير بتعديل عناصر الطلبات المحفوظة مسبقاً',
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'عند تفعيل هذا الخيار، طلبات الويب (دليفري وتيك أواي) المفتوحة سيتم نقلها تلقائياً للوردية الجديدة عند إغلاق الوردية الحالية',
         };
     }
 
@@ -130,6 +135,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => 'تفعيل',
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'تفعيل',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'تفعيل',
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'تفعيل',
         };
     }
 
@@ -153,6 +159,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_DISCOUNTS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_CASHIER_CANCEL_ORDERS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_CASHIER_ITEM_CHANGES => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
         };
     }
 }

@@ -54,6 +54,7 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
+                    SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                 ])) {
                     $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 } else {
@@ -236,6 +237,16 @@ class Settings extends Page implements HasForms
                             ->helperText(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->helperText())
                             ->inline(false),
                     ]),
+
+                Section::make('إدارة الورديات')
+                    ->description('إعدادات خاصة بإدارة الورديات والطلبات')
+                    ->icon('heroicon-m-clock')
+                    ->schema([
+                        Toggle::make(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)
+                            ->label(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->label())
+                            ->helperText(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->helperText())
+                            ->inline(false),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -253,6 +264,7 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
+                    SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                 ])) {
                     $cleanData[$key] = $value ? 'true' : 'false';
                 } else {

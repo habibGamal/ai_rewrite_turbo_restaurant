@@ -137,6 +137,15 @@ class SettingsService
     }
 
     /**
+     * Check if web orders (delivery and takeaway) can be transferred to the next shift
+     */
+    public function isWebOrdersShiftTransferAllowed(): bool
+    {
+        $value = $this->get(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value, SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->defaultValue());
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
      * Get a setting value by key
      */
     public function get(string $key, mixed $default = null): mixed
