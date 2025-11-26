@@ -13,7 +13,7 @@ class ListOrderReturns extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // No create action - returns are created via OrderResource
+            Actions\CreateAction::make()->label('إرجاع طلب'),
         ];
     }
 }

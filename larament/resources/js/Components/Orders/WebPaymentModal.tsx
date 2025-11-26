@@ -25,6 +25,10 @@ export default function WebPaymentModal({ open, onCancel, order }: WebPaymentMod
     const [remaining, setRemaining] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'one_payment' | 'multi_payment'>('one_payment');
 
+    // Get preferred payment method from web_preferences
+    const preferredPaymentMethod = order.web_preferences?.payment_method;
+    const isPaymentMethodLocked = preferredPaymentMethod === 'card';
+
     const paymentDetails = {
         subTotal: Number(order.sub_total) || 0,
         tax: Number(order.tax) || 0,
@@ -151,7 +155,7 @@ export default function WebPaymentModal({ open, onCancel, order }: WebPaymentMod
                         onFinish={askForPrint}
                         initialValues={{
                             discount: 0,
-                            paymentMethod: PaymentMethod.Cash,
+                            paymentMethod: preferredPaymentMethod || PaymentMethod.Cash,
                         }}
                         layout="vertical"
                         className={`min-w-[350px] ${paymentMethod === 'one_payment' ? 'block' : 'hidden'}`}
@@ -177,12 +181,17 @@ export default function WebPaymentModal({ open, onCancel, order }: WebPaymentMod
                         </Form.Item>
                         <Typography.Text className="block mb-4">المبلغ المتبقي : {remaining}</Typography.Text>
                         <Form.Item name="paymentMethod">
-                            <Radio.Group>
+                            <Radio.Group disabled={isPaymentMethodLocked}>
                                 <Radio value={PaymentMethod.Cash}>نقدي</Radio>
                                 <Radio value={PaymentMethod.Card}>فيزا</Radio>
                                 <Radio value={PaymentMethod.TalabatCard}>فيزا طلبات</Radio>
                             </Radio.Group>
                         </Form.Item>
+                        {isPaymentMethodLocked && (
+                            <Typography.Text type="warning" className="block mb-4">
+                                طريقة الدفع محددة من قبل العميل (فيزا)
+                            </Typography.Text>
+                        )}
                         <Form.Item>
                             <Button htmlType="submit" type="primary">
                                 تم

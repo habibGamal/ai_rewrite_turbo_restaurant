@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\OrderResource\Pages;
 
-use App\Filament\Actions\ReturnOrderAction;
 use App\Filament\Resources\OrderResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
@@ -14,7 +13,7 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            ReturnOrderAction::make(),
+            // Return order functionality moved to OrderReturnResource
         ];
     }
 }

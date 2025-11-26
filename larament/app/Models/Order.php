@@ -39,6 +39,7 @@ class Order extends Model
         'kitchen_notes',
         'order_notes',
         'order_number',
+        'web_preferences',
     ];
 
     protected $appends = [
@@ -57,6 +58,7 @@ class Order extends Model
         'temp_discount_percent' => 'decimal:2',
         'total' => 'decimal:2',
         'profit' => 'decimal:2',
+        'web_preferences' => 'array',
     ];
 
     public function getServiceRateAttribute(): float

@@ -47,7 +47,6 @@ class WebOrderController extends Controller
 
         // Get all regions for the dropdown
         $regions = Region::orderBy('name')->get();
-
         return Inertia::render('Orders/ManageWebOrder', [
             'order' => $order,
             'categories' => $categories,

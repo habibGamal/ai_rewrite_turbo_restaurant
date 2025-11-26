@@ -193,6 +193,7 @@ class WebApiService
                 'temp_discount_percent' => 0,
                 'profit' => 0, // Will be calculated later
                 'payment_status' => PaymentStatus::PENDING,
+                'web_preferences' => $data['order']['webPreferences'] ?? null,
             ]);
 
             $this->fillOrderItems($order, $data['order']['items']);

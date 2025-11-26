@@ -114,6 +114,8 @@
             border: 1px solid black;
             padding: 8px;
             text-align: center;
+            word-break: break-word;
+            font-size: 20px;
         }
 
         th {
@@ -125,6 +127,14 @@
             text-align: right;
             max-width: 200px;
             word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .number-cell {
+            max-width: 80px;
+            font-size: 18px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .reference {
@@ -221,17 +231,17 @@
                     @endphp
                     <tr>
                         <td class="product-cell">{{ $item->product->name }}</td>
-                        <td>{{ $item->quantity }}</td>
-                        <td>{{ number_format($item->price, 2) }}</td>
-                        <td>{{ number_format($itemSubtotal, 2) }}</td>
-                        <td class="product-cell" style="text-align: left; padding-right: 20px;">
+                        <td class="number-cell">{{ $item->quantity }}</td>
+                        <td class="number-cell">{{ number_format($item->price, 2) }}</td>
+                        <td class="number-cell">{{ number_format($itemSubtotal, 2) }}</td>
+                        <td class="number-cell" style="text-align: left; padding-right: 20px;">
                             @if ($item->item_discount_type === 'percent' && $item->item_discount_percent)
                                 ({{ number_format($item->item_discount_percent, 0) }}%)
                             @endif
                             {{ number_format($itemDiscount, 2) }}
                         </td>
 
-                        <td style="background-color: #f9f9f9;">
+                        <td class="number-cell" style="background-color: #f9f9f9;">
                             {{ number_format($itemTotal, 2) }}
                         </td>
                     </tr>
@@ -243,23 +253,23 @@
             <tbody>
                 <tr>
                     <td>اجمالي الطلب</td>
-                    <td>{{ number_format($order->sub_total, 2) }}</td>
+                    <td class="number-cell">{{ number_format($order->sub_total, 2) }}</td>
                 </tr>
                 <tr>
                     <td>الخصم</td>
-                    <td>{{ number_format($order->discount, 2) }}</td>
+                    <td class="number-cell">{{ number_format($order->discount, 2) }}</td>
                 </tr>
                 <tr>
                     <td>الخدمة</td>
-                    <td>{{ number_format($order->service, 2) }}</td>
+                    <td class="number-cell">{{ number_format($order->service, 2) }}</td>
                 </tr>
                 <tr>
                     <td>الضريبة</td>
-                    <td>{{ number_format($order->tax, 2) }}</td>
+                    <td class="number-cell">{{ number_format($order->tax, 2) }}</td>
                 </tr>
                 <tr>
                     <td>الاجمالي النهائي</td>
-                    <td>{{ ceil($order->total) }}</td>
+                    <td class="number-cell">{{ ceil($order->total) }}</td>
                 </tr>
             </tbody>
         </table>

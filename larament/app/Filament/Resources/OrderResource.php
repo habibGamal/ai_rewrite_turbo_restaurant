@@ -107,6 +107,17 @@ class OrderResource extends Resource
                     ->label('الكاشير')
                     ->placeholder('غير محدد'),
 
+                Tables\Columns\TextColumn::make('transaction_id')
+                    ->label('رقم المعاملة')
+                    ->state(fn ($record) => $record->web_preferences['transaction_id'] ?? 'غير محدد')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('web_preferences->transaction_id', 'like', "%{$search}%");
+                    })
+                    ->copyable()
+                    ->copyMessage('تم نسخ رقم المعاملة')
+                    ->copyMessageDuration(1500)
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime('Y-m-d H:i')
@@ -300,6 +311,39 @@ class OrderResource extends Resource
                     ->columns(3)
                     ->collapsed()
                     ->collapsible(),
+
+                Infolists\Components\Section::make('معلومات الدفع عبر الويب')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('web_payment_method')
+                            ->label('طريقة الدفع')
+                            ->state(function ($record) {
+                                $method = $record->web_preferences['payment_method'] ?? null;
+                                return match($method) {
+                                    'cash' => 'كاش',
+                                    'card' => 'فيزا',
+                                    'talabat_card' => 'بطاقة طلبات',
+                                    default => 'غير محدد'
+                                };
+                            })
+                            ->badge()
+                            ->color(fn ($state) => match($state) {
+                                'كاش' => 'success',
+                                'فيزا' => 'info',
+                                'بطاقة طلبات' => 'warning',
+                                default => 'gray'
+                            }),
+
+                        Infolists\Components\TextEntry::make('transaction_id')
+                            ->label('رقم المعاملة')
+                            ->state(fn ($record) => $record->web_preferences['transaction_id'] ?? 'غير محدد')
+                            ->copyable()
+                            ->copyMessage('تم نسخ رقم المعاملة')
+                            ->copyMessageDuration(1500),
+                    ])
+                    ->columns(2)
+                    ->collapsed()
+                    ->collapsible()
+                    ->visible(fn ($record) => !empty($record->web_preferences)),
             ]);
     }
 

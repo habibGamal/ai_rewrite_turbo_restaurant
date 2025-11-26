@@ -62,6 +62,9 @@ class WebOrdersController extends Controller
             'order.discount' => 'required|numeric',
             'order.total' => 'required|numeric',
             'order.note' => 'nullable|string',
+            'order.webPreferences' => 'nullable|array',
+            'order.webPreferences.payment_method' => 'nullable|in:cash,card,talabat_card',
+            'order.webPreferences.transaction_id' => 'nullable|string',
             'order.items' => 'required|array',
             'order.items.*.quantity' => 'required|numeric|min:0.001',
             'order.items.*.notes' => 'nullable|string',
@@ -73,6 +76,7 @@ class WebOrdersController extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
+
 
         try {
             $this->webApiService->placeOrder($request->all());

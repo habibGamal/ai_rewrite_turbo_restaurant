@@ -92,6 +92,9 @@ export interface Order {
   kitchen_notes?: string;
   order_notes?: string;
   order_number: string;
+  web_preferences?: {
+    payment_method?: 'cash' | 'card' | 'talabat_card';
+  };
   created_at: string;
   updated_at: string;
   customer?: Customer;
