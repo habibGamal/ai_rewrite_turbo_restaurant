@@ -382,24 +382,68 @@ class PrintService
             // Load order with relationships
             $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
 
+            $itemCount = $order->items->count();
 
-            // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
-            $html = $this->generateReceiptHtml($order);
+            // If order has 5 or fewer items, use existing single-image logic
+            if ($itemCount <= 5) {
+                \Log::info("Order {$order->id} has {$itemCount} items, using single receipt printing");
 
-            // ---------- 2. Convert HTML to image using current strategy ----------
-            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
+                // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
+                $html = $this->generateReceiptHtml($order);
 
-            // ---------- 3. Print via escpos-php ----------
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
+                // ---------- 2. Convert HTML to image using current strategy ----------
+                $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
 
-            // Load and print image
-            $escposImage = EscposImage::load($tempImagePath);
-            $printer->bitImage($escposImage);
-            $printer->feed(3);
-            $printer->cut();
+                // ---------- 3. Print via escpos-php ----------
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
 
-            // Clean up
-            unlink($tempImagePath);
+                // Load and print image
+                $escposImage = EscposImage::load($tempImagePath);
+                $printer->bitImage($escposImage);
+                $printer->feed(3);
+                $printer->cut();
+
+                // Clean up
+                unlink($tempImagePath);
+
+            } else {
+                // Split printing for orders with more than 5 items
+                \Log::info("Order {$order->id} has {$itemCount} items, using split receipt printing");
+
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+
+                // ---------- 1. Print header with first 5 items ----------
+                $headerItems = $order->items->take(5);
+                $html = $this->generateReceiptHeaderHtml($order, $headerItems);
+                $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
+                $escposImage = EscposImage::load($tempImagePath);
+                $printer->bitImage($escposImage);
+                unlink($tempImagePath);
+                \Log::info("Printed header with first 5 items for order {$order->id}");
+
+                // ---------- 2. Print remaining items in chunks of 5 ----------
+                $remainingItems = $order->items->skip(5);
+                $chunks = $remainingItems->chunk(5);
+
+                foreach ($chunks as $index => $chunk) {
+                    $html = $this->generateReceiptItemsHtml($chunk);
+                    $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
+                    $escposImage = EscposImage::load($tempImagePath);
+                    $printer->bitImage($escposImage);
+                    unlink($tempImagePath);
+                    \Log::info("Printed items chunk " . ($index + 1) . " for order {$order->id}");
+                }
+
+                // ---------- 3. Print footer with totals ----------
+                $html = $this->generateReceiptFooterHtml($order);
+                $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
+                $escposImage = EscposImage::load($tempImagePath);
+                $printer->bitImage($escposImage);
+                $printer->feed(3);
+                $printer->cut();
+                unlink($tempImagePath);
+                \Log::info("Printed footer for order {$order->id}");
+            }
 
             \Log::info("Order receipt printing completed successfully for order {$order->id}");
 
@@ -477,6 +521,37 @@ class PrintService
     public function isUsingQueue(): bool
     {
         return self::USE_QUEUE;
+    }
+
+    /**
+     * Generate HTML content for receipt header with specified items
+     */
+    private function generateReceiptHeaderHtml(Order $order, $items): string
+    {
+        return view('print.receipt-header', [
+            'order' => $order,
+            'items' => $items,
+        ])->render();
+    }
+
+    /**
+     * Generate HTML content for receipt items continuation
+     */
+    private function generateReceiptItemsHtml($items): string
+    {
+        return view('print.receipt-items', [
+            'items' => $items,
+        ])->render();
+    }
+
+    /**
+     * Generate HTML content for receipt footer
+     */
+    private function generateReceiptFooterHtml(Order $order): string
+    {
+        return view('print.receipt-footer', [
+            'order' => $order,
+        ])->render();
     }
 
     /**

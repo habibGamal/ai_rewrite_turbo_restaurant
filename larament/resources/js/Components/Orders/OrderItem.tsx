@@ -117,6 +117,27 @@ export default function OrderItem({
     const itemDiscount = orderItem.item_discount || 0;
     const itemTotal = itemSubtotal - itemDiscount;
 
+    // Parse JSON notes for web orders
+    const parseWebNotes = (notes: string | null | undefined) => {
+        if (!notes || !forWeb) return null;
+        
+        const jsonPrefix = "json::";
+        if (notes.startsWith(jsonPrefix)) {
+            try {
+                const jsonString = notes.substring(jsonPrefix.length);
+                const parsed = JSON.parse(jsonString);
+                return parsed;
+            } catch (e) {
+                console.error("Failed to parse order item notes:", e);
+                return null;
+            }
+        }
+        return null;
+    };
+
+    const parsedNotes = parseWebNotes(orderItem.notes);
+    const displayAsPlainText = forWeb && orderItem.notes && !parsedNotes;
+
     console.log("Rendering OrderItem:", orderItem);
     const quantityCanBeFraction = ["kg", "كجم", "كيلوجرام"].includes(
         orderItem.product.unit
@@ -125,11 +146,20 @@ export default function OrderItem({
         <>
             <div className="isolate-3 flex flex-col gap-4 my-4">
                 <div className="flex justify-between items-center">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-1">
                         <Typography.Paragraph className="!my-0">
                             {orderItem.name}
                         </Typography.Paragraph>
-                        {forWeb && orderItem.notes && (
+                        {parsedNotes && (
+                            <div className="flex flex-wrap gap-1">
+                                {Object.entries(parsedNotes).map(([key, value]) => (
+                                    <Tag key={key} color="blue">
+                                        {key}: {String(value)}
+                                    </Tag>
+                                ))}
+                            </div>
+                        )}
+                        {displayAsPlainText && (
                             <Typography.Paragraph
                                 className="!my-0 !text-sm text-gray-500 ltr"
                                 ellipsis={{ rows: 2 }}

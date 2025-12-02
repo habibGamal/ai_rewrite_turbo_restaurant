@@ -286,7 +286,7 @@ class WebApiService
         try {
             $websiteUrl = setting(SettingKey::WEBSITE_URL);
 
-            Http::post($websiteUrl . '/api/order-status', [
+            $response = Http::post($websiteUrl . '/api/order-status', [
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);
@@ -296,6 +296,14 @@ class WebApiService
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);
+            if($response->failed()) {
+                Log::error('خطأ في استجابة تحديث الطلب من العميل', [
+                    'order_id' => $order->id,
+                    'response_status' => $response->status(),
+                    'response_body' => $response->body(),
+                ]);
+                throw new \Exception('فشل في تحديث حالة الطلب على الموقع الإلكتروني');
+            }
             Log::info('تم إرسال تحديث الطلب إلى العميل', ['order_id' => $order->id]);
         } catch (\Exception $e) {
             Log::error('فشل في إرسال تحديث الطلب إلى العميل', [

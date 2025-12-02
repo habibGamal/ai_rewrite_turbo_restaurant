@@ -61,10 +61,11 @@ class WebOrderController extends Controller
     public function acceptOrder(Order $order)
     {
         try {
-            $this->webApiService->acceptOrder($order->id);
-
-            // Log web order acceptance
-            $this->loggingService->logWebOrderAction('accept', $order->id);
+            DB::transaction(function () use ($order) {
+                $this->webApiService->acceptOrder($order->id);
+                // Log web order acceptance
+                $this->loggingService->logWebOrderAction('accept', $order->id);
+            });
 
             return Redirect::back()->with('success', 'تم قبول الطلب بنجاح');
         } catch (\Exception $e) {
@@ -73,7 +74,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في قبول الطلب: ' . $e->getMessage());
+            return Redirect::back()->withErrors(['فشل في قبول الطلب: ' . $e->getMessage()]);
         }
     }
 
