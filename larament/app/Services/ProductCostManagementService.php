@@ -31,8 +31,8 @@ class ProductCostManagementService
                 $oldQuantity = $oldQuantity > 0 ? $oldQuantity : 0; // Ensure old quantity is not negative
                 $oldCost = $item->product->cost ?? 0;
 
-                $newAverageCost = ($oldCost * $oldQuantity + $newCost * $newQuantity) / ($oldQuantity + $newQuantity);
-                $item->product->update(['cost' => $newAverageCost]);
+                // $newAverageCost = ($oldCost * $oldQuantity + $newCost * $newQuantity) / ($oldQuantity + $newQuantity);
+                $item->product->update(['cost' => $newCost]);
             }
 
             DB::commit();

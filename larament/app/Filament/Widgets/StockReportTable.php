@@ -46,7 +46,21 @@ class StockReportTable extends BaseWidget
                         'inventory_items.id as inventory_item_id',
                         'inventory_items.quantity as actual_remaining_quantity',
                         // end quantity of the previous day
-                        DB::raw('COALESCE(SUM(startDailyMovements.end_quantity), 0) as start_quantity'),
+                        DB::raw(
+                            "(
+                            SELECT COALESCE(dm.end_quantity, 0)
+                            FROM inventory_item_movement_daily dm
+                            WHERE dm.product_id = products.id
+                            AND dm.date = (
+                                SELECT MAX(d.date)
+                                FROM inventory_item_movement_daily d
+                                WHERE d.product_id = products.id
+                                    AND d.date < '{$startDate}'
+                            )
+                            ORDER BY dm.id DESC
+                            LIMIT 1
+                        ) AS start_quantity"
+                        ),
                         DB::raw('COALESCE(SUM(dailyMovements.incoming_quantity), 0) as incoming'),
                         DB::raw('COALESCE(SUM(dailyMovements.sales_quantity), 0) - COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as sales'),
                         DB::raw('COALESCE(SUM(dailyMovements.return_waste_quantity), 0) as return_waste'),
