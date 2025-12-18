@@ -65,6 +65,11 @@ enum OrderType: string implements HasColor, HasIcon, HasLabel
         return $this === self::DINE_IN;
     }
 
+    public function isDineIn(): bool
+    {
+        return $this === self::DINE_IN;
+    }
+
     public function hasDeliveryFee(): bool
     {
         return in_array($this, [self::DELIVERY, self::WEB_DELIVERY]);

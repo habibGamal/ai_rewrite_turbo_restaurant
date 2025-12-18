@@ -118,7 +118,7 @@
         <div class="order-info">
             <p>نوع الطلب : {{ $getOrderTypeString($order->type) }}</p>
             <p>التاريخ : {{ $printDate }}</p>
-            @if ($order->type === 'dine_in' && $order->dine_table_number)
+            @if ($order->type->isDineIn() && $order->dine_table_number)
                 <p>طاولة رقم {{ $order->dine_table_number }}</p>
             @endif
         </div>
