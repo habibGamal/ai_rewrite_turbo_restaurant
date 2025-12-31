@@ -186,6 +186,7 @@ class InventoryDailyAggregationService
                 // Get the last opened day date
                 $openDay = InventoryItemMovementDaily::whereNull('closed_at')
                     ->orderBy('date', 'desc')
+                    ->orderBy('created_at', 'asc')
                     ->first();
 
                 if (!$openDay) {
@@ -292,7 +293,7 @@ class InventoryDailyAggregationService
      */
     public function aggregateMultipleMovements(array $productIds, Carbon $date)
     {
-        return DB::transaction(function () use ($productIds, $date) {
+        return DB::transaction(callback: function () use ($productIds, $date) {
             $dateString = $date->toDateString();
 
             try {
