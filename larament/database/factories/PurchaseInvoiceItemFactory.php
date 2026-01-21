@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\PurchaseInvoice;
+use App\Models\Product;
 
 class PurchaseInvoiceItemFactory extends Factory
 {
@@ -11,12 +13,15 @@ class PurchaseInvoiceItemFactory extends Factory
 
     public function definition(): array
     {
+        $quantity = $this->faker->numberBetween(1, 100);
+        $price = $this->faker->randomFloat(2, 1, 100);
+
         return [
-            'purchase_invoice_id' => 1,
-            'product_id' => 1,
-            'quantity' => $this->faker->numberBetween(1, 100),
-            'price' => $this->faker->randomFloat(2, 1, 100),
-            'total' => $this->faker->randomFloat(2, 1, 1000),
+            'purchase_invoice_id' => PurchaseInvoice::factory(),
+            'product_id' => Product::factory(),
+            'quantity' => $quantity,
+            'price' => $price,
+            'total' => $quantity * $price,
         ];
     }
 }

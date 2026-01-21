@@ -2,11 +2,11 @@
 
 namespace App\Filament\Pages\App;
 
+use Filament\Auth\Pages\EditProfile;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use App\Filament\Actions\GeneratePasswordAction;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Pages\Auth\EditProfile;
 
 class Profile extends EditProfile
 {
@@ -18,12 +18,12 @@ class Profile extends EditProfile
         ];
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         /** @var TextInput $passwordComponent */
         $passwordComponent = $this->getPasswordFormComponent();
 
-        return $form->schema([
+        return $schema->components([
             Section::make()
                 ->inlineLabel(false)
                 ->schema([

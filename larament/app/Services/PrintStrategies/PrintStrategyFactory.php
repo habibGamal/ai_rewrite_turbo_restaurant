@@ -2,6 +2,8 @@
 
 namespace App\Services\PrintStrategies;
 
+use InvalidArgumentException;
+
 class PrintStrategyFactory
 {
     /**
@@ -12,7 +14,7 @@ class PrintStrategyFactory
         return match (strtolower($strategyName)) {
             'browsershot' => new BrowsershotPrintStrategy(),
             'wkhtmltoimage' => new WkhtmltoimagePrintStrategy(),
-            default => throw new \InvalidArgumentException("Unknown print strategy: {$strategyName}")
+            default => throw new InvalidArgumentException("Unknown print strategy: {$strategyName}")
         };
     }
 

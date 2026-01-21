@@ -2,6 +2,15 @@
 
 namespace App\Filament\Pages\Reports;
 
+use Filament\Schemas\Schema;
+use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftInfoStats;
+use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
+use App\Filament\Widgets\PeriodShiftOrdersStats;
+use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
+use App\Filament\Widgets\PeriodShiftOrdersTable;
+use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
+use App\Filament\Widgets\PeriodShiftExpensesTable;
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
 use App\Models\Shift;
@@ -9,17 +18,16 @@ use App\Services\ShiftsReportService;
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
-use Filament\Forms\Form;
 
 class PeriodShiftReport extends BaseDashboard
 {
     use HasFiltersForm,ViewerAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-calendar-days';
 
     protected static string $routePath = 'period-shift-report';
 
-    protected static ?string $navigationGroup = 'التقارير';
+    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير فترة الشفتات';
 
@@ -34,10 +42,10 @@ class PeriodShiftReport extends BaseDashboard
         $this->shiftsReportService = app(ShiftsReportService::class);
     }
 
-    public function filtersForm(Form $form): Form
+    public function filtersForm(Schema $schema): Schema
     {
-        return $form
-            ->schema(
+        return $schema
+            ->components(
                 PeriodWithShiftFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض تقارير الشفتات',
                     'اختر الشفتات المحددة',
@@ -63,18 +71,18 @@ class PeriodShiftReport extends BaseDashboard
 
         if ($shiftsCount === 0) {
             return [
-                \App\Filament\Widgets\NoShiftsInPeriodWidget::class,
+                NoShiftsInPeriodWidget::class,
             ];
         }
 
         return [
-            \App\Filament\Widgets\PeriodShiftInfoStats::class,
-            \App\Filament\Widgets\PeriodShiftMoneyInfoStats::class,
-            \App\Filament\Widgets\PeriodShiftOrdersStats::class,
-            \App\Filament\Widgets\PeriodShiftDoneOrdersStats::class,
-            \App\Filament\Widgets\PeriodShiftOrdersTable::class,
-             \App\Filament\Widgets\PeriodShiftExpensesDetailsTable::class,
-            \App\Filament\Widgets\PeriodShiftExpensesTable::class,
+            PeriodShiftInfoStats::class,
+            PeriodShiftMoneyInfoStats::class,
+            PeriodShiftOrdersStats::class,
+            PeriodShiftDoneOrdersStats::class,
+            PeriodShiftOrdersTable::class,
+             PeriodShiftExpensesDetailsTable::class,
+            PeriodShiftExpensesTable::class,
         ];
     }
 }

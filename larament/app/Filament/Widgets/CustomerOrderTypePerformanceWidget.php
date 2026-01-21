@@ -9,15 +9,15 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class CustomerOrderTypePerformanceWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'أداء العملاء حسب نوع الطلب';
+    protected ?string $heading = 'أداء العملاء حسب نوع الطلب';
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $maxHeight = '400px';
+    protected ?string $maxHeight = '400px';
 
     protected CustomersPerformanceReportService $customersReportService;
 
@@ -28,8 +28,8 @@ class CustomerOrderTypePerformanceWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $orderTypePerformance = $this->customersReportService->getOrderTypePerformance($startDate, $endDate);
         $labels = [];

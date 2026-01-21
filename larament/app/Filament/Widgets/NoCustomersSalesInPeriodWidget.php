@@ -10,7 +10,7 @@ class NoCustomersSalesInPeriodWidget extends Widget
 {
     use InteractsWithPageFilters;
 
-    protected static string $view = 'filament.widgets.no-customers-sales-in-period';
+    protected string $view = 'filament.widgets.no-customers-sales-in-period';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -35,8 +35,8 @@ class NoCustomersSalesInPeriodWidget extends Widget
 
     private function getPeriodInfo(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $this->customersReportService->getPeriodInfo($startDate, $endDate);
     }

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Exports;
 
+use App\Models\Shift;
+use App\Models\Expense;
 use App\Models\ExpenceType;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
@@ -42,7 +44,7 @@ class CurrentShiftExpensesExporter extends Exporter
                 ->label('تفاصيل المصروفات')
                 ->state(function ($record) {
                     // Get individual expenses for this type in current shift
-                    $currentShift = \App\Models\Shift::where('closed', false)
+                    $currentShift = Shift::where('closed', false)
                         ->where('end_at', null)
                         ->first();
 
@@ -50,7 +52,7 @@ class CurrentShiftExpensesExporter extends Exporter
                         return 'لا توجد شفت مفتوحة';
                     }
 
-                    $expenses = \App\Models\Expense::where('shift_id', $currentShift->id)
+                    $expenses = Expense::where('shift_id', $currentShift->id)
                         ->where('expence_type_id', $record->id)
                         ->get();
 

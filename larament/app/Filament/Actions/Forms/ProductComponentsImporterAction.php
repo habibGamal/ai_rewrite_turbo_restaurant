@@ -2,11 +2,13 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\RawJs;
 use App\Models\Category;
 use App\Models\Product;
 use App\Enums\ProductType;
@@ -121,7 +123,8 @@ class ProductComponentsImporterAction extends Action
                             'quantity' => 1,
                             'unit' => $product->unit,
                             'cost' => $product->cost ?? 0,
-                            'category_name' => $product->category->name
+                            'category_name' => $product->category->name,
+                            'total' => $product->cost ?? 0,
                         ];
                         $addedCount++;
                     }
@@ -135,7 +138,7 @@ class ProductComponentsImporterAction extends Action
                     $message .= " وتم تجاهل {$skippedCount} مكون موجود مسبقاً";
                 }
 
-                \Filament\Notifications\Notification::make()
+                Notification::make()
                     ->title('تم استيراد المكونات')
                     ->body($message)
                     ->success()

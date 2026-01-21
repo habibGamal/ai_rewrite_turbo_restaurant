@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -141,7 +142,7 @@ class MigrateOldDataCommand extends Command
 
             $this->showMigrationSummary();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             $this->error('Migration failed: ' . $e->getMessage());
             $this->error('Stack trace: ' . $e->getTraceAsString());
@@ -156,7 +157,7 @@ class MigrateOldDataCommand extends Command
         try {
             $result = DB::connection($this->oldConnection)->select('SELECT 1');
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -1010,7 +1011,7 @@ class MigrateOldDataCommand extends Command
                         DB::statement("ALTER TABLE `{$table}` AUTO_INCREMENT = {$nextAutoIncrement}");
                         $this->line("Set {$table} auto_increment to {$nextAutoIncrement}");
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $this->warn("Could not update auto_increment for {$table}: " . $e->getMessage());
                 }
             }

@@ -2,6 +2,7 @@
 
 namespace App\DTOs\Orders;
 
+use InvalidArgumentException;
 use App\Enums\PaymentMethod;
 
 class PaymentDTO
@@ -13,7 +14,7 @@ class PaymentDTO
         public readonly int $shiftId,
     ) {
         if ($amount <= 0) {
-            throw new \InvalidArgumentException('Payment amount must be greater than zero');
+            throw new InvalidArgumentException('Payment amount must be greater than zero');
         }
     }
 

@@ -2,23 +2,30 @@
 
 namespace App\Filament\Pages\Reports;
 
+use Filament\Schemas\Schema;
+use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
+use App\Filament\Widgets\ProductsSalesStatsWidget;
+use App\Filament\Widgets\TopProductsBySalesWidget;
+use App\Filament\Widgets\TopProductsByProfitWidget;
+use App\Filament\Widgets\OrderTypePerformanceWidget;
+use App\Filament\Widgets\CategoryPerformanceWidget;
+use App\Filament\Widgets\ProductsSalesTableWidget;
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
 use App\Services\ProductsSalesReportService;
 use App\Filament\Components\PeriodFilterFormComponent;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
-use Filament\Forms\Form;
 
 class ProductsSalesPerformanceReport extends BaseDashboard
 {
     use HasFiltersForm, ViewerAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static string $routePath = 'products-sales-performance-report';
 
-    protected static ?string $navigationGroup = 'التقارير';
+    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير أداء المنتجات';
 
@@ -33,10 +40,10 @@ class ProductsSalesPerformanceReport extends BaseDashboard
         $this->productsReportService = app(ProductsSalesReportService::class);
     }
 
-    public function filtersForm(Form $form): Form
+    public function filtersForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 PeriodFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض أداء المنتجات في المبيعات',
                     'last_30_days',
@@ -56,17 +63,17 @@ class ProductsSalesPerformanceReport extends BaseDashboard
 
         if ($ordersCount === 0) {
             return [
-                \App\Filament\Widgets\NoProductsSalesInPeriodWidget::class,
+                NoProductsSalesInPeriodWidget::class,
             ];
         }
 
         return [
-            \App\Filament\Widgets\ProductsSalesStatsWidget::class,
-            \App\Filament\Widgets\TopProductsBySalesWidget::class,
-            \App\Filament\Widgets\TopProductsByProfitWidget::class,
-            \App\Filament\Widgets\OrderTypePerformanceWidget::class,
-            \App\Filament\Widgets\CategoryPerformanceWidget::class,
-            \App\Filament\Widgets\ProductsSalesTableWidget::class,
+            ProductsSalesStatsWidget::class,
+            TopProductsBySalesWidget::class,
+            TopProductsByProfitWidget::class,
+            OrderTypePerformanceWidget::class,
+            CategoryPerformanceWidget::class,
+            ProductsSalesTableWidget::class,
         ];
     }
 

@@ -2,12 +2,14 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
 use App\Filament\Exports\StockReportExporter;
 use App\Models\Product;
 use App\Models\Category;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -30,8 +32,8 @@ class StockReportTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $startDate = $this->filters['startDate'] ?? '2025-07-29';
-        $endDate = $this->filters['endDate'] ?? '2025-08-1';
+        $startDate = $this->pageFilters['startDate'] ?? '2025-07-29';
+        $endDate = $this->pageFilters['endDate'] ?? '2025-08-1';
 
         return $table
             ->query(
@@ -109,14 +111,14 @@ class StockReportTable extends BaseWidget
                     ])
             )
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('المنتج')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('category.name')
+                TextColumn::make('category.name')
                     ->label('التصنيف')
                     ->searchable()
                     ->sortable()
@@ -124,7 +126,7 @@ class StockReportTable extends BaseWidget
                     ->toggleable()
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('start_quantity')
+                TextColumn::make('start_quantity')
                     ->label('الكمية البدائية')
                     ->numeric()
                     ->sortable()
@@ -134,7 +136,7 @@ class StockReportTable extends BaseWidget
                     })
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('incoming')
+                TextColumn::make('incoming')
                     ->label('كمية الوارد')
                     ->numeric()
                     ->sortable()
@@ -154,7 +156,7 @@ class StockReportTable extends BaseWidget
                 //     ->color(function ($state) { return $state > 0 ? 'warning' : 'gray'; })
                 //     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('total_quantity')
+                TextColumn::make('total_quantity')
                     ->label('الكمية الكلية')
                     ->numeric()
                     ->toggleable()
@@ -165,7 +167,7 @@ class StockReportTable extends BaseWidget
                     ->weight('bold')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('sales')
+                TextColumn::make('sales')
                     ->label('كمية المبيعات')
                     ->numeric()
                     ->sortable()
@@ -176,7 +178,7 @@ class StockReportTable extends BaseWidget
                     })
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('return_waste')
+                TextColumn::make('return_waste')
                     ->label('كمية الفاقد والمرتجع')
                     ->numeric()
                     ->sortable()
@@ -187,7 +189,7 @@ class StockReportTable extends BaseWidget
                     })
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('total_consumed')
+                TextColumn::make('total_consumed')
                     ->label('الكمية الكلية المنصرفة')
                     ->numeric()
                     ->toggleable()
@@ -198,7 +200,7 @@ class StockReportTable extends BaseWidget
                     ->weight('medium')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('ideal_remaining')
+                TextColumn::make('ideal_remaining')
                     ->label('الكمية المتبقية المثالية')
                     ->numeric()
                     ->sortable()
@@ -212,7 +214,7 @@ class StockReportTable extends BaseWidget
                     ->weight('medium')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('actual_remaining_quantity')
+                TextColumn::make('actual_remaining_quantity')
                     ->label('الكمية المتبقية الفعلية')
                     ->numeric()
                     ->sortable()
@@ -234,7 +236,7 @@ class StockReportTable extends BaseWidget
                     ->weight('bold')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('cost')
+                TextColumn::make('cost')
                     ->label('متوسط التكلفة')
                     ->numeric(decimalPlaces: 2)
                     ->sortable()
@@ -243,7 +245,7 @@ class StockReportTable extends BaseWidget
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('deviation')
+                TextColumn::make('deviation')
                     ->label('الانحراف')
                     ->numeric()
                     ->toggleable()
@@ -263,7 +265,7 @@ class StockReportTable extends BaseWidget
                     ->weight('medium')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('deviation_value')
+                TextColumn::make('deviation_value')
                     ->label('قيمة الانحراف')
                     ->numeric(decimalPlaces: 2)
                     ->toggleable()
@@ -282,7 +284,7 @@ class StockReportTable extends BaseWidget
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('deviation_percentage')
+                TextColumn::make('deviation_percentage')
                     ->label('نسبة الانحراف')
                     ->numeric(decimalPlaces: 1)
                     ->toggleable()
@@ -315,7 +317,7 @@ class StockReportTable extends BaseWidget
                     ->searchable()
                     ->preload(),
 
-                Tables\Filters\TernaryFilter::make('has_stock')
+                TernaryFilter::make('has_stock')
                     ->label('المنتجات المتوفرة في المخزن')
                     ->queries(
                         true: function (Builder $query) {
@@ -334,7 +336,7 @@ class StockReportTable extends BaseWidget
                         },
                     ),
 
-                Tables\Filters\TernaryFilter::make('has_movements')
+                TernaryFilter::make('has_movements')
                     ->label('المنتجات التي لها حركة في الفترة')
                     ->queries(
                         true: function (Builder $query) use ($startDate, $endDate) {
@@ -391,8 +393,8 @@ class StockReportTable extends BaseWidget
             ->emptyStateHeading('لا توجد منتجات')
             ->emptyStateDescription('لم يتم العثور على أي منتجات لعرضها في التقرير.')
             ->emptyStateIcon('heroicon-o-cube')
-            ->actions([
-                Tables\Actions\Action::make('view_product')
+            ->recordActions([
+                Action::make('view_product')
                     ->label('عرض المنتج')
                     ->icon('heroicon-o-eye')
                     ->url(function ($record) {
@@ -422,6 +424,6 @@ class StockReportTable extends BaseWidget
             ])
             ->recordAction(null)
             ->recordUrl(null)
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 }

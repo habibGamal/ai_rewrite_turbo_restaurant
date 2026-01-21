@@ -13,6 +13,7 @@ class WasteFactory extends Factory
     {
         return [
             'user_id' => 1,
+            'total' => $this->faker->randomFloat(2, 0, 10000),
             'notes' => $this->faker->optional()->sentence(),
         ];
     }

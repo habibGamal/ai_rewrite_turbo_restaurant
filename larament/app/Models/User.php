@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\SettingsService;
 use App\Enums\UserRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -78,7 +79,7 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->role === UserRole::CASHIER) {
-            return app(\App\Services\SettingsService::class)->isCashierCancelOrdersAllowed();
+            return app(SettingsService::class)->isCashierCancelOrdersAllowed();
         }
 
         return $this->role?->canCancelOrders() ?? false;
@@ -91,7 +92,7 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->role === UserRole::CASHIER) {
-            return app(\App\Services\SettingsService::class)->isCashierDiscountsAllowed();
+            return app(SettingsService::class)->isCashierDiscountsAllowed();
         }
 
         return $this->role?->canApplyDiscounts() ?? false;
@@ -104,7 +105,7 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->role === UserRole::CASHIER) {
-            return app(\App\Services\SettingsService::class)->isCashierItemChangesAllowed();
+            return app(SettingsService::class)->isCashierItemChangesAllowed();
         }
 
         return true; // Default for other roles

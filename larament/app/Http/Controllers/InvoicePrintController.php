@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Services\InvoicePrintService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,7 +29,7 @@ class InvoicePrintController extends Controller
             return Inertia::render('Print/InvoicePrint', [
                 'invoiceData' => $data,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             abort(404, 'فاتورة غير موجودة');
         }
     }

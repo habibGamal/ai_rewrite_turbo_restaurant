@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 class CurrentShiftMoneyInfoStats extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     protected ShiftsReportService $shiftsReportService;
 

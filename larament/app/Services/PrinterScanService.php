@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use Log;
+use RuntimeException;
+use Exception;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\Printer;
 
@@ -14,18 +17,18 @@ class PrinterScanService
     {
         $command = "nmap -sS -p 9100 {$networkRange} -T4 -n -Pn --max-retries 2 --min-rate 5000";
 
-        \Log::info("Scanning for printers with command: {$command}");
+        Log::info("Scanning for printers with command: {$command}");
 
         try {
             $output = shell_exec($command . ' 2>&1');
 
             if ($output === null) {
-                throw new \RuntimeException('Failed to execute nmap command');
+                throw new RuntimeException('Failed to execute nmap command');
             }
 
             return $this->parseNmapOutput($output);
-        } catch (\Exception $e) {
-            \Log::error("Error scanning for printers: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error scanning for printers: " . $e->getMessage());
             throw $e;
         }
     }
@@ -71,7 +74,7 @@ class PrinterScanService
             ];
         }
 
-        \Log::info("Found " . count($printers) . " potential printers", $printers);
+        Log::info("Found " . count($printers) . " potential printers", $printers);
 
         return $printers;
     }
@@ -99,8 +102,8 @@ class PrinterScanService
                 'success' => true,
                 'message' => 'تم إرسال رسالة الاختبار بنجاح'
             ];
-        } catch (\Exception $e) {
-            \Log::error("Error testing printer {$ipAddress}: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error testing printer {$ipAddress}: " . $e->getMessage());
 
             return [
                 'success' => false,

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -22,7 +23,7 @@ class ExcelImportService
 
             $highestRow = $worksheet->getHighestRow();
             $highestColumn = $worksheet->getHighestColumn();
-            $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+            $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
 
             // Get headers from first row
             $headers = [];

@@ -14,6 +14,7 @@ class StocktakingFactory extends Factory
         return [
             'user_id' => 1,
             'notes' => $this->faker->optional()->sentence(),
+            'total' => 0,
         ];
     }
 }

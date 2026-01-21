@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Models\Shift;
 use App\Models\User;
 use App\Models\Order;
@@ -37,7 +38,7 @@ class ShiftService
         // Check if user already has an active shift
         $activeShift = $this->getCurrentShift();
         if ($activeShift) {
-            throw new \Exception('User already has an active shift');
+            throw new Exception('User already has an active shift');
         }
 
         return DB::transaction(function () use ($user, $startCash) {
@@ -86,7 +87,7 @@ class ShiftService
 
         $currentShift = $this->getCurrentShift();
         if (!$currentShift) {
-            throw new \Exception('No active shift found');
+            throw new Exception('No active shift found');
         }
 
         // Build query for processing orders check
@@ -101,7 +102,7 @@ class ShiftService
         $processingOrders = $processingOrdersQuery->exists();
 
         if ($processingOrders) {
-            throw new \Exception('لا يمكن إنهاء الشيفت لوجود طلبات قيد المعالجة');
+            throw new Exception('لا يمكن إنهاء الشيفت لوجود طلبات قيد المعالجة');
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {

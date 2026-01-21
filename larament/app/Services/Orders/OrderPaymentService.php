@@ -2,6 +2,8 @@
 
 namespace App\Services\Orders;
 
+use InvalidArgumentException;
+use App\Enums\PaymentMethod;
 use App\DTOs\Orders\PaymentDTO;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\PaymentProcessed;
@@ -58,7 +60,7 @@ class OrderPaymentService
 
         // Validate that total payments don't exceed order total
         if (($totalPaid + $totalNewPayments) > $order->total) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "إجمالي المدفوعات ({$totalPaid} + {$totalNewPayments} = " . ($totalPaid + $totalNewPayments) .
                 ") يتجاوز إجمالي الطلب (" . $order->total . ")"
             );
@@ -71,7 +73,7 @@ class OrderPaymentService
 
                 $paymentDTO = new PaymentDTO(
                     amount: $actualPaymentAmount,
-                    method: \App\Enums\PaymentMethod::from($method),
+                    method: PaymentMethod::from($method),
                     orderId: $order->id,
                     shiftId: $shiftId
                 );

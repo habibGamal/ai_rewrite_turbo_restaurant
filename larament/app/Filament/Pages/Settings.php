@@ -2,6 +2,11 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
+use Exception;
 use App\Filament\Traits\AdminAccess;
 use App\Services\SettingsService;
 use App\Services\PrintService;
@@ -9,8 +14,6 @@ use App\Services\BranchService;
 use App\Models\Category;
 use App\Enums\SettingKey;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\FileUpload;
@@ -18,8 +21,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Storage;
@@ -28,11 +29,11 @@ class Settings extends Page implements HasForms
 {
     use InteractsWithForms, AdminAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static string $view = 'filament.pages.settings';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected string $view = 'filament.pages.settings';
     protected static ?string $navigationLabel = 'الإعدادات';
     protected static ?string $title = 'إعدادات النظام';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static string | \UnitEnum | null $navigationGroup = 'إدارة النظام';
     protected static ?int $navigationSort = 100;
 
     public ?array $data = [];
@@ -66,10 +67,10 @@ class Settings extends Page implements HasForms
         $this->form->fill($this->data);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('الإعدادات العامة')
                     ->description('إعدادات النظام الأساسية')
                     ->icon('heroicon-m-cog-6-tooth')
@@ -282,7 +283,7 @@ class Settings extends Page implements HasForms
                 ->iconColor('success')
                 ->send();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في حفظ الإعدادات')
                 ->body('حدث خطأ أثناء محاولة حفظ الإعدادات. يرجى المحاولة مرة أخرى.')
@@ -309,7 +310,7 @@ class Settings extends Page implements HasForms
                 ->iconColor('success')
                 ->send();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في إعادة تعيين الإعدادات')
                 ->body('حدث خطأ أثناء محاولة إعادة تعيين الإعدادات.')
@@ -332,7 +333,7 @@ class Settings extends Page implements HasForms
                 ->iconColor('success')
                 ->send();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('فشل في اختبار الطابعة')
                 ->body('حدث خطأ أثناء محاولة اختبار الطابعة: ' . $e->getMessage())

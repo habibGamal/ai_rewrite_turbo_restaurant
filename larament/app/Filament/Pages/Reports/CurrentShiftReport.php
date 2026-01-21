@@ -2,6 +2,14 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Filament\Widgets\NoActiveShiftWidget;
+use App\Filament\Widgets\CurrentShiftInfoStats;
+use App\Filament\Widgets\CurrentShiftMoneyInfoStats;
+use App\Filament\Widgets\CurrentShiftOrdersStats;
+use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
+use App\Filament\Widgets\CurrentShiftOrdersTable;
+use App\Filament\Widgets\CurrentShiftExpensesDetailsTable;
+use App\Filament\Widgets\CurrentShiftExpensesTable;
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
 use App\Services\ShiftsReportService;
@@ -14,11 +22,11 @@ class CurrentShiftReport extends BaseDashboard
 {
     use HasFiltersForm ,ViewerAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static string $routePath = 'current-shift-report';
 
-    protected static ?string $navigationGroup = 'التقارير';
+    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير اليوم';
 
@@ -39,18 +47,18 @@ class CurrentShiftReport extends BaseDashboard
 
         if (!$currentShift) {
             return [
-                \App\Filament\Widgets\NoActiveShiftWidget::class,
+                NoActiveShiftWidget::class,
             ];
         }
 
         return [
-            \App\Filament\Widgets\CurrentShiftInfoStats::class,
-            \App\Filament\Widgets\CurrentShiftMoneyInfoStats::class,
-            \App\Filament\Widgets\CurrentShiftOrdersStats::class,
-            \App\Filament\Widgets\CurrentShiftDoneOrdersStats::class,
-            \App\Filament\Widgets\CurrentShiftOrdersTable::class,
-            \App\Filament\Widgets\CurrentShiftExpensesDetailsTable::class,
-            \App\Filament\Widgets\CurrentShiftExpensesTable::class,
+            CurrentShiftInfoStats::class,
+            CurrentShiftMoneyInfoStats::class,
+            CurrentShiftOrdersStats::class,
+            CurrentShiftDoneOrdersStats::class,
+            CurrentShiftOrdersTable::class,
+            CurrentShiftExpensesDetailsTable::class,
+            CurrentShiftExpensesTable::class,
         ];
     }
 

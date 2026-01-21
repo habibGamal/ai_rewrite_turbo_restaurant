@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use Carbon\Carbon;
 use App\Services\CustomersPerformanceReportService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -11,7 +12,7 @@ use Filament\Support\Enums\IconPosition;
 class CustomerLoyaltyInsightsWidget extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -68,8 +69,8 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
 
     private function getCustomerLoyaltyInsights(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $customers = $this->customersReportService->getCustomersPerformanceQuery($startDate, $endDate)->get();
 
@@ -80,8 +81,8 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
         // Calculate average customer lifetime
         $lifetimes = $customers->map(function ($customer) {
             if ($customer->first_order_date && $customer->last_order_date) {
-                return \Carbon\Carbon::parse($customer->first_order_date)
-                    ->diffInDays(\Carbon\Carbon::parse($customer->last_order_date));
+                return Carbon::parse($customer->first_order_date)
+                    ->diffInDays(Carbon::parse($customer->last_order_date));
             }
             return 0;
         })->filter(fn($lifetime) => $lifetime > 0);
@@ -94,7 +95,7 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
         // At risk customers (haven't ordered in last 60 days but have ordered before)
         $atRiskCustomers = $customers->filter(function ($customer) {
             return $customer->last_order_date &&
-                   \Carbon\Carbon::parse($customer->last_order_date)->lt(now()->subDays(60)) &&
+                   Carbon::parse($customer->last_order_date)->lt(now()->subDays(60)) &&
                    $customer->total_orders > 0;
         })->count();
 
@@ -112,8 +113,8 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
 
         if ($returningCustomersWithLifetime->count() > 0) {
             $avgDaysBetweenOrders = $returningCustomersWithLifetime->map(function ($customer) {
-                $lifetime = \Carbon\Carbon::parse($customer->first_order_date)
-                    ->diffInDays(\Carbon\Carbon::parse($customer->last_order_date));
+                $lifetime = Carbon::parse($customer->first_order_date)
+                    ->diffInDays(Carbon::parse($customer->last_order_date));
                 return $customer->total_orders > 1 ? $lifetime / ($customer->total_orders - 1) : 0;
             })->avg();
         }

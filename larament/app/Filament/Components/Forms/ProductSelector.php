@@ -2,9 +2,10 @@
 
 namespace App\Filament\Components\Forms;
 
+use App\Enums\ProductType;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use App\Models\Product;
 use App\Models\Category;
 use Filament\Notifications\Notification;
@@ -45,8 +46,8 @@ class ProductSelector extends Select
             // ])
             ->options(function () {
                 $products = Product::whereIn('type', [
-                    \App\Enums\ProductType::RawMaterial,
-                    \App\Enums\ProductType::Consumable,
+                    ProductType::RawMaterial,
+                    ProductType::Consumable,
                 ])
                     ->with('category')
                     ->get();
@@ -124,7 +125,7 @@ class ProductSelector extends Select
             ->dehydrated(false); // Don't save this field's value
     }
 
-    public static function make(string $name = 'product_selector'): static
+    public static function make(?string $name = 'product_selector'): static
     {
         return parent::make($name);
     }

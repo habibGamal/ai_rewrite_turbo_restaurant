@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use Exception;
 use App\Filament\Traits\AdminAccess;
 use App\Services\BranchService;
 use App\Models\Category;
@@ -17,11 +18,11 @@ class BranchManagement extends Page implements HasForms
 {
     use InteractsWithForms, AdminAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office';
-    protected static string $view = 'filament.pages.branch-management';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
+    protected string $view = 'filament.pages.branch-management';
     protected static ?string $navigationLabel = 'إدارة الفروع';
     protected static ?string $title = 'إدارة الفروع';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected static string | \UnitEnum | null $navigationGroup = 'إدارة النظام';
     protected static ?int $navigationSort = 2;
 
     public $newProducts = [];
@@ -49,7 +50,7 @@ class BranchManagement extends Page implements HasForms
             $branchService = app(BranchService::class);
             $this->newProducts =
             $branchService->getNewProductsFromMaster();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->newProducts = [];
             Notification::make()
                 ->title('خطأ في تحميل المنتجات الجديدة')
@@ -65,7 +66,7 @@ class BranchManagement extends Page implements HasForms
         try {
             $branchService = app(BranchService::class);
             $this->changedPrices = $branchService->getChangedPricesProductsFromMaster();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->changedPrices = [];
             Notification::make()
                 ->title('خطأ في تحميل الأسعار المتغيرة')
@@ -81,7 +82,7 @@ class BranchManagement extends Page implements HasForms
         try {
             $branchService = app(BranchService::class);
             $this->changedRecipes = $branchService->getChangedRecipesProductsFromMaster();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->changedRecipes = [];
             Notification::make()
                 ->title('خطأ في تحميل الوصفات المتغيرة')
@@ -133,7 +134,7 @@ class BranchManagement extends Page implements HasForms
                 ->icon('heroicon-o-plus-circle')
                 ->color('success')
                 ->visible($newProductsCount > 0)
-                ->form([
+                ->schema([
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات للاستيراد')
                         ->options($this->getProductOptions($this->newProducts))
@@ -150,7 +151,7 @@ class BranchManagement extends Page implements HasForms
                 ->icon('heroicon-o-currency-dollar')
                 ->color('warning')
                 ->visible($changedPricesCount > 0)
-                ->form([
+                ->schema([
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات لتحديث أسعارها')
                         ->options($this->getPriceOptions($this->changedPrices))
@@ -167,7 +168,7 @@ class BranchManagement extends Page implements HasForms
                 ->icon('heroicon-o-squares-2x2')
                 ->color('info')
                 ->visible($changedRecipesCount > 0)
-                ->form([
+                ->schema([
                     CheckboxList::make('productIds')
                         ->label('اختر المنتجات لتحديث وصفاتها')
                         ->bulkToggleable()
@@ -248,7 +249,7 @@ class BranchManagement extends Page implements HasForms
             // Refresh data
             $this->refreshData();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في استيراد المنتجات')
                 ->body('حدث خطأ أثناء محاولة استيراد المنتجات: ' . $e->getMessage())
@@ -284,7 +285,7 @@ class BranchManagement extends Page implements HasForms
             // Refresh data
             $this->refreshData();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في تحديث الأسعار')
                 ->body('حدث خطأ أثناء محاولة تحديث الأسعار: ' . $e->getMessage())
@@ -320,7 +321,7 @@ class BranchManagement extends Page implements HasForms
             // Refresh data
             $this->refreshData();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في تحديث الوصفات')
                 ->body('حدث خطأ أثناء محاولة تحديث الوصفات: ' . $e->getMessage())

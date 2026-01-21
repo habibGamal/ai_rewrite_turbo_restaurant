@@ -9,11 +9,11 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class OrderTypePerformanceWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'أداء المبيعات حسب نوع الطلب';
+    protected ?string $heading = 'أداء المبيعات حسب نوع الطلب';
 
     protected int | string | array $columnSpan = 2;
 
@@ -126,8 +126,8 @@ class OrderTypePerformanceWidget extends ChartWidget
 
     private function getOrderTypePerformance(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $this->productsReportService->getOrderTypePerformance($startDate, $endDate);
     }

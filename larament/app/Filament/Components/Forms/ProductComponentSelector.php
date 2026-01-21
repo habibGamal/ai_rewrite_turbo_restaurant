@@ -2,9 +2,9 @@
 
 namespace App\Filament\Components\Forms;
 
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use App\Models\Product;
 use App\Models\Category;
 use App\Enums\ProductType;
@@ -108,7 +108,7 @@ class ProductComponentSelector extends Select
             ->dehydrated(false); // Don't save this field's value
     }
 
-    public static function make(string $name = 'component_selector'): static
+    public static function make(?string $name = 'component_selector'): static
     {
         return parent::make($name);
     }

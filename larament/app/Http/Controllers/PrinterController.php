@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Services\PrinterScanService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,7 @@ class PrinterController extends Controller
             $result = $this->printerScanService->testPrinter($request->ip_address);
 
             return response()->json($result);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء اختبار الطابعة: ' . $e->getMessage()
@@ -50,7 +51,7 @@ class PrinterController extends Controller
                 'success' => true,
                 'printers' => $printers
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء البحث عن الطابعات: ' . $e->getMessage()

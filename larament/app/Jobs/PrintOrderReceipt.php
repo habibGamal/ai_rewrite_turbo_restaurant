@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use Exception;
+use Throwable;
 use App\Models\Order;
 use App\Services\PrintService;
 use App\Enums\SettingKey;
@@ -40,7 +42,7 @@ class PrintOrderReceipt implements ShouldQueue
             $printService->printOrderProcess($this->order);
 
             Log::info("Order receipt print job completed successfully for order {$this->order->id}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Order receipt print job failed for order {$this->order->id}: " . $e->getMessage());
             throw $e;
         }
@@ -49,7 +51,7 @@ class PrintOrderReceipt implements ShouldQueue
     /**
      * Handle a job failure.
      */
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         Log::error("Order receipt print job permanently failed for order {$this->order->id}: " . $exception->getMessage());
     }

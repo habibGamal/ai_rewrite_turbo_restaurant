@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
 use App\Services\ShiftsReportService;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -10,7 +12,6 @@ use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
 use Carbon\Carbon;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,10 +36,10 @@ class PeriodShiftExpensesTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             $totalExpensesOverPeriod = Expense::query()
                 ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
@@ -70,8 +71,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->orderBy('created_at', 'desc');
             };
         } else {
-            $startDate = $this->filters['startDate'];
-            $endDate = $this->filters['endDate'];
+            $startDate = $this->pageFilters['startDate'];
+            $endDate = $this->pageFilters['endDate'];
             $totalExpensesOverPeriod = Expense::query()
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [
@@ -133,20 +134,20 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->fileName(fn() => 'period-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('نوع المصروف')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('expenses_count')
+                TextColumn::make('expenses_count')
                     ->label('عدد المصروفات')
                     ->alignCenter()
                     ->sortable()
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('expenses_sum_amount')
+                TextColumn::make('expenses_sum_amount')
                     ->label('الإجمالي')
                     ->money('EGP')
                     ->alignCenter()
@@ -164,8 +165,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                         $monthsInPeriod = 1; // Default to 1 month
 
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -180,14 +181,14 @@ class PeriodShiftExpensesTable extends BaseWidget
                         return 'success';
                     }),
 
-                Tables\Columns\TextColumn::make('avg_month_rate')
+                TextColumn::make('avg_month_rate')
                     ->label('الميزانية الشهرية')
                     ->money('EGP')
                     ->alignCenter()
                     ->placeholder('غير محدد')
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('adjusted_budget')
+                TextColumn::make('adjusted_budget')
                     ->label('ميزانية الفترة')
                     ->state(function ($record) use ($filterType) {
                         $monthlyRate = $record->avg_month_rate ?? 0;
@@ -200,8 +201,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                         $monthsInPeriod = 1; // Default to 1 month
 
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -215,8 +216,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->color('warning')
                     ->tooltip(function ($record) use ($filterType) {
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -227,7 +228,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                         return 'ميزانية الفترة المحددة';
                     }),
 
-                Tables\Columns\TextColumn::make('budget_status')
+                TextColumn::make('budget_status')
                     ->label('حالة الميزانية')
                     ->state(function ($record) use ($filterType) {
                         $current = $record->expenses_sum_amount ?? 0;
@@ -241,8 +242,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                         $monthsInPeriod = 1; // Default to 1 month
 
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -271,8 +272,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                         $monthsInPeriod = 1; // Default to 1 month
 
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -296,8 +297,8 @@ class PeriodShiftExpensesTable extends BaseWidget
                         $monthsInPeriod = 1; // Default to 1 month
 
                         if ($filterType === 'period') {
-                            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->toDateString();
-                            $endDate = $this->filters['endDate'] ?? now()->toDateString();
+                            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(6)->toDateString();
+                            $endDate = $this->pageFilters['endDate'] ?? now()->toDateString();
 
                             $start = Carbon::parse($startDate);
                             $end = Carbon::parse($endDate);
@@ -309,7 +310,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                         return $current > $adjustedBudget ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle';
                     }),
 
-                Tables\Columns\TextColumn::make('average_amount')
+                TextColumn::make('average_amount')
                     ->label('متوسط المبلغ')
                     ->state(function ($record) {
                         $count = $record->expenses_count ?? 0;
@@ -320,7 +321,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                     ->alignCenter()
                     ->color('warning'),
 
-                Tables\Columns\TextColumn::make('percentage')
+                TextColumn::make('percentage')
                     ->label('النسبة المئوية')
                     ->state(function ($record) use ($totalExpensesOverPeriod) {
                         // Calculate total expenses for percentage
@@ -338,7 +339,7 @@ class PeriodShiftExpensesTable extends BaseWidget
             ->emptyStateIcon('heroicon-o-banknotes')
             ->recordAction(null)
             ->recordUrl(null)
-            ->bulkActions([])
+            ->toolbarActions([])
         ;
     }
 

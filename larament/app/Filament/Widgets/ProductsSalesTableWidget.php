@@ -2,12 +2,13 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Actions\ViewAction;
 use App\Enums\ProductType;
 use App\Services\ProductsSalesReportService;
 use App\Filament\Exports\ProductsSalesTableExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -36,8 +37,8 @@ class ProductsSalesTableWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $table
             ->query(
@@ -127,8 +128,8 @@ class ProductsSalesTableWidget extends BaseWidget
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])
             ->striped()
-            ->actions([
-                Tables\Actions\ViewAction::make()
+            ->recordActions([
+                ViewAction::make()
                     ->label('عرض المنتج')
                     ->icon('heroicon-o-eye')
                     ->url(function ($record): string {
@@ -144,7 +145,7 @@ class ProductsSalesTableWidget extends BaseWidget
                     })
                     ->openUrlInNewTab(),
             ])
-            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordAction(ViewAction::class)
             ->recordUrl(function ($record): string {
                 // Determine the appropriate resource based on product type
                 $resourceRoute = match ($record->type) {

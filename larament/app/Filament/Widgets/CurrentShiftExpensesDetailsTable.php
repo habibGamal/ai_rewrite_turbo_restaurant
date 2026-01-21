@@ -2,12 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use App\Services\ShiftsReportService;
 use App\Models\Expense;
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
@@ -55,21 +58,21 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                     ->visible(fn() => $this->getCurrentShift() !== null),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('رقم المصروف')
                     ->sortable()
                     ->searchable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('expenceType.name')
+                TextColumn::make('expenceType.name')
                     ->label('نوع المصروف')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('amount')
+                TextColumn::make('amount')
                     ->label('المبلغ')
                     ->money('EGP')
                     ->alignCenter()
@@ -77,7 +80,7 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                     ->weight('bold')
                     ->color('danger'),
 
-                Tables\Columns\TextColumn::make('notes')
+                TextColumn::make('notes')
                     ->label('ملاحظات')
                     ->searchable()
                     ->limit(50)
@@ -87,14 +90,14 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                     ->placeholder('لا توجد ملاحظات')
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->alignCenter()
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('آخر تحديث')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
@@ -110,17 +113,17 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
             ->emptyStateIcon('heroicon-o-banknotes')
             ->recordAction(null)
             ->recordUrl(null)
-            ->bulkActions([])
+            ->toolbarActions([])
             ->filters([
-                Tables\Filters\SelectFilter::make('expenceType')
+                SelectFilter::make('expenceType')
                     ->label('نوع المصروف')
                     ->relationship('expenceType', 'name')
                     ->searchable()
                     ->preload(),
 
-                Tables\Filters\Filter::make('amount_range')
+                Filter::make('amount_range')
                     ->label('نطاق المبلغ')
-                    ->form([
+                    ->schema([
                         TextInput::make('min_amount')
                             ->label('أقل مبلغ')
                             ->numeric()
@@ -142,7 +145,7 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                             );
                     }),
 
-                Tables\Filters\Filter::make('today')
+                Filter::make('today')
                     ->label('اليوم فقط')
                     ->query(fn (Builder $query): Builder => $query->whereDate('created_at', today()))
                     ->toggle(),

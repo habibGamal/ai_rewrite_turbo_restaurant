@@ -3,7 +3,6 @@
 namespace App\Filament\Actions;
 
 use Filament\Actions\Action;
-use Filament\Tables\Actions\Action as TableAction;
 use Illuminate\Database\Eloquent\Model;
 
 class PrintInvoiceAction
@@ -26,9 +25,9 @@ class PrintInvoiceAction
         return 'invoice';
     }
 
-    public static function table(?string $name = null): TableAction
+    public static function table(?string $name = null): Action
     {
-        return TableAction::make($name ?? 'print')
+        return Action::make($name ?? 'print')
             ->label('طباعة')
             ->icon('heroicon-o-printer')
             ->color('success')

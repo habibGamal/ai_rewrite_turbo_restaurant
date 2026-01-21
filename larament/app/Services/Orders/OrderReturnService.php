@@ -2,6 +2,7 @@
 
 namespace App\Services\Orders;
 
+use Exception;
 use App\Enums\MovementReason;
 use App\Enums\ReturnStatus;
 use App\Models\Order;
@@ -28,7 +29,7 @@ class OrderReturnService
      * @param int $shiftId
      * @param bool $reverseStock
      * @return OrderReturn
-     * @throws \Exception
+     * @throws Exception
      */
     public function processReturn(
         Order $order,
@@ -101,7 +102,7 @@ class OrderReturnService
 
             return $orderReturn;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error("Failed to process order return", [
                 'order_id' => $order->id,
@@ -121,7 +122,7 @@ class OrderReturnService
             $orderItem = $order->items->firstWhere('id', $item['order_item_id']);
 
             if (!$orderItem) {
-                throw new \Exception("صنف الطلب غير موجود");
+                throw new Exception("صنف الطلب غير موجود");
             }
 
             // Calculate already returned quantity
@@ -132,18 +133,18 @@ class OrderReturnService
             $availableForReturn = $orderItem->quantity - $alreadyReturned;
 
             if ($item['quantity'] > $availableForReturn) {
-                throw new \Exception(
+                throw new Exception(
                     "الكمية المطلوب إرجاعها للصنف {$orderItem->product->name} أكبر من المتاح. " .
                     "المتاح: {$availableForReturn}, المطلوب: {$item['quantity']}"
                 );
             }
 
             if ($item['quantity'] <= 0) {
-                throw new \Exception("الكمية يجب أن تكون أكبر من صفر");
+                throw new Exception("الكمية يجب أن تكون أكبر من صفر");
             }
 
             if ($item['refund_amount'] < 0) {
-                throw new \Exception("مبلغ الاسترجاع يجب أن يكون موجباً");
+                throw new Exception("مبلغ الاسترجاع يجب أن يكون موجباً");
             }
         }
     }
@@ -156,14 +157,14 @@ class OrderReturnService
         $distributionSum = collect($refundDistribution)->sum('amount');
 
         if (abs($distributionSum - $totalRefund) > 0.01) {
-            throw new \Exception(
+            throw new Exception(
                 "مجموع توزيع الاسترجاع ({$distributionSum}) لا يساوي إجمالي الاسترجاع ({$totalRefund})"
             );
         }
 
         foreach ($refundDistribution as $refund) {
             if ($refund['amount'] <= 0) {
-                throw new \Exception("مبلغ الاسترجاع يجب أن يكون أكبر من صفر");
+                throw new Exception("مبلغ الاسترجاع يجب أن يكون أكبر من صفر");
             }
         }
     }

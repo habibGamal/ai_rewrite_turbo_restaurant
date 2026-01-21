@@ -2,6 +2,7 @@
 
 namespace App\Filament\Exports;
 
+use Carbon\Carbon;
 use App\Models\Customer;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
@@ -82,7 +83,7 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->label('آخر طلب')
                 ->state(function ($record) {
                     return $record->last_order_date ?
-                        \Carbon\Carbon::parse($record->last_order_date)->format('Y-m-d') :
+                        Carbon::parse($record->last_order_date)->format('Y-m-d') :
                         'لا يوجد';
                 }),
 
@@ -90,7 +91,7 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->label('أول طلب')
                 ->state(function ($record) {
                     return $record->first_order_date ?
-                        \Carbon\Carbon::parse($record->first_order_date)->format('Y-m-d') :
+                        Carbon::parse($record->first_order_date)->format('Y-m-d') :
                         'لا يوجد';
                 }),
 
@@ -142,8 +143,8 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->label('مدة العلاقة (أيام)')
                 ->state(function ($record) {
                     if ($record->first_order_date && $record->last_order_date) {
-                        $first = \Carbon\Carbon::parse($record->first_order_date);
-                        $last = \Carbon\Carbon::parse($record->last_order_date);
+                        $first = Carbon::parse($record->first_order_date);
+                        $last = Carbon::parse($record->last_order_date);
                         return $first->diffInDays($last);
                     }
                     return 0;
@@ -153,8 +154,8 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->label('معدل الطلب (طلب/شهر)')
                 ->state(function ($record) {
                     if ($record->first_order_date && $record->last_order_date && $record->total_orders > 1) {
-                        $first = \Carbon\Carbon::parse($record->first_order_date);
-                        $last = \Carbon\Carbon::parse($record->last_order_date);
+                        $first = Carbon::parse($record->first_order_date);
+                        $last = Carbon::parse($record->last_order_date);
                         $months = $first->diffInMonths($last) ?: 1;
                         return number_format($record->total_orders / $months, 2);
                     }

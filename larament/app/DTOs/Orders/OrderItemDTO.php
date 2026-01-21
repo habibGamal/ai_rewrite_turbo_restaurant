@@ -2,6 +2,8 @@
 
 namespace App\DTOs\Orders;
 
+use InvalidArgumentException;
+
 class OrderItemDTO
 {
     public function __construct(
@@ -15,23 +17,23 @@ class OrderItemDTO
         public readonly ?float $itemDiscountPercent = null,
     ) {
         if ($quantity <= 0) {
-            throw new \InvalidArgumentException('Quantity must be greater than zero');
+            throw new InvalidArgumentException('Quantity must be greater than zero');
         }
 
         if ($price < 0) {
-            throw new \InvalidArgumentException('Price cannot be negative');
+            throw new InvalidArgumentException('Price cannot be negative');
         }
 
         if ($cost < 0) {
-            throw new \InvalidArgumentException('Cost cannot be negative');
+            throw new InvalidArgumentException('Cost cannot be negative');
         }
 
         if ($itemDiscount < 0) {
-            throw new \InvalidArgumentException('Item discount cannot be negative');
+            throw new InvalidArgumentException('Item discount cannot be negative');
         }
 
         if ($itemDiscountPercent !== null && ($itemDiscountPercent < 0 || $itemDiscountPercent > 100)) {
-            throw new \InvalidArgumentException('Item discount percent must be between 0 and 100');
+            throw new InvalidArgumentException('Item discount percent must be between 0 and 100');
         }
     }
 

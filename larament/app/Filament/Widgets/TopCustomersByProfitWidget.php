@@ -9,15 +9,15 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class TopCustomersByProfitWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'أفضل 10 عملاء بالأرباح';
+    protected ?string $heading = 'أفضل 10 عملاء بالأرباح';
 
     protected int|string|array $columnSpan = 'lg:col-span-2';
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
     protected CustomersPerformanceReportService $customersReportService;
 
@@ -28,8 +28,8 @@ class TopCustomersByProfitWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $topCustomers = $this->customersReportService->getCustomersPerformanceQuery($startDate, $endDate)
             ->orderByDesc('total_profit')

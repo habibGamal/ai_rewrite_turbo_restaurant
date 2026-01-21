@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Enums\MovementReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
@@ -29,7 +30,7 @@ class PurchaseService
     public function closePurchaseInvoice(PurchaseInvoice $invoice): bool
     {
         if ($invoice->closed_at) {
-            throw new \Exception('هذه الفاتورة مغلقة بالفعل');
+            throw new Exception('هذه الفاتورة مغلقة بالفعل');
         }
 
         shouldDayBeOpen();
@@ -41,7 +42,7 @@ class PurchaseService
             $items = $invoice->items()->with('product')->get();
 
             if ($items->isEmpty()) {
-                throw new \Exception('لا توجد أصناف في هذه الفاتورة');
+                throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing
@@ -63,7 +64,7 @@ class PurchaseService
             );
 
             if (!$success) {
-                throw new \Exception('فشل في إضافة الأصناف إلى المخزون');
+                throw new Exception('فشل في إضافة الأصناف إلى المخزون');
             }
 
             // Mark invoice as closed
@@ -74,7 +75,7 @@ class PurchaseService
             Log::info("Purchase invoice {$invoice->id} closed successfully with cost updates");
             return true;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error("Failed to close purchase invoice {$invoice->id}: " . $e->getMessage());
             throw $e;
@@ -87,7 +88,7 @@ class PurchaseService
     public function closeReturnPurchaseInvoice(ReturnPurchaseInvoice $invoice): bool
     {
         if ($invoice->closed_at) {
-            throw new \Exception('هذه الفاتورة مغلقة بالفعل');
+            throw new Exception('هذه الفاتورة مغلقة بالفعل');
         }
 
         shouldDayBeOpen();
@@ -99,7 +100,7 @@ class PurchaseService
             $items = $invoice->items()->with('product')->get();
 
             if ($items->isEmpty()) {
-                throw new \Exception('لا توجد أصناف في هذه الفاتورة');
+                throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing and validate availability
@@ -129,7 +130,7 @@ class PurchaseService
             );
 
             if (!$success) {
-                throw new \Exception('فشل في خصم الأصناف من المخزون');
+                throw new Exception('فشل في خصم الأصناف من المخزون');
             }
 
             // Mark invoice as closed
@@ -140,7 +141,7 @@ class PurchaseService
             Log::info("Return purchase invoice {$invoice->id} closed successfully");
             return true;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error("Failed to close return purchase invoice {$invoice->id}: " . $e->getMessage());
             throw $e;

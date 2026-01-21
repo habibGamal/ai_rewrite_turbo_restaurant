@@ -2,10 +2,10 @@
 
 namespace App\Filament\Actions;
 
+use Exception;
 use App\Models\Stocktaking;
 use App\Services\StocktakingService;
 use Filament\Actions\Action;
-use Filament\Tables\Actions\Action as TableAction;
 use Filament\Notifications\Notification;
 
 class CloseStocktakingAction
@@ -34,7 +34,7 @@ class CloseStocktakingAction
                         ->success()
                         ->send();
 
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق الجرد')
                         ->body($e->getMessage())
@@ -44,9 +44,9 @@ class CloseStocktakingAction
             });
     }
 
-    public static function table(?string $name = null): TableAction
+    public static function table(?string $name = null): Action
     {
-        return TableAction::make($name ?? 'close')
+        return Action::make($name ?? 'close')
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
@@ -64,7 +64,7 @@ class CloseStocktakingAction
                         ->body('تم تحديث كميات المخزون بناءً على الكميات الفعلية')
                         ->success()
                         ->send();
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق الجرد')
                         ->body($e->getMessage())

@@ -2,6 +2,7 @@
 
 namespace App\Services\Orders;
 
+use Exception;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductComponent;
@@ -130,7 +131,7 @@ class OrderStockConversionService
                 $order
             );
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to remove stock for completed order", [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
@@ -158,7 +159,7 @@ class OrderStockConversionService
                 $order
             );
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to add stock back for cancelled order", [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()

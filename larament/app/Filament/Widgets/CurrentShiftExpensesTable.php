@@ -2,6 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
+use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Support\Enums\Width;
+use Illuminate\Database\Eloquent\Collection;
 use App\Models\Shift;
 use App\Models\Expense;
 use App\Models\ExpenceType;
@@ -10,11 +16,9 @@ use App\Filament\Exports\CurrentShiftExpensesExporter;
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
-use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\HtmlString;
 
 class CurrentShiftExpensesTable extends BaseWidget
@@ -107,19 +111,19 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->visible(fn () => $this->getCurrentShift() !== null),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('نوع المصروف')
                     ->searchable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('expense_count')
+                TextColumn::make('expense_count')
                     ->label('عدد المصروفات')
                     ->numeric()
                     ->alignCenter()
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('total_amount')
+                TextColumn::make('total_amount')
                     ->label('الإجمالي')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -134,14 +138,14 @@ class CurrentShiftExpensesTable extends BaseWidget
                         return 'success';
                     }),
 
-                Tables\Columns\TextColumn::make('avg_month_rate')
+                TextColumn::make('avg_month_rate')
                     ->label('الميزانية الشهرية')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
                     ->state(function ($record) {
                         $monthlyRate = $record->avg_month_rate ?? 0;
-                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        $daysInMonth = Carbon::today()->daysInMonth;
                         // show budget distributed over days of the month (amount per day)
                         $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
                         return $monthlyRate > 0 ? number_format($monthlyRate, 2) : 'غير محدد';
@@ -149,12 +153,12 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->placeholder('غير محدد')
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('budget_status')
+                TextColumn::make('budget_status')
                     ->label('حالة الميزانية')
                     ->state(function ($record) {
                         $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
-                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        $daysInMonth = Carbon::today()->daysInMonth;
                         // compare against budget distributed over days of the month (amount per day)
                         $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
@@ -175,7 +179,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->color(function ($record) {
                         $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
-                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        $daysInMonth = Carbon::today()->daysInMonth;
                         // compare against budget distributed over days of the month (amount per day)
                         $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
@@ -189,7 +193,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->icon(function ($record) {
                          $current = $record->total_amount ?? 0;
                         $monthlyRate = $record->avg_month_rate ?? 0;
-                        $daysInMonth = \Carbon\Carbon::today()->daysInMonth;
+                        $daysInMonth = Carbon::today()->daysInMonth;
                         // compare against budget distributed over days of the month (amount per day)
                         $monthlyRate = $monthlyRate > 0 ? ($monthlyRate / max(1, $daysInMonth)) : 0;
 
@@ -206,13 +210,13 @@ class CurrentShiftExpensesTable extends BaseWidget
             ->emptyStateHeading('لا توجد مصروفات')
             ->emptyStateDescription('لم يتم تسجيل أي مصروفات في الشفت الحالي.')
             ->emptyStateIcon('heroicon-o-currency-dollar')
-            ->actions([
-                Tables\Actions\Action::make('view_expenses')
+            ->recordActions([
+                Action::make('view_expenses')
                     ->label('عرض التفاصيل')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->modalHeading(fn ($record) => 'مصروفات نوع: ' . $record->name)
-                    ->modalWidth(MaxWidth::FourExtraLarge)
+                    ->modalWidth(Width::FourExtraLarge)
                     ->modalContent(fn ($record) =>
                         view('filament.modals.shift-details', [
                             'shiftId' => $currentShift->id,
@@ -224,7 +228,7 @@ class CurrentShiftExpensesTable extends BaseWidget
             ])
             ->recordAction(null)
             ->recordUrl(null)
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 
     private function getCurrentShift(): ?Shift
@@ -232,7 +236,7 @@ class CurrentShiftExpensesTable extends BaseWidget
         return $this->shiftsReportService->getCurrentShift();
     }
 
-    private function getExpensesForType(int $expenseTypeId): \Illuminate\Database\Eloquent\Collection
+    private function getExpensesForType(int $expenseTypeId): Collection
     {
         $currentShift = $this->getCurrentShift();
 

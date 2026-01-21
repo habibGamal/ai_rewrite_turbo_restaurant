@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use Exception;
+use InvalidArgumentException;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
 use App\Models\InventoryItemMovementDaily;
@@ -73,7 +75,7 @@ class FixInventoryDailyAggregationCommand extends Command
 
             return 0;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error("❌ فشل الإصلاح: {$e->getMessage()}");
             Log::error("Fix inventory daily aggregation failed", [
                 'error' => $e->getMessage(),
@@ -100,8 +102,8 @@ class FixInventoryDailyAggregationCommand extends Command
                         'is_open' => InventoryItemMovementDaily::where('date', $date)->whereNull('closed_at')->exists()
                     ]
                 ]);
-            } catch (\Exception $e) {
-                throw new \InvalidArgumentException("تاريخ غير صالح: {$specificDate}");
+            } catch (Exception $e) {
+                throw new InvalidArgumentException("تاريخ غير صالح: {$specificDate}");
             }
         }
 
@@ -197,7 +199,7 @@ class FixInventoryDailyAggregationCommand extends Command
 
             $this->info("  ✅ تم معالجة {$records->count()} سجل");
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             $this->error("  ❌ خطأ في معالجة اليوم {$dateString}: {$e->getMessage()}");
             $this->stats['errors']++;

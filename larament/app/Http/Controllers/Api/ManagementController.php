@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Exception;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -50,7 +51,7 @@ class ManagementController extends Controller
                 'message' => 'Deployment completed successfully',
                 'output' => $output
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Deployment failed', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -83,7 +84,7 @@ class ManagementController extends Controller
                 'message' => 'Application stopped successfully',
                 'output' => $output
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to stop application', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -116,7 +117,7 @@ class ManagementController extends Controller
                 'message' => 'Application started successfully',
                 'output' => $output
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to start application', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -175,7 +176,7 @@ class ManagementController extends Controller
                 'command' => $command,
                 'output' => $output
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Custom script execution failed', [
                 'command' => $request->input('command'),
                 'error' => $e->getMessage()
@@ -210,7 +211,7 @@ class ManagementController extends Controller
                 'status' => $isDown ? 'maintenance' : 'running',
                 'timestamp' => now()->toISOString()
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to get application status', ['error' => $e->getMessage()]);
 
             return response()->json([

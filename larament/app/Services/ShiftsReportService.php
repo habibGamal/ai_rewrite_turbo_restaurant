@@ -61,11 +61,21 @@ class ShiftsReportService
      */
     public function getShiftsInfo(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
+        $driver = config('database.default');
+        $connection = config("database.connections.{$driver}.driver");
+
+        // Use different SQL for different database drivers
+        if ($connection === 'sqlite') {
+            $minutesExpression = "SUM((julianday(end_at) - julianday(start_at)) * 24 * 60)";
+        } else {
+            $minutesExpression = 'SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at))';
+        }
+
         $query = DB::table('shifts')
             ->select([
                 DB::raw('COUNT(*) as total_shifts'),
                 DB::raw('COUNT(DISTINCT user_id) as distinct_users'),
-                DB::raw('SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at)) as total_minutes')
+                DB::raw("{$minutesExpression} as total_minutes")
             ]);
 
         if ($shiftIds && !empty($shiftIds)) {
