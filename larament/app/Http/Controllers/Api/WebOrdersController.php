@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Exception;
 use App\Http\Controllers\Controller;
 use App\Services\WebApiService;
 use App\Models\Order;
@@ -84,7 +85,7 @@ class WebOrdersController extends Controller
             return response()->json([
                 'message' => 'تم إنشاء الطلب بنجاح',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'فشل في إنشاء الطلب',
                 'error' => $e->getMessage(),

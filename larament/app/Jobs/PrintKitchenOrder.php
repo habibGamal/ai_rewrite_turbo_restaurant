@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use Exception;
+use Throwable;
 use App\Models\Order;
 use App\Services\PrintService;
 use Illuminate\Bus\Queueable;
@@ -42,7 +44,7 @@ class PrintKitchenOrder implements ShouldQueue
             $printService->printKitchenProcess($this->order, $this->orderItems, $this->printerId);
 
             Log::info("Kitchen print job completed successfully for order {$this->order->id}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Kitchen print job failed for order {$this->order->id}: " . $e->getMessage());
             throw $e;
         }
@@ -51,7 +53,7 @@ class PrintKitchenOrder implements ShouldQueue
     /**
      * Handle a job failure.
      */
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         Log::error("Kitchen print job permanently failed for order {$this->order->id} to printer {$this->printerId}: " . $exception->getMessage());
     }

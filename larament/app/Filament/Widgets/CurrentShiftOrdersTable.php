@@ -2,6 +2,13 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
+use App\Services\PrintService;
 use App\Models\Shift;
 use App\Models\Order;
 use App\Services\ShiftsReportService;
@@ -11,7 +18,6 @@ use App\Enums\PaymentMethod;
 use App\Filament\Exports\CurrentShiftOrdersExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
@@ -83,52 +89,52 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->visible(fn() => $this->getCurrentShift() !== null),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('الرقم المرجعي')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('order_number')
+                TextColumn::make('order_number')
                     ->label('رقم الطلب')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('الحالة')
                     ->badge(),
 
-                Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('النوع')
                     ->badge(),
 
-                Tables\Columns\TextColumn::make('customer.name')
+                TextColumn::make('customer.name')
                     ->label('العميل')
                     ->searchable()
                     ->default('غير محدد')
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('sub_total')
+                TextColumn::make('sub_total')
                     ->label('المجموع الفرعي')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('tax')
+                TextColumn::make('tax')
                     ->label('الضريبة')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('service')
+                TextColumn::make('service')
                     ->label('الخدمة')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('discount')
+                TextColumn::make('discount')
                     ->label('الخصم')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -136,7 +142,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('total')
+                TextColumn::make('total')
                     ->label('الإجمالي')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -144,7 +150,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->weight('bold')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('profit')
+                TextColumn::make('profit')
                     ->label('الربح')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -152,7 +158,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('payments')
+                TextColumn::make('payments')
                     ->label('طرق الدفع')
                     ->state(function ($record) {
                         // dd($record->payments);
@@ -166,7 +172,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('cash')
+                TextColumn::make('cash')
                     ->label('مدفوع كاش')
                     ->state(function ($record) {
                         $methods = $record->payments
@@ -177,7 +183,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     })
                     ->color('primary')
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('card')
+                TextColumn::make('card')
                     ->label('مدفوع فيزا')
                     ->state(function ($record) {
                         $methods = $record->payments
@@ -189,7 +195,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('talabat_card')
+                TextColumn::make('talabat_card')
                     ->label('مدفوع بطاقة طلبات')
                     ->state(function ($record) {
                         $methods = $record->payments
@@ -201,13 +207,13 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('الموظف')
                     ->searchable()
                     ->color('gray')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
                     ->color('gray')
@@ -215,15 +221,15 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('الحالة')
                     ->options(OrderStatus::class),
 
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('النوع')
                     ->options(OrderType::class),
 
-                Tables\Filters\SelectFilter::make('payment_method')
+                SelectFilter::make('payment_method')
                     ->label('طريقة الدفع')
                     ->options(PaymentMethod::class)
                     ->query(function (Builder $query, array $data): Builder {
@@ -235,7 +241,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                         );
                     }),
 
-                Tables\Filters\TernaryFilter::make('has_discount')
+                TernaryFilter::make('has_discount')
                     ->label('يحتوي على خصم')
                     ->queries(
                         true: fn(Builder $query) => $query->where('discount', '>', 0),
@@ -250,23 +256,23 @@ class CurrentShiftOrdersTable extends BaseWidget
             ->emptyStateHeading('لا توجد طلبات')
             ->emptyStateDescription('لم يتم العثور على أي طلبات في الشفت الحالي.')
             ->emptyStateIcon('heroicon-o-shopping-cart')
-            ->actions([
-                Tables\Actions\ViewAction::make()
+            ->recordActions([
+                ViewAction::make()
                     ->label('عرض')
                     ->icon('heroicon-o-eye')
                     ->url(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
                     ->openUrlInNewTab(),
-                Tables\Actions\Action::make('print')
+                Action::make('print')
                     ->label('طباعة')
                     ->icon('heroicon-o-printer')
                     ->color('primary')
                     ->action(function ($record) {
-                        app(\App\Services\PrintService::class)->printOrderReceipt($record, []);
+                        app(PrintService::class)->printOrderReceipt($record, []);
                     })
             ])
-            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordAction(ViewAction::class)
             ->recordUrl(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 
 

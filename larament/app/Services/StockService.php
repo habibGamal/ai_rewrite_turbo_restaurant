@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Exception;
+use InvalidArgumentException;
 use App\Models\Product;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
@@ -84,7 +86,7 @@ class StockService
             DB::commit();
             return true;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error("Failed to process stock movement: " . $e->getMessage(), [
                 'operation' => $operation->value,
@@ -101,20 +103,20 @@ class StockService
     private function validateItems(array $items): void
     {
         if (empty($items)) {
-            throw new \InvalidArgumentException('Items array cannot be empty');
+            throw new InvalidArgumentException('Items array cannot be empty');
         }
 
         foreach ($items as $index => $item) {
             if (!isset($item['product_id']) || !isset($item['quantity'])) {
-                throw new \InvalidArgumentException("Item at index {$index} must have 'product_id' and 'quantity' keys");
+                throw new InvalidArgumentException("Item at index {$index} must have 'product_id' and 'quantity' keys");
             }
 
             if (!is_numeric($item['product_id']) || !is_numeric($item['quantity'])) {
-                throw new \InvalidArgumentException("Item at index {$index} must have numeric 'product_id' and 'quantity' values");
+                throw new InvalidArgumentException("Item at index {$index} must have numeric 'product_id' and 'quantity' values");
             }
 
             if ($item['quantity'] <= 0) {
-                throw new \InvalidArgumentException("Item at index {$index} must have positive quantity");
+                throw new InvalidArgumentException("Item at index {$index} must have positive quantity");
             }
         }
     }
@@ -129,7 +131,7 @@ class StockService
         $missingProducts = array_diff($productIds, $existingProducts);
 
         if (!empty($missingProducts)) {
-            throw new \InvalidArgumentException("Products not found: " . implode(', ', $missingProducts));
+            throw new InvalidArgumentException("Products not found: " . implode(', ', $missingProducts));
         }
     }
 
@@ -148,7 +150,7 @@ class StockService
         if (!empty($insufficientItems)) {
             $errorMessage = "Insufficient stock for: " .
                 implode(', ', array_column($insufficientItems, 'product_name'));
-            throw new \InvalidArgumentException($errorMessage);
+            throw new InvalidArgumentException($errorMessage);
         }
     }
 
@@ -298,7 +300,7 @@ class StockService
             // Then aggregate movements for better performance
             $this->dailyAggregationService->aggregateMultipleMovements($productIds, $today);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log error but don't fail the transaction as daily aggregation is not critical
             Log::error("Failed to update daily aggregations: " . $e->getMessage(), [
                 'product_ids' => array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements))

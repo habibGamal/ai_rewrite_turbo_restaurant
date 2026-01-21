@@ -2,10 +2,10 @@
 
 namespace App\Filament\Actions;
 
+use Exception;
 use App\Models\PurchaseInvoice;
 use App\Services\PurchaseService;
 use Filament\Actions\Action;
-use Filament\Tables\Actions\Action as TableAction;
 use Filament\Notifications\Notification;
 
 class ClosePurchaseInvoiceAction
@@ -34,7 +34,7 @@ class ClosePurchaseInvoiceAction
                         ->success()
                         ->send();
 
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق الفاتورة')
                         ->body($e->getMessage())
@@ -44,9 +44,9 @@ class ClosePurchaseInvoiceAction
             });
     }
 
-    public static function table(?string $name = null): TableAction
+    public static function table(?string $name = null): Action
     {
-        return TableAction::make($name ?? 'close')
+        return Action::make($name ?? 'close')
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
@@ -64,7 +64,7 @@ class ClosePurchaseInvoiceAction
                         ->body('تم إضافة جميع الأصناف إلى المخزون')
                         ->success()
                         ->send();
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق الفاتورة')
                         ->body($e->getMessage())

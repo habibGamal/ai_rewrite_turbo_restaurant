@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Services\InventoryDailyAggregationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -58,7 +59,7 @@ class InventoryController extends Controller
                     'status' => 'مفتوح'
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ: ' . $e->getMessage()

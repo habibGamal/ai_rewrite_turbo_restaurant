@@ -2,6 +2,7 @@
 
 namespace App\Services\PrintStrategies;
 
+use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -75,19 +76,19 @@ class WkhtmltoimagePrintStrategy implements PrintStrategyInterface
             if (!$result->successful()) {
                 $error = $result->errorOutput() ?: $result->output();
                 Log::error("wkhtmltoimage command failed: " . $error);
-                throw new \Exception("wkhtmltoimage failed: " . $error);
+                throw new Exception("wkhtmltoimage failed: " . $error);
             }
 
             // Verify that the image file was created
             if (!file_exists($tempImagePath) || filesize($tempImagePath) === 0) {
-                throw new \Exception("wkhtmltoimage did not generate a valid image file");
+                throw new Exception("wkhtmltoimage did not generate a valid image file");
             }
 
             Log::info("wkhtmltoimage image generated successfully");
 
             return $tempImagePath;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Clean up temporary files if they exist
             if (isset($tempHtmlPath) && file_exists($tempHtmlPath)) {
                 unlink($tempHtmlPath);
@@ -118,7 +119,7 @@ class WkhtmltoimagePrintStrategy implements PrintStrategyInterface
 
             return $result->successful();
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning("wkhtmltoimage availability check failed: " . $e->getMessage());
             return false;
         }

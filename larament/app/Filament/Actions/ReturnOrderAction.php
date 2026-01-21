@@ -2,6 +2,10 @@
 
 namespace App\Filament\Actions;
 
+use Exception;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Section;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
@@ -14,9 +18,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 
 class ReturnOrderAction
@@ -28,7 +29,7 @@ class ReturnOrderAction
             ->icon('heroicon-o-arrow-uturn-left')
             ->color('warning')
             ->visible(fn(Order $record): bool => $record->status === OrderStatus::COMPLETED)
-            ->form(fn(Order $record) => self::getFormSchema($record))
+            ->schema(fn(Order $record) => self::getFormSchema($record))
             ->action(function (Order $record, array $data) {
                 try {
                     $returnService = app(OrderReturnService::class);
@@ -45,7 +46,7 @@ class ReturnOrderAction
                         ->toArray();
 
                     if (empty($returnItems)) {
-                        throw new \Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
+                        throw new Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
                     }
 
                     // Filter out refunds with zero amount
@@ -59,7 +60,7 @@ class ReturnOrderAction
                         ->toArray();
 
                     if (empty($refundDistribution)) {
-                        throw new \Exception('يجب تحديد طريقة استرجاع واحدة على الأقل');
+                        throw new Exception('يجب تحديد طريقة استرجاع واحدة على الأقل');
                     }
 
                     $orderReturn = $returnService->processReturn(
@@ -77,7 +78,7 @@ class ReturnOrderAction
                         ->success()
                         ->send();
 
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إرجاع الطلب')
                         ->body($e->getMessage())

@@ -2,10 +2,10 @@
 
 namespace App\Filament\Actions;
 
+use Exception;
 use App\Models\Waste;
 use App\Services\WasteService;
 use Filament\Actions\Action;
-use Filament\Tables\Actions\Action as TableAction;
 use Filament\Notifications\Notification;
 
 class CloseWasteAction
@@ -34,7 +34,7 @@ class CloseWasteAction
                         ->success()
                         ->send();
 
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق سجل التالف')
                         ->body($e->getMessage())
@@ -44,9 +44,9 @@ class CloseWasteAction
             });
     }
 
-    public static function table(?string $name = null): TableAction
+    public static function table(?string $name = null): Action
     {
-        return TableAction::make($name ?? 'close')
+        return Action::make($name ?? 'close')
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('danger')
@@ -64,7 +64,7 @@ class CloseWasteAction
                         ->body('تم خصم جميع الأصناف التالفة من المخزون')
                         ->success()
                         ->send();
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('فشل في إغلاق سجل التالف')
                         ->body($e->getMessage())

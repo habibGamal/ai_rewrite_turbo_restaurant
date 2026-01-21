@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use App\Enums\ProductType;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\InventoryItem;
@@ -29,7 +31,7 @@ class SpecificDataImportService extends ExcelImportService
 
                 $highestRow = $worksheet->getHighestRow();
                 $highestColumn = $worksheet->getHighestColumn();
-                $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+                $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
 
                 // Get headers from first row
                 $headers = [];
@@ -150,7 +152,7 @@ class SpecificDataImportService extends ExcelImportService
     {
         $highestRow = $worksheet->getHighestRow();
         $highestColumn = $worksheet->getHighestColumn();
-        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
 
         // Get headers
         $headers = [];
@@ -314,7 +316,7 @@ class SpecificDataImportService extends ExcelImportService
                     'price' => $data['التكلفة'] ?? null,
                     'unit' => $data['الوحدة'] ?? null,
                     'category_id' => $categoryId,
-                    'type' => \App\Enums\ProductType::RawMaterial,
+                    'type' => ProductType::RawMaterial,
                 ]
             );
 
@@ -359,7 +361,7 @@ class SpecificDataImportService extends ExcelImportService
                     'cost' => 0,
                     'unit' => 'باكت',
                     'category_id' => $categoryId,
-                    'type' => \App\Enums\ProductType::Manufactured,
+                    'type' => ProductType::Manufactured,
                     'barcode' => $barcode,
                 ]
             );
@@ -404,7 +406,7 @@ class SpecificDataImportService extends ExcelImportService
                     'price' => $data['السعر'] ?? null,
                     'unit' => $data['الوحدة'] ?? null,
                     'category_id' => $categoryId,
-                    'type' => \App\Enums\ProductType::Consumable,
+                    'type' => ProductType::Consumable,
                     'barcode' => $barcode,
                 ]
             );

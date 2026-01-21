@@ -2,12 +2,13 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Forms\Components\Select;
 use App\Models\Category;
 use App\Models\Product;
@@ -133,18 +134,17 @@ class StocktakingProductImporterAction extends Action
                         $addedCount++;
                     }
                 }
-
                 $set('items', $currentItems);
 
                 // Recalculate stocktaking total
-                $stocktakingTotal = 0;
-                foreach ($currentItems as $item) {
-                    $stockQty = (float) ($item['stock_quantity'] ?? 0);
-                    $realQty = (float) ($item['real_quantity'] ?? 0);
-                    $price = (float) ($item['price'] ?? 0);
-                    $stocktakingTotal += ($realQty - $stockQty) * $price;
-                }
-                $set('total', $stocktakingTotal);
+                // $stocktakingTotal = 0;
+                // foreach ($currentItems as $item) {
+                //     $stockQty = (float) ($item['stock_quantity'] ?? 0);
+                //     $realQty = (float) ($item['real_quantity'] ?? 0);
+                //     $price = (float) ($item['price'] ?? 0);
+                //     $stocktakingTotal += ($realQty - $stockQty) * $price;
+                // }
+                // $set('total', $stocktakingTotal);
 
                 // Show notification
                 $message = "تم إضافة {$addedCount} منتج بنجاح";
@@ -152,7 +152,7 @@ class StocktakingProductImporterAction extends Action
                     $message .= " وتم تجاهل {$skippedCount} منتج موجود مسبقاً";
                 }
 
-                \Filament\Notifications\Notification::make()
+                Notification::make()
                     ->title('تم استيراد المنتجات')
                     ->body($message)
                     ->success()

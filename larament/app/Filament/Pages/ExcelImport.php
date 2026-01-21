@@ -2,15 +2,16 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Actions;
+use Filament\Actions\Action;
+use Exception;
 use App\Filament\Traits\AdminAccess;
 use Filament\Forms\Components\ViewField;
 use Filament\Pages\Page;
-use Filament\Forms\Form;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Forms\Components\Actions;
 use Filament\Notifications\Notification;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -22,11 +23,11 @@ class ExcelImport extends Page implements HasForms
 {
     use InteractsWithForms , AdminAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'رفع ملف Excel';
     protected static ?string $title = 'رفع ملف Excel';
-    protected static string $view = 'filament.pages.excel-import';
-    protected static ?string $navigationGroup = 'إدارة النظام';
+    protected string $view = 'filament.pages.excel-import';
+    protected static string | \UnitEnum | null $navigationGroup = 'إدارة النظام';
 
     public ?array $data = [];
     public ?array $analysisResult = null;
@@ -51,10 +52,10 @@ class ExcelImport extends Page implements HasForms
         return $filePath;
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('رفع ملف Excel')
                     ->description('اختر ملف Excel (.xlsx) لرفعه وتحليل بياناته')
                     ->schema([
@@ -151,7 +152,7 @@ class ExcelImport extends Page implements HasForms
                     ->danger()
                     ->send();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ')
                 ->body('حدث خطأ أثناء تحليل الملف: ' . $e->getMessage())
@@ -196,7 +197,7 @@ class ExcelImport extends Page implements HasForms
                     ->danger()
                     ->send();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ')
                 ->body('حدث خطأ أثناء استيراد البيانات: ' . $e->getMessage())

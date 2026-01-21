@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
+use DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,7 +29,7 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'type' => \App\Enums\ProductType::class,
+        'type' => ProductType::class,
     ];
 
     protected $appends = [
@@ -111,8 +113,8 @@ class Product extends Model
 
     public function updateManufacturedCost()
     {
-        if ($this->type === \App\Enums\ProductType::Manufactured) {
-            $this->cost = $this->components()->sum(\DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
+        if ($this->type === ProductType::Manufactured) {
+            $this->cost = $this->components()->sum(DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
             $this->save();
         }
     }

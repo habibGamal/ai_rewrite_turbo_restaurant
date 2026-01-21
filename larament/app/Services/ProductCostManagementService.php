@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Enums\ProductType;
 use App\Models\Product;
 use Illuminate\Support\Collection;
@@ -38,7 +39,7 @@ class ProductCostManagementService
             DB::commit();
             return true;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error("Failed to update product costs: " . $e->getMessage());
             throw $e;

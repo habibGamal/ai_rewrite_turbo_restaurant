@@ -2,6 +2,11 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Order;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Actions\Action;
+use Illuminate\Database\Eloquent\Collection;
 use App\Services\ChannelPerformanceReportService;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -28,9 +33,9 @@ class ChannelPerformanceTableWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(\App\Models\Order::query()->whereRaw('1 = 0')) // Empty query, we'll override getTableRecords
+            ->query(Order::query()->whereRaw('1 = 0')) // Empty query, we'll override getTableRecords
             ->columns([
-                Tables\Columns\TextColumn::make('type_label')
+                TextColumn::make('type_label')
                     ->label('قناة البيع')
                     ->sortable()
                     ->weight('bold')
@@ -46,36 +51,36 @@ class ChannelPerformanceTableWidget extends BaseWidget
                         default => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('total_orders')
+                TextColumn::make('total_orders')
                     ->label('إجمالي الطلبات')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state))
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('total_sales')
+                TextColumn::make('total_sales')
                     ->label('إجمالي المبيعات')
                     ->sortable()
                     ->money('EGP')
                     ->color('success'),
 
-                Tables\Columns\TextColumn::make('total_profit')
+                TextColumn::make('total_profit')
                     ->label('إجمالي الأرباح')
                     ->sortable()
                     ->money('EGP')
                     ->color('warning'),
 
-                Tables\Columns\TextColumn::make('unique_customers')
+                TextColumn::make('unique_customers')
                     ->label('عدد العملاء')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state))
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('avg_order_value')
+                TextColumn::make('avg_order_value')
                     ->label('متوسط قيمة الطلب')
                     ->sortable()
                     ->money('EGP'),
 
-                Tables\Columns\TextColumn::make('market_share')
+                TextColumn::make('market_share')
                     ->label('الحصة السوقية')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state, 1) . '%')
@@ -87,7 +92,7 @@ class ChannelPerformanceTableWidget extends BaseWidget
                         default => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('profit_margin_percentage')
+                TextColumn::make('profit_margin_percentage')
                     ->label('هامش الربح')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state, 1) . '%')
@@ -99,7 +104,7 @@ class ChannelPerformanceTableWidget extends BaseWidget
                         default => 'danger',
                     }),
 
-                Tables\Columns\TextColumn::make('efficiency_score')
+                TextColumn::make('efficiency_score')
                     ->label('نقاط الكفاءة')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state, 1))
@@ -111,32 +116,32 @@ class ChannelPerformanceTableWidget extends BaseWidget
                         default => 'danger',
                     }),
 
-                Tables\Columns\TextColumn::make('avg_revenue_per_customer')
+                TextColumn::make('avg_revenue_per_customer')
                     ->label('متوسط الإيراد/عميل')
                     ->sortable()
                     ->money('EGP'),
 
-                Tables\Columns\TextColumn::make('avg_orders_per_customer')
+                TextColumn::make('avg_orders_per_customer')
                     ->label('متوسط الطلبات/عميل')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => number_format($state, 1)),
             ])
             ->defaultSort('total_sales', 'desc')
             ->filters([
-                Tables\Filters\Filter::make('high_performance')
+                Filter::make('high_performance')
                     ->label('أداء عالي (حصة سوقية >= 20%)')
                     ->query(fn ($query) => $query->where('market_share', '>=', 20)),
 
-                Tables\Filters\Filter::make('high_profit_margin')
+                Filter::make('high_profit_margin')
                     ->label('هامش ربح عالي (>= 20%)')
                     ->query(fn ($query) => $query->where('profit_margin_percentage', '>=', 20)),
 
-                Tables\Filters\Filter::make('high_efficiency')
+                Filter::make('high_efficiency')
                     ->label('كفاءة عالية (>= 110)')
                     ->query(fn ($query) => $query->where('efficiency_score', '>=', 110)),
             ])
-            ->actions([
-                Tables\Actions\Action::make('analyze')
+            ->recordActions([
+                Action::make('analyze')
                     ->label('تحليل تفصيلي')
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
@@ -149,10 +154,10 @@ class ChannelPerformanceTableWidget extends BaseWidget
             ]);
     }
 
-    public function getTableRecords(): \Illuminate\Database\Eloquent\Collection
+    public function getTableRecords(): Collection
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $metrics = $this->channelReportService->getChannelEfficiencyMetrics($startDate, $endDate);
 

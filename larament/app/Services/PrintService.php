@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use Log;
+use Exception;
+use App\Models\Product;
 use App\Enums\OrderType;
 use App\Models\Order;
 use App\Enums\SettingKey;
@@ -32,7 +35,7 @@ class PrintService
     {
         // Use factory to get the best available strategy
         $strategy = PrintStrategyFactory::create('wkhtmltoimage');
-        \Log::info("Using print strategy: " . $strategy->getName());
+        Log::info("Using print strategy: " . $strategy->getName());
         return $strategy;
     }
     /**
@@ -65,10 +68,10 @@ class PrintService
     public function printOrderReceipt(Order $order): void
     {
         if (self::USE_QUEUE) {
-            \Log::info("Dispatching order receipt to queue for order {$order->id}");
+            Log::info("Dispatching order receipt to queue for order {$order->id}");
             PrintOrderReceipt::dispatch($order);
         } else {
-            \Log::info("Printing order receipt directly for order {$order->id}");
+            Log::info("Printing order receipt directly for order {$order->id}");
             $this->printOrderProcess($order);
         }
     }
@@ -79,10 +82,10 @@ class PrintService
     public function printKitchenReceipt($orderId, $items): void
     {
         if (self::USE_QUEUE) {
-            \Log::info("Dispatching kitchen receipt to queue for order {$orderId}");
+            Log::info("Dispatching kitchen receipt to queue for order {$orderId}");
             $this->printKitchenQueued($orderId, $items);
         } else {
-            \Log::info("Printing kitchen receipt directly for order {$orderId}");
+            Log::info("Printing kitchen receipt directly for order {$orderId}");
             $this->printKitchenDirect($orderId, $items);
         }
     }
@@ -97,13 +100,13 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            \Log::info("Opening cashier drawer");
+            Log::info("Opening cashier drawer");
 
             // Send pulse to open the drawer
             $printer->pulse();
 
-        } catch (\Exception $e) {
-            \Log::error("Error opening cashier drawer: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error opening cashier drawer: " . $e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -118,7 +121,7 @@ class PrintService
     private function printKitchenDirect($orderId, $items): void
     {
         try {
-            \Log::info("Starting direct kitchen printing for order {$orderId}");
+            Log::info("Starting direct kitchen printing for order {$orderId}");
 
             // Load order with relationships
             $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
@@ -127,14 +130,14 @@ class PrintService
             $preparedItems = $this->prepareKitchenItems($items);
 
             if (empty($preparedItems)) {
-                throw new \Exception('لا توجد منتجات للطباعة');
+                throw new Exception('لا توجد منتجات للطباعة');
             }
 
             // Get product IDs from items to find their printers
             $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
 
             // Get products with their printers
-            $products = \App\Models\Product::with('printers:id')
+            $products = Product::with('printers:id')
                 ->whereIn('id', $productIds)
                 ->get(['id']);
 
@@ -162,14 +165,14 @@ class PrintService
             }
 
             if (empty($itemsByPrinterMap)) {
-                \Log::warning("No printers found for order {$orderId} items");
-                throw new \Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+                Log::warning("No printers found for order {$orderId} items");
+                throw new Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
             }
 
-            \Log::info("Kitchen printing completed directly for order {$orderId}");
+            Log::info("Kitchen printing completed directly for order {$orderId}");
 
-        } catch (\Exception $e) {
-            \Log::error("Error in direct kitchen printing for order {$orderId}: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error in direct kitchen printing for order {$orderId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -180,7 +183,7 @@ class PrintService
     private function printKitchenQueued($orderId, $items): void
     {
         try {
-            \Log::info("Starting kitchen printing via queue for order {$orderId}");
+            Log::info("Starting kitchen printing via queue for order {$orderId}");
 
             // Load order with relationships
             $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
@@ -189,14 +192,14 @@ class PrintService
             $preparedItems = $this->prepareKitchenItems($items);
 
             if (empty($preparedItems)) {
-                throw new \Exception('لا توجد منتجات للطباعة');
+                throw new Exception('لا توجد منتجات للطباعة');
             }
 
             // Get product IDs from items to find their printers
             $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
 
             // Get products with their printers
-            $products = \App\Models\Product::with('printers:id')
+            $products = Product::with('printers:id')
                 ->whereIn('id', $productIds)
                 ->get(['id']);
 
@@ -224,14 +227,14 @@ class PrintService
             }
 
             if (empty($itemsByPrinterMap)) {
-                \Log::warning("No printers found for order {$orderId} items");
-                throw new \Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+                Log::warning("No printers found for order {$orderId} items");
+                throw new Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
             }
 
-            \Log::info("Kitchen printing jobs dispatched successfully for order {$orderId}");
+            Log::info("Kitchen printing jobs dispatched successfully for order {$orderId}");
 
-        } catch (\Exception $e) {
-            \Log::error("Error dispatching kitchen printing jobs for order {$orderId}: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error dispatching kitchen printing jobs for order {$orderId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -247,7 +250,7 @@ class PrintService
         foreach ($items as $item) {
             // Validate required fields
             if (!isset($item['product_id']) || !isset($item['quantity'])) {
-                \Log::warning('Invalid item data: missing product_id or quantity', $item);
+                Log::warning('Invalid item data: missing product_id or quantity', $item);
                 continue;
             }
 
@@ -261,7 +264,7 @@ class PrintService
             if (isset($item['name'])) {
                 $preparedItem['name'] = $item['name'];
             } else {
-                $product = \App\Models\Product::find($item['product_id']);
+                $product = Product::find($item['product_id']);
                 $preparedItem['name'] = $product ? $product->name : "المنتج رقم {$item['product_id']}";
             }
 
@@ -280,10 +283,10 @@ class PrintService
             $printer = \App\Models\Printer::findOrFail($printerId);
 
             if (!$printer->ip_address) {
-                \Log::warning("Printer {$printer->name} has no IP address configured");
+                Log::warning("Printer {$printer->name} has no IP address configured");
                 return;
             }
-            \Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
+            Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
 
             // ---------- 1. Generate HTML content using kitchen template ----------
             $html = $this->generateKitchenHtml($order, $orderItems);
@@ -306,10 +309,10 @@ class PrintService
             unlink($tempImagePath);
             $escposPrinter->close();
 
-            \Log::info("Kitchen order printed successfully to printer {$printer->name}");
+            Log::info("Kitchen order printed successfully to printer {$printer->name}");
 
-        } catch (\Exception $e) {
-            \Log::error("Error printing kitchen order to printer {$printerId}: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error printing kitchen order to printer {$printerId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -336,7 +339,7 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            \Log::info("Testing cashier printer connection");
+            Log::info("Testing cashier printer connection");
 
             // Print test text
             $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -351,10 +354,10 @@ class PrintService
             $printer->feed(3);
             $printer->cut();
 
-            \Log::info("Test print sent successfully to cashier printer");
+            Log::info("Test print sent successfully to cashier printer");
 
-        } catch (\Exception $e) {
-            \Log::error("Error testing cashier printer: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error testing cashier printer: " . $e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -374,7 +377,7 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            \Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
+            Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
 
             // Load order with relationships
             $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
@@ -383,7 +386,7 @@ class PrintService
 
             // If order has 5 or fewer items, use existing single-image logic
             if ($itemCount <= 5) {
-                \Log::info("Order {$order->id} has {$itemCount} items, using single receipt printing");
+                Log::info("Order {$order->id} has {$itemCount} items, using single receipt printing");
 
                 // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
                 $html = $this->generateReceiptHtml($order);
@@ -405,7 +408,7 @@ class PrintService
 
             } else {
                 // Split printing for orders with more than 5 items
-                \Log::info("Order {$order->id} has {$itemCount} items, using split receipt printing");
+                Log::info("Order {$order->id} has {$itemCount} items, using split receipt printing");
 
                 $printer->setJustification(Printer::JUSTIFY_CENTER);
 
@@ -416,7 +419,7 @@ class PrintService
                 $escposImage = EscposImage::load($tempImagePath);
                 $printer->bitImage($escposImage);
                 unlink($tempImagePath);
-                \Log::info("Printed header with first 5 items for order {$order->id}");
+                Log::info("Printed header with first 5 items for order {$order->id}");
 
                 // ---------- 2. Print remaining items in chunks of 5 ----------
                 $remainingItems = $order->items->skip(5);
@@ -428,7 +431,7 @@ class PrintService
                     $escposImage = EscposImage::load($tempImagePath);
                     $printer->bitImage($escposImage);
                     unlink($tempImagePath);
-                    \Log::info("Printed items chunk " . ($index + 1) . " for order {$order->id}");
+                    Log::info("Printed items chunk " . ($index + 1) . " for order {$order->id}");
                 }
 
                 // ---------- 3. Print footer with totals ----------
@@ -439,13 +442,13 @@ class PrintService
                 $printer->feed(3);
                 $printer->cut();
                 unlink($tempImagePath);
-                \Log::info("Printed footer for order {$order->id}");
+                Log::info("Printed footer for order {$order->id}");
             }
 
-            \Log::info("Order receipt printing completed successfully for order {$order->id}");
+            Log::info("Order receipt printing completed successfully for order {$order->id}");
 
-        } catch (\Exception $e) {
-            \Log::error("Error printing order receipt for order {$order->id}: " . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error("Error printing order receipt for order {$order->id}: " . $e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -471,7 +474,7 @@ class PrintService
     public function setPrintStrategyByName(string $strategyName): void
     {
         $this->printStrategy = PrintStrategyFactory::create($strategyName);
-        \Log::info("Print strategy changed to: " . $this->printStrategy->getName());
+        Log::info("Print strategy changed to: " . $this->printStrategy->getName());
     }
 
     /**
@@ -480,7 +483,7 @@ class PrintService
     public function setPrintStrategy(PrintStrategyInterface $strategy): void
     {
         $this->printStrategy = $strategy;
-        \Log::info("Print strategy changed to: " . $strategy->getName());
+        Log::info("Print strategy changed to: " . $strategy->getName());
     }
 
     /**
@@ -507,7 +510,7 @@ class PrintService
         try {
             $strategy = PrintStrategyFactory::create($strategyName);
             return $strategy->isAvailable();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }

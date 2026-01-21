@@ -2,12 +2,14 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Utilities\Get;
+use App\Enums\ProductType;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Forms\Components\Select;
 use App\Models\Category;
 use App\Models\Product;
@@ -54,8 +56,8 @@ class LowStockImporterAction extends Action
                         // Get products with low stock (quantity < min_stock)
                         $query = Product::query()
                             ->whereIn('type', [
-                                \App\Enums\ProductType::RawMaterial,
-                                \App\Enums\ProductType::Consumable,
+                                ProductType::RawMaterial,
+                                ProductType::Consumable,
                             ])
                             ->with(['category', 'inventoryItem'])
                             ->whereHas('inventoryItem', function ($inventoryQuery) {
@@ -108,7 +110,7 @@ class LowStockImporterAction extends Action
                 $selectedProducts = $data['selected_products'] ?? [];
 
                 if (empty($selectedProducts)) {
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('لا يوجد منتجات محددة')
                         ->body('يرجى اختيار المنتجات التي تريد إضافتها')
                         ->warning()
@@ -170,7 +172,7 @@ class LowStockImporterAction extends Action
                     $message .= " وتم تجاهل {$skippedCount} منتج موجود مسبقاً";
                 }
 
-                \Filament\Notifications\Notification::make()
+                Notification::make()
                     ->title('تم استيراد المنتجات منخفضة المخزون')
                     ->body($message)
                     ->success()

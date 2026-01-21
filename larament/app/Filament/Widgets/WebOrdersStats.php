@@ -11,7 +11,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class WebOrdersStats extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = '30s';
+    protected ?string $pollingInterval = '30s';
 
     public function getHeading(): string
     {

@@ -14,7 +14,10 @@ class StocktakingItemFactory extends Factory
         return [
             'stocktaking_id' => 1,
             'product_id' => 1,
-            'quantity' => $this->faker->numberBetween(1, 100),
+            'stock_quantity' => $this->faker->numberBetween(10, 100),
+            'real_quantity' => $this->faker->numberBetween(10, 100),
+            'price' => $this->faker->randomFloat(2, 10, 500),
+            'total' => 0,
         ];
     }
 }

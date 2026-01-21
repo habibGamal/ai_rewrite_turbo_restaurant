@@ -10,7 +10,7 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class PeriodShiftMoneyInfoStats extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -115,14 +115,14 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     private function getPeriodStats()
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             return $this->shiftsReportService->calculatePeriodStats(null, null, $shiftIds);
         } else {
-            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
             return $this->shiftsReportService->calculatePeriodStats($startDate, $endDate, null);
         }
     }

@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use Filament\Actions\Exports\Jobs\ExportCsv;
+use App\Jobs\ExporterCsv;
+use Filament\Auth\Http\Responses\LoginResponse;
 use App\Http\Responses\CustomLoginResponse;
 use App\Jobs\ImportCsv;
 use App\Models\Product;
 use App\Observers\ProductObserver;
-use Filament\Http\Responses\Auth\LoginResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -27,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(BaseImportCsv::class, ImportCsv::class);
-        $this->app->bind(\Filament\Actions\Exports\Jobs\ExportCsv::class, \App\Jobs\ExporterCsv::class);
+        $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
     }
 

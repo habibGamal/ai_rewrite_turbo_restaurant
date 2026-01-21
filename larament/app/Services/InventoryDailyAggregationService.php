@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+use Exception;
+use App\Models\PurchaseInvoice;
+use App\Models\ReturnPurchaseInvoice;
+use App\Models\Waste;
+use App\Models\Stocktaking;
 use App\Models\InventoryItemMovementDaily;
 use App\Models\InventoryItem;
 use App\Models\Product;
@@ -90,7 +95,7 @@ class InventoryDailyAggregationService
 
                 return $insertedCount;
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error("Failed to open day for {$dateString}", [
                     'error' => $e->getMessage(),
                     'date' => $dateString,
@@ -106,31 +111,31 @@ class InventoryDailyAggregationService
     public function closeDay(): int
     {
         if (app(ShiftService::class)->getCurrentShift() !== null) {
-            throw new \Exception('لا يمكن إغلاق اليوم أثناء وجود شيفت مفتوح');
+            throw new Exception('لا يمكن إغلاق اليوم أثناء وجود شيفت مفتوح');
         }
 
         // Check for open purchase invoices
-        $openPurchases = \App\Models\PurchaseInvoice::whereNull('closed_at')->count();
+        $openPurchases = PurchaseInvoice::whereNull('closed_at')->count();
         if ($openPurchases > 0) {
-            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openPurchases} فاتورة شراء مفتوحة");
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openPurchases} فاتورة شراء مفتوحة");
         }
 
         // Check for open return purchase invoices
-        $openReturnPurchases = \App\Models\ReturnPurchaseInvoice::whereNull('closed_at')->count();
+        $openReturnPurchases = ReturnPurchaseInvoice::whereNull('closed_at')->count();
         if ($openReturnPurchases > 0) {
-            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openReturnPurchases} فاتورة مرتجع شراء مفتوحة");
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openReturnPurchases} فاتورة مرتجع شراء مفتوحة");
         }
 
         // Check for open wastes
-        $openWastes = \App\Models\Waste::whereNull('closed_at')->count();
+        $openWastes = Waste::whereNull('closed_at')->count();
         if ($openWastes > 0) {
-            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openWastes} سجل هالك مفتوح");
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openWastes} سجل هالك مفتوح");
         }
 
         // Check for open stocktaking
-        $openStocktaking = \App\Models\Stocktaking::whereNull('closed_at')->count();
+        $openStocktaking = Stocktaking::whereNull('closed_at')->count();
         if ($openStocktaking > 0) {
-            throw new \Exception("لا يمكن إغلاق اليوم لوجود {$openStocktaking} جرد مفتوح");
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openStocktaking} جرد مفتوح");
         }
 
         return DB::transaction(function () {
@@ -167,7 +172,7 @@ class InventoryDailyAggregationService
 
                 return $updatedCount;
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error("Failed to close day", [
                     'error' => $e->getMessage(),
                 ]);
@@ -190,7 +195,7 @@ class InventoryDailyAggregationService
                     ->first();
 
                 if (!$openDay) {
-                    throw new \Exception('No open day found. Please open a day first.');
+                    throw new Exception('No open day found. Please open a day first.');
                 }
 
                 $openDayDate = Carbon::parse($openDay->date);
@@ -278,7 +283,7 @@ class InventoryDailyAggregationService
                     'created_records' => count($missingProductIds)
                 ]);
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error("Failed to bulk aggregate movements", [
                     'error' => $e->getMessage(),
                     'product_ids' => $productIds,
@@ -299,7 +304,7 @@ class InventoryDailyAggregationService
             try {
                 $this->bulkAggregateWithInsertSelect($productIds);
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error("Failed to bulk aggregate movements for date {$dateString}", [
                     'error' => $e->getMessage(),
                     'product_ids' => $productIds,

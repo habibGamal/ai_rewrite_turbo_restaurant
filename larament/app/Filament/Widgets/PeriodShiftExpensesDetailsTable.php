@@ -2,13 +2,16 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use App\Services\ShiftsReportService;
 use App\Models\Expense;
 use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
 use Carbon\Carbon;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Forms\Components\TextInput;
@@ -33,10 +36,10 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             $expenseQuery = Expense::query()
                 ->when(!empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
@@ -44,8 +47,8 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                 ->with(['expenceType', 'shift.user'])
                 ->orderBy('created_at', 'desc');
         } else {
-            $startDate = $this->filters['startDate'];
-            $endDate = $this->filters['endDate'];
+            $startDate = $this->pageFilters['startDate'];
+            $endDate = $this->pageFilters['endDate'];
             $expenseQuery = Expense::query()
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('created_at', [
@@ -71,42 +74,42 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->fileName(fn() => 'period-shift-expenses-detailed-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('رقم المصروف')
                     ->sortable()
                     ->searchable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('expenceType.name')
+                TextColumn::make('expenceType.name')
                     ->label('نوع المصروف')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
 
-                Tables\Columns\TextColumn::make('amount')
+                TextColumn::make('amount')
                     ->label('المبلغ')
                     ->money('EGP')
                     ->alignCenter()
                     ->sortable()
                     ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('shift.id')
+                TextColumn::make('shift.id')
                     ->label('رقم الشفت')
                     ->sortable()
                     ->alignCenter()
                     ->color('warning')
                     ->formatStateUsing(fn ($state) => "شفت #{$state}"),
 
-                Tables\Columns\TextColumn::make('shift.user.name')
+                TextColumn::make('shift.user.name')
                     ->label('المستخدم')
                     ->searchable()
                     ->sortable()
                     ->color('secondary')
                     ->default('غير محدد'),
 
-                Tables\Columns\TextColumn::make('notes')
+                TextColumn::make('notes')
                     ->label('ملاحظات')
                     ->searchable()
                     ->limit(50)
@@ -116,7 +119,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->placeholder('لا توجد ملاحظات')
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
@@ -131,17 +134,17 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
             ->emptyStateIcon('heroicon-o-banknotes')
             ->recordAction(null)
             ->recordUrl(null)
-            ->bulkActions([])
+            ->toolbarActions([])
             ->filters([
-                Tables\Filters\SelectFilter::make('expenceType')
+                SelectFilter::make('expenceType')
                     ->label('نوع المصروف')
                     ->relationship('expenceType', 'name')
                     ->searchable()
                     ->preload(),
 
-                Tables\Filters\Filter::make('amount_range')
+                Filter::make('amount_range')
                     ->label('نطاق المبلغ')
-                    ->form([
+                    ->schema([
                         TextInput::make('min_amount')
                             ->label('أقل مبلغ')
                             ->numeric()

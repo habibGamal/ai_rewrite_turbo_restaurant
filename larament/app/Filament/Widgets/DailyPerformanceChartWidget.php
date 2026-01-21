@@ -8,10 +8,10 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class DailyPerformanceChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'أداء المبيعات حسب أيام الأسبوع';
-    protected static ?string $description = 'مقارنة الأداء عبر أيام الأسبوع المختلفة';
+    protected ?string $heading = 'أداء المبيعات حسب أيام الأسبوع';
+    protected ?string $description = 'مقارنة الأداء عبر أيام الأسبوع المختلفة';
 
-    protected static ?string $maxHeight = '350px';
+    protected ?string $maxHeight = '350px';
     protected static bool $isLazy = false;
 
     use InteractsWithPageFilters;
@@ -25,8 +25,8 @@ class DailyPerformanceChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $dailyData = $this->peakHoursReportService->getDailyPerformance($startDate, $endDate);
 

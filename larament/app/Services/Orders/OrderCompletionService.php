@@ -2,6 +2,8 @@
 
 namespace App\Services\Orders;
 
+use App\DTOs\Orders\PaymentDTO;
+use App\Enums\PaymentMethod;
 use App\Enums\OrderStatus;
 use App\Events\Orders\OrderCompleted;
 use App\Models\Order;
@@ -31,9 +33,9 @@ class OrderCompletionService
             $method = array_key_first($validPayments);
             $amount = $validPayments[$method];
 
-            $paymentDTO = new \App\DTOs\Orders\PaymentDTO(
+            $paymentDTO = new PaymentDTO(
                 amount: $amount,
-                method: \App\Enums\PaymentMethod::from($method),
+                method: PaymentMethod::from($method),
                 orderId: $order->id,
                 shiftId: $order->shift_id
             );

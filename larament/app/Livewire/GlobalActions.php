@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use Filament\Notifications\Notification;
+use Exception;
 use Livewire\Component;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -38,7 +40,7 @@ class GlobalActions extends Component implements HasForms, HasActions
             ->action(function () {
                 $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
                 if (!$isDayClosed) {
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('خطأ')
                         ->body('اليوم مفتوح بالفعل.')
                         ->danger()
@@ -61,11 +63,11 @@ class GlobalActions extends Component implements HasForms, HasActions
                 try {
                     $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
                     if ($isDayClosed) {
-                        throw new \Exception('اليوم مغلق بالفعل.');
+                        throw new Exception('اليوم مغلق بالفعل.');
                     }
                     app(InventoryDailyAggregationService::class)->closeDay();
-                } catch (\Exception $e) {
-                    \Filament\Notifications\Notification::make()
+                } catch (Exception $e) {
+                    Notification::make()
                         ->title('خطأ')
                         ->body('حدث خطأ أثناء إغلاق اليوم: ' . $e->getMessage())
                         ->danger()

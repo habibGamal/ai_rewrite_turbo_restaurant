@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss' important;
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
 
 @layer components {
     .isolate-0 {

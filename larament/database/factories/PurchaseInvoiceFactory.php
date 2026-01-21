@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\PurchaseInvoice;
+use App\Models\User;
+use App\Models\Supplier;
 
 class PurchaseInvoiceFactory extends Factory
 {
@@ -12,8 +14,8 @@ class PurchaseInvoiceFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => 1,
-            'supplier_id' => 1,
+            'user_id' => User::factory(),
+            'supplier_id' => Supplier::factory(),
             'total' => $this->faker->randomFloat(2, 10, 500),
         ];
     }

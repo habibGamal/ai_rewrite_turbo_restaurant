@@ -11,7 +11,7 @@ use Filament\Support\Enums\IconPosition;
 class PeakHoursStatsWidget extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -90,8 +90,8 @@ class PeakHoursStatsWidget extends BaseWidget
 
     private function getPeakAnalysis(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $this->peakHoursReportService->getPeakAnalysis($startDate, $endDate);
     }

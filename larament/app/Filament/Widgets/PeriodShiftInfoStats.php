@@ -11,7 +11,7 @@ use Carbon\Carbon;
 class PeriodShiftInfoStats extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -30,14 +30,14 @@ class PeriodShiftInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             $info = $this->shiftsReportService->getShiftsInfo(null, null, $shiftIds);
         } else {
-            $startDate = Carbon::parse($this->filters['startDate'])->startOfDay();
-            $endDate = Carbon::parse($this->filters['endDate'])->endOfDay();
+            $startDate = Carbon::parse($this->pageFilters['startDate'])->startOfDay();
+            $endDate = Carbon::parse($this->pageFilters['endDate'])->endOfDay();
             $info = $this->shiftsReportService->getShiftsInfo($startDate, $endDate, null);
         }
 
@@ -69,14 +69,14 @@ class PeriodShiftInfoStats extends BaseWidget
 
     private function getPeriodInfo(): array
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             return $this->shiftsReportService->getPeriodInfo(null, null, $shiftIds);
         } else {
-            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
             return $this->shiftsReportService->getPeriodInfo($startDate, $endDate, null);
         }
     }

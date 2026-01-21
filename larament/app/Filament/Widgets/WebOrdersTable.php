@@ -2,6 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
+use App\Services\PrintService;
 use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
@@ -9,7 +18,6 @@ use App\Enums\PaymentMethod;
 use App\Filament\Exports\WebOrdersExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -68,35 +76,35 @@ class WebOrdersTable extends BaseWidget
                     ->fileName(fn() => 'web-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('الرقم المرجعي')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('order_number')
+                TextColumn::make('order_number')
                     ->label('رقم الطلب')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('الحالة')
                     ->badge(),
 
-                Tables\Columns\TextColumn::make('customer.name')
+                TextColumn::make('customer.name')
                     ->label('العميل')
                     ->searchable()
                     ->default('غير محدد')
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('customer.phone')
+                TextColumn::make('customer.phone')
                     ->label('رقم الهاتف')
                     ->searchable()
                     ->default('غير محدد')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('web_payment_method')
+                TextColumn::make('web_payment_method')
                     ->label('طريقة الدفع (ويب)')
                     ->state(function ($record) {
                         $method = $record->web_preferences['payment_method'] ?? null;
@@ -116,7 +124,7 @@ class WebOrdersTable extends BaseWidget
                     })
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('transaction_id')
+                TextColumn::make('transaction_id')
                     ->label('رقم المعاملة')
                     ->state(fn ($record) => $record->web_preferences['transaction_id'] ?? 'غير محدد')
                     ->searchable(query: function (Builder $query, string $search): Builder {
@@ -127,34 +135,34 @@ class WebOrdersTable extends BaseWidget
                     ->copyMessageDuration(1500)
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('driver.name')
+                TextColumn::make('driver.name')
                     ->label('السائق')
                     ->searchable()
                     ->default('غير محدد')
                     ->color('info')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('sub_total')
+                TextColumn::make('sub_total')
                     ->label('المجموع الفرعي')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('tax')
+                TextColumn::make('tax')
                     ->label('الضريبة')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('service')
+                TextColumn::make('service')
                     ->label('الخدمة')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('discount')
+                TextColumn::make('discount')
                     ->label('الخصم')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -162,7 +170,7 @@ class WebOrdersTable extends BaseWidget
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('total')
+                TextColumn::make('total')
                     ->label('الإجمالي')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -170,7 +178,7 @@ class WebOrdersTable extends BaseWidget
                     ->weight('bold')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('profit')
+                TextColumn::make('profit')
                     ->label('الربح')
                     ->numeric(decimalPlaces: 2)
                     ->suffix(' جنيه')
@@ -178,7 +186,7 @@ class WebOrdersTable extends BaseWidget
                     ->alignCenter()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('payments')
+                TextColumn::make('payments')
                     ->label('طرق الدفع')
                     ->state(function ($record) {
                         $methods = $record->payments
@@ -191,7 +199,7 @@ class WebOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('cash')
+                TextColumn::make('cash')
                     ->label('مدفوع كاش')
                     ->state(function ($record) {
                         $amount = $record->payments
@@ -202,7 +210,7 @@ class WebOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('card')
+                TextColumn::make('card')
                     ->label('مدفوع فيزا')
                     ->state(function ($record) {
                         $amount = $record->payments
@@ -213,13 +221,13 @@ class WebOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('الموظف')
                     ->searchable()
                     ->color('gray')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
                     ->color('gray')
@@ -227,7 +235,7 @@ class WebOrdersTable extends BaseWidget
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('الحالة')
                     ->options([
                         OrderStatus::PENDING->value => OrderStatus::PENDING->label(),
@@ -235,7 +243,7 @@ class WebOrdersTable extends BaseWidget
                         OrderStatus::OUT_FOR_DELIVERY->value => OrderStatus::OUT_FOR_DELIVERY->label(),
                     ]),
 
-                Tables\Filters\SelectFilter::make('web_payment_method')
+                SelectFilter::make('web_payment_method')
                     ->label('طريقة الدفع (ويب)')
                     ->options([
                         'cash' => 'كاش',
@@ -249,7 +257,7 @@ class WebOrdersTable extends BaseWidget
                         );
                     }),
 
-                Tables\Filters\SelectFilter::make('payment_method')
+                SelectFilter::make('payment_method')
                     ->label('طريقة الدفع')
                     ->options(PaymentMethod::class)
                     ->query(function (Builder $query, array $data): Builder {
@@ -261,7 +269,7 @@ class WebOrdersTable extends BaseWidget
                         );
                     }),
 
-                Tables\Filters\TernaryFilter::make('has_discount')
+                TernaryFilter::make('has_discount')
                     ->label('يحتوي على خصم')
                     ->queries(
                         true: fn(Builder $query) => $query->where('discount', '>', 0),
@@ -269,11 +277,11 @@ class WebOrdersTable extends BaseWidget
                         blank: fn(Builder $query) => $query,
                     ),
 
-                Tables\Filters\Filter::make('created_at')
-                    ->form([
-                        \Filament\Forms\Components\DatePicker::make('created_from')
+                Filter::make('created_at')
+                    ->schema([
+                        DatePicker::make('created_from')
                             ->label('من تاريخ'),
-                        \Filament\Forms\Components\DatePicker::make('created_until')
+                        DatePicker::make('created_until')
                             ->label('إلى تاريخ'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
@@ -295,22 +303,22 @@ class WebOrdersTable extends BaseWidget
             ->emptyStateHeading('لا توجد أوردرات')
             ->emptyStateDescription('لم يتم العثور على أي أوردرات ويب.')
             ->emptyStateIcon('heroicon-o-shopping-cart')
-            ->actions([
-                Tables\Actions\ViewAction::make()
+            ->recordActions([
+                ViewAction::make()
                     ->label('عرض')
                     ->icon('heroicon-o-eye')
                     ->url(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
                     ->openUrlInNewTab(),
-                Tables\Actions\Action::make('print')
+                Action::make('print')
                     ->label('طباعة')
                     ->icon('heroicon-o-printer')
                     ->color('primary')
                     ->action(function ($record) {
-                        app(\App\Services\PrintService::class)->printOrderReceipt($record, []);
+                        app(PrintService::class)->printOrderReceipt($record, []);
                     })
             ])
-            ->recordAction(Tables\Actions\ViewAction::class)
+            ->recordAction(ViewAction::class)
             ->recordUrl(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 }

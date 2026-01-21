@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Http\Controllers\Controller;
 use App\Models\Driver;
 use App\Models\Order;
@@ -68,7 +69,7 @@ class WebOrderController extends Controller
             });
 
             return Redirect::back()->with('success', 'تم قبول الطلب بنجاح');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في قبول طلب ويب', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
@@ -98,7 +99,7 @@ class WebOrderController extends Controller
 
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في رفض طلب ويب', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
@@ -128,7 +129,7 @@ class WebOrderController extends Controller
 
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إلغاء طلب ويب', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
@@ -150,7 +151,7 @@ class WebOrderController extends Controller
             $this->loggingService->logWebOrderAction('out_for_delivery', $order->id);
 
             return Redirect::back()->with('success', 'تم تحديد الطلب كخارج للتوصيل');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في تحديد طلب ويب كخارج للتوصيل', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
@@ -213,7 +214,7 @@ class WebOrderController extends Controller
 
                 return Redirect::back()->with('success', $message);
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إكمال طلب ويب', [
                 'order_id' => $order->id,
                 'payment_data' => $request->all(),
@@ -248,7 +249,7 @@ class WebOrderController extends Controller
             ]);
 
             return Redirect::back()->with('success', 'تم تطبيق الخصم');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في تطبيق خصم على طلب ويب', [
                 'order_id' => $order->id,
                 'discount' => $request->get('discount'),
@@ -301,7 +302,7 @@ class WebOrderController extends Controller
             ]);
 
             return Redirect::back()->with('success', 'تم حفظ الطلب');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في حفظ طلب ويب', [
                 'order_id' => $order->id,
                 'items_data' => $request->get('items'),

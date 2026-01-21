@@ -2,12 +2,14 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Forms\Components\Actions\Action;
+use Filament\Actions\Action;
+use App\Enums\ProductType;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Forms\Components\Select;
 use App\Models\Category;
 use App\Models\Product;
@@ -43,8 +45,8 @@ class ProductImporterAction extends Action
                     ->label('المنتجات المختارة')
                     ->options(function () {
                         return Product::whereIn('type', [
-                            \App\Enums\ProductType::RawMaterial,
-                            \App\Enums\ProductType::Consumable,
+                            ProductType::RawMaterial,
+                            ProductType::Consumable,
                         ])->get()->pluck('name', 'id');
                     })
                     ->multiple(),
@@ -61,8 +63,8 @@ class ProductImporterAction extends Action
                     ->label('اختر المنتجات للاستيراد')
                     ->options(function (Get $get) {
                         $query = Product::query()->whereIn('type', [
-                            \App\Enums\ProductType::RawMaterial,
-                            \App\Enums\ProductType::Consumable,
+                            ProductType::RawMaterial,
+                            ProductType::Consumable,
                         ])->with('category');
 
                         // Filter by category if selected
@@ -154,7 +156,7 @@ class ProductImporterAction extends Action
                     $message .= " وتم تجاهل {$skippedCount} منتج موجود مسبقاً";
                 }
 
-                \Filament\Notifications\Notification::make()
+                Notification::make()
                     ->title('تم استيراد المنتجات')
                     ->body($message)
                     ->success()

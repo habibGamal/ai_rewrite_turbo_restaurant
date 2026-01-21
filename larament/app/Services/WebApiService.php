@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\WebOrderReceived;
 use App\Models\Shift;
@@ -57,7 +58,7 @@ class WebApiService
     {
         $currentShiftId = $this->getShiftId();
         if ($shiftId !== $currentShiftId) {
-            throw new \Exception('الوردية غير صحيحة');
+            throw new Exception('الوردية غير صحيحة');
         }
     }
 
@@ -110,7 +111,7 @@ class WebApiService
             ->toArray();
 
         if (!empty($notFoundProducts)) {
-            throw new \Exception('منتجات غير موجودة: ' . json_encode($notFoundProducts));
+            throw new Exception('منتجات غير موجودة: ' . json_encode($notFoundProducts));
         }
 
         // Build order items
@@ -302,15 +303,15 @@ class WebApiService
                     'response_status' => $response->status(),
                     'response_body' => $response->body(),
                 ]);
-                throw new \Exception('فشل في تحديث حالة الطلب على الموقع الإلكتروني');
+                throw new Exception('فشل في تحديث حالة الطلب على الموقع الإلكتروني');
             }
             Log::info('تم إرسال تحديث الطلب إلى العميل', ['order_id' => $order->id]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('فشل في إرسال تحديث الطلب إلى العميل', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
-            throw new \Exception('فشل في إرسال تحديث الطلب إلى العميل');
+            throw new Exception('فشل في إرسال تحديث الطلب إلى العميل');
         }
     }
 }

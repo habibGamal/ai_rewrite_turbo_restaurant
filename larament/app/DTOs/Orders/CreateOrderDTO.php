@@ -2,6 +2,7 @@
 
 namespace App\DTOs\Orders;
 
+use InvalidArgumentException;
 use App\Enums\OrderType;
 
 class CreateOrderDTO
@@ -17,7 +18,7 @@ class CreateOrderDTO
         public readonly ?string $orderNotes = null,
     ) {
         if ($type->requiresTable() && !$tableNumber) {
-            throw new \InvalidArgumentException('Table number is required for dine-in orders');
+            throw new InvalidArgumentException('Table number is required for dine-in orders');
         }
     }
 

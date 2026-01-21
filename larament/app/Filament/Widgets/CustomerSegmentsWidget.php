@@ -9,11 +9,11 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class CustomerSegmentsWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'تقسيم العملاء حسب الأداء';
+    protected ?string $heading = 'تقسيم العملاء حسب الأداء';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -28,8 +28,8 @@ class CustomerSegmentsWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $segments = $this->customersReportService->getCustomerSegments($startDate, $endDate);
 

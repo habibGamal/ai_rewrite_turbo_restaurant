@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\ProductType;
 use App\Models\Product;
 use App\Models\InventoryItem;
 
@@ -24,7 +25,7 @@ class ProductObserver
     public function created(Product $product): void
     {
         // Create inventory item for the product with initial quantity of 0
-        if ($product->type !== \App\Enums\ProductType::Manufactured) {
+        if ($product->type !== ProductType::Manufactured) {
             InventoryItem::create([
                 'product_id' => $product->id,
                 'quantity' => 0,
@@ -43,7 +44,7 @@ class ProductObserver
         }
 
         // set price of raw material = its cost
-        if ($product->type === \App\Enums\ProductType::RawMaterial) {
+        if ($product->type === ProductType::RawMaterial) {
             $product->price = $product->cost;
         }
     }
@@ -54,7 +55,7 @@ class ProductObserver
     public function saved(Product $product): void
     {
         // Auto-assign product_ref if not provided (fallback for mass assignment)
-        if ($product->type !== \App\Enums\ProductType::Manufactured) {
+        if ($product->type !== ProductType::Manufactured) {
             $product->load('componentOf');
             $product->componentOf->each(function ($component) {
                 $component->updateManufacturedCost();

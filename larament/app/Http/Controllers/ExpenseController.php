@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Models\Expense;
 use App\Models\ExpenceType;
 use App\Services\ShiftService;
@@ -80,7 +81,7 @@ class ExpenseController extends Controller
             });
 
             return back()->with('success', 'تم إضافة المصروف بنجاح');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إضافة مصروف', [
                 'expense_type_id' => $request->expenseTypeId,
                 'amount' => $request->amount,
@@ -139,7 +140,7 @@ class ExpenseController extends Controller
             });
 
             return back()->with('success', 'تم تعديل المصروف بنجاح');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في تعديل مصروف', [
                 'expense_id' => $expense->id,
                 'expense_type_id' => $request->expenseTypeId,
@@ -179,7 +180,7 @@ class ExpenseController extends Controller
             });
 
             return back()->with('success', 'تم حذف المصروف بنجاح');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->loggingService->logAction('فشل في حذف مصروف', [
                 'expense_id' => $expense->id,
                 'error' => $e->getMessage(),

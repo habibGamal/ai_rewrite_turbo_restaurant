@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 
@@ -37,7 +38,7 @@ class DeployCommand extends Command
             $deployScriptPath = base_path('deploy.sh');
 
             if (!file_exists($deployScriptPath)) {
-                throw new \Exception('Deploy script not found at: ' . $deployScriptPath);
+                throw new Exception('Deploy script not found at: ' . $deployScriptPath);
             }
 
             $this->info('� Executing deployment script...');
@@ -51,7 +52,7 @@ class DeployCommand extends Command
             $result = Process::timeout(60*6)->run('sudo /bin/sh /var/www/turbo_restaurant/larament/deploy.sh');
 
             if ($result->failed()) {
-                throw new \Exception('Deployment script failed: ' . $result->errorOutput());
+                throw new Exception('Deployment script failed: ' . $result->errorOutput());
             }
 
             // Show script output
@@ -69,7 +70,7 @@ class DeployCommand extends Command
 
             return Command::SUCCESS;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error('❌ Deployment failed: ' . $e->getMessage());
 
             // Try to bring the application back online

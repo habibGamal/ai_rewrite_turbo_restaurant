@@ -11,7 +11,7 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class PeriodShiftOrdersStats extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -73,14 +73,14 @@ class PeriodShiftOrdersStats extends BaseWidget
 
     private function calculatePeriodOrderStats()
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             return $this->shiftsReportService->calculatePeriodOrderStats(null, null, $shiftIds);
         } else {
-            $startDate = $this->filters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
+            $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
             return $this->shiftsReportService->calculatePeriodOrderStats($startDate, $endDate, null);
         }
     }

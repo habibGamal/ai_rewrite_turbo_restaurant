@@ -2,7 +2,7 @@
 
 namespace App\Filament\Components;
 
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 

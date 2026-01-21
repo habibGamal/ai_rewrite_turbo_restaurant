@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use InvalidArgumentException;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Stocktaking;
@@ -143,7 +144,7 @@ class InvoicePrintService
             'return_purchase_invoice' => $this->getReturnPurchaseInvoiceData(ReturnPurchaseInvoice::findOrFail($id)),
             'stocktaking' => $this->getStocktakingData(Stocktaking::findOrFail($id)),
             'waste' => $this->getWasteData(Waste::findOrFail($id)),
-            default => throw new \InvalidArgumentException("Invalid print type: {$type}"),
+            default => throw new InvalidArgumentException("Invalid print type: {$type}"),
         };
     }
 }

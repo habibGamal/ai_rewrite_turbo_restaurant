@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use Carbon\Carbon;
 use App\Services\CustomersPerformanceReportService;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -10,15 +11,15 @@ use Illuminate\Support\Facades\DB;
 class CustomerActivityTrendWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'اتجاه نشاط العملاء الجدد مقابل المعادين';
+    protected ?string $heading = 'اتجاه نشاط العملاء الجدد مقابل المعادين';
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
     protected CustomersPerformanceReportService $customersReportService;
 
@@ -29,8 +30,8 @@ class CustomerActivityTrendWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         // Get data grouped by customer type (new vs returning)
         $newCustomersQuery = $this->customersReportService->getOrdersQuery($startDate, $endDate)
@@ -52,7 +53,7 @@ class CustomerActivityTrendWidget extends ChartWidget
         $returningCustomers = [];
 
         foreach ($newCustomersQuery as $data) {
-            $labels[] = \Carbon\Carbon::parse($data->order_date)->format('m/d');
+            $labels[] = Carbon::parse($data->order_date)->format('m/d');
             $newCustomers[] = $data->new_customers;
             $returningCustomers[] = $data->returning_customers;
         }

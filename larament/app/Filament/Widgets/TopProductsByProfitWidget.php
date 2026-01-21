@@ -9,11 +9,11 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class TopProductsByProfitWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'أفضل 10 منتجات بالربحية';
+    protected ?string $heading = 'أفضل 10 منتجات بالربحية';
 
     protected int | string | array $columnSpan = 2;
 
@@ -110,8 +110,8 @@ class TopProductsByProfitWidget extends ChartWidget
 
     private function getProducts()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $this->productsReportService->getProductsSalesPerformanceQuery($startDate, $endDate)->orderBy('total_profit', 'desc')->limit(10)->get();
     }

@@ -2,6 +2,8 @@
 
 namespace App\Services\Orders;
 
+use Illuminate\Support\Facades\Log;
+use App\Enums\OrderType;
 use App\DTOs\Orders\CreateOrderDTO;
 use App\DTOs\Orders\OrderItemDTO;
 use App\DTOs\Orders\PaymentDTO;
@@ -207,7 +209,7 @@ class OrderService
 
             if (!$stockRemoved) {
                 // Log warning but don't fail the transaction as order is already completed
-                \Illuminate\Support\Facades\Log::warning('Failed to remove stock for completed order', [
+                Log::warning('Failed to remove stock for completed order', [
                     'order_id' => $completedOrder->id
                 ]);
             }
@@ -249,7 +251,7 @@ class OrderService
                 $stockRestored = $this->orderStockConversionService->addStockForCancelledOrder($order);
 
                 if (!$stockRestored) {
-                    \Illuminate\Support\Facades\Log::warning('Failed to restore stock for cancelled order', [
+                    Log::warning('Failed to restore stock for cancelled order', [
                         'order_id' => $order->id
                     ]);
                 }
@@ -282,7 +284,7 @@ class OrderService
 
             // Handle table management
             $oldType = $order->type;
-            $newOrderType = \App\Enums\OrderType::from($newType);
+            $newOrderType = OrderType::from($newType);
 
             // Free old table if switching from dine-in
             if ($oldType->requiresTable() && $order->dine_table_number) {

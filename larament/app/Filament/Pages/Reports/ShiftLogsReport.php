@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages\Reports;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
 use App\Models\Shift;
@@ -10,8 +12,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Page;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -22,11 +22,11 @@ class ShiftLogsReport extends Page implements HasForms
 {
     use InteractsWithForms, ViewerAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.pages.reports.shift-logs-report';
+    protected string $view = 'filament.pages.reports.shift-logs-report';
 
-    protected static ?string $navigationGroup = 'التقارير';
+    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'سجل أنشطة الوردية';
 
@@ -44,10 +44,10 @@ class ShiftLogsReport extends Page implements HasForms
         $this->loadLogs();
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('اختيار الوردية')
                     ->description('اختر الوردية لعرض سجل الأنشطة الخاص بها')
                     ->schema([

@@ -2,11 +2,11 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ExportAction;
 use App\Services\ProductsSalesReportService;
 use App\Filament\Exports\CategoryPerformanceExporter;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -100,8 +100,8 @@ class CategoryPerformanceWidget extends BaseWidget
 
     private function getCategoryPerformance()
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         return $this->productsReportService->getCategoryPerformance($startDate, $endDate);
     }

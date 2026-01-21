@@ -2,23 +2,27 @@
 
 namespace App\Filament\Pages\Reports;
 
+use Filament\Schemas\Schema;
+use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
+use App\Filament\Widgets\PeakHoursStatsWidget;
+use App\Filament\Widgets\HourlyPerformanceChartWidget;
+use App\Filament\Widgets\DailyPerformanceChartWidget;
 use App\Filament\Traits\AdminAccess;
 use App\Filament\Traits\ViewerAccess;
 use App\Services\PeakHoursPerformanceReportService;
 use App\Filament\Components\PeriodFilterFormComponent;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
-use Filament\Forms\Form;
 
 class PeakHoursPerformanceReport extends BaseDashboard
 {
     use HasFiltersForm, ViewerAccess;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
     protected static string $routePath = 'peak-hours-performance-report';
 
-    protected static ?string $navigationGroup = 'التقارير';
+    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير أداء ساعات الذروة';
 
@@ -33,10 +37,10 @@ class PeakHoursPerformanceReport extends BaseDashboard
         $this->peakHoursReportService = app(PeakHoursPerformanceReportService::class);
     }
 
-    public function filtersForm(Form $form): Form
+    public function filtersForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 PeriodFilterFormComponent::make(
                     'اختر الفترة الزمنية لتحليل أداء ساعات الذروة والأنماط الزمنية',
                     'last_30_days',
@@ -57,14 +61,14 @@ class PeakHoursPerformanceReport extends BaseDashboard
 
         if ($ordersCount === 0) {
             return [
-                \App\Filament\Widgets\NoCustomersSalesInPeriodWidget::class,
+                NoCustomersSalesInPeriodWidget::class,
             ];
         }
 
         return [
-            \App\Filament\Widgets\PeakHoursStatsWidget::class,
-            \App\Filament\Widgets\HourlyPerformanceChartWidget::class,
-            \App\Filament\Widgets\DailyPerformanceChartWidget::class,
+            PeakHoursStatsWidget::class,
+            HourlyPerformanceChartWidget::class,
+            DailyPerformanceChartWidget::class,
             // \App\Filament\Widgets\PeriodPerformanceWidget::class,
             // \App\Filament\Widgets\StaffOptimizationWidget::class,
             // \App\Filament\Widgets\CustomerTrafficPatternsWidget::class,

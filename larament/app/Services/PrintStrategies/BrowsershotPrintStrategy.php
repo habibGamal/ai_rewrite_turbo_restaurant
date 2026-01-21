@@ -2,6 +2,7 @@
 
 namespace App\Services\PrintStrategies;
 
+use Exception;
 use Spatie\Browsershot\Browsershot;
 use Illuminate\Support\Facades\Log;
 
@@ -41,7 +42,7 @@ class BrowsershotPrintStrategy implements PrintStrategyInterface
 
             return $tempImagePath;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Error generating image with Browsershot: " . $e->getMessage());
             throw $e;
         }
@@ -73,7 +74,7 @@ class BrowsershotPrintStrategy implements PrintStrategyInterface
 
             return $response !== false;
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning("Browsershot availability check failed: " . $e->getMessage());
             return false;
         }

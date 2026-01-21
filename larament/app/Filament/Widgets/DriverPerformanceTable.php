@@ -2,7 +2,9 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\DriverResource\Pages\ViewDriver;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\Action;
+use App\Filament\Resources\Drivers\Pages\ViewDriver;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Services\ShiftsReportService;
@@ -41,14 +43,14 @@ class DriverPerformanceTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
             $query = $this->getDriverPerformanceQuery($shiftIds, null, null);
         } else {
-            $startDate = Carbon::parse($this->filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
-            $endDate = Carbon::parse($this->filters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
+            $startDate = Carbon::parse($this->pageFilters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
+            $endDate = Carbon::parse($this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
 
             $shiftIds = $this->shiftsReportService->getShiftsInPeriodQuery($startDate->toDateString(), $endDate->toDateString(), null)
                 ->pluck('id')
@@ -60,45 +62,45 @@ class DriverPerformanceTable extends BaseWidget
         return $table
             ->query($query)
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('اسم السائق')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('phone')
+                TextColumn::make('phone')
                     ->label('رقم الهاتف')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('orders_count')
+                TextColumn::make('orders_count')
                     ->label('عدد الطلبات')
                     ->sortable()
                     ->default(0),
 
-                Tables\Columns\TextColumn::make('completed_orders_count')
+                TextColumn::make('completed_orders_count')
                     ->label('الطلبات المكتملة')
                     ->sortable()
                     ->default(0),
 
-                Tables\Columns\TextColumn::make('total_value')
+                TextColumn::make('total_value')
                     ->label('إجمالي القيمة')
                     ->sortable()
                     ->default(0)
                     ->formatStateUsing(fn ($state) => number_format($state, 2) . ' ج.م'),
 
-                Tables\Columns\TextColumn::make('avg_order_value')
+                TextColumn::make('avg_order_value')
                     ->label('متوسط قيمة الطلب')
                     ->sortable()
                     ->default(0)
                     ->formatStateUsing(fn ($state) => number_format($state, 2) . ' ج.م'),
             ])
-            ->actions([
-                Tables\Actions\Action::make('view_orders')
+            ->recordActions([
+                Action::make('view_orders')
                     ->label('عرض الطلبات')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->url(function (Driver $record) use ($filterType) {
                         $shiftIdsParam = $filterType === 'shifts'
-                            ? ($this->filters['shifts'] ?? [])
+                            ? ($this->pageFilters['shifts'] ?? [])
                             : $this->getShiftIdsForPeriod();
 
                         $shiftIdsString = http_build_query(['tableFilters' => ['shift_ids' => ['values' => $shiftIdsParam]]]);
@@ -135,8 +137,8 @@ class DriverPerformanceTable extends BaseWidget
 
     private function getShiftIdsForPeriod(): array
     {
-        $startDate = Carbon::parse($this->filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
-        $endDate = Carbon::parse($this->filters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
+        $startDate = Carbon::parse($this->pageFilters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
+        $endDate = Carbon::parse($this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
 
         return $this->shiftsReportService->getShiftsInPeriodQuery($startDate->toDateString(), $endDate->toDateString(), null)
             ->pluck('id')

@@ -8,10 +8,10 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class ChannelMarketShareWidget extends ChartWidget
 {
-    protected static ?string $heading = 'الحصة السوقية للقنوات';
-    protected static ?string $description = 'توزيع الإيرادات والطلبات حسب قنوات البيع';
+    protected ?string $heading = 'الحصة السوقية للقنوات';
+    protected ?string $description = 'توزيع الإيرادات والطلبات حسب قنوات البيع';
 
-    protected static ?string $maxHeight = '350px';
+    protected ?string $maxHeight = '350px';
     protected static bool $isLazy = false;
 
     use InteractsWithPageFilters;
@@ -25,8 +25,8 @@ class ChannelMarketShareWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
 
         $metrics = $this->channelReportService->getChannelEfficiencyMetrics($startDate, $endDate);
         $channelData = $metrics['channel_summary'];

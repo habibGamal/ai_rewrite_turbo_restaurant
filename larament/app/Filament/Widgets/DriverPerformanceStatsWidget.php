@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class DriverPerformanceStatsWidget extends BaseWidget
 {
     protected static bool $isLazy = false;
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
@@ -60,10 +60,10 @@ class DriverPerformanceStatsWidget extends BaseWidget
 
     private function calculateDriverStats(): array
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
+            $shiftIds = $this->pageFilters['shifts'] ?? [];
 
             if (empty($shiftIds)) {
                 return [
@@ -79,8 +79,8 @@ class DriverPerformanceStatsWidget extends BaseWidget
                 ->whereNotNull('driver_id')
                 ->where('status', OrderStatus::COMPLETED);
         } else {
-            $startDate = Carbon::parse($this->filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
-            $endDate = Carbon::parse($this->filters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
+            $startDate = Carbon::parse($this->pageFilters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString())->startOfDay();
+            $endDate = Carbon::parse($this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString())->endOfDay();
 
             $shiftIds = $this->shiftsReportService->getShiftsInPeriodQuery($startDate->toDateString(), $endDate->toDateString(), null)
                 ->pluck('id')

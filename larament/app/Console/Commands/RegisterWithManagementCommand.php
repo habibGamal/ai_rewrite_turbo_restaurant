@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -87,7 +88,7 @@ class RegisterWithManagementCommand extends Command
                 return Command::FAILURE;
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error('❌ Registration failed: ' . $e->getMessage());
             Log::error('Registration with management operations failed', [
                 'error' => $e->getMessage(),
@@ -105,7 +106,7 @@ class RegisterWithManagementCommand extends Command
         $envPath = base_path('.env');
 
         if (!file_exists($envPath)) {
-            throw new \Exception('.env file not found');
+            throw new Exception('.env file not found');
         }
 
         $envContent = file_get_contents($envPath);
