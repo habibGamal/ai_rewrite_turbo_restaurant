@@ -3,10 +3,10 @@
     use Illuminate\Support\Facades\Storage;
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
+
     $qrLogoPath =
-        setting(SettingKey::RESTAURANT_QR_LOGO) !== ''
-        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_QR_LOGO)))
-        : null;
+        setting(SettingKey::RESTAURANT_QR_LOGO) !== '' ? Storage::path(setting(SettingKey::RESTAURANT_QR_LOGO)) : null;
+
 
     $printDate = now()->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');
 

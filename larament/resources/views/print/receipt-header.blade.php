@@ -19,8 +19,8 @@
 
     $logoPath =
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
-        ? public_path(Storage::url(setting(SettingKey::RESTAURANT_PRINT_LOGO)))
-        : null;
+            ? Storage::path(setting(SettingKey::RESTAURANT_PRINT_LOGO))
+            : null;
 
     // Format dates
     $orderDate = $order->created_at->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');

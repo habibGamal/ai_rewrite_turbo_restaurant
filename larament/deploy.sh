@@ -1,28 +1,70 @@
 #!/bin/sh
 set -e
-cd /var/www/turbo_restaurant
-git reset --hard
-git pull
-if [ ! -x /usr/local/bin/wkhtmltoimage ]; then
-    if [ -f ./wkhtmltoimage ]; then
-        echo "Installing wkhtmltoimage to /usr/local/bin"
-        cp ./wkhtmltoimage /usr/local/bin/wkhtmltoimage
-        chmod +x /usr/local/bin/wkhtmltoimage
-    else
-        echo "Warning: ./wkhtmltoimage not found, skipping installation"
-    fi
+
+# --- PHP Upgrade & Extension Section ---
+if ! php -v | grep -q "PHP 8.4"; then
+  echo "🚀 Upgrading PHP to 8.4..."
+
+  apk add php84 \
+    php84-cli php84-common php84-fpm php84-opcache \
+    php84-mbstring php84-intl php84-xml php84-curl \
+    php84-gd php84-zip php84-pdo php84-pdo_mysql \
+    php84-mysqli php84-phar php84-session php84-tokenizer \
+    php84-calendar php84-fileinfo php84-dom php84-iconv php84-mysqlnd \
+    php84-xmlreader php84-xmlwriter php84-simplexml
+
+  ln -sf /usr/bin/php84 /usr/bin/php
+  [ -f /usr/bin/composer ] && sed -i 's/php83/php84/g' /usr/bin/composer
+
+  # --- SOCKET CONFIGURATION ---
+  echo "🔧 Configuring PHP-FPM 8.4 Socket..."
+  WWW_CONF="/etc/php84/php-fpm.d/www.conf"
+  sed -i 's|^listen =.*|listen = /run/php-fpm84/php-fpm.sock|' $WWW_CONF
+  sed -i 's|^;listen.owner =.*|listen.owner = nginx|' $WWW_CONF
+  sed -i 's|^;listen.group =.*|listen.group = nginx|' $WWW_CONF
+  sed -i 's|^;listen.mode =.*|listen.mode = 0660|' $WWW_CONF
+
+  rc-service php-fpm83 stop || true
+  rc-update del php-fpm83 || true
+  rc-service php-fpm84 restart
+  rc-update add php-fpm84
+
+  NGINX_CONF="/etc/nginx/http.d/localturbo.system.conf"
+  if [ -f "$NGINX_CONF" ]; then
+    sed -i 's|fastcgi_pass .*|fastcgi_pass unix:/run/php-fpm84/php-fpm.sock;|' $NGINX_CONF
+    nginx -t && rc-service nginx reload || true
+  fi
 fi
-if ! apk info -e font-dejavu > /dev/null 2>&1; then
-  echo "🖋 Installing font-dejavu..."
-  apk update && apk add font-dejavu
-  echo "✅ font-dejavu installed successfully."
-else
-  echo "✔ font-dejavu is already installed."
-fi
+
+# --- Deployment Logic ---
 cd /var/www/turbo_restaurant/larament
+
+echo "📦 Installing Dependencies..."
 composer install
-npm install
-npm run build
+npm install && npm run build
+
+# --- PERMISSIONS SECTION ---
+echo "🔐 Setting Laravel Permissions for Filament..."
+
+# 1. Ensure the directories exist
+mkdir -p storage/framework/cache/data
+mkdir -p storage/framework/sessions
+mkdir -p storage/framework/views
+mkdir -p storage/logs
+mkdir -p bootstrap/cache
+
+# 2. Set Ownership (nobody is the typical Alpine web user)
+# We give ownership to nobody so it can write uploads and cache files
+chown -R nobody:nobody storage bootstrap/cache public
+
+# 3. Set Permissions
+# 775 allows the owner and group (nginx) to write, while others can read
+chmod -R 775 storage bootstrap/cache public
+
+# 4. Create the symbolic link for storage if it doesn't exist
+php artisan storage:link --force
+
+# --- Optimization ---
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
