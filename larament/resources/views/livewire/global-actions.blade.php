@@ -1,14 +1,14 @@
 <div>
-    @if ($this->toCashierAction->isVisible())
+
+    @if ($this->toCashierAction()->isVisible())
         {{ $this->toCashierAction }}
     @endif
 
-
-    @if ($this->openDayAction->isVisible())
+    @if ($this->openDayAction()->isVisible())
         {{ $this->openDayAction }}
     @endif
 
-    @if ($this->closeDayAction->isVisible())
+    @if ($this->closeDayAction()->isVisible())
         {{ $this->closeDayAction }}
     @endif
 
