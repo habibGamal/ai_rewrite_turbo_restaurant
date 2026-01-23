@@ -13,7 +13,7 @@ class DeployCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'app:deploy {--force : Force deployment without confirmation}';
+    protected $signature = '  {--force : Force deployment without confirmation}';
 
     /**
      * The console command description.
