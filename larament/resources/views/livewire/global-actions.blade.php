@@ -1,15 +1,15 @@
 <div>
 
     @if ($this->toCashierAction()->isVisible())
-        {{ $this->toCashierAction }}
+        {{ $this->toCashierAction() }}
     @endif
 
     @if ($this->openDayAction()->isVisible())
-        {{ $this->openDayAction }}
+        {{ $this->openDayAction() }}
     @endif
 
     @if ($this->closeDayAction()->isVisible())
-        {{ $this->closeDayAction }}
+        {{ $this->closeDayAction() }}
     @endif
 
     <x-filament-actions::modals />
