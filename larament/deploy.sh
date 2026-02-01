@@ -45,7 +45,7 @@ if ! php -v | grep -q "PHP 8.4"; then
   echo "🚀 Upgrading PHP to 8.4..."
 
   apk add php84 \
-    php84-cli php84-common php84-fpm php84-opcache \
+    php84-cli php84-common php84-fpm php84-opcache php84-pcntl \
     php84-mbstring php84-intl php84-xml php84-curl \
     php84-gd php84-zip php84-pdo php84-pdo_mysql \
     php84-mysqli php84-phar php84-session php84-tokenizer \
