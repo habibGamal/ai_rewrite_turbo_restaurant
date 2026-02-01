@@ -73,6 +73,12 @@ if ! php -v | grep -q "PHP 8.4"; then
     sed -i 's|fastcgi_pass .*|fastcgi_pass unix:/run/php-fpm84/php-fpm.sock;|' $NGINX_CONF
     nginx -t && rc-service nginx reload || true
   fi
+
+  NGINX_CONF="/etc/nginx/http.d/phpmyadmin.conf"
+  if [ -f "$NGINX_CONF" ]; then
+    sed -i 's|fastcgi_pass .*|fastcgi_pass unix:/run/php-fpm84/php-fpm.sock;|' $NGINX_CONF
+    nginx -t && rc-service nginx reload || true
+  fi
 fi
 
 # --- Deployment Logic ---
