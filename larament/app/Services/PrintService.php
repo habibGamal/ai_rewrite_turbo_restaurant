@@ -313,7 +313,7 @@ class PrintService
 
         } catch (Exception $e) {
             Log::error("Error printing kitchen order to printer {$printerId}: " . $e->getMessage());
-            throw $e;
+            // throw $e;
         }
     }
 
