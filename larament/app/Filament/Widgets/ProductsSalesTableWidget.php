@@ -53,6 +53,17 @@ class ProductsSalesTableWidget extends BaseWidget
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(ProductsSalesTableExporter::class)
+                    ->modifyQueryUsing(function (Builder $query, array $options): Builder {
+                        // Return a fresh query from the service instead of modifying the table's query
+                        return app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery(
+                            $options['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString(),
+                            $options['endDate'] ?? now()->endOfDay()->toDateString()
+                        );
+                    })
+                    ->options([
+                        'startDate' => $startDate,
+                        'endDate' => $endDate,
+                    ])
                     ->fileName(fn () => 'products-sales-performance-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
             ->columns([

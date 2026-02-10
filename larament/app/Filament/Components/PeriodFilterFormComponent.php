@@ -15,6 +15,7 @@ class PeriodFilterFormComponent
     ): Section {
         return Section::make('فترة التقرير')
             ->description($description)
+            ->columnSpanFull()
             ->schema([
                 Select::make('presetPeriod')
                     ->label('فترات محددة مسبقاً')

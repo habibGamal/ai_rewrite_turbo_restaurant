@@ -82,15 +82,16 @@ class ProductsSalesReportService
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->leftJoin('order_items', function ($join) use ($startDate, $endDate) {
                 $join->on('products.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate) {
-                        $query->select(DB::raw(1))
-                            ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id')
-                            ->whereBetween('orders.created_at', [
-                                $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                                $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                            ]);
-                    });
+                    // ->whereExists(function ($query) use ($startDate, $endDate) {
+                    //     $query->select(DB::raw(1))
+                    //         ->from('orders')
+                    //         ->whereColumn('orders.id', 'order_items.order_id')
+                    //         ->whereBetween('orders.created_at', [
+                    //             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    //             $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    //         ]);
+                    // })
+                    ;
             })
             ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
                 $join->on('order_items.order_id', '=', 'orders.id')
@@ -98,7 +99,6 @@ class ProductsSalesReportService
                         $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
                         $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
                     ]);
-                ;
             })
             ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name');
     }

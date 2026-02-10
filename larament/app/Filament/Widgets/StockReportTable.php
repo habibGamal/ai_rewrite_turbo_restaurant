@@ -68,7 +68,7 @@ class StockReportTable extends BaseWidget
                         DB::raw('COALESCE(SUM(dailyMovements.return_waste_quantity), 0) as return_waste'),
                         // DB::raw('COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as return_sales'),
                         // Created at of startDailyMovements
-                        DB::raw('MAX(startDailyMovements.created_at) as start_created_at'),
+                        // DB::raw('MAX(startDailyMovements.created_at) as start_created_at'),
 
                         DB::raw("(SELECT dm.created_at
                                             FROM inventory_item_movement_daily dm
