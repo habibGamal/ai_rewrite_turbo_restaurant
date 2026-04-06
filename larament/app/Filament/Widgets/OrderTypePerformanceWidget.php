@@ -126,9 +126,11 @@ class OrderTypePerformanceWidget extends ChartWidget
 
     private function getOrderTypePerformance(): array
     {
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getOrderTypePerformance($startDate, $endDate);
+        return $this->productsReportService->getOrderTypePerformance($startDate, $endDate, $shiftIds);
     }
 }

@@ -15,10 +15,20 @@ use Carbon\Carbon;
 
 class ProductsSalesReportService
 {
-    public function getOrdersQuery(?string $startDate = null, ?string $endDate = null)
+    public function getOrdersQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        return Order::query()
-            ->where('status', OrderStatus::COMPLETED)
+        $query = Order::query()
+            ->where('status', OrderStatus::COMPLETED);
+
+        if ($shiftIds !== null) {
+            if (empty($shiftIds)) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereIn('shift_id', $shiftIds);
+        }
+
+        return $query
             ->when($startDate, function ($query) use ($startDate) {
                 $query->where('created_at', '>=', Carbon::parse($startDate)->startOfDay());
             })
@@ -27,7 +37,7 @@ class ProductsSalesReportService
             });
     }
 
-    public function getProductsSalesPerformanceQuery(?string $startDate = null, ?string $endDate = null)
+    public function getProductsSalesPerformanceQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
         // Get products with sales data aggregated by order type
         return Product::query()
@@ -93,12 +103,23 @@ class ProductsSalesReportService
                     // })
                     ;
             })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereBetween('orders.created_at', [
-                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                    ]);
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id');
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('orders.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('orders.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                ]);
             })
             ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name');
     }
@@ -106,7 +127,7 @@ class ProductsSalesReportService
     /**
      * Get period statistics summary
      */
-    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null): array
+    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
         $summary = DB::table('products as p')
             ->select([
@@ -116,24 +137,46 @@ class ProductsSalesReportService
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
                 DB::raw('AVG((order_items.total - (p.cost * order_items.quantity)) / order_items.total * 100) as avg_profit_margin'),
                 DB::raw('MAX(order_items.total) as best_selling_product_id'),
-            ])->leftJoin('order_items', function ($join) use ($startDate, $endDate) {
+            ])->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('p.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate) {
+                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
                         $query->select(DB::raw(1))
                             ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id')
-                            ->whereBetween('orders.created_at', [
-                                $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                                $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                            ]);
+                            ->whereColumn('orders.id', 'order_items.order_id');
+
+                        if ($shiftIds !== null) {
+                            if (empty($shiftIds)) {
+                                $query->whereRaw('1 = 0');
+                            } else {
+                                $query->whereIn('orders.shift_id', $shiftIds);
+                            }
+
+                            return;
+                        }
+
+                        $query->whereBetween('orders.created_at', [
+                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                        ]);
                     });
             })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereBetween('orders.created_at', [
-                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                    ]);
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id');
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('orders.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('orders.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                ]);
             })
             ->first();
 
@@ -145,24 +188,46 @@ class ProductsSalesReportService
                 DB::raw('SUM(order_items.total) as total_sales'),
                 DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
             ])
-            ->leftJoin('order_items', function ($join) use ($startDate, $endDate) {
+            ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('p.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate) {
+                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
                         $query->select(DB::raw(1))
                             ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id')
-                            ->whereBetween('orders.created_at', [
-                                $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                                $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                            ]);
+                            ->whereColumn('orders.id', 'order_items.order_id');
+
+                        if ($shiftIds !== null) {
+                            if (empty($shiftIds)) {
+                                $query->whereRaw('1 = 0');
+                            } else {
+                                $query->whereIn('orders.shift_id', $shiftIds);
+                            }
+
+                            return;
+                        }
+
+                        $query->whereBetween('orders.created_at', [
+                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                        ]);
                     });
             })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereBetween('orders.created_at', [
-                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                    ]);
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id');
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('orders.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('orders.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                ]);
             })
             ->groupBy('p.id', 'p.name')
         ;
@@ -203,7 +268,7 @@ class ProductsSalesReportService
     /**
      * Get order type performance summary
      */
-    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null): array
+    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
 
         $performanceData = DB::table('orders as o')
@@ -217,11 +282,20 @@ class ProductsSalesReportService
             ->leftJoin('order_items as oi', 'o.id', '=', 'oi.order_id')
             ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
             ->where('o.status', OrderStatus::COMPLETED)
-            ->when($startDate, function ($query) use ($startDate) {
-                $query->where('o.created_at', '>=', Carbon::parse($startDate)->startOfDay());
-            })
-            ->when($endDate, function ($query) use ($endDate) {
-                $query->where('o.created_at', '<=', Carbon::parse($endDate)->endOfDay());
+            ->when($shiftIds !== null, function ($query) use ($shiftIds) {
+                if (empty($shiftIds)) {
+                    return $query->whereRaw('1 = 0');
+                }
+
+                return $query->whereIn('o.shift_id', $shiftIds);
+            }, function ($query) use ($startDate, $endDate) {
+                return $query
+                    ->when($startDate, function ($query) use ($startDate) {
+                        $query->where('o.created_at', '>=', Carbon::parse($startDate)->startOfDay());
+                    })
+                    ->when($endDate, function ($query) use ($endDate) {
+                        $query->where('o.created_at', '<=', Carbon::parse($endDate)->endOfDay());
+                    });
             })
             ->groupBy('o.type')
             ->get();
@@ -245,7 +319,7 @@ class ProductsSalesReportService
     /**
      * Get category performance summary
      */
-    public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null)
+    public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
         // Get category performance aggregated directly at the database level
         return Category::query()
@@ -258,25 +332,47 @@ class ProductsSalesReportService
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
             ])
             ->leftJoin('products', 'categories.id', '=', 'products.category_id')
-            ->leftJoin('order_items', function ($join) use ($startDate, $endDate) {
+            ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('products.id', '=', 'order_items.product_id')
                     ->whereNot('products.type', ProductType::RawMaterial)
-                    ->whereExists(function ($query) use ($startDate, $endDate) {
+                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
                         $query->select(DB::raw(1))
                             ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id')
-                            ->whereBetween('orders.created_at', [
-                                $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                                $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                            ]);
+                            ->whereColumn('orders.id', 'order_items.order_id');
+
+                        if ($shiftIds !== null) {
+                            if (empty($shiftIds)) {
+                                $query->whereRaw('1 = 0');
+                            } else {
+                                $query->whereIn('orders.shift_id', $shiftIds);
+                            }
+
+                            return;
+                        }
+
+                        $query->whereBetween('orders.created_at', [
+                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                        ]);
                     });
             })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereBetween('orders.created_at', [
-                        Carbon::parse($startDate)->startOfDay(),
-                        Carbon::parse($endDate)->endOfDay()
-                    ]);
+            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id');
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('orders.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('orders.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                ]);
             })
             ->groupBy('categories.id', 'categories.name');
     }
@@ -284,8 +380,24 @@ class ProductsSalesReportService
     /**
      * Get period info for display
      */
-    public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
+    public function getPeriodInfo(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
+        if ($shiftIds !== null) {
+            $count = count($shiftIds);
+
+            if ($count === 0) {
+                return [
+                    'title' => 'تقرير أداء المنتجات',
+                    'description' => 'لا توجد شفتات محددة لعرض بيانات المبيعات والأرباح',
+                ];
+            }
+
+            return [
+                'title' => 'تقرير أداء المنتجات',
+                'description' => sprintf('أداء المبيعات والأرباح للشفتات المحددة (%d شفت)', $count),
+            ];
+        }
+
         if (!$startDate && !$endDate) {
             return [
                 'title' => 'تقرير أداء المنتجات - جميع الفترات',

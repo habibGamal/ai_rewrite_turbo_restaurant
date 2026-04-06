@@ -100,9 +100,11 @@ class CategoryPerformanceWidget extends BaseWidget
 
     private function getCategoryPerformance()
     {
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getCategoryPerformance($startDate, $endDate);
+        return $this->productsReportService->getCategoryPerformance($startDate, $endDate, $shiftIds);
     }
 }

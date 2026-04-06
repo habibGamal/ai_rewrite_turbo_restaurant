@@ -100,9 +100,15 @@ class TopProductsBySalesWidget extends ChartWidget
 
     private function getProducts()
     {
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getProductsSalesPerformanceQuery($startDate, $endDate)->orderBy('total_sales', 'desc')->limit(10)->get();
+        return $this->productsReportService
+            ->getProductsSalesPerformanceQuery($startDate, $endDate, $shiftIds)
+            ->orderBy('total_sales', 'desc')
+            ->limit(10)
+            ->get();
     }
 }

@@ -36,9 +36,11 @@ class NoProductsSalesInPeriodWidget extends Widget
 
     private function getPeriodInfo(): array
     {
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getPeriodInfo($startDate, $endDate);
+        return $this->productsReportService->getPeriodInfo($startDate, $endDate, $shiftIds);
     }
 }

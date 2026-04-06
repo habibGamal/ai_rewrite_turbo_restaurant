@@ -37,14 +37,17 @@ class ProductsSalesTableWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
         return $table
             ->query(
                 $this->productsReportService->getProductsSalesPerformanceQuery(
                     $startDate,
-                    $endDate
+                    $endDate,
+                    $shiftIds
                 )
             )
             ->headerActions([
@@ -57,12 +60,14 @@ class ProductsSalesTableWidget extends BaseWidget
                         // Return a fresh query from the service instead of modifying the table's query
                         return app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery(
                             $options['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString(),
-                            $options['endDate'] ?? now()->endOfDay()->toDateString()
+                            $options['endDate'] ?? now()->endOfDay()->toDateString(),
+                            $options['shiftIds'] ?? null
                         );
                     })
                     ->options([
                         'startDate' => $startDate,
                         'endDate' => $endDate,
+                        'shiftIds' => $shiftIds,
                     ])
                     ->fileName(fn () => 'products-sales-performance-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
             ])
