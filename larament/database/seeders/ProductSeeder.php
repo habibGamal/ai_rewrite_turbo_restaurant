@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Printer;
-use App\Models\InventoryItem;
 use App\Enums\ProductType;
+use App\Models\Category;
+use App\Models\InventoryItem;
+use App\Models\Printer;
+use App\Models\Product;
+use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
@@ -225,7 +225,7 @@ class ProductSeeder extends Seeder
             unset($productData['initial_stock']);
 
             // Add product_ref to the data
-            $productData['product_ref'] = 'P' . str_pad($index + 1, 6, '0', STR_PAD_LEFT);
+            $productData['product_ref'] = 'P'.str_pad($index + 1, 6, '0', STR_PAD_LEFT);
 
             // Create the product (observer will create inventory item with quantity 0)
             $product = Product::create($productData);

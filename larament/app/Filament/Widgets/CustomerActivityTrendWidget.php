@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use Carbon\Carbon;
 use App\Services\CustomersPerformanceReportService;
+use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 class CustomerActivityTrendWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;

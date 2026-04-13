@@ -2,21 +2,20 @@
 
 namespace App\Filament\Widgets;
 
-use Filament\Actions\ExportAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\DatePicker;
-use Filament\Actions\ViewAction;
-use Filament\Actions\Action;
-use App\Services\PrintService;
-use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\WebOrdersExporter;
-use Filament\Tables;
+use App\Models\Order;
+use App\Services\PrintService;
+use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 class WebOrdersTable extends BaseWidget
 {
     protected static bool $isLazy = false;
+
     protected static ?string $pollingInterval = '30s';
 
     protected int|string|array $columnSpan = 'full';
@@ -33,8 +33,7 @@ class WebOrdersTable extends BaseWidget
     protected $listeners = ['filterUpdate' => 'updateTableFilters'];
 
     /**
-     * @param array $filter like ['status' => 'completed']
-     * @return void
+     * @param  array  $filter  like ['status' => 'completed']
      */
     public function updateTableFilters(array $filter): void
     {
@@ -49,11 +48,11 @@ class WebOrdersTable extends BaseWidget
         $statuses = [
             OrderStatus::PENDING,
             OrderStatus::PROCESSING,
-            OrderStatus::OUT_FOR_DELIVERY
+            OrderStatus::OUT_FOR_DELIVERY,
         ];
 
         $query = Order::query()
-            ->whereIn('type', [OrderType::WEB_TAKEAWAY , OrderType::WEB_DELIVERY])
+            ->whereIn('type', [OrderType::WEB_TAKEAWAY, OrderType::WEB_DELIVERY])
             ->whereIn('status', $statuses)
             ->with(['customer', 'user', 'payments', 'driver']);
 
@@ -73,7 +72,7 @@ class WebOrdersTable extends BaseWidget
                             ->whereIn('status', $statuses)
                             ->with(['customer', 'user', 'payments', 'driver']);
                     })
-                    ->fileName(fn() => 'web-orders-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
+                    ->fileName(fn () => 'web-orders-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->columns([
                 TextColumn::make('id')
@@ -108,7 +107,8 @@ class WebOrdersTable extends BaseWidget
                     ->label('طريقة الدفع (ويب)')
                     ->state(function ($record) {
                         $method = $record->web_preferences['payment_method'] ?? null;
-                        return match($method) {
+
+                        return match ($method) {
                             'cash' => 'كاش',
                             'card' => 'فيزا',
                             'talabat_card' => 'بطاقة طلبات',
@@ -116,7 +116,7 @@ class WebOrdersTable extends BaseWidget
                         };
                     })
                     ->badge()
-                    ->color(fn ($state) => match($state) {
+                    ->color(fn ($state) => match ($state) {
                         'كاش' => 'success',
                         'فيزا' => 'info',
                         'بطاقة طلبات' => 'warning',
@@ -191,9 +191,10 @@ class WebOrdersTable extends BaseWidget
                     ->state(function ($record) {
                         $methods = $record->payments
                             ->pluck('method')
-                            ->map(fn($method) => $method->label())
+                            ->map(fn ($method) => $method->label())
                             ->unique()
                             ->implode(', ');
+
                         return $methods ?: 'غير محدد';
                     })
                     ->color('primary')
@@ -205,7 +206,8 @@ class WebOrdersTable extends BaseWidget
                         $amount = $record->payments
                             ->where('method', PaymentMethod::CASH)
                             ->sum('amount');
-                        return $amount > 0 ? number_format($amount, 2) . ' جنيه' : 'غير محدد';
+
+                        return $amount > 0 ? number_format($amount, 2).' جنيه' : 'غير محدد';
                     })
                     ->color('primary')
                     ->toggleable(),
@@ -216,7 +218,8 @@ class WebOrdersTable extends BaseWidget
                         $amount = $record->payments
                             ->where('method', PaymentMethod::CARD)
                             ->sum('amount');
-                        return $amount > 0 ? number_format($amount, 2) . ' جنيه' : 'غير محدد';
+
+                        return $amount > 0 ? number_format($amount, 2).' جنيه' : 'غير محدد';
                     })
                     ->color('primary')
                     ->toggleable(),
@@ -253,7 +256,7 @@ class WebOrdersTable extends BaseWidget
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['value'],
-                            fn(Builder $query, $value): Builder => $query->where('web_preferences->payment_method', $value)
+                            fn (Builder $query, $value): Builder => $query->where('web_preferences->payment_method', $value)
                         );
                     }),
 
@@ -263,7 +266,7 @@ class WebOrdersTable extends BaseWidget
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['value'],
-                            fn(Builder $query, $value): Builder => $query->whereHas('payments', function (Builder $subQuery) use ($value) {
+                            fn (Builder $query, $value): Builder => $query->whereHas('payments', function (Builder $subQuery) use ($value) {
                                 $subQuery->where('method', $value);
                             })
                         );
@@ -272,9 +275,9 @@ class WebOrdersTable extends BaseWidget
                 TernaryFilter::make('has_discount')
                     ->label('يحتوي على خصم')
                     ->queries(
-                        true: fn(Builder $query) => $query->where('discount', '>', 0),
-                        false: fn(Builder $query) => $query->where('discount', '<=', 0),
-                        blank: fn(Builder $query) => $query,
+                        true: fn (Builder $query) => $query->where('discount', '>', 0),
+                        false: fn (Builder $query) => $query->where('discount', '<=', 0),
+                        blank: fn (Builder $query) => $query,
                     ),
 
                 Filter::make('created_at')
@@ -288,11 +291,11 @@ class WebOrdersTable extends BaseWidget
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     }),
             ])
@@ -307,7 +310,7 @@ class WebOrdersTable extends BaseWidget
                 ViewAction::make()
                     ->label('عرض')
                     ->icon('heroicon-o-eye')
-                    ->url(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
+                    ->url(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
                     ->openUrlInNewTab(),
                 Action::make('print')
                     ->label('طباعة')
@@ -315,10 +318,10 @@ class WebOrdersTable extends BaseWidget
                     ->color('primary')
                     ->action(function ($record) {
                         app(PrintService::class)->printOrderReceipt($record, []);
-                    })
+                    }),
             ])
             ->recordAction(ViewAction::class)
-            ->recordUrl(fn(Order $record): string => route('filament.admin.resources.orders.view', $record))
+            ->recordUrl(fn (Order $record): string => route('filament.admin.resources.orders.view', $record))
             ->toolbarActions([]);
     }
 }

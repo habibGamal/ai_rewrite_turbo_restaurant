@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 use Exception;
+use Illuminate\Http\UploadedFile;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ExcelImportService
 {
@@ -70,7 +68,7 @@ class ExcelImportService
         try {
             $analysis = $this->analyzeExcelStructure($file);
 
-            if (!$analysis['success']) {
+            if (! $analysis['success']) {
                 return $analysis;
             }
 
@@ -113,12 +111,12 @@ class ExcelImportService
                         $importedData[] = $processed['data'];
                         $successCount++;
                     } else {
-                        $errors[] = "Row {$row}: " . $processed['error'];
+                        $errors[] = "Row {$row}: ".$processed['error'];
                         $errorCount++;
                     }
 
                 } catch (Exception $e) {
-                    $errors[] = "Row {$row}: " . $e->getMessage();
+                    $errors[] = "Row {$row}: ".$e->getMessage();
                     $errorCount++;
                 }
             }

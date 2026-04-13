@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class PrinterProductSeeder extends Seeder
@@ -17,6 +16,7 @@ class PrinterProductSeeder extends Seeder
 
         if ($products->isEmpty() || $printers->isEmpty()) {
             $this->command->info('No products or printers found. Skipping printer-product relationships.');
+
             return;
         }
 

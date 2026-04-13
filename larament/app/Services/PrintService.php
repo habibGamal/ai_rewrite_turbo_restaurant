@@ -2,16 +2,15 @@
 
 namespace App\Services;
 
-use Log;
-use Exception;
-use App\Models\Product;
-use App\Enums\OrderType;
-use App\Models\Order;
 use App\Enums\SettingKey;
 use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
-use App\Services\PrintStrategies\PrintStrategyInterface;
+use App\Models\Order;
+use App\Models\Product;
 use App\Services\PrintStrategies\PrintStrategyFactory;
+use App\Services\PrintStrategies\PrintStrategyInterface;
+use Exception;
+use Log;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -20,6 +19,7 @@ use Mike42\Escpos\Printer;
 class PrintService
 {
     private const USE_QUEUE = false;
+
     private PrintStrategyInterface $printStrategy;
 
     public function __construct()
@@ -35,9 +35,11 @@ class PrintService
     {
         // Use factory to get the best available strategy
         $strategy = PrintStrategyFactory::create('wkhtmltoimage');
-        Log::info("Using print strategy: " . $strategy->getName());
+        Log::info('Using print strategy: '.$strategy->getName());
+
         return $strategy;
     }
+
     /**
      * Create appropriate print connector based on printer IP format
      */
@@ -49,7 +51,7 @@ class PrintService
         }
 
         // Check if it's just a printer name (e.g., share_cash)
-        if (!filter_var($printerIp, FILTER_VALIDATE_IP)) {
+        if (! filter_var($printerIp, FILTER_VALIDATE_IP)) {
             return new WindowsPrintConnector($printerIp);
         }
 
@@ -91,6 +93,20 @@ class PrintService
     }
 
     /**
+     * Print kitchen changes receipt (increments/decrements on save)
+     */
+    public function printKitchenChangesReceipt($orderId, $items): void
+    {
+        if (self::USE_QUEUE) {
+            Log::info("Dispatching kitchen changes receipt to queue for order {$orderId}");
+            $this->printKitchenChangesQueued($orderId, $items);
+        } else {
+            Log::info("Printing kitchen changes receipt directly for order {$orderId}");
+            $this->printKitchenChangesDirect($orderId, $items);
+        }
+    }
+
+    /**
      * Open the cashier drawer
      */
     public function openCashierDrawer(): void
@@ -100,13 +116,13 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            Log::info("Opening cashier drawer");
+            Log::info('Opening cashier drawer');
 
             // Send pulse to open the drawer
             $printer->pulse();
 
         } catch (Exception $e) {
-            Log::error("Error opening cashier drawer: " . $e->getMessage());
+            Log::error('Error opening cashier drawer: '.$e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -149,7 +165,7 @@ class PrintService
 
                 if ($product && $product->printers->isNotEmpty()) {
                     foreach ($product->printers as $printer) {
-                        if (!isset($itemsByPrinterMap[$printer->id])) {
+                        if (! isset($itemsByPrinterMap[$printer->id])) {
                             $itemsByPrinterMap[$printer->id] = [];
                         }
 
@@ -172,7 +188,7 @@ class PrintService
             Log::info("Kitchen printing completed directly for order {$orderId}");
 
         } catch (Exception $e) {
-            Log::error("Error in direct kitchen printing for order {$orderId}: " . $e->getMessage());
+            Log::error("Error in direct kitchen printing for order {$orderId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -211,7 +227,7 @@ class PrintService
 
                 if ($product && $product->printers->isNotEmpty()) {
                     foreach ($product->printers as $printer) {
-                        if (!isset($itemsByPrinterMap[$printer->id])) {
+                        if (! isset($itemsByPrinterMap[$printer->id])) {
                             $itemsByPrinterMap[$printer->id] = [];
                         }
 
@@ -234,11 +250,10 @@ class PrintService
             Log::info("Kitchen printing jobs dispatched successfully for order {$orderId}");
 
         } catch (Exception $e) {
-            Log::error("Error dispatching kitchen printing jobs for order {$orderId}: " . $e->getMessage());
+            Log::error("Error dispatching kitchen printing jobs for order {$orderId}: ".$e->getMessage());
             throw $e;
         }
     }
-
 
     /**
      * Prepare and validate kitchen items data
@@ -249,8 +264,9 @@ class PrintService
 
         foreach ($items as $item) {
             // Validate required fields
-            if (!isset($item['product_id']) || !isset($item['quantity'])) {
+            if (! isset($item['product_id']) || ! isset($item['quantity'])) {
                 Log::warning('Invalid item data: missing product_id or quantity', $item);
+
                 continue;
             }
 
@@ -282,8 +298,9 @@ class PrintService
         try {
             $printer = \App\Models\Printer::findOrFail($printerId);
 
-            if (!$printer->ip_address) {
+            if (! $printer->ip_address) {
                 Log::warning("Printer {$printer->name} has no IP address configured");
+
                 return;
             }
             Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
@@ -312,7 +329,7 @@ class PrintService
             Log::info("Kitchen order printed successfully to printer {$printer->name}");
 
         } catch (Exception $e) {
-            Log::error("Error printing kitchen order to printer {$printerId}: " . $e->getMessage());
+            Log::error("Error printing kitchen order to printer {$printerId}: ".$e->getMessage());
             // throw $e;
         }
     }
@@ -339,7 +356,7 @@ class PrintService
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
-            Log::info("Testing cashier printer connection");
+            Log::info('Testing cashier printer connection');
 
             // Print test text
             $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -347,17 +364,17 @@ class PrintService
             $printer->text("Printer Test\n");
             $printer->selectPrintMode();
             $printer->text("------------------------\n");
-            $printer->text("Date: " . now()->format('Y-m-d H:i:s') . "\n");
+            $printer->text('Date: '.now()->format('Y-m-d H:i:s')."\n");
             $printer->text("IP: {$printerIp}\n");
             $printer->text("------------------------\n");
             $printer->text("If you see this text, the printer is working correctly\n");
             $printer->feed(3);
             $printer->cut();
 
-            Log::info("Test print sent successfully to cashier printer");
+            Log::info('Test print sent successfully to cashier printer');
 
         } catch (Exception $e) {
-            Log::error("Error testing cashier printer: " . $e->getMessage());
+            Log::error('Error testing cashier printer: '.$e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -431,7 +448,7 @@ class PrintService
                     $escposImage = EscposImage::load($tempImagePath);
                     $printer->bitImage($escposImage);
                     unlink($tempImagePath);
-                    Log::info("Printed items chunk " . ($index + 1) . " for order {$order->id}");
+                    Log::info('Printed items chunk '.($index + 1)." for order {$order->id}");
                 }
 
                 // ---------- 3. Print footer with totals ----------
@@ -448,7 +465,7 @@ class PrintService
             Log::info("Order receipt printing completed successfully for order {$order->id}");
 
         } catch (Exception $e) {
-            Log::error("Error printing order receipt for order {$order->id}: " . $e->getMessage());
+            Log::error("Error printing order receipt for order {$order->id}: ".$e->getMessage());
             throw $e;
         } finally {
             if (isset($printer)) {
@@ -474,7 +491,7 @@ class PrintService
     public function setPrintStrategyByName(string $strategyName): void
     {
         $this->printStrategy = PrintStrategyFactory::create($strategyName);
-        Log::info("Print strategy changed to: " . $this->printStrategy->getName());
+        Log::info('Print strategy changed to: '.$this->printStrategy->getName());
     }
 
     /**
@@ -483,7 +500,7 @@ class PrintService
     public function setPrintStrategy(PrintStrategyInterface $strategy): void
     {
         $this->printStrategy = $strategy;
-        Log::info("Print strategy changed to: " . $strategy->getName());
+        Log::info('Print strategy changed to: '.$strategy->getName());
     }
 
     /**
@@ -509,6 +526,7 @@ class PrintService
     {
         try {
             $strategy = PrintStrategyFactory::create($strategyName);
+
             return $strategy->isAvailable();
         } catch (Exception $e) {
             return false;
@@ -551,6 +569,171 @@ class PrintService
     {
         return view('print.receipt-footer', [
             'order' => $order,
+        ])->render();
+    }
+
+    private function printKitchenChangesDirect($orderId, $items): void
+    {
+        try {
+            Log::info("Starting direct kitchen changes printing for order {$orderId}");
+
+            $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
+            $preparedItems = $this->prepareKitchenChangesItems($items);
+
+            if (empty($preparedItems)) {
+                throw new Exception('لا توجد تغييرات للطباعة');
+            }
+
+            $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
+            $products = Product::with('printers:id')->whereIn('id', $productIds)->get(['id']);
+
+            $itemsByPrinterMap = [];
+            foreach ($preparedItems as $item) {
+                $product = $products->firstWhere('id', $item['product_id']);
+                if ($product && $product->printers->isNotEmpty()) {
+                    foreach ($product->printers as $printer) {
+                        if (! isset($itemsByPrinterMap[$printer->id])) {
+                            $itemsByPrinterMap[$printer->id] = [];
+                        }
+                        $itemsByPrinterMap[$printer->id][] = $item;
+                    }
+                }
+            }
+
+            foreach ($itemsByPrinterMap as $printerId => $printerItems) {
+                $this->printKitchenChangesProcess($order, $printerItems, $printerId);
+            }
+
+            if (empty($itemsByPrinterMap)) {
+                Log::warning("No printers found for order {$orderId} changes items");
+                throw new Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+            }
+
+            Log::info("Kitchen changes printing completed directly for order {$orderId}");
+
+        } catch (Exception $e) {
+            Log::error("Error in direct kitchen changes printing for order {$orderId}: ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    private function printKitchenChangesQueued($orderId, $items): void
+    {
+        try {
+            Log::info("Starting kitchen changes printing via queue for order {$orderId}");
+
+            $order = Order::with(['user', 'customer', 'driver', 'table'])->findOrFail($orderId);
+            $preparedItems = $this->prepareKitchenChangesItems($items);
+
+            if (empty($preparedItems)) {
+                throw new Exception('لا توجد تغييرات للطباعة');
+            }
+
+            $productIds = collect($preparedItems)->pluck('product_id')->unique()->values()->toArray();
+            $products = Product::with('printers:id')->whereIn('id', $productIds)->get(['id']);
+
+            $itemsByPrinterMap = [];
+            foreach ($preparedItems as $item) {
+                $product = $products->firstWhere('id', $item['product_id']);
+                if ($product && $product->printers->isNotEmpty()) {
+                    foreach ($product->printers as $printer) {
+                        if (! isset($itemsByPrinterMap[$printer->id])) {
+                            $itemsByPrinterMap[$printer->id] = [];
+                        }
+                        $itemsByPrinterMap[$printer->id][] = $item;
+                    }
+                }
+            }
+
+            foreach ($itemsByPrinterMap as $printerId => $printerItems) {
+                PrintKitchenOrder::dispatch($order, $printerItems, $printerId);
+            }
+
+            if (empty($itemsByPrinterMap)) {
+                Log::warning("No printers found for order {$orderId} changes items");
+                throw new Exception('لا توجد طابعات مخصصة للمنتجات المحددة');
+            }
+
+            Log::info("Kitchen changes printing jobs dispatched successfully for order {$orderId}");
+
+        } catch (Exception $e) {
+            Log::error("Error dispatching kitchen changes printing jobs for order {$orderId}: ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    private function prepareKitchenChangesItems(array $items): array
+    {
+        $preparedItems = [];
+
+        foreach ($items as $item) {
+            if (! isset($item['product_id']) || ! isset($item['new_quantity'])) {
+                Log::warning('Invalid changes item data: missing product_id or new_quantity', $item);
+
+                continue;
+            }
+
+            $preparedItem = [
+                'product_id' => (int) $item['product_id'],
+                'old_quantity' => (int) ($item['old_quantity'] ?? 0),
+                'new_quantity' => (int) $item['new_quantity'],
+                'delta' => (int) ($item['delta'] ?? ($item['new_quantity'] - ($item['old_quantity'] ?? 0))),
+                'notes' => $item['notes'] ?? null,
+            ];
+
+            if (isset($item['name'])) {
+                $preparedItem['name'] = $item['name'];
+            } else {
+                $product = Product::find($item['product_id']);
+                $preparedItem['name'] = $product ? $product->name : "المنتج رقم {$item['product_id']}";
+            }
+
+            $preparedItems[] = $preparedItem;
+        }
+
+        return $preparedItems;
+    }
+
+    public function printKitchenChangesProcess(Order $order, array $orderItems, int $printerId): void
+    {
+        try {
+            $printer = \App\Models\Printer::findOrFail($printerId);
+
+            if (! $printer->ip_address) {
+                Log::warning("Printer {$printer->name} has no IP address configured");
+
+                return;
+            }
+
+            Log::info("Printing kitchen changes to printer {$printer->name} ({$printer->ip_address})");
+
+            $html = $this->generateKitchenChangesHtml($order, $orderItems);
+            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
+
+            $connector = $this->createConnector($printer->ip_address);
+            $escposPrinter = new Printer($connector);
+            $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
+
+            $escposImage = EscposImage::load($tempImagePath);
+            $escposPrinter->bitImage($escposImage);
+            $escposPrinter->feed(3);
+            $escposPrinter->cut();
+
+            unlink($tempImagePath);
+            $escposPrinter->close();
+
+            Log::info("Kitchen changes printed successfully to printer {$printer->name}");
+
+        } catch (Exception $e) {
+            Log::error("Error printing kitchen changes to printer {$printerId}: ".$e->getMessage());
+        }
+    }
+
+    private function generateKitchenChangesHtml(Order $order, array $orderItems): string
+    {
+        return view('print.kitchen-changes-template', [
+            'order' => $order,
+            'orderItems' => $orderItems,
         ])->render();
     }
 

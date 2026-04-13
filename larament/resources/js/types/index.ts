@@ -71,6 +71,19 @@ export interface Payment {
   user_id: number;
 }
 
+export interface OrderItemChange {
+  id: number;
+  order_id: number;
+  product_id: number | null;
+  product_name: string;
+  change_type: 'added' | 'removed' | 'quantity_changed';
+  old_quantity: number | null;
+  new_quantity: number | null;
+  delta: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Order {
   id: number;
   customer_id?: number;
@@ -100,6 +113,7 @@ export interface Order {
   customer?: Customer;
   driver?: Driver;
   items: OrderItem[];
+  item_changes?: OrderItemChange[];
   payments: Payment[];
   user?: User;
 }

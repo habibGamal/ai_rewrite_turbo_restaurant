@@ -3,19 +3,20 @@
 namespace App\Filament\Widgets;
 
 use App\Services\ProductsSalesReportService;
-use Filament\Widgets\Widget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\Widget;
 
 class NoProductsSalesInPeriodWidget extends Widget
 {
     protected static bool $isLazy = false;
+
     protected static ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
     protected string $view = 'filament.widgets.no-products-sales-in-period';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     protected ProductsSalesReportService $productsReportService;
 

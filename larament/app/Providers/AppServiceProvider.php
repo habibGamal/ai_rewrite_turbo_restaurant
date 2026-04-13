@@ -2,24 +2,21 @@
 
 namespace App\Providers;
 
-use Filament\Actions\Exports\Jobs\ExportCsv;
-use App\Jobs\ExporterCsv;
-use Filament\Auth\Http\Responses\LoginResponse;
 use App\Http\Responses\CustomLoginResponse;
+use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
 use App\Models\Product;
 use App\Observers\ProductObserver;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Vite;
-use Illuminate\Support\ServiceProvider;
+use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
+use Filament\Auth\Http\Responses\LoginResponse;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
-use Filament\Actions\Action;
-use Illuminate\Support\Facades\Date;
-use Carbon\Carbon;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-            fn(): View => view('filament.global-actions'),
+            fn (): View => view('filament.global-actions'),
         );
 
         if (request()->isSecure() || request()->header('X-Forwarded-Proto') === 'https') {

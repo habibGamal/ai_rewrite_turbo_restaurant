@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\WastedItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class WastedItemFactory extends Factory
 {

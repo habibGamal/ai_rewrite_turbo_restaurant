@@ -2,16 +2,15 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\ProductType;
+use App\Filament\Exports\ProductsSalesTableExporter;
+use App\Services\ProductsSalesReportService;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
-use App\Enums\ProductType;
-use App\Services\ProductsSalesReportService;
-use App\Filament\Exports\ProductsSalesTableExporter;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 class ProductsSalesTableWidget extends BaseWidget
@@ -22,18 +21,14 @@ class ProductsSalesTableWidget extends BaseWidget
 
     protected static bool $isLazy = false;
 
-
     protected static ?string $heading = 'تفاصيل أداء المنتجات';
 
     protected ProductsSalesReportService $productsReportService;
-
 
     public function boot(): void
     {
         $this->productsReportService = app(ProductsSalesReportService::class);
     }
-
-
 
     public function table(Table $table): Table
     {
@@ -69,7 +64,7 @@ class ProductsSalesTableWidget extends BaseWidget
                         'endDate' => $endDate,
                         'shiftIds' => $shiftIds,
                     ])
-                    ->fileName(fn () => 'products-sales-performance-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
+                    ->fileName(fn () => 'products-sales-performance-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->columns([
                 TextColumn::make('name')
@@ -100,8 +95,8 @@ class ProductsSalesTableWidget extends BaseWidget
                 TextColumn::make('profit_margin')
                     ->label('هامش الربح %')
                     ->state(
-                        fn($record) => $record->total_sales > 0
-                            ? number_format(($record->total_profit / $record->total_sales) * 100, 1) . '%'
+                        fn ($record) => $record->total_sales > 0
+                            ? number_format(($record->total_profit / $record->total_sales) * 100, 1).'%'
                             : '0%'
                     ),
 

@@ -3,11 +3,10 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\DTOs\Orders\OrderItemDTO;
 use App\Events\Orders\OrderCreated;
 use App\Models\Order;
-use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\OrderItemRepositoryInterface;
+use App\Repositories\Contracts\OrderRepositoryInterface;
 
 class OrderCreationService
 {

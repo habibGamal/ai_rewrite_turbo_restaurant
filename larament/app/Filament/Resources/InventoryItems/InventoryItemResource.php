@@ -2,27 +2,24 @@
 
 namespace App\Filament\Resources\InventoryItems;
 
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
 use App\Enums\ProductType;
-use Filament\Actions\ViewAction;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
 use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
-use App\Filament\Resources\InventoryItemResource\Pages;
-use App\Filament\Resources\InventoryItemResource\RelationManagers;
+use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
+use App\Filament\Resources\InventoryItems\RelationManagers\UsedInProductsRelationManager;
+use App\Filament\Traits\AdminAccess;
 use App\Models\InventoryItem;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
-use Filament\Infolists;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use \App\Filament\Traits\AdminAccess;
 
 class InventoryItemResource extends Resource
 {
@@ -30,9 +27,9 @@ class InventoryItemResource extends Resource
 
     protected static ?string $model = InventoryItem::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-archive-box';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المخزون';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المخزون';
 
     protected static ?int $navigationSort = 1;
 
@@ -63,7 +60,7 @@ class InventoryItemResource extends Resource
                     ->numeric()
                     ->sortable()
                     ->badge()
-                    ->color(fn($record): string => match (true) {
+                    ->color(fn ($record): string => match (true) {
                         $record->quantity > ($record->product->min_stock * 2) => 'success',
                         $record->quantity > $record->product->min_stock => 'warning',
                         default => 'danger',
@@ -105,21 +102,21 @@ class InventoryItemResource extends Resource
                             ->placeholder('اختر نوع المنتج'),
                     ])
                     ->query(
-                        fn(Builder $query, array $data) => $query
+                        fn (Builder $query, array $data) => $query
                             ->when(
                                 $data['type'] ?? null,
-                                fn(Builder $query) => $query->whereHas('product', fn(Builder $productQuery) => $productQuery->where('type', $data['type'] ?? null))
+                                fn (Builder $query) => $query->whereHas('product', fn (Builder $productQuery) => $productQuery->where('type', $data['type'] ?? null))
                             )
                     ),
                 Filter::make('low_stock')
                     ->label('مخزون منخفض')
-                    ->query(fn($query) => $query->whereRaw('quantity <= (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
+                    ->query(fn ($query) => $query->whereRaw('quantity <= (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
                 Filter::make('critical_stock')
                     ->label('مخزون حرج')
-                    ->query(fn($query) => $query->whereRaw('quantity < (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
+                    ->query(fn ($query) => $query->whereRaw('quantity < (SELECT min_stock FROM products WHERE products.id = inventory_items.product_id)')),
                 Filter::make('out_of_stock')
                     ->label('نفد المخزون')
-                    ->query(fn($query) => $query->where('quantity', '<=', 0)),
+                    ->query(fn ($query) => $query->where('quantity', '<=', 0)),
             ])
             ->recordActions([
                 ViewAction::make()
@@ -148,16 +145,15 @@ class InventoryItemResource extends Resource
                         TextEntry::make('product.type')
                             ->label('نوع المنتج'),
                     ])
-                    ->columns(3)
+                    ->columns(3),
             ]);
     }
-
-
 
     public static function getRelations(): array
     {
         return [
             MovementsRelationManager::class,
+            UsedInProductsRelationManager::class,
         ];
     }
 

@@ -1,10 +1,11 @@
 import React from "react";
-import { Link, router } from "@inertiajs/react";
-import { Button, Col, Empty, Row, Typography, Badge } from "antd";
-import { PhoneOutlined, PlusOutlined } from "@ant-design/icons";
+import { router } from "@inertiajs/react";
+import { Button, Col, Empty, Row } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import { orderStatus } from "@/helpers/orderState";
 import useModal from "@/hooks/useModal";
 import ChooseTableForm from "@/Components/Orders/ChooseTableForm";
+import { OrderCard } from "./OrderCard";
 import type { Order } from "@/types";
 
 interface DineInTabProps {
@@ -14,7 +15,6 @@ interface DineInTabProps {
 export const DineInTab: React.FC<DineInTabProps> = ({ orders }) => {
     const tableModal = useModal();
 
-    // Sort orders
     const sortedOrders = [...orders].sort((a, b) => {
         if (a.status === b.status) {
             return 0;
@@ -39,11 +39,11 @@ export const DineInTab: React.FC<DineInTabProps> = ({ orders }) => {
         <div>
             <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
 
-            <Row gutter={[24, 16]}>
+            <Row gutter={[16, 16]}>
                 <Col span={6}>
                     <Button
                         onClick={addTable}
-                        className="h-32 w-full"
+                        className="h-36 w-full"
                         icon={<PlusOutlined style={{ fontSize: "48px" }} />}
                         type="primary"
                         size="large"
@@ -53,21 +53,14 @@ export const DineInTab: React.FC<DineInTabProps> = ({ orders }) => {
                 </Col>
 
                 {sortedOrders.map((order) => (
-                    <Col span={6} key={order.id}>
-                        <Link href={`/orders/manage/${order.id}`}>
-                            <Badge.Ribbon {...orderStatus(order.status)}>
-                                <div className="isolate grid place-items-center rounded p-4 border h-32">
-                                    <Typography.Title level={4}>
-                                        طاولة{" "}
-                                        {order.dine_table_number || "غير محدد"}
-                                    </Typography.Title>
-                                    <Typography.Title level={5}>
-                                        # طلب رقم {order.order_number}
-                                    </Typography.Title>
-                                </div>
-                            </Badge.Ribbon>
-                        </Link>
-                    </Col>
+                    <OrderCard
+                        key={order.id}
+                        order={order}
+                        headerTitle={`طاولة ${order.dine_table_number || "غير محدد"}`}
+                        subtitle={`# طلب رقم ${order.order_number}`}
+                        statusConfig={orderStatus(order.status)}
+                        className="space-y-3"
+                    />
                 ))}
             </Row>
             {sortedOrders.length === 0 && (

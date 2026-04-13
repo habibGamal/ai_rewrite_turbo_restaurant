@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\ProductType;
+use App\Enums\SettingKey;
 use App\Models\Category;
 use App\Models\Product;
-use App\Enums\SettingKey;
-use App\Enums\ProductType;
+use Exception;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Exception;
 
 class BranchService
 {
@@ -55,13 +55,14 @@ class BranchService
     public function testMasterConnection(): bool
     {
         $masterLink = $this->getMasterNodeLink();
-        if (!$masterLink) {
+        if (! $masterLink) {
             return false;
         }
 
         try {
             $response = Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/check');
+                ->get($masterLink.'/api/check');
+
             return $response->successful();
         } catch (Exception $e) {
             return false;
@@ -76,7 +77,7 @@ class BranchService
         try {
             return $callback();
         } catch (Exception $e) {
-            throw new Exception('لا يمكن الاتصال بالنقطة الرئيسية: ' . $e->getMessage());
+            throw new Exception('لا يمكن الاتصال بالنقطة الرئيسية: '.$e->getMessage());
         }
     }
 
@@ -86,8 +87,9 @@ class BranchService
     {
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
+
             return Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/all-products-refs-master');
+                ->get($masterLink.'/api/all-products-refs-master');
         });
     }
 
@@ -95,8 +97,9 @@ class BranchService
     {
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
+
             return Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/all-products-prices-master');
+                ->get($masterLink.'/api/all-products-prices-master');
         });
     }
 
@@ -104,8 +107,9 @@ class BranchService
     {
         return $this->tryMasterConnection(function () use ($ids) {
             $masterLink = $this->getMasterNodeLink();
+
             return Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/get-products-master?ids=,' . $ids);
+                ->get($masterLink.'/api/get-products-master?ids=,'.$ids);
         });
     }
 
@@ -113,8 +117,9 @@ class BranchService
     {
         return $this->tryMasterConnection(function () use ($ids) {
             $masterLink = $this->getMasterNodeLink();
+
             return Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/get-products-prices-master?ids=,' . $ids);
+                ->get($masterLink.'/api/get-products-prices-master?ids=,'.$ids);
         });
     }
 
@@ -122,8 +127,9 @@ class BranchService
     {
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
+
             return Http::withOptions($this->querySettings)
-                ->get($masterLink . '/api/all-products-recipes-master');
+                ->get($masterLink.'/api/all-products-recipes-master');
         });
     }
 
@@ -135,13 +141,13 @@ class BranchService
     public function getNewProductsFromMaster(): array
     {
         $response = $this->queryAllProductsRefsMaster();
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get products from master');
         }
 
         $allMasterProducts = $response->json();
         $productRefs = collect($allMasterProducts)
-            ->flatMap(fn($category) => $category['products'])
+            ->flatMap(fn ($category) => $category['products'])
             ->pluck('productRef')
             ->toArray();
         if (empty($productRefs)) {
@@ -154,10 +160,11 @@ class BranchService
             ->toArray();
 
         $nonExistingProducts = array_diff($productRefs, $existingRefs);
+
         // Filter master categories to only include new products
         return collect($allMasterProducts)->map(function ($category) use ($nonExistingProducts) {
             $filteredProducts = collect($category['products'])
-                ->filter(fn($product) => in_array($product['productRef'], $nonExistingProducts))
+                ->filter(fn ($product) => in_array($product['productRef'], $nonExistingProducts))
                 ->values()
                 ->toArray();
 
@@ -166,7 +173,7 @@ class BranchService
                 'name' => $category['name'],
                 'products' => $filteredProducts,
             ];
-        })->filter(fn($category) => !empty($category['products']))->values()->toArray();
+        })->filter(fn ($category) => ! empty($category['products']))->values()->toArray();
     }
 
     /**
@@ -175,12 +182,12 @@ class BranchService
     public function getChangedPricesProductsFromMaster(): array
     {
         $response = $this->queryAllProductsPricesMaster();
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get prices from master');
         }
 
         $allMasterProducts = $response->json();
-        $products = collect($allMasterProducts)->flatMap(fn($category) => $category['products']);
+        $products = collect($allMasterProducts)->flatMap(fn ($category) => $category['products']);
         $productsRefs = $products->pluck('productRef')->toArray();
 
         if (empty($productsRefs)) {
@@ -194,12 +201,14 @@ class BranchService
 
         $changedPricesProducts = $products->filter(function ($masterProduct) use ($localProducts) {
             $localProduct = $localProducts->get($masterProduct['productRef']);
-            if (!$localProduct)
+            if (! $localProduct) {
                 return false;
+            }
 
             $isRawProduct = $localProduct->type === ProductType::RawMaterial;
-            if ($isRawProduct)
+            if ($isRawProduct) {
                 return false;
+            }
 
             $priceChanged = isset($masterProduct['price']) &&
                 abs((float) $localProduct->price - (float) $masterProduct['price']) > 0.01;
@@ -212,7 +221,7 @@ class BranchService
         // Filter master categories to only include products with changed prices
         return collect($allMasterProducts)->map(function ($category) use ($changedPricesProducts) {
             $filteredProducts = collect($category['products'])
-                ->filter(fn($product) => in_array($product['productRef'], $changedPricesProducts))
+                ->filter(fn ($product) => in_array($product['productRef'], $changedPricesProducts))
                 ->values()
                 ->toArray();
 
@@ -221,7 +230,7 @@ class BranchService
                 'name' => $category['name'],
                 'products' => $filteredProducts,
             ];
-        })->filter(fn($category) => !empty($category['products']))->values()->toArray();
+        })->filter(fn ($category) => ! empty($category['products']))->values()->toArray();
     }
 
     /**
@@ -230,12 +239,12 @@ class BranchService
     public function getChangedRecipesProductsFromMaster(): array
     {
         $response = $this->queryAllProductsRecipesMaster();
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get recipes from master');
         }
 
         $allMasterProducts = $response->json();
-        $products = collect($allMasterProducts)->flatMap(fn($category) => $category['products']);
+        $products = collect($allMasterProducts)->flatMap(fn ($category) => $category['products']);
         $productsRefs = $products->pluck('productRef')->toArray();
 
         if (empty($productsRefs)) {
@@ -250,7 +259,7 @@ class BranchService
 
         $changedRecipesProducts = $products->filter(function ($masterProduct) use ($localProducts) {
             $localProduct = $localProducts->get($masterProduct['productRef']);
-            if (!$localProduct) {
+            if (! $localProduct) {
                 return false;
             }
 
@@ -264,7 +273,7 @@ class BranchService
         // Filter master categories to only include products with changed recipes
         return collect($allMasterProducts)->map(function ($category) use ($changedRecipesProducts) {
             $filteredProducts = collect($category['products'])
-                ->filter(fn($product) => in_array($product['productRef'], $changedRecipesProducts))
+                ->filter(fn ($product) => in_array($product['productRef'], $changedRecipesProducts))
                 ->values()
                 ->toArray();
 
@@ -273,7 +282,7 @@ class BranchService
                 'name' => $category['name'],
                 'products' => $filteredProducts,
             ];
-        })->filter(fn($category) => !empty($category['products']))->values()->toArray();
+        })->filter(fn ($category) => ! empty($category['products']))->values()->toArray();
     }
 
     /**
@@ -281,7 +290,7 @@ class BranchService
      */
     public function importProductsFromMaster(array $productIds): bool
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can import products from master');
         }
 
@@ -291,7 +300,7 @@ class BranchService
 
         $ids = implode(',', $productIds);
         $response = $this->queryGetProductsMaster($ids);
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get product details from master');
         }
 
@@ -301,7 +310,7 @@ class BranchService
         try {
             // Extract all components (raw products) from manufactured products
             $rawProducts = collect($products)
-                ->flatMap(fn($product) => $product['components'] ?? [])
+                ->flatMap(fn ($product) => $product['components'] ?? [])
                 ->unique('productRef');
 
             // Create categories if they don't exist
@@ -328,6 +337,7 @@ class BranchService
                         logger()->error('Raw product type is "manifactured", which is not valid for raw materials.', [
                             'data' => $rawProduct,
                         ]);
+
                         continue; // Skip invalid raw product types
                     }
                     Product::updateOrCreate(
@@ -353,7 +363,7 @@ class BranchService
                     ProductType::Manufactured->value, 'manifactured' => ProductType::Manufactured,
                     ProductType::RawMaterial->value => ProductType::RawMaterial,
                     ProductType::Consumable->value => ProductType::Consumable,
-                    default => throw new Exception('نوع المنتج غير معروف: ' . $productData['type']),
+                    default => throw new Exception('نوع المنتج غير معروف: '.$productData['type']),
                 };
                 if ($localCategory && $type === ProductType::RawMaterial) {
                     $product = Product::updateOrCreate(
@@ -368,7 +378,7 @@ class BranchService
                             'product_ref' => $productData['productRef'],
                         ]
                     );
-                } else if ($localCategory && $type === ProductType::Consumable) {
+                } elseif ($localCategory && $type === ProductType::Consumable) {
                     $product = Product::updateOrCreate(
                         ['product_ref' => $productData['productRef']],
                         [
@@ -381,7 +391,7 @@ class BranchService
                             'product_ref' => $productData['productRef'],
                         ]
                     );
-                } else if ($localCategory && $type === ProductType::Manufactured) {
+                } elseif ($localCategory && $type === ProductType::Manufactured) {
 
                     $product = Product::updateOrCreate(
                         ['product_ref' => $productData['productRef']],
@@ -399,7 +409,7 @@ class BranchService
                     // Handle product components for manufactured products
                     if (
                         $type === ProductType::Manufactured
-                        && !empty($productData['components'])
+                        && ! empty($productData['components'])
                     ) {
 
                         // First, delete existing components
@@ -419,11 +429,12 @@ class BranchService
             }
 
             DB::commit();
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to import products from master: ' . $e->getMessage());
+            Log::error('Failed to import products from master: '.$e->getMessage());
             throw $e;
         }
     }
@@ -433,7 +444,7 @@ class BranchService
      */
     public function updateProductPricesFromMaster(array $productIds): bool
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can update prices from master');
         }
 
@@ -444,7 +455,7 @@ class BranchService
         $ids = implode(',', $productIds);
         $response = $this->queryGetProductsPricesMaster($ids);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get product prices from master');
         }
 
@@ -479,18 +490,19 @@ class BranchService
                             break;
                     }
 
-                    if (!empty($updateData)) {
+                    if (! empty($updateData)) {
                         $localProduct->update($updateData);
                     }
                 }
             }
 
             DB::commit();
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to update prices from master: ' . $e->getMessage());
+            Log::error('Failed to update prices from master: '.$e->getMessage());
             throw $e;
         }
     }
@@ -500,7 +512,7 @@ class BranchService
      */
     public function updateProductRecipesFromMaster(array $productIds): bool
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can update recipes from master');
         }
 
@@ -511,7 +523,7 @@ class BranchService
         $ids = implode(',', $productIds);
         $response = $this->queryGetProductsMaster($ids);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new Exception('Failed to get product recipes from master');
         }
 
@@ -521,7 +533,7 @@ class BranchService
         try {
             // Extract all raw materials/components from the recipes
             $rawProducts = collect($products)
-                ->flatMap(fn($product) => $product['components'] ?? [])
+                ->flatMap(fn ($product) => $product['components'] ?? [])
                 ->unique('productRef');
 
             // Create categories if they don't exist
@@ -567,7 +579,7 @@ class BranchService
                     $localProduct->components()->detach();
 
                     // Add new components from master
-                    if (!empty($productData['components'])) {
+                    if (! empty($productData['components'])) {
                         foreach ($productData['components'] as $component) {
                             $componentProduct = Product::where('product_ref', $component['productRef'])->first();
                             if ($componentProduct) {
@@ -581,11 +593,12 @@ class BranchService
             }
 
             DB::commit();
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Failed to update recipes from master: ' . $e->getMessage());
+            Log::error('Failed to update recipes from master: '.$e->getMessage());
             throw $e;
         }
     }
@@ -598,7 +611,7 @@ class BranchService
      */
     public function pullProductsFromMaster(array $categoryIds): array
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can pull products from master');
         }
 
@@ -618,7 +631,7 @@ class BranchService
      */
     public function pullPricesFromMaster(array $categoryIds): array
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can pull prices from master');
         }
 
@@ -638,7 +651,7 @@ class BranchService
      */
     public function pullRecipesFromMaster(array $categoryIds): array
     {
-        if (!$this->isSlave()) {
+        if (! $this->isSlave()) {
             throw new Exception('Only slave nodes can pull recipes from master');
         }
 

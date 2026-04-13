@@ -2,18 +2,15 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Actions\Action;
-use Filament\Schemas\Components\Utilities\Get;
 use App\Enums\ProductType;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Notifications\Notification;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\InventoryItem;
+use Filament\Actions\Action;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class LowStockImporterAction extends Action
 {
@@ -46,8 +43,7 @@ class LowStockImporterAction extends Action
                     ->placeholder('جميع الفئات')
                     ->options(Category::all()->pluck('name', 'id'))
                     ->reactive()
-                    ->afterStateUpdated(fn($state, callable $set) => $set('selected_products', []))
-                ,
+                    ->afterStateUpdated(fn ($state, callable $set) => $set('selected_products', [])),
 
                 CheckboxList::make('selected_products')
                     ->label('المنتجات منخفضة المخزون')
@@ -79,7 +75,7 @@ class LowStockImporterAction extends Action
                             $needed = max(0, $minStock - $currentStock);
 
                             return [
-                                $product->id => $product->name . ' - ' . $price . ' ج.م' . ' (' . $categoryName . ') - مطلوب: ' . $needed
+                                $product->id => $product->name.' - '.$price.' ج.م'.' ('.$categoryName.') - مطلوب: '.$needed,
                             ];
                         });
                     })
@@ -104,7 +100,7 @@ class LowStockImporterAction extends Action
 
                             return [$product->id => $description];
                         });
-                    })
+                    }),
             ])
             ->action(function (array $data, Set $set, Get $get) {
                 $selectedProducts = $data['selected_products'] ?? [];
@@ -115,6 +111,7 @@ class LowStockImporterAction extends Action
                         ->body('يرجى اختيار المنتجات التي تريد إضافتها')
                         ->warning()
                         ->send();
+
                     return;
                 }
 
@@ -134,6 +131,7 @@ class LowStockImporterAction extends Action
                     // Skip if product already exists in the list
                     if (in_array($productId, $existingProductIds)) {
                         $skippedCount++;
+
                         continue;
                     }
 
@@ -151,7 +149,7 @@ class LowStockImporterAction extends Action
                             'quantity' => $quantity,
                             'price' => $price,
                             'total' => $total,
-                            ...($this->additional ? ($this->additional)($product) : [])
+                            ...($this->additional ? ($this->additional)($product) : []),
                         ];
                         $addedCount++;
                     }

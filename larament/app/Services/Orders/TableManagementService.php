@@ -9,7 +9,7 @@ class TableManagementService
 {
     public function validateTableAvailability(string $tableNumber): void
     {
-        if (!$this->isTableAvailable($tableNumber)) {
+        if (! $this->isTableAvailable($tableNumber)) {
             throw new OrderException('هذه الطاولة محجوزة');
         }
     }
@@ -17,7 +17,8 @@ class TableManagementService
     public function isTableAvailable(string $tableNumber): bool
     {
         $table = DineTable::where('table_number', $tableNumber)->first();
-        return !$table || $table->order_id === null;
+
+        return ! $table || $table->order_id === null;
     }
 
     public function reserveTable(string $tableNumber, int $orderId): DineTable

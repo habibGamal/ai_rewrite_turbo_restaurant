@@ -2,8 +2,8 @@
 
 namespace App\DTOs\Orders;
 
-use InvalidArgumentException;
 use App\Enums\PaymentMethod;
+use InvalidArgumentException;
 
 class PaymentDTO
 {

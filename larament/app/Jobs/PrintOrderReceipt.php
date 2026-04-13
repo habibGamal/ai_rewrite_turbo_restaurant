@@ -2,23 +2,23 @@
 
 namespace App\Jobs;
 
-use Exception;
-use Throwable;
 use App\Models\Order;
 use App\Services\PrintService;
-use App\Enums\SettingKey;
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class PrintOrderReceipt implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 120; // 2 minutes timeout
+
     public $tries = 1; // Retry 3 times on failure
 
     /**
@@ -43,7 +43,7 @@ class PrintOrderReceipt implements ShouldQueue
 
             Log::info("Order receipt print job completed successfully for order {$this->order->id}");
         } catch (Exception $e) {
-            Log::error("Order receipt print job failed for order {$this->order->id}: " . $e->getMessage());
+            Log::error("Order receipt print job failed for order {$this->order->id}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -53,6 +53,6 @@ class PrintOrderReceipt implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Order receipt print job permanently failed for order {$this->order->id}: " . $exception->getMessage());
+        Log::error("Order receipt print job permanently failed for order {$this->order->id}: ".$exception->getMessage());
     }
 }

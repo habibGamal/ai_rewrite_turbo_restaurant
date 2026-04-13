@@ -9,7 +9,6 @@ class OrderCalculationService
 {
     private const TAX_RATE = 0.0; // 0% tax rate as per original system
 
-
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
     ) {}
@@ -19,8 +18,8 @@ class OrderCalculationService
         $order->load(['items', 'customer']);
 
         // Calculate subtotal
-        $subtotal = $order->items->sum(fn($item) => $item->total);
-
+        $subtotal = $order->items->sum(fn ($item) => $item->total);
+        logger()->info("Calculated subtotal: {$subtotal} for Order ID: {$order->id} , Items Count: {$order->items->count()}");
         // Calculate service charge
         $serviceCharge = $this->calculateServiceCharge($order, $subtotal);
 
@@ -103,7 +102,7 @@ class OrderCalculationService
     private function calculateDiscount(Order $order, float $subtotal): float
     {
         // Check if any items have item-level discounts
-        $hasItemDiscounts = $order->items->some(fn($item) => ($item->item_discount ?? 0) > 0);
+        $hasItemDiscounts = $order->items->some(fn ($item) => ($item->item_discount ?? 0) > 0);
 
         if ($hasItemDiscounts) {
             // Calculate total discount from item-level discounts
@@ -132,7 +131,8 @@ class OrderCalculationService
 
     private function calculateProfit(Order $order, float $total): float
     {
-        $totalCost = $order->items->sum(fn($item) => $item->cost * $item->quantity);
+        $totalCost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
+
         return $total - $totalCost;
     }
 }

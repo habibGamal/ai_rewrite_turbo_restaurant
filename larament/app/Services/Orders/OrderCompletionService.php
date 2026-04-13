@@ -3,8 +3,8 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\PaymentDTO;
-use App\Enums\PaymentMethod;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Events\Orders\OrderCompleted;
 use App\Models\Order;
 
@@ -26,7 +26,7 @@ class OrderCompletionService
         }
 
         // Process payments - use single or multiple payment based on array content
-        $validPayments = array_filter($paymentsData, fn($amount) => $amount > 0);
+        $validPayments = array_filter($paymentsData, fn ($amount) => $amount > 0);
 
         if (count($validPayments) === 1) {
             // Single payment - use processPayment method

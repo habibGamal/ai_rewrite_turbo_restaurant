@@ -2,13 +2,12 @@
 
 namespace App\Filament\Components\Forms;
 
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Forms\Components\Select;
-use App\Models\Product;
-use App\Models\Category;
 use App\Enums\ProductType;
+use App\Models\Product;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class ProductComponentSelector extends Select
 {
@@ -31,25 +30,25 @@ class ProductComponentSelector extends Select
                 return $products->mapWithKeys(function ($product) {
                     $cost = $product->cost ?? 0;
                     $categoryName = $product->category ? $product->category->name : 'بدون فئة';
-                    $typeLabel = match($product->type->value) {
+                    $typeLabel = match ($product->type->value) {
                         'raw_material' => 'مادة خام',
                         'consumable' => 'استهلاكي',
                         default => $product->type->value
                     };
 
-                    $label = $product->name . ' - ' . $cost . ' ج.م' . ' (' . $categoryName . ') - ' . $typeLabel;
+                    $label = $product->name.' - '.$cost.' ج.م'.' ('.$categoryName.') - '.$typeLabel;
 
                     return [$product->id => $label];
                 });
             })
             ->live()
             ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                if (!$state) {
+                if (! $state) {
                     return;
                 }
 
                 $product = Product::find($state);
-                if (!$product) {
+                if (! $product) {
                     return;
                 }
 
@@ -66,6 +65,7 @@ class ProductComponentSelector extends Select
 
                     // Reset the select
                     $set('component_selector', null);
+
                     return;
                 }
 
@@ -81,7 +81,7 @@ class ProductComponentSelector extends Select
                     'unit' => $product->unit,
                     'cost' => $cost,
                     'total' => $total,
-                    'category_name' => $product->category->name ?? 'بدون فئة'
+                    'category_name' => $product->category->name ?? 'بدون فئة',
                 ];
 
                 // Add the new component

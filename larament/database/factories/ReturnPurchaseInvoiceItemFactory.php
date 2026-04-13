@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\ReturnPurchaseInvoiceItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ReturnPurchaseInvoiceItemFactory extends Factory
 {

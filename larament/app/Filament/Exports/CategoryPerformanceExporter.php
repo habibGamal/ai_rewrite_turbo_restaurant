@@ -49,7 +49,8 @@ class CategoryPerformanceExporter extends Exporter
                 ->state(function ($record) {
                     $totalSales = $record->total_sales ?? 0;
                     $totalProfit = $record->total_profit ?? 0;
-                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1) . '%' : '0%';
+
+                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1).'%' : '0%';
                 }),
 
             ExportColumn::make('avg_sales_per_product')
@@ -58,6 +59,7 @@ class CategoryPerformanceExporter extends Exporter
                     $quantity = $record->total_quantity ?? 0;
                     $totalSales = $record->total_sales ?? 0;
                     $avg = $quantity > 0 ? $totalSales / $quantity : 0;
+
                     return number_format($avg, 2);
                 }),
 
@@ -67,6 +69,7 @@ class CategoryPerformanceExporter extends Exporter
                     $quantity = $record->total_quantity ?? 0;
                     $totalProfit = $record->total_profit ?? 0;
                     $avg = $quantity > 0 ? $totalProfit / $quantity : 0;
+
                     return number_format($avg, 2);
                 }),
 
@@ -76,6 +79,7 @@ class CategoryPerformanceExporter extends Exporter
                     $productsCount = $record->products_count ?? 0;
                     $totalQuantity = $record->total_quantity ?? 0;
                     $avg = $productsCount > 0 ? $totalQuantity / $productsCount : 0;
+
                     return number_format($avg, 1);
                 }),
 
@@ -113,10 +117,10 @@ class CategoryPerformanceExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير تقرير أداء التصنيفات وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'تصنيف' : 'تصنيف') . '.';
+        $body = 'تم إكمال تصدير تقرير أداء التصنيفات وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'تصنيف' : 'تصنيف').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'تصنيف' : 'تصنيف') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'تصنيف' : 'تصنيف').'.';
         }
 
         return $body;

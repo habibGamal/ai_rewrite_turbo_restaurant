@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\WebOrdersController;
 use App\Http\Controllers\Api\ManagementController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,3 +45,7 @@ Route::get('/get-products-prices-master', [ApiController::class, 'getProductsPri
 Route::post('/web-orders/place-order', [WebOrdersController::class, 'createOrder']);
 Route::get('/can-accept-order', [WebOrdersController::class, 'canAcceptOrder']);
 Route::get('/get-shift-id', [WebOrdersController::class, 'getShiftId']);
+
+
+
+Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');

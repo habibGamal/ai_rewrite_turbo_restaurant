@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Shift;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ShiftLoggingService
 {
@@ -22,9 +22,10 @@ class ShiftLoggingService
     {
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift) {
+        if (! $currentShift) {
             // Log to default channel if no shift is active
             Log::channel('daily')->log($level, $action, $details);
+
             return;
         }
 
@@ -38,7 +39,7 @@ class ShiftLoggingService
         ];
 
         // Create shift-specific log channel
-        $channelName = 'shift_' . $currentShift->id;
+        $channelName = 'shift_'.$currentShift->id;
         $this->createShiftLogChannel($channelName, $currentShift);
 
         Log::channel($channelName)->log($level, $action, $logData);
@@ -47,10 +48,8 @@ class ShiftLoggingService
     /**
      * Log order save action with item differences
      */
-    public function logOrderSave(int $orderId, array $oldItems, array $newItems): void
+    public function logOrderSave(int $orderId, array $differences): void
     {
-        $differences = $this->calculateItemDifferences($oldItems, $newItems);
-
         $action = "حفظ تعديلات الطلب رقم #{$orderId}";
         $details = [
             'order_id' => $orderId,
@@ -93,7 +92,7 @@ class ShiftLoggingService
         $paymentDetails = [];
         foreach ($paymentData as $method => $amount) {
             if ($amount > 0) {
-                $paymentDetails[] = $this->translatePaymentMethod($method) . ": {$amount} جنيه";
+                $paymentDetails[] = $this->translatePaymentMethod($method).": {$amount} جنيه";
             }
         }
 
@@ -111,7 +110,7 @@ class ShiftLoggingService
     /**
      * Log order cancellation
      */
-    public function logOrderCancellation(int $orderId, string $reason = null): void
+    public function logOrderCancellation(int $orderId, ?string $reason = null): void
     {
         $action = "إلغاء الطلب رقم #{$orderId}";
         $details = [
@@ -125,7 +124,7 @@ class ShiftLoggingService
     /**
      * Log customer creation/update
      */
-    public function logCustomerAction(string $actionType, array $customerData, int $orderId = null): void
+    public function logCustomerAction(string $actionType, array $customerData, ?int $orderId = null): void
     {
         $actionMap = [
             'create' => 'إنشاء عميل جديد',
@@ -152,7 +151,7 @@ class ShiftLoggingService
     /**
      * Log driver actions
      */
-    public function logDriverAction(string $actionType, array $driverData, int $orderId = null): void
+    public function logDriverAction(string $actionType, array $driverData, ?int $orderId = null): void
     {
         $actionMap = [
             'create' => 'إنشاء سائق جديد',
@@ -231,7 +230,7 @@ class ShiftLoggingService
             'save' => 'حفظ طلب ويب',
         ];
 
-        $action = ($actionMap[$actionType] ?? $actionType) . " رقم #{$orderId}";
+        $action = ($actionMap[$actionType] ?? $actionType)." رقم #{$orderId}";
         $details = array_merge([
             'order_id' => $orderId,
             'action_type' => $actionType,
@@ -265,7 +264,7 @@ class ShiftLoggingService
     /**
      * Calculate differences between old and new order items
      */
-    private function calculateItemDifferences(array $oldItems, array $newItems): array
+    public function calculateItemDifferences(array $oldItems, array $newItems): array
     {
         $differences = [];
 
@@ -285,10 +284,11 @@ class ShiftLoggingService
             $productId = $newItem['product_id'];
             $productName = $newItem['product_name'] ?? "المنتج رقم {$productId}";
 
-            if (!isset($oldItemsLookup[$productId])) {
+            if (! isset($oldItemsLookup[$productId])) {
                 // New item added
                 $differences[] = [
                     'type' => 'added',
+                    'product_id' => $productId,
                     'product_name' => $productName,
                     'quantity' => $newItem['quantity'],
                     'description' => "تم إضافة {$newItem['quantity']} من {$productName}",
@@ -301,6 +301,7 @@ class ShiftLoggingService
                 if ($oldQuantity != $newQuantity) {
                     $differences[] = [
                         'type' => 'quantity_changed',
+                        'product_id' => $productId,
                         'product_name' => $productName,
                         'old_quantity' => $oldQuantity,
                         'new_quantity' => $newQuantity,
@@ -316,6 +317,7 @@ class ShiftLoggingService
                 if ($oldNotes != $newNotes) {
                     $differences[] = [
                         'type' => 'notes_changed',
+                        'product_id' => $productId,
                         'product_name' => $productName,
                         'old_notes' => $oldNotes,
                         'new_notes' => $newNotes,
@@ -328,10 +330,11 @@ class ShiftLoggingService
         // Check for removed items
         foreach ($oldItems as $oldItem) {
             $productId = $oldItem['product_id'];
-            if (!isset($newItemsLookup[$productId])) {
+            if (! isset($newItemsLookup[$productId])) {
                 $productName = $oldItem['product_name'] ?? "المنتج رقم {$productId}";
                 $differences[] = [
                     'type' => 'removed',
+                    'product_id' => $productId,
                     'product_name' => $productName,
                     'quantity' => $oldItem['quantity'],
                     'description' => "تم حذف {$oldItem['quantity']} من {$productName}",
@@ -366,7 +369,7 @@ class ShiftLoggingService
 
         // Ensure directory exists
         $logDir = dirname($logPath);
-        if (!is_dir($logDir)) {
+        if (! is_dir($logDir)) {
             mkdir($logDir, 0755, true);
         }
 
@@ -376,7 +379,7 @@ class ShiftLoggingService
                 'path' => $logPath,
                 'level' => 'info',
                 'replace_placeholders' => true,
-            ]
+            ],
         ]);
     }
 }

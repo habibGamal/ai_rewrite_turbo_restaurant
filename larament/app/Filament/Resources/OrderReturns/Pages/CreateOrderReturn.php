@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\OrderReturns\Pages;
 
-use Illuminate\Database\Eloquent\Model;
-use App\Models\Order;
-use Exception;
 use App\Filament\Resources\OrderReturns\OrderReturnResource;
+use App\Models\Order;
 use App\Services\Orders\OrderReturnService;
 use App\Services\Resources\OrderReturnCalculatorService;
-use Filament\Resources\Pages\CreateRecord;
+use Exception;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class CreateOrderReturn extends CreateRecord
 {
@@ -20,8 +20,8 @@ class CreateOrderReturn extends CreateRecord
         // Filter out items with zero quantity
         if (isset($data['return_items'])) {
             $data['return_items'] = collect($data['return_items'])
-                ->filter(fn($item) => ($item['quantity'] ?? 0) > 0)
-                ->map(fn($item) => OrderReturnCalculatorService::prepareReturnItemData($item))
+                ->filter(fn ($item) => ($item['quantity'] ?? 0) > 0)
+                ->map(fn ($item) => OrderReturnCalculatorService::prepareReturnItemData($item))
                 ->values()
                 ->toArray();
         }
@@ -29,7 +29,7 @@ class CreateOrderReturn extends CreateRecord
         // Filter out refunds with zero amount
         if (isset($data['refund_distribution'])) {
             $data['refund_distribution'] = collect($data['refund_distribution'])
-                ->filter(fn($refund) => ($refund['amount'] ?? 0) > 0)
+                ->filter(fn ($refund) => ($refund['amount'] ?? 0) > 0)
                 ->values()
                 ->toArray();
         }
@@ -51,7 +51,7 @@ class CreateOrderReturn extends CreateRecord
 
             // Prepare return items
             $returnItems = collect($data['return_items'])
-                ->map(fn($item) => [
+                ->map(fn ($item) => [
                     'order_item_id' => $item['order_item_id'],
                     'quantity' => $item['quantity'],
                     'refund_amount' => $item['refund_amount'],
@@ -60,7 +60,7 @@ class CreateOrderReturn extends CreateRecord
 
             // Prepare refund distribution
             $refundDistribution = collect($data['refund_distribution'])
-                ->map(fn($refund) => [
+                ->map(fn ($refund) => [
                     'method' => $refund['method'],
                     'amount' => $refund['amount'],
                 ])

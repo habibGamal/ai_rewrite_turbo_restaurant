@@ -9,6 +9,7 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class CustomerSegmentsWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;

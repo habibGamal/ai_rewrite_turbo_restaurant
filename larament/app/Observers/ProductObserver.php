@@ -3,8 +3,8 @@
 namespace App\Observers;
 
 use App\Enums\ProductType;
-use App\Models\Product;
 use App\Models\InventoryItem;
+use App\Models\Product;
 
 class ProductObserver
 {
@@ -81,7 +81,7 @@ class ProductObserver
                 $nextNumber = 1;
             }
 
-            $productRef = 'P' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+            $productRef = 'P'.str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
             // Check if this reference already exists
             $exists = Product::where('product_ref', $productRef)->exists();

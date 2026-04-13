@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\TableTypes\Pages;
 
 use App\Filament\Resources\TableTypes\TableTypeResource;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateTableType extends CreateRecord

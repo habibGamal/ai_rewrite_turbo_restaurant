@@ -46,7 +46,8 @@ class ProductsSalesTableExporter extends Exporter
                 ->state(function ($record) {
                     $totalSales = $record->total_sales ?? 0;
                     $totalProfit = $record->total_profit ?? 0;
-                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1) . '%' : '0%';
+
+                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1).'%' : '0%';
                 }),
 
             ExportColumn::make('dine_in_sales')
@@ -110,6 +111,7 @@ class ProductsSalesTableExporter extends Exporter
                     $totalQuantity = $record->total_quantity ?? 0;
                     $totalSales = $record->total_sales ?? 0;
                     $avgPrice = $totalQuantity > 0 ? $totalSales / $totalQuantity : 0;
+
                     return number_format($avgPrice, 2);
                 }),
         ];
@@ -117,10 +119,10 @@ class ProductsSalesTableExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير تقرير أداء المنتجات وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'منتج' : 'منتج') . '.';
+        $body = 'تم إكمال تصدير تقرير أداء المنتجات وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'منتج' : 'منتج').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'منتج' : 'منتج') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'منتج' : 'منتج').'.';
         }
 
         return $body;

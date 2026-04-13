@@ -2,23 +2,20 @@
 
 namespace App\Services;
 
-use Exception;
+use App\Models\InventoryItem;
+use App\Models\InventoryItemMovementDaily;
+use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
-use App\Models\Waste;
 use App\Models\Stocktaking;
-use App\Models\InventoryItemMovementDaily;
-use App\Models\InventoryItem;
-use App\Models\Product;
-use App\Enums\MovementReason;
-use App\Enums\InventoryMovementOperation;
+use App\Models\Waste;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class InventoryDailyAggregationService
 {
-
     /**
      * Get the status of the current day
      * Returns the opened day date or null if all days are closed
@@ -49,6 +46,7 @@ class InventoryDailyAggregationService
                     // ensure that they not closed by closed_at
                     InventoryItemMovementDaily::where('date', $today)->update(['closed_at' => null]);
                     Log::info("Day {$dateString} is already opened");
+
                     return $existingRecords;
                 }
 
@@ -90,7 +88,7 @@ class InventoryDailyAggregationService
 
                 Log::info("Opened day for {$dateString}", [
                     'date' => $dateString,
-                    'records_created' => $insertedCount
+                    'records_created' => $insertedCount,
                 ]);
 
                 return $insertedCount;
@@ -144,7 +142,8 @@ class InventoryDailyAggregationService
                 $openRecords = InventoryItemMovementDaily::whereNull('closed_at')->get();
 
                 if ($openRecords->isEmpty()) {
-                    Log::info("No open day to close");
+                    Log::info('No open day to close');
+
                     return 0;
                 }
 
@@ -165,15 +164,15 @@ class InventoryDailyAggregationService
                     $updatedCount++;
                 }
 
-                Log::info("Closed day", [
+                Log::info('Closed day', [
                     'records_updated' => $updatedCount,
-                    'closed_at' => $currentTime
+                    'closed_at' => $currentTime,
                 ]);
 
                 return $updatedCount;
 
             } catch (Exception $e) {
-                Log::error("Failed to close day", [
+                Log::error('Failed to close day', [
                     'error' => $e->getMessage(),
                 ]);
                 throw $e;
@@ -194,7 +193,7 @@ class InventoryDailyAggregationService
                     ->orderBy('created_at', 'asc')
                     ->first();
 
-                if (!$openDay) {
+                if (! $openDay) {
                     throw new Exception('No open day found. Please open a day first.');
                 }
 
@@ -258,7 +257,7 @@ class InventoryDailyAggregationService
                 $existingProductIds = $existingRecords->keys()->toArray();
                 $missingProductIds = array_diff($productIds, $existingProductIds);
 
-                if (!empty($missingProductIds)) {
+                if (! empty($missingProductIds)) {
                     foreach ($missingProductIds as $productId) {
                         $data = $aggregationData->get($productId);
 
@@ -276,15 +275,15 @@ class InventoryDailyAggregationService
                     }
                 }
 
-                Log::info("Bulk aggregated movements", [
+                Log::info('Bulk aggregated movements', [
                     'product_ids' => $productIds,
                     'open_day_date' => $openDayDate->toDateString(),
                     'updated_records' => $existingRecords->count(),
-                    'created_records' => count($missingProductIds)
+                    'created_records' => count($missingProductIds),
                 ]);
 
             } catch (Exception $e) {
-                Log::error("Failed to bulk aggregate movements", [
+                Log::error('Failed to bulk aggregate movements', [
                     'error' => $e->getMessage(),
                     'product_ids' => $productIds,
                 ]);

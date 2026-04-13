@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\Payment;
-use App\Models\Order;
-use App\Models\Shift;
 use App\Enums\PaymentMethod;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Shift;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PaymentFactory extends Factory
 {

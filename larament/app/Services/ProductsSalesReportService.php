@@ -2,16 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Category;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\ProductType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Category;
+use App\Models\Order;
+use App\Models\Product;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ProductsSalesReportService
 {
@@ -90,18 +88,17 @@ class ProductsSalesReportService
                 DB::raw('COALESCE(SUM(CASE WHEN orders.type = "companies" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as companies_profit'),
             ])
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-            ->leftJoin('order_items', function ($join) use ($startDate, $endDate) {
-                $join->on('products.id', '=', 'order_items.product_id')
-                    // ->whereExists(function ($query) use ($startDate, $endDate) {
-                    //     $query->select(DB::raw(1))
-                    //         ->from('orders')
-                    //         ->whereColumn('orders.id', 'order_items.order_id')
-                    //         ->whereBetween('orders.created_at', [
-                    //             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    //             $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
-                    //         ]);
-                    // })
-                    ;
+            ->leftJoin('order_items', function ($join) {
+                $join->on('products.id', '=', 'order_items.product_id');
+                // ->whereExists(function ($query) use ($startDate, $endDate) {
+                //     $query->select(DB::raw(1))
+                //         ->from('orders')
+                //         ->whereColumn('orders.id', 'order_items.order_id')
+                //         ->whereBetween('orders.created_at', [
+                //             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                //             $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                //         ]);
+                // })
             })
             ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('order_items.order_id', '=', 'orders.id');
@@ -118,7 +115,7 @@ class ProductsSalesReportService
 
                 $join->whereBetween('orders.created_at', [
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
             ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name');
@@ -156,7 +153,7 @@ class ProductsSalesReportService
 
                         $query->whereBetween('orders.created_at', [
                             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                         ]);
                     });
             })
@@ -175,7 +172,7 @@ class ProductsSalesReportService
 
                 $join->whereBetween('orders.created_at', [
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
             ->first();
@@ -207,7 +204,7 @@ class ProductsSalesReportService
 
                         $query->whereBetween('orders.created_at', [
                             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                         ]);
                     });
             })
@@ -226,11 +223,10 @@ class ProductsSalesReportService
 
                 $join->whereBetween('orders.created_at', [
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
-            ->groupBy('p.id', 'p.name')
-        ;
+            ->groupBy('p.id', 'p.name');
 
         $mostProfitableProduct = $mostProductQuery
             ->orderByDesc('total_profit')
@@ -242,7 +238,7 @@ class ProductsSalesReportService
             ->limit(1)
             ->first();
 
-        if (!$summary) {
+        if (! $summary) {
             return [
                 'total_products' => 0,
                 'total_sales' => 0,
@@ -300,8 +296,6 @@ class ProductsSalesReportService
             ->groupBy('o.type')
             ->get();
 
-
-
         // dd($performanceData);
         return $performanceData->mapWithKeys(function ($item) {
             return [
@@ -352,7 +346,7 @@ class ProductsSalesReportService
 
                         $query->whereBetween('orders.created_at', [
                             $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                         ]);
                     });
             })
@@ -371,7 +365,7 @@ class ProductsSalesReportService
 
                 $join->whereBetween('orders.created_at', [
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay()
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
             ->groupBy('categories.id', 'categories.name');
@@ -398,7 +392,7 @@ class ProductsSalesReportService
             ];
         }
 
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             return [
                 'title' => 'تقرير أداء المنتجات - جميع الفترات',
                 'description' => 'أداء المبيعات والأرباح لجميع المنتجات عبر جميع أنواع الطلبات',

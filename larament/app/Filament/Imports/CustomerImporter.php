@@ -46,7 +46,7 @@ class CustomerImporter extends Importer
                 ->examples([
                     'شارع الجامعة، المعادي، القاهرة',
                     'شارع النصر، مدينة نصر',
-                    'شارع التحرير، الدقي'
+                    'شارع التحرير، الدقي',
                 ])
                 ->guess(['العنوان', 'address', 'location']),
 
@@ -69,25 +69,25 @@ class CustomerImporter extends Importer
 
     public function resolveRecord(): ?Customer
     {
-        if($this->data['has_whatsapp'] === null){
+        if ($this->data['has_whatsapp'] === null) {
             $this->data['has_whatsapp'] = 0;
         }
         // Update existing customer if phone number matches, otherwise create new
-        if (!empty($this->data['phone'])) {
+        if (! empty($this->data['phone'])) {
             return Customer::firstOrNew([
                 'phone' => $this->data['phone'],
             ]);
         }
 
-        return new Customer();
+        return new Customer;
     }
 
     public static function getCompletedNotificationBody(Import $import): string
     {
-        $body = 'تم إكمال استيراد العملاء بنجاح وتم استيراد ' . number_format($import->successful_rows) . ' ' . ($import->successful_rows === 1 ? 'عميل' : 'عميل') . '.';
+        $body = 'تم إكمال استيراد العملاء بنجاح وتم استيراد '.number_format($import->successful_rows).' '.($import->successful_rows === 1 ? 'عميل' : 'عميل').'.';
 
         if ($failedRowsCount = $import->getFailedRowsCount()) {
-            $body .= ' فشل استيراد ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount === 1 ? 'عميل' : 'عميل') . '.';
+            $body .= ' فشل استيراد '.number_format($failedRowsCount).' '.($failedRowsCount === 1 ? 'عميل' : 'عميل').'.';
         }
 
         return $body;

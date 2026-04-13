@@ -2,10 +2,9 @@
 
 namespace App\Filament\Exports;
 
-use App\Models\Order;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
+use App\Models\Order;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -71,9 +70,10 @@ class WebOrdersExporter extends Exporter
                 ->state(function ($record) {
                     $methods = $record->payments
                         ->pluck('method')
-                        ->map(fn($method) => $method instanceof PaymentMethod ? $method->label() : $method)
+                        ->map(fn ($method) => $method instanceof PaymentMethod ? $method->label() : $method)
                         ->unique()
                         ->implode(', ');
+
                     return $methods ?: 'غير محدد';
                 }),
 
@@ -83,6 +83,7 @@ class WebOrdersExporter extends Exporter
                     $amount = $record->payments
                         ->where('method', PaymentMethod::CASH)
                         ->sum('amount');
+
                     return number_format($amount, 2);
                 }),
 
@@ -92,6 +93,7 @@ class WebOrdersExporter extends Exporter
                     $amount = $record->payments
                         ->where('method', PaymentMethod::CARD)
                         ->sum('amount');
+
                     return number_format($amount, 2);
                 }),
 
@@ -109,10 +111,10 @@ class WebOrdersExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير أوردرات الويب وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'أوردر' : 'أوردر') . '.';
+        $body = 'تم إكمال تصدير أوردرات الويب وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'أوردر' : 'أوردر').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'أوردر' : 'أوردر') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'أوردر' : 'أوردر').'.';
         }
 
         return $body;

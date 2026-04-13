@@ -2,27 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
-use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Driver;
 use App\Models\Order;
-use App\Models\Category;
 use App\Models\Region;
-use App\Services\WebApiService;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftLoggingService;
-use App\Enums\OrderType;
-use App\Enums\OrderStatus;
+use App\Services\WebApiService;
+use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WebOrderController extends Controller
 {
     protected WebApiService $webApiService;
+
     protected OrderService $orderService;
+
     protected ShiftLoggingService $loggingService;
 
     public function __construct(WebApiService $webApiService, OrderService $orderService, ShiftLoggingService $loggingService)
@@ -48,6 +47,7 @@ class WebOrderController extends Controller
 
         // Get all regions for the dropdown
         $regions = Region::orderBy('name')->get();
+
         return Inertia::render('Orders/ManageWebOrder', [
             'order' => $order,
             'categories' => $categories,
@@ -75,7 +75,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->withErrors(['فشل في قبول الطلب: ' . $e->getMessage()]);
+            return Redirect::back()->withErrors(['فشل في قبول الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -94,7 +94,7 @@ class WebOrderController extends Controller
 
                 // Log web order rejection
                 $this->loggingService->logWebOrderAction('reject', $order->id, [
-                    'reason' => 'تم رفض الطلب من واجهة الويب'
+                    'reason' => 'تم رفض الطلب من واجهة الويب',
                 ]);
 
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
@@ -105,7 +105,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في إلغاء الطلب: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في إلغاء الطلب: '.$e->getMessage());
         }
     }
 
@@ -124,7 +124,7 @@ class WebOrderController extends Controller
 
                 // Log web order cancellation
                 $this->loggingService->logWebOrderAction('cancel', $order->id, [
-                    'reason' => 'تم إلغاء الطلب من واجهة الويب'
+                    'reason' => 'تم إلغاء الطلب من واجهة الويب',
                 ]);
 
                 return Redirect::back()->with('success', 'تم إلغاء الطلب');
@@ -135,7 +135,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في إلغاء الطلب: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في إلغاء الطلب: '.$e->getMessage());
         }
     }
 
@@ -157,7 +157,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في تحديث حالة الطلب: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في تحديث حالة الطلب: '.$e->getMessage());
         }
     }
 
@@ -221,7 +221,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في إكمال الطلب: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في إكمال الطلب: '.$e->getMessage());
         }
     }
 
@@ -257,7 +257,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في تطبيق الخصم: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في تطبيق الخصم: '.$e->getMessage());
         }
     }
 
@@ -309,7 +309,7 @@ class WebOrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return Redirect::back()->with('error', 'فشل في حفظ الطلب: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'فشل في حفظ الطلب: '.$e->getMessage());
         }
     }
 }

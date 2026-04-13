@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
 use App\Services\InvoicePrintService;
-use Illuminate\Http\Request;
+use Exception;
 use Inertia\Inertia;
 
 class InvoicePrintController extends Controller
@@ -19,7 +18,7 @@ class InvoicePrintController extends Controller
     public function show(string $type, int $id)
     {
         // Validate type parameter
-        if (!in_array($type, ['purchase_invoice', 'return_purchase_invoice', 'stocktaking', 'waste'])) {
+        if (! in_array($type, ['purchase_invoice', 'return_purchase_invoice', 'stocktaking', 'waste'])) {
             abort(404, 'نوع الفاتورة غير صحيح');
         }
 

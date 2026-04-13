@@ -3,8 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Services\CustomersPerformanceReportService;
-use Filament\Widgets\Widget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\Widget;
 
 class NoCustomersSalesInPeriodWidget extends Widget
 {

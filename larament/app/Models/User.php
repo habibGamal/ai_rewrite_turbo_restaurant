@@ -3,8 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Services\SettingsService;
 use App\Enums\UserRole;
+use App\Services\SettingsService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -110,6 +110,13 @@ class User extends Authenticatable implements FilamentUser
 
         return true; // Default for other roles
     }
+
+    public function canAccessKitchen(): bool
+    {
+        return $this->role === UserRole::ADMIN
+            || $this->role === UserRole::KITCHEN;
+    }
+
     public function shifts()
     {
         return $this->hasMany(Shift::class);

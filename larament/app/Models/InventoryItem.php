@@ -23,4 +23,9 @@ class InventoryItem extends Model
     {
         return $this->hasMany(InventoryItemMovement::class, 'product_id', 'product_id');
     }
+
+    public function usedInProducts()
+    {
+        return $this->hasMany(ProductComponent::class, 'component_id', 'product_id');
+    }
 }

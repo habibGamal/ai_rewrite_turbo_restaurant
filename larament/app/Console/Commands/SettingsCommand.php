@@ -28,14 +28,16 @@ class SettingsCommand extends Command
 
         switch ($action) {
             case 'get':
-                if (!$key) {
+                if (! $key) {
                     $this->error('Key is required for get action.');
+
                     return self::FAILURE;
                 }
 
                 $setting = $settingsService->get($key);
                 if ($setting === null) {
                     $this->warn("Setting '{$key}' not found.");
+
                     return self::FAILURE;
                 }
 
@@ -43,8 +45,9 @@ class SettingsCommand extends Command
                 break;
 
             case 'set':
-                if (!$key || $value === null) {
+                if (! $key || $value === null) {
                     $this->error('Key and value are required for set action.');
+
                     return self::FAILURE;
                 }
 
@@ -56,6 +59,7 @@ class SettingsCommand extends Command
                 $settings = $settingsService->all();
                 if (empty($settings)) {
                     $this->info('No settings found.');
+
                     return self::SUCCESS;
                 }
 
@@ -72,6 +76,7 @@ class SettingsCommand extends Command
 
             default:
                 $this->error("Unknown action '{$action}'. Available actions: get, set, list, reset");
+
                 return self::FAILURE;
         }
 

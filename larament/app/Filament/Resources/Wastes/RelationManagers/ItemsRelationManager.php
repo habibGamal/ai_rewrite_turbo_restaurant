@@ -2,15 +2,11 @@
 
 namespace App\Filament\Resources\Wastes\RelationManagers;
 
-use Filament\Schemas\Schema;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
-use Filament\Tables\Table;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
 class ItemsRelationManager extends RelationManager
 {
@@ -86,6 +82,4 @@ class ItemsRelationManager extends RelationManager
             ->emptyStateDescription('لم يتم إضافة أي أصناف تالفة إلى هذا السجل بعد.')
             ->emptyStateIcon('heroicon-o-trash');
     }
-
-
 }

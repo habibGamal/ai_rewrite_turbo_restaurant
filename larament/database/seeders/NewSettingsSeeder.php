@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Setting;
 use App\Enums\SettingKey;
+use App\Models\Setting;
 use Illuminate\Database\Seeder;
 
 class NewSettingsSeeder extends Seeder

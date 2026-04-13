@@ -2,34 +2,29 @@
 
 namespace App\Filament\Resources\TableTypes;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\TableTypes\Pages\ListTableTypes;
 use App\Filament\Resources\TableTypes\Pages\CreateTableType;
 use App\Filament\Resources\TableTypes\Pages\EditTableType;
-use App\Filament\Resources\TableTypeResource\Pages;
-use App\Filament\Resources\TableTypeResource\RelationManagers;
+use App\Filament\Resources\TableTypes\Pages\ListTableTypes;
 use App\Filament\Traits\AdminAccess;
 use App\Models\TableType;
-use Filament\Forms;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TableTypeResource extends Resource
 {
     use AdminAccess;
+
     protected static ?string $model = TableType::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-table-cells';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';
 
     protected static ?string $navigationLabel = 'أنواع الطاولات';
 
@@ -37,7 +32,7 @@ class TableTypeResource extends Resource
 
     protected static ?string $pluralModelLabel = 'أنواع الطاولات';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
 
     protected static ?int $navigationSort = 4;
 

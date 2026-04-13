@@ -65,6 +65,7 @@ class Order extends Model
     {
         if ($this->type === OrderType::DINE_IN) {
             $settingsService = app(SettingsService::class);
+
             return (float) setting(SettingKey::DINE_IN_SERVICE_CHARGE);
         }
 
@@ -109,6 +110,11 @@ class Order extends Model
     public function returns(): HasMany
     {
         return $this->hasMany(OrderReturn::class);
+    }
+
+    public function itemChanges(): HasMany
+    {
+        return $this->hasMany(OrderItemChange::class)->orderBy('created_at', 'desc');
     }
 
     // Computed attributes

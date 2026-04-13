@@ -2,34 +2,33 @@
 
 namespace App\Filament\Resources\ManufacturedProducts;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Actions;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use App\Enums\ProductType;
 use App\Filament\Actions\Forms\ProductComponentsImporterAction;
 use App\Filament\Components\Forms\ProductComponentSelector;
-use App\Models\Product;
+use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
-use App\Enums\ProductType;
+use App\Models\Product;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use \App\Filament\Traits\AdminAccess;
-use Filament\Schemas\JsContent;
 
 class ManufacturedProductResource extends Resource
 {
@@ -134,7 +133,7 @@ class ManufacturedProductResource extends Resource
                 Section::make('مكونات المنتج (الوصفة)')
                     ->schema([
                         Actions::make([
-                            ProductComponentsImporterAction::make('importComponents')
+                            ProductComponentsImporterAction::make('importComponents'),
                         ])
                             ->alignStart(),
 
@@ -142,7 +141,7 @@ class ManufacturedProductResource extends Resource
                             ->columnSpanFull(),
                         Repeater::make('productComponents')
                             ->label('المكونات')
-                            ->relationship('productComponents', fn($query) => $query->with('component.category'))
+                            ->relationship('productComponents', fn ($query) => $query->with('component.category'))
                             ->table([
                                 TableColumn::make('المكون')
                                     ->width('200px'),
@@ -162,7 +161,7 @@ class ManufacturedProductResource extends Resource
                                 TextInput::make('component_name')
                                     ->label('اسم المكون')
                                     ->formatStateUsing(
-                                        fn($record, $state) => $state ?? $record->component->name
+                                        fn ($record, $state) => $state ?? $record->component->name
                                     )
                                     ->disabled()
                                     ->dehydrated(false),
@@ -191,7 +190,7 @@ class ManufacturedProductResource extends Resource
                                 TextInput::make('unit')
                                     ->label('الوحدة')
                                     ->formatStateUsing(
-                                        fn($record, $state) => $state ?? $record->component->unit
+                                        fn ($record, $state) => $state ?? $record->component->unit
                                     )
                                     ->disabled()
                                     ->dehydrated(false),
@@ -199,7 +198,7 @@ class ManufacturedProductResource extends Resource
                                 TextInput::make('cost')
                                     ->label('التكلفة')
                                     ->formatStateUsing(
-                                        fn($record, $state) => $state ?? $record->component->cost
+                                        fn ($record, $state) => $state ?? $record->component->cost
                                     )
                                     ->disabled()
                                     ->dehydrated(false),
@@ -208,14 +207,14 @@ class ManufacturedProductResource extends Resource
                                     ->label('الإجمالي')
                                     ->disabled()
                                     ->formatStateUsing(
-                                        fn($record, $state, $get) => $state ?? ($record->quantity * $record->component->cost)
+                                        fn ($record, $state, $get) => $state ?? ($record->quantity * $record->component->cost)
                                     )
                                     ->dehydrated(false),
 
                                 TextInput::make('category_name')
                                     ->label('الفئة')
                                     ->formatStateUsing(
-                                        fn($record, $state) => $state ?? $record->component->category->name
+                                        fn ($record, $state) => $state ?? $record->component->category->name
                                     )
                                     ->disabled()
                                     ->dehydrated(false),
@@ -223,7 +222,7 @@ class ManufacturedProductResource extends Resource
                             ->defaultItems(0)
                             ->reorderableWithButtons()
                             ->collapsible()
-                            ->itemLabel(fn(array $state): ?string => $state['component_name'] ?? null)
+                            ->itemLabel(fn (array $state): ?string => $state['component_name'] ?? null)
                             ->collapsed()
                             ->compact(),
                     ]),
@@ -260,7 +259,7 @@ class ManufacturedProductResource extends Resource
                     ->sortable(),
                 TextColumn::make('unit')
                     ->label('الوحدة')
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
                         'packet' => 'باكت',
                         'kg' => 'كيلوجرام',
                         'gram' => 'جرام',
@@ -329,5 +328,4 @@ class ManufacturedProductResource extends Resource
             'edit' => Pages\EditManufacturedProduct::route('/{record}/edit'),
         ];
     }
-
 }

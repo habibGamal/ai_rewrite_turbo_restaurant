@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
 use App\Services\PrinterScanService;
-use Illuminate\Http\Request;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PrinterController extends Controller
 {
@@ -19,7 +19,7 @@ class PrinterController extends Controller
     public function testPrinter(Request $request): JsonResponse
     {
         $request->validate([
-            'ip_address' => 'required|string|max:255'
+            'ip_address' => 'required|string|max:255',
         ]);
 
         try {
@@ -29,7 +29,7 @@ class PrinterController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء اختبار الطابعة: ' . $e->getMessage()
+                'message' => 'حدث خطأ أثناء اختبار الطابعة: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -40,7 +40,7 @@ class PrinterController extends Controller
     public function scanNetwork(Request $request): JsonResponse
     {
         $request->validate([
-            'network_range' => 'sometimes|string|max:255'
+            'network_range' => 'sometimes|string|max:255',
         ]);
 
         try {
@@ -49,12 +49,12 @@ class PrinterController extends Controller
 
             return response()->json([
                 'success' => true,
-                'printers' => $printers
+                'printers' => $printers,
             ]);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء البحث عن الطابعات: ' . $e->getMessage()
+                'message' => 'حدث خطأ أثناء البحث عن الطابعات: '.$e->getMessage(),
             ], 500);
         }
     }

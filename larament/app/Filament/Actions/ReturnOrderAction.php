@@ -2,23 +2,23 @@
 
 namespace App\Filament\Actions;
 
-use Exception;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Section;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Services\Orders\OrderReturnService;
+use Exception;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Hidden;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class ReturnOrderAction
 {
@@ -28,16 +28,16 @@ class ReturnOrderAction
             ->label('إرجاع الطلب')
             ->icon('heroicon-o-arrow-uturn-left')
             ->color('warning')
-            ->visible(fn(Order $record): bool => $record->status === OrderStatus::COMPLETED)
-            ->schema(fn(Order $record) => self::getFormSchema($record))
+            ->visible(fn (Order $record): bool => $record->status === OrderStatus::COMPLETED)
+            ->schema(fn (Order $record) => self::getFormSchema($record))
             ->action(function (Order $record, array $data) {
                 try {
                     $returnService = app(OrderReturnService::class);
 
                     // Filter out items with zero quantity
                     $returnItems = collect($data['return_items'])
-                        ->filter(fn($item) => ($item['quantity'] ?? 0) > 0)
-                        ->map(fn($item) => [
+                        ->filter(fn ($item) => ($item['quantity'] ?? 0) > 0)
+                        ->map(fn ($item) => [
                             'order_item_id' => $item['order_item_id'],
                             'quantity' => $item['quantity'],
                             'refund_amount' => $item['refund_amount'],
@@ -51,8 +51,8 @@ class ReturnOrderAction
 
                     // Filter out refunds with zero amount
                     $refundDistribution = collect($data['refund_distribution'])
-                        ->filter(fn($refund) => ($refund['amount'] ?? 0) > 0)
-                        ->map(fn($refund) => [
+                        ->filter(fn ($refund) => ($refund['amount'] ?? 0) > 0)
+                        ->map(fn ($refund) => [
                             'method' => $refund['method'],
                             'amount' => $refund['amount'],
                         ])
@@ -167,6 +167,7 @@ class ReturnOrderAction
                 ->default(function () use ($order, $returnService) {
                     return $order->items->map(function ($item) use ($returnService, $order) {
                         $availableQty = $returnService->getAvailableQuantityForReturn($order, $item->id);
+
                         return [
                             'order_item_id' => $item->id,
                             'product_name' => $item->product->name,
@@ -196,12 +197,12 @@ class ReturnOrderAction
                     Placeholder::make('payment_info')
                         ->label('')
                         ->content(function () use ($paymentsByMethod, $order) {
-                            $info = "إجمالي الطلب: " . number_format((float)$order->total, 2) . " ج.م\n\n";
+                            $info = 'إجمالي الطلب: '.number_format((float) $order->total, 2)." ج.م\n\n";
                             $info .= "طرق الدفع المستخدمة:\n";
 
                             foreach ($paymentsByMethod as $method => $amount) {
                                 $methodLabel = PaymentMethod::from($method)->getLabel();
-                                $info .= "• {$methodLabel}: " . number_format((float)$amount, 2) . " ج.م\n";
+                                $info .= "• {$methodLabel}: ".number_format((float) $amount, 2)." ج.م\n";
                             }
 
                             return $info;
@@ -228,7 +229,7 @@ class ReturnOrderAction
                         ->required()
                         ->columnSpan(1),
                 ])
-                ->default(function () use ($paymentsByMethod, $order) {
+                ->default(function () use ($paymentsByMethod) {
                     // Suggest distribution based on original payment methods
                     return $paymentsByMethod->map(function ($amount, $method) {
                         return [

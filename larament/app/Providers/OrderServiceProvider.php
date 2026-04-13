@@ -2,11 +2,11 @@
 
 namespace App\Providers;
 
-use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\OrderItemRepositoryInterface;
+use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
-use App\Repositories\OrderRepository;
 use App\Repositories\OrderItemRepository;
+use App\Repositories\OrderRepository;
 use App\Repositories\PaymentRepository;
 use Illuminate\Support\ServiceProvider;
 

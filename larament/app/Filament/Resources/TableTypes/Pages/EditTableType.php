@@ -2,9 +2,8 @@
 
 namespace App\Filament\Resources\TableTypes\Pages;
 
-use Filament\Actions\DeleteAction;
 use App\Filament\Resources\TableTypes\TableTypeResource;
-use Filament\Actions;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditTableType extends EditRecord

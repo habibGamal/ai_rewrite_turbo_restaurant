@@ -7,9 +7,9 @@ use DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
@@ -44,12 +44,11 @@ class Product extends Model
     public function getComponentsHashAttribute(): string
     {
         return $this->components
-            ->map(fn($component) => [$component->product_ref, $component->pivot->quantity])
+            ->map(fn ($component) => [$component->product_ref, $component->pivot->quantity])
             ->sort()
             ->flatten()
             ->join('');
     }
-
 
     public function category(): BelongsTo
     {

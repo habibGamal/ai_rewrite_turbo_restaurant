@@ -2,13 +2,11 @@
 
 namespace App\Filament\Resources\Orders\RelationManagers;
 
-use Filament\Schemas\Schema;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\ViewAction;
-use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class OrderReturnsRelationManager extends RelationManager
@@ -69,7 +67,7 @@ class OrderReturnsRelationManager extends RelationManager
             ])
             ->recordActions([
                 ViewAction::make()
-                    ->url(fn($record) => route('filament.admin.resources.order-returns.view', ['record' => $record->id])),
+                    ->url(fn ($record) => route('filament.admin.resources.order-returns.view', ['record' => $record->id])),
             ])
             ->toolbarActions([
                 // No bulk actions

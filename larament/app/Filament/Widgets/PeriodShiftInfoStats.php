@@ -3,14 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Services\ShiftsReportService;
+use Carbon\Carbon;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Carbon\Carbon;
 
 class PeriodShiftInfoStats extends BaseWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
@@ -25,6 +26,7 @@ class PeriodShiftInfoStats extends BaseWidget
     public function getHeading(): string
     {
         $periodInfo = $this->getPeriodInfo();
+
         return $periodInfo['title'];
     }
 
@@ -50,7 +52,7 @@ class PeriodShiftInfoStats extends BaseWidget
         $avgDuration = $totalShifts > 0 ? $totalDuration / $totalShifts : 0;
 
         return [
-            Stat::make('عدد الشفتات', $totalShifts . ' شفت')
+            Stat::make('عدد الشفتات', $totalShifts.' شفت')
                 ->description($periodInfo['description'])
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('info'),
@@ -60,7 +62,7 @@ class PeriodShiftInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-play')
                 ->color('warning'),
 
-            Stat::make('عدد الموظفين', $usersCount . ' موظف')
+            Stat::make('عدد الموظفين', $usersCount.' موظف')
                 ->description('الموظفون المسؤولون عن الشفتات')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary'),
@@ -73,10 +75,12 @@ class PeriodShiftInfoStats extends BaseWidget
 
         if ($filterType === 'shifts') {
             $shiftIds = $this->pageFilters['shifts'] ?? [];
+
             return $this->shiftsReportService->getPeriodInfo(null, null, $shiftIds);
         } else {
             $startDate = $this->pageFilters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
             $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+
             return $this->shiftsReportService->getPeriodInfo($startDate, $endDate, null);
         }
     }

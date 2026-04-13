@@ -25,5 +25,4 @@ class Waste extends Model
     {
         return $this->hasMany(WastedItem::class);
     }
-
 }

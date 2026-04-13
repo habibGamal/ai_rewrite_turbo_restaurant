@@ -2,21 +2,20 @@
 
 namespace App\Services;
 
-use Exception;
-use App\Models\Shift;
-use App\Models\User;
-use App\Models\Order;
-use App\Enums\PaymentMethod;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\PaymentMethod;
+use App\Models\Order;
+use App\Models\Shift;
+use App\Models\User;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class ShiftService
 {
     public function __construct(
         private readonly SettingsService $settingsService
-    ) {
-    }
+    ) {}
 
     /**
      * Get the current active shift for a user
@@ -68,7 +67,7 @@ class ShiftService
             ->orderBy('end_at', 'desc')
             ->first();
 
-        if (!$lastShift) {
+        if (! $lastShift) {
             return;
         }
 
@@ -86,7 +85,7 @@ class ShiftService
     {
 
         $currentShift = $this->getCurrentShift();
-        if (!$currentShift) {
+        if (! $currentShift) {
             throw new Exception('No active shift found');
         }
 

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ProductType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BaseResource;
-use App\Models\Product;
 use App\Models\Category;
-use App\Enums\ProductType;
-use Illuminate\Http\Request;
+use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class ApiController extends Controller
 {
@@ -33,6 +33,7 @@ class ApiController extends Controller
             ->where('name', 'like', "%{$search}%")
             ->where('type', '!=', ProductType::RawMaterial)
             ->get();
+
         return response()->json([
             'products' => $products,
         ]);
@@ -68,7 +69,7 @@ class ApiController extends Controller
 
         $foundRefs = $products->pluck('product_ref')->toArray();
         $invalidProductsRefs = collect($productsRefs)
-            ->filter(fn($productRef) => !in_array($productRef['ref'], $foundRefs))
+            ->filter(fn ($productRef) => ! in_array($productRef['ref'], $foundRefs))
             ->values();
 
         return response()->json([
@@ -104,10 +105,11 @@ class ApiController extends Controller
                     return [
                         'id' => $product->id,
                         'name' => $product->name,
-                        'productRef' => $product->product_ref ?? 'PROD_' . str_pad($product->id, 6, '0', STR_PAD_LEFT),
+                        'productRef' => $product->product_ref ?? 'PROD_'.str_pad($product->id, 6, '0', STR_PAD_LEFT),
                         'type' => $product->type,
                     ];
                 });
+
                 return $category;
             });
 

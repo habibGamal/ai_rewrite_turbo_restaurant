@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Enums\OrderStatus;
+use App\Enums\OrderType;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
-use App\Enums\OrderType;
-use App\Enums\OrderStatus;
-use App\Enums\PaymentStatus;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class OrderFactory extends Factory
 {

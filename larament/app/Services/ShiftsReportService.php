@@ -2,15 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Shift;
-use App\Models\Order;
-use App\Models\ExpenceType;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Order;
+use App\Models\Shift;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ShiftsReportService
 {
@@ -25,7 +24,6 @@ class ShiftsReportService
             ->first();
     }
 
-
     /**
      * Get shifts within a date range or specific shift IDs
      */
@@ -33,7 +31,7 @@ class ShiftsReportService
     {
         $query = Shift::query()->with(['orders', 'expenses', 'user']);
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $query->whereIn('id', $shiftIds);
         } else {
             if ($startDate) {
@@ -47,6 +45,7 @@ class ShiftsReportService
 
         return $query;
     }
+
     /**
      * Get shifts count within a date range or specific shift IDs
      */
@@ -54,7 +53,6 @@ class ShiftsReportService
     {
         return $this->getShiftsInPeriodQuery($startDate, $endDate, $shiftIds)->count();
     }
-
 
     /**
      * Get shifts info within a date range or specific shift IDs
@@ -66,7 +64,7 @@ class ShiftsReportService
 
         // Use different SQL for different database drivers
         if ($connection === 'sqlite') {
-            $minutesExpression = "SUM((julianday(end_at) - julianday(start_at)) * 24 * 60)";
+            $minutesExpression = 'SUM((julianday(end_at) - julianday(start_at)) * 24 * 60)';
         } else {
             $minutesExpression = 'SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at))';
         }
@@ -75,15 +73,15 @@ class ShiftsReportService
             ->select([
                 DB::raw('COUNT(*) as total_shifts'),
                 DB::raw('COUNT(DISTINCT user_id) as distinct_users'),
-                DB::raw("{$minutesExpression} as total_minutes")
+                DB::raw("{$minutesExpression} as total_minutes"),
             ]);
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $query->whereIn('id', $shiftIds);
         } else {
             $query->whereBetween('created_at', [
                 Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
+                Carbon::parse($endDate)->endOfDay(),
             ]);
         }
 
@@ -161,12 +159,12 @@ class ShiftsReportService
     {
         $shiftsQuery = DB::table('shifts');
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $shiftsQuery->whereIn('shifts.id', $shiftIds);
         } else {
             $shiftsQuery->whereBetween('shifts.created_at', [
                 Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
+                Carbon::parse($endDate)->endOfDay(),
             ]);
         }
 
@@ -179,7 +177,7 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'orders',
-                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
                     ->where('orders.status', OrderStatus::COMPLETED)
             )->first();
 
@@ -221,6 +219,7 @@ class ShiftsReportService
             'profitPercent' => ($ordersData->sales ?? 0) > 0 ? (($ordersData->profit ?? 0) / ($ordersData->sales ?? 1)) * 100 : 0,
             'totalOrders' => $ordersData->total_orders ?? 0,
         ];
+
         return $totalStats;
     }
 
@@ -240,6 +239,7 @@ class ShiftsReportService
                 'profit' => $statusOrders->sum('profit'),
             ];
         }
+
         return $stats;
     }
 
@@ -298,12 +298,12 @@ class ShiftsReportService
     {
         $shiftsQuery = DB::table('shifts');
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $shiftsQuery->whereIn('shifts.id', $shiftIds);
         } else {
             $shiftsQuery->whereBetween('shifts.created_at', [
                 Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
+                Carbon::parse($endDate)->endOfDay(),
             ]);
         }
 
@@ -316,7 +316,7 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'orders',
-                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
             )
             ->groupBy('orders.status')
             ->get();
@@ -342,12 +342,12 @@ class ShiftsReportService
     {
         $shiftsQuery = DB::table('shifts');
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $shiftsQuery->whereIn('shifts.id', $shiftIds);
         } else {
             $shiftsQuery->whereBetween('shifts.created_at', [
                 Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay()
+                Carbon::parse($endDate)->endOfDay(),
             ]);
         }
 
@@ -360,7 +360,7 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'orders',
-                fn($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
                     ->where('orders.status', OrderStatus::COMPLETED)
             )
             ->groupBy('orders.type')
@@ -389,21 +389,21 @@ class ShiftsReportService
         return $totalStats;
     }
 
-
     /**
      * Get period info for display
      */
     public function getPeriodInfo(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $count = count($shiftIds);
+
             return [
                 'title' => 'تقرير الشفتات المحددة',
                 'description' => sprintf('تقرير لعدد %d شفت محدد', $count),
             ];
         }
 
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             return [
                 'title' => 'جميع الشفتات',
                 'description' => 'تقرير شامل لجميع الشفتات',

@@ -2,35 +2,32 @@
 
 namespace App\Filament\Resources\RawMaterialProducts;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Toggle;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
+use App\Enums\ProductType;
 use App\Filament\Resources\RawMaterialProducts\Pages\CreateRawMaterialProduct;
-use App\Filament\Resources\RawMaterialProducts\Pages\ViewRawMaterialProduct;
 use App\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
-use App\Filament\Resources\RawMaterialProductResource\Pages;
-use App\Models\Product;
+use App\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
+use App\Filament\Resources\RawMaterialProducts\Pages\ViewRawMaterialProduct;
+use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
 use App\Models\Printer;
-use App\Enums\ProductType;
-use Filament\Forms;
+use App\Models\Product;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Traits\AdminAccess;
 
 class RawMaterialProductResource extends Resource
 {
@@ -38,9 +35,9 @@ class RawMaterialProductResource extends Resource
 
     protected static ?string $model = Product::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cube';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المنتجات';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المنتجات';
 
     protected static ?int $navigationSort = 3;
 

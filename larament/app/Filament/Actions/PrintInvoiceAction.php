@@ -15,6 +15,7 @@ class PrintInvoiceAction
             ->color('success')
             ->url(function (Model $record, array $data) {
                 $type = static::getInvoiceType();
+
                 return route('invoice.print', ['type' => $type, 'id' => $record->id]);
             })
             ->openUrlInNewTab();
@@ -33,6 +34,7 @@ class PrintInvoiceAction
             ->color('success')
             ->url(function (Model $record) {
                 $type = static::getInvoiceType();
+
                 return route('invoice.print', ['type' => $type, 'id' => $record->id]);
             })
             ->openUrlInNewTab();

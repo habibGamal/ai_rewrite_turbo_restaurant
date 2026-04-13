@@ -2,18 +2,17 @@
 
 namespace App\Services;
 
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use App\Enums\ProductType;
-use App\Models\Product;
 use App\Models\Category;
-use App\Models\InventoryItem;
 use App\Models\Printer;
+use App\Models\Product;
 use App\Models\ProductComponent;
-use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Exception;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class SpecificDataImportService extends ExcelImportService
 {
@@ -50,7 +49,7 @@ class SpecificDataImportService extends ExcelImportService
                         $cellValue = $worksheet->getCellByColumnAndRow($col, $row)->getCalculatedValue();
                         $rowData[] = $cellValue;
                     }
-                    if (!empty(array_filter($rowData))) {
+                    if (! empty(array_filter($rowData))) {
                         $sampleData[] = $rowData;
                     }
                 }
@@ -99,13 +98,14 @@ class SpecificDataImportService extends ExcelImportService
             foreach ($processingOrder as $sheetName) {
                 try {
                     $worksheet = $spreadsheet->getSheetByName($sheetName);
-                    if (!$worksheet) {
+                    if (! $worksheet) {
                         // Skip if sheet doesn't exist
                         $results[$sheetName] = [
                             'success_count' => 0,
                             'error_count' => 0,
                             'errors' => ["الورقة '{$sheetName}' غير موجودة"],
                         ];
+
                         continue;
                     }
 
@@ -119,10 +119,10 @@ class SpecificDataImportService extends ExcelImportService
                     $results[$sheetName] = [
                         'success_count' => 0,
                         'error_count' => 1,
-                        'errors' => ["خطأ في معالجة الورقة '{$sheetName}': " . $e->getMessage()],
+                        'errors' => ["خطأ في معالجة الورقة '{$sheetName}': ".$e->getMessage()],
                     ];
                     $totalErrors++;
-                    $allErrors[] = "خطأ في معالجة الورقة '{$sheetName}': " . $e->getMessage();
+                    $allErrors[] = "خطأ في معالجة الورقة '{$sheetName}': ".$e->getMessage();
                 }
             }
 
@@ -138,6 +138,7 @@ class SpecificDataImportService extends ExcelImportService
 
         } catch (Exception $e) {
             DB::rollBack();
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -190,12 +191,12 @@ class SpecificDataImportService extends ExcelImportService
                 if ($result['success']) {
                     $successCount++;
                 } else {
-                    $errors[] = "{$sheetName} - Row {$row}: " . $result['error'];
+                    $errors[] = "{$sheetName} - Row {$row}: ".$result['error'];
                     $errorCount++;
                 }
 
             } catch (Exception $e) {
-                $errors[] = "{$sheetName} - Row {$row}: " . $e->getMessage();
+                $errors[] = "{$sheetName} - Row {$row}: ".$e->getMessage();
                 $errorCount++;
             }
         }
@@ -304,7 +305,7 @@ class SpecificDataImportService extends ExcelImportService
 
             // Get or create category
             $categoryId = null;
-            if (!empty($data['الفئة'])) {
+            if (! empty($data['الفئة'])) {
                 $category = Category::firstOrCreate(['name' => $data['الفئة']]);
                 $categoryId = $category->id;
             }
@@ -319,7 +320,6 @@ class SpecificDataImportService extends ExcelImportService
                     'type' => ProductType::RawMaterial,
                 ]
             );
-
 
             return [
                 'success' => true,
@@ -345,7 +345,7 @@ class SpecificDataImportService extends ExcelImportService
 
             // Get or create category
             $categoryId = null;
-            if (!empty($data['الفئة'])) {
+            if (! empty($data['الفئة'])) {
                 $category = Category::firstOrCreate(['name' => $data['الفئة']]);
                 $categoryId = $category->id;
             }
@@ -390,7 +390,7 @@ class SpecificDataImportService extends ExcelImportService
 
             // Get or create category
             $categoryId = null;
-            if (!empty($data['الفئة'])) {
+            if (! empty($data['الفئة'])) {
                 $category = Category::firstOrCreate(['name' => $data['الفئة']]);
                 $categoryId = $category->id;
             }
@@ -431,19 +431,19 @@ class SpecificDataImportService extends ExcelImportService
             $componentName = $data['أسم المكون'] ?? null;
             $quantity = $data['الكمية'] ?? null;
 
-            if (empty($finalProductName) || empty($componentName) || !is_numeric($quantity)) {
+            if (empty($finalProductName) || empty($componentName) || ! is_numeric($quantity)) {
                 return ['success' => false, 'error' => 'اسم المنتج النهائي والمكون والكمية مطلوبة'];
             }
 
             // Find the final product
             $finalProduct = Product::where('name', $finalProductName)->first();
-            if (!$finalProduct) {
+            if (! $finalProduct) {
                 return ['success' => false, 'error' => "المنتج النهائي '{$finalProductName}' غير موجود"];
             }
 
             // Find the component
             $component = Product::where('name', $componentName)->first();
-            if (!$component) {
+            if (! $component) {
                 return ['success' => false, 'error' => "المكون '{$componentName}' غير موجود"];
             }
 
@@ -473,6 +473,7 @@ class SpecificDataImportService extends ExcelImportService
 
         } catch (Exception $e) {
             dd($e);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Stocktaking;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class StocktakingFactory extends Factory
 {

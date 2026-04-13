@@ -39,7 +39,6 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
         { value: 'dine_in', label: 'صالة' },
         { value: 'takeaway', label: 'تيك أواي' },
         { value: 'delivery', label: 'دليفري' },
-        { value: 'companies', label: 'شركات' },
         { value: 'talabat', label: 'طلبات' },
     ];
 

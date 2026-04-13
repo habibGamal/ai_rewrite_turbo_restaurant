@@ -27,7 +27,7 @@ class TableTypeFactory extends Factory
         ];
 
         return [
-            'name' => $this->faker->unique()->randomElement($arabicTypes) . ' ' . $this->faker->unique()->numberBetween(1, 10000),
+            'name' => $this->faker->unique()->randomElement($arabicTypes).' '.$this->faker->unique()->numberBetween(1, 10000),
         ];
     }
 }

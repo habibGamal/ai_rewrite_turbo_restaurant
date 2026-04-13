@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
 use App\Services\InventoryDailyAggregationService;
-use Illuminate\Http\Request;
+use Exception;
 use Illuminate\Http\JsonResponse;
 
 class InventoryController extends Controller
@@ -26,7 +25,7 @@ class InventoryController extends Controller
         return response()->json([
             'is_open' => $dayStatus !== null,
             'date' => $dayStatus?->toDateString(),
-            'status' => $dayStatus ? 'مفتوح' : 'مغلق'
+            'status' => $dayStatus ? 'مفتوح' : 'مغلق',
         ]);
     }
 
@@ -41,28 +40,30 @@ class InventoryController extends Controller
             if ($currentStatus) {
                 // Day is open, close it
                 $closedCount = $this->inventoryService->closeDay();
+
                 return response()->json([
                     'success' => true,
                     'action' => 'closed',
                     'message' => "تم إغلاق اليوم بنجاح. تم تحديث {$closedCount} منتج.",
                     'is_open' => false,
-                    'status' => 'مغلق'
+                    'status' => 'مغلق',
                 ]);
             } else {
                 // Day is closed, open it
                 $openedCount = $this->inventoryService->openDay();
+
                 return response()->json([
                     'success' => true,
                     'action' => 'opened',
                     'message' => "تم فتح اليوم بنجاح. تم إنشاء {$openedCount} سجل منتج.",
                     'is_open' => true,
-                    'status' => 'مفتوح'
+                    'status' => 'مفتوح',
                 ]);
             }
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ: ' . $e->getMessage()
+                'message' => 'حدث خطأ: '.$e->getMessage(),
             ], 500);
         }
     }

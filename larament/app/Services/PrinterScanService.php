@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use Log;
-use RuntimeException;
 use Exception;
+use Log;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\Printer;
+use RuntimeException;
 
 class PrinterScanService
 {
@@ -20,7 +20,7 @@ class PrinterScanService
         Log::info("Scanning for printers with command: {$command}");
 
         try {
-            $output = shell_exec($command . ' 2>&1');
+            $output = shell_exec($command.' 2>&1');
 
             if ($output === null) {
                 throw new RuntimeException('Failed to execute nmap command');
@@ -28,7 +28,7 @@ class PrinterScanService
 
             return $this->parseNmapOutput($output);
         } catch (Exception $e) {
-            Log::error("Error scanning for printers: " . $e->getMessage());
+            Log::error('Error scanning for printers: '.$e->getMessage());
             throw $e;
         }
     }
@@ -52,7 +52,7 @@ class PrinterScanService
                 if ($currentIp && $portOpen) {
                     $printers[] = [
                         'ip' => $currentIp,
-                        'status' => 'detected'
+                        'status' => 'detected',
                     ];
                 }
 
@@ -70,11 +70,11 @@ class PrinterScanService
         if ($currentIp && $portOpen) {
             $printers[] = [
                 'ip' => $currentIp,
-                'status' => 'detected'
+                'status' => 'detected',
             ];
         }
 
-        Log::info("Found " . count($printers) . " potential printers", $printers);
+        Log::info('Found '.count($printers).' potential printers', $printers);
 
         return $printers;
     }
@@ -91,7 +91,7 @@ class PrinterScanService
             // Send test message
             $printer->text("=== اختبار الطابعة ===\n");
             $printer->text("عنوان IP: {$ipAddress}\n");
-            $printer->text("التاريخ: " . now()->format('Y-m-d H:i:s') . "\n");
+            $printer->text('التاريخ: '.now()->format('Y-m-d H:i:s')."\n");
             $printer->text("هذه رسالة اختبار للطابعة\n");
             $printer->text("========================\n\n");
             $printer->cut();
@@ -100,14 +100,14 @@ class PrinterScanService
 
             return [
                 'success' => true,
-                'message' => 'تم إرسال رسالة الاختبار بنجاح'
+                'message' => 'تم إرسال رسالة الاختبار بنجاح',
             ];
         } catch (Exception $e) {
-            Log::error("Error testing printer {$ipAddress}: " . $e->getMessage());
+            Log::error("Error testing printer {$ipAddress}: ".$e->getMessage());
 
             return [
                 'success' => false,
-                'message' => 'فشل في الاتصال بالطابعة: ' . $e->getMessage()
+                'message' => 'فشل في الاتصال بالطابعة: '.$e->getMessage(),
             ];
         }
     }
@@ -118,6 +118,7 @@ class PrinterScanService
     public function isNmapAvailable(): bool
     {
         $output = shell_exec('nmap --version 2>&1');
+
         return $output !== null && strpos($output, 'Nmap version') !== false;
     }
 }

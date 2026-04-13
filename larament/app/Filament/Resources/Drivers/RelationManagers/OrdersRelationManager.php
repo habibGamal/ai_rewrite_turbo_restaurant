@@ -2,26 +2,21 @@
 
 namespace App\Filament\Resources\Drivers\RelationManagers;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\DatePicker;
-use Filament\Actions\ViewAction;
-use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Enums\PaymentStatus;
 use App\Models\Shift;
-use Filament\Forms;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Carbon\Carbon;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrdersRelationManager extends RelationManager
 {
@@ -106,7 +101,7 @@ class OrdersRelationManager extends RelationManager
 
                 TextColumn::make('total')
                     ->label('إجمالي الطلب')
-                    ->formatStateUsing(fn($state) => number_format($state, 2) . ' ج.م')
+                    ->formatStateUsing(fn ($state) => number_format($state, 2).' ج.م')
                     ->sortable(),
 
                 TextColumn::make('shift.user.name')
@@ -151,7 +146,7 @@ class OrdersRelationManager extends RelationManager
                                 $endDate = $shift->end_at ? $shift->end_at->format('d/m/Y H:i') : 'لم ينته';
 
                                 return [
-                                    $shift->id => "شفت #{$shift->id} - {$userLabel} ({$startDate} - {$endDate})"
+                                    $shift->id => "شفت #{$shift->id} - {$userLabel} ({$startDate} - {$endDate})",
                                 ];
                             });
                     })
@@ -161,6 +156,7 @@ class OrdersRelationManager extends RelationManager
                     ->preload()
                     ->query(function (Builder $query, array $data): Builder {
                         $shiftIds = $data['values'] ?? [];
+
                         return $query->whereIn('shift_id', $shiftIds);
                     }),
                 Filter::make('date_range')
@@ -175,22 +171,22 @@ class OrdersRelationManager extends RelationManager
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     })
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
 
                         if ($data['created_from'] ?? null) {
-                            $indicators[] = 'من: ' . Carbon::parse($data['created_from'])->format('d/m/Y');
+                            $indicators[] = 'من: '.Carbon::parse($data['created_from'])->format('d/m/Y');
                         }
 
                         if ($data['created_until'] ?? null) {
-                            $indicators[] = 'إلى: ' . Carbon::parse($data['created_until'])->format('d/m/Y');
+                            $indicators[] = 'إلى: '.Carbon::parse($data['created_until'])->format('d/m/Y');
                         }
 
                         return $indicators;
@@ -222,8 +218,8 @@ class OrdersRelationManager extends RelationManager
             // Apply the filter automatically when shift_ids is provided in URL
             $this->tableFilters = [
                 'shift_ids' => [
-                    'shift_ids' => $shiftIds
-                ]
+                    'shift_ids' => $shiftIds,
+                ],
             ];
         }
     }
@@ -240,10 +236,10 @@ class OrdersRelationManager extends RelationManager
         if ($shiftIds) {
             $shiftIdsArray = array_filter(
                 array_map('trim', explode(',', $shiftIds)),
-                fn($id) => is_numeric($id)
+                fn ($id) => is_numeric($id)
             );
 
-            if (!empty($shiftIdsArray)) {
+            if (! empty($shiftIdsArray)) {
                 $query->whereIn('shift_id', $shiftIdsArray);
             }
         }

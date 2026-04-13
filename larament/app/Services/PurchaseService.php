@@ -2,18 +2,17 @@
 
 namespace App\Services;
 
-use Exception;
 use App\Enums\MovementReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
-use App\Services\StockService;
-use App\Services\ProductCostManagementService;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PurchaseService
 {
     protected StockService $stockService;
+
     protected ProductCostManagementService $costManagementService;
 
     public function __construct(
@@ -63,7 +62,7 @@ class PurchaseService
                 $invoice
             );
 
-            if (!$success) {
+            if (! $success) {
                 throw new Exception('فشل في إضافة الأصناف إلى المخزون');
             }
 
@@ -73,11 +72,12 @@ class PurchaseService
             DB::commit();
 
             Log::info("Purchase invoice {$invoice->id} closed successfully with cost updates");
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Failed to close purchase invoice {$invoice->id}: " . $e->getMessage());
+            Log::error("Failed to close purchase invoice {$invoice->id}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -129,7 +129,7 @@ class PurchaseService
                 $invoice
             );
 
-            if (!$success) {
+            if (! $success) {
                 throw new Exception('فشل في خصم الأصناف من المخزون');
             }
 
@@ -139,11 +139,12 @@ class PurchaseService
             DB::commit();
 
             Log::info("Return purchase invoice {$invoice->id} closed successfully");
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Failed to close return purchase invoice {$invoice->id}: " . $e->getMessage());
+            Log::error("Failed to close return purchase invoice {$invoice->id}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -161,6 +162,6 @@ class PurchaseService
      */
     public function isInvoiceClosed($invoice): bool
     {
-        return !is_null($invoice->closed_at);
+        return ! is_null($invoice->closed_at);
     }
 }

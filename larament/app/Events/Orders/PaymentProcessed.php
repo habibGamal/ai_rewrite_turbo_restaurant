@@ -2,12 +2,9 @@
 
 namespace App\Events\Orders;
 
-use App\DTOs\Orders\PaymentDTO;
 use App\Models\Order;
 use App\Models\Payment;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -25,7 +22,7 @@ class PaymentProcessed implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('shift.' . $this->order->shift_id),
+            new PrivateChannel('shift.'.$this->order->shift_id),
         ];
     }
 

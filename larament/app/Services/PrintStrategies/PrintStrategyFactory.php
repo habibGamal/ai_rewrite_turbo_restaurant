@@ -12,8 +12,8 @@ class PrintStrategyFactory
     public static function create(string $strategyName): PrintStrategyInterface
     {
         return match (strtolower($strategyName)) {
-            'browsershot' => new BrowsershotPrintStrategy(),
-            'wkhtmltoimage' => new WkhtmltoimagePrintStrategy(),
+            'browsershot' => new BrowsershotPrintStrategy,
+            'wkhtmltoimage' => new WkhtmltoimagePrintStrategy,
             default => throw new InvalidArgumentException("Unknown print strategy: {$strategyName}")
         };
     }
@@ -24,11 +24,11 @@ class PrintStrategyFactory
     public static function getAvailableStrategies(): array
     {
         $strategies = [
-            'browsershot' => new BrowsershotPrintStrategy(),
-            'wkhtmltoimage' => new WkhtmltoimagePrintStrategy(),
+            'browsershot' => new BrowsershotPrintStrategy,
+            'wkhtmltoimage' => new WkhtmltoimagePrintStrategy,
         ];
 
-        return array_filter($strategies, fn($strategy) => $strategy->isAvailable());
+        return array_filter($strategies, fn ($strategy) => $strategy->isAvailable());
     }
 
     /**

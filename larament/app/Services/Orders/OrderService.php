@@ -2,25 +2,19 @@
 
 namespace App\Services\Orders;
 
-use Illuminate\Support\Facades\Log;
-use App\Enums\OrderType;
 use App\DTOs\Orders\CreateOrderDTO;
 use App\DTOs\Orders\OrderItemDTO;
 use App\DTOs\Orders\PaymentDTO;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethod;
+use App\Enums\OrderType;
 use App\Events\Orders\OrderCancelled;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\Product;
 use App\Repositories\Contracts\OrderRepositoryInterface;
-use App\Services\Orders\OrderCalculationService;
-use App\Services\Orders\OrderPaymentService;
-use App\Services\Orders\TableManagementService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -38,8 +32,7 @@ class OrderService
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
         private readonly OrderStockConversionService $orderStockConversionService,
-    ) {
-    }
+    ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
     {
@@ -64,9 +57,11 @@ class OrderService
     public function updateOrderItems(int $orderId, array $itemsData): Order
     {
         return DB::transaction(function () use ($orderId, $itemsData) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
+            $order = Order::where('id', $orderId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            if (!$order->status->canBeModified()) {
+            if (! $order->status->canBeModified()) {
                 throw new OrderException('لا يمكن تعديل الطلب في هذه المرحلة');
             }
 
@@ -74,7 +69,7 @@ class OrderService
             $products = Product::select(['id', 'cost', 'price'])->whereIn('id', $productIds)->get();
 
             // Check if using item-level discounts and clear order-level discount if needed
-            $hasItemDiscounts = collect($itemsData)->some(fn($item) => ($item['item_discount'] ?? 0) > 0);
+            $hasItemDiscounts = collect($itemsData)->some(fn ($item) => ($item['item_discount'] ?? 0) > 0);
             if ($hasItemDiscounts && ($order->discount > 0 || $order->temp_discount_percent > 0)) {
                 $this->orderRepository->update($order, [
                     'discount' => 0,
@@ -84,7 +79,7 @@ class OrderService
 
             $itemsData = array_map(function ($item) use ($products) {
                 $product = $products->firstWhere('id', $item['product_id']);
-                if (!$product) {
+                if (! $product) {
                     throw new OrderException('المنتج غير موجود');
                 }
 
@@ -114,7 +109,7 @@ class OrderService
                 ];
             }, $itemsData);
 
-            $itemDTOs = array_map(fn($item) => OrderItemDTO::fromArray($item), $itemsData);
+            $itemDTOs = array_map(fn ($item) => OrderItemDTO::fromArray($item), $itemsData);
 
             return $this->orderCreationService->updateOrderItems($order, $itemDTOs);
         });
@@ -124,7 +119,7 @@ class OrderService
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
 
-        if (!$order->status->canBeModified()) {
+        if (! $order->status->canBeModified()) {
             throw new OrderException('لا يمكن ربط العميل في هذه المرحلة');
         }
 
@@ -141,7 +136,7 @@ class OrderService
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
 
-        if (!$order->status->canBeModified()) {
+        if (! $order->status->canBeModified()) {
             throw new OrderException('لا يمكن ربط السائق في هذه المرحلة');
         }
 
@@ -163,7 +158,7 @@ class OrderService
             $updateData['order_notes'] = $orderNotes;
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $this->orderRepository->update($order, $updateData);
             $order->refresh();
         }
@@ -176,7 +171,7 @@ class OrderService
         return DB::transaction(function () use ($orderId, $discount, $discountType) {
             $order = $this->orderRepository->findByIdOrFail($orderId);
 
-            if (!$order->status->canBeModified()) {
+            if (! $order->status->canBeModified()) {
                 throw new OrderException('لا يمكن تطبيق الخصم في هذه المرحلة');
             }
 
@@ -187,10 +182,9 @@ class OrderService
     public function completeOrder(int $orderId, array $paymentsData, bool $shouldPrint = false): Order
     {
         return DB::transaction(function () use ($orderId, $paymentsData, $shouldPrint) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
             $order = Order::where('id', $orderId)->lockForUpdate()->firstOrFail();
 
-            if (!in_array($order->status, [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY])) {
+            if (! in_array($order->status, [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY])) {
                 throw new OrderException('الطلب غير متاح للإكمال');
             }
 
@@ -207,10 +201,10 @@ class OrderService
             // Remove stock items after successful completion
             $stockRemoved = $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
 
-            if (!$stockRemoved) {
+            if (! $stockRemoved) {
                 // Log warning but don't fail the transaction as order is already completed
                 Log::warning('Failed to remove stock for completed order', [
-                    'order_id' => $completedOrder->id
+                    'order_id' => $completedOrder->id,
                 ]);
             }
 
@@ -223,7 +217,7 @@ class OrderService
         return DB::transaction(function () use ($orderId, $reason) {
             $order = $this->orderRepository->findByIdOrFail($orderId);
 
-            if (!$order->status->canBeCancelled()) {
+            if (! $order->status->canBeCancelled()) {
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
             }
 
@@ -250,9 +244,9 @@ class OrderService
             if ($wasCompleted) {
                 $stockRestored = $this->orderStockConversionService->addStockForCancelledOrder($order);
 
-                if (!$stockRestored) {
+                if (! $stockRestored) {
                     Log::warning('Failed to restore stock for cancelled order', [
-                        'order_id' => $order->id
+                        'order_id' => $order->id,
                     ]);
                 }
             }
@@ -278,7 +272,7 @@ class OrderService
         return DB::transaction(function () use ($orderId, $newType, $tableNumber) {
             $order = $this->orderRepository->findByIdOrFail($orderId);
 
-            if (!$order->status->canBeModified()) {
+            if (! $order->status->canBeModified()) {
                 throw new OrderException('لا يمكن تغيير نوع الطلب في هذه المرحلة');
             }
 
@@ -293,7 +287,7 @@ class OrderService
 
             // Reserve new table if switching to dine-in
             if ($newOrderType->requiresTable()) {
-                if (!$tableNumber) {
+                if (! $tableNumber) {
                     throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');
                 }
                 $this->tableManagementService->reserveTable($tableNumber, $order->id);

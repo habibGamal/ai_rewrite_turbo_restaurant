@@ -2,35 +2,41 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Actions;
-use Filament\Actions\Action;
-use Exception;
 use App\Filament\Traits\AdminAccess;
-use Filament\Forms\Components\ViewField;
-use Filament\Pages\Page;
+use App\Services\SpecificDataImportService;
+use Exception;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
-use Filament\Notifications\Notification;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use App\Services\SpecificDataImportService;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class ExcelImport extends Page implements HasForms
 {
-    use InteractsWithForms , AdminAccess;
+    use AdminAccess , InteractsWithForms;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-up-tray';
+
     protected static ?string $navigationLabel = 'رفع ملف Excel';
+
     protected static ?string $title = 'رفع ملف Excel';
+
     protected string $view = 'filament.pages.excel-import';
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة النظام';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة النظام';
 
     public ?array $data = [];
+
     public ?array $analysisResult = null;
+
     public ?array $importResult = null;
 
     public function mount(): void
@@ -84,7 +90,7 @@ class ExcelImport extends Page implements HasForms
                                 ->label('استيراد البيانات')
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('success')
-                                ->visible(fn() => !empty($this->analysisResult) && $this->analysisResult['success'])
+                                ->visible(fn () => ! empty($this->analysisResult) && $this->analysisResult['success'])
                                 ->requiresConfirmation()
                                 ->modalHeading('تأكيد الاستيراد')
                                 ->modalDescription('هل أنت متأكد من أنك تريد استيراد هذه البيانات؟')
@@ -95,25 +101,24 @@ class ExcelImport extends Page implements HasForms
 
                 Section::make('نتائج التحليل')
                     ->description('معلومات حول هيكل الملف والبيانات المكتشفة')
-                    ->visible(fn() => !empty($this->analysisResult))
+                    ->visible(fn () => ! empty($this->analysisResult))
                     ->schema([
                         ViewField::make('analysis_info')
                             ->label('')
                             ->reactive()
                             ->view('filament.pages.partials.analysis-results', [
-                                'analysisResult' => $this->analysisResult
-                            ])
-                            ,
+                                'analysisResult' => $this->analysisResult,
+                            ]),
                     ]),
 
                 Section::make('نتائج الاستيراد')
                     ->description('تفاصيل عملية الاستيراد')
-                    ->visible(fn() => !empty($this->importResult))
+                    ->visible(fn () => ! empty($this->importResult))
                     ->schema([
                         Placeholder::make('import_info')
                             ->label('')
-                            ->content(fn() => view('filament.pages.partials.import-results', [
-                                'importResult' => $this->importResult
+                            ->content(fn () => view('filament.pages.partials.import-results', [
+                                'importResult' => $this->importResult,
                             ])->render()),
                     ]),
             ])
@@ -126,17 +131,18 @@ class ExcelImport extends Page implements HasForms
 
         $filePath = $this->getFilePath();
 
-        if (!$filePath) {
+        if (! $filePath) {
             Notification::make()
                 ->title('خطأ')
                 ->body('يرجى اختيار ملف Excel أولاً')
                 ->danger()
                 ->send();
+
             return;
         }
 
         try {
-            $service = new SpecificDataImportService();
+            $service = new SpecificDataImportService;
             $this->analysisResult = $service->analyzeExcelStructure(array_values($this->data['excel_file'])[0]);
 
             if ($this->analysisResult['success']) {
@@ -155,7 +161,7 @@ class ExcelImport extends Page implements HasForms
         } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ')
-                ->body('حدث خطأ أثناء تحليل الملف: ' . $e->getMessage())
+                ->body('حدث خطأ أثناء تحليل الملف: '.$e->getMessage())
                 ->danger()
                 ->send();
         }
@@ -165,12 +171,13 @@ class ExcelImport extends Page implements HasForms
     {
         $filePath = $this->getFilePath();
 
-        if (!$filePath) {
+        if (! $filePath) {
             Notification::make()
                 ->title('خطأ')
                 ->body('يرجى اختيار ملف Excel أولاً')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -178,7 +185,7 @@ class ExcelImport extends Page implements HasForms
             // $fullPath = Storage::path($filePath);
             // $uploadedFile = new UploadedFile($fullPath, basename($filePath));
 
-            $service = new SpecificDataImportService();
+            $service = new SpecificDataImportService;
             $this->importResult = $service->importExcelData(array_values($this->data['excel_file'])[0]);
 
             if ($this->importResult['success']) {
@@ -187,7 +194,7 @@ class ExcelImport extends Page implements HasForms
 
                 Notification::make()
                     ->title('نجح الاستيراد')
-                    ->body("تم استيراد {$imported} سجل بنجاح" . ($errors > 0 ? " مع {$errors} خطأ" : ""))
+                    ->body("تم استيراد {$imported} سجل بنجاح".($errors > 0 ? " مع {$errors} خطأ" : ''))
                     ->success()
                     ->send();
             } else {
@@ -200,7 +207,7 @@ class ExcelImport extends Page implements HasForms
         } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ')
-                ->body('حدث خطأ أثناء استيراد البيانات: ' . $e->getMessage())
+                ->body('حدث خطأ أثناء استيراد البيانات: '.$e->getMessage())
                 ->danger()
                 ->send();
         }

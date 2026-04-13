@@ -2,11 +2,11 @@
 
 namespace App\Filament\Pages\App;
 
-use Filament\Auth\Pages\EditProfile;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
 use App\Filament\Actions\GeneratePasswordAction;
+use Filament\Auth\Pages\EditProfile;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class Profile extends EditProfile
 {

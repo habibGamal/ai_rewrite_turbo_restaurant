@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
-use App\Models\Expense;
 use App\Models\ExpenceType;
-use App\Services\ShiftService;
+use App\Models\Expense;
 use App\Services\ShiftLoggingService;
+use App\Services\ShiftService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -16,8 +16,7 @@ class ExpenseController extends Controller
     public function __construct(
         private ShiftService $shiftService,
         private ShiftLoggingService $loggingService
-    ) {
-    }
+    ) {}
 
     /**
      * Display a listing of expenses for the current shift
@@ -26,7 +25,7 @@ class ExpenseController extends Controller
     {
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift) {
+        if (! $currentShift) {
             return redirect()->route('shifts.start');
         }
 
@@ -56,7 +55,7 @@ class ExpenseController extends Controller
 
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift) {
+        if (! $currentShift) {
             return redirect()->route('shifts.start');
         }
 
@@ -89,7 +88,7 @@ class ExpenseController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['message' => 'حدث خطأ أثناء إضافة المصروف: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'حدث خطأ أثناء إضافة المصروف: '.$e->getMessage()]);
         }
     }
 
@@ -106,7 +105,7 @@ class ExpenseController extends Controller
 
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift || $expense->shift_id !== $currentShift->id) {
+        if (! $currentShift || $expense->shift_id !== $currentShift->id) {
             return back()->withErrors(['message' => 'لا يمكن تعديل هذا المصروف']);
         }
 
@@ -149,7 +148,7 @@ class ExpenseController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['message' => 'حدث خطأ أثناء تعديل المصروف: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'حدث خطأ أثناء تعديل المصروف: '.$e->getMessage()]);
         }
     }
 
@@ -160,7 +159,7 @@ class ExpenseController extends Controller
     {
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift || $expense->shift_id !== $currentShift->id) {
+        if (! $currentShift || $expense->shift_id !== $currentShift->id) {
             return back()->withErrors(['message' => 'لا يمكن حذف هذا المصروف']);
         }
 
@@ -186,7 +185,7 @@ class ExpenseController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['message' => 'حدث خطأ أثناء حذف المصروف: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'حدث خطأ أثناء حذف المصروف: '.$e->getMessage()]);
         }
     }
 }

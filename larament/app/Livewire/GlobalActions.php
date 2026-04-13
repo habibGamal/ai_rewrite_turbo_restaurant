@@ -2,24 +2,20 @@
 
 namespace App\Livewire;
 
-use Filament\Notifications\Notification;
+use App\Services\InventoryDailyAggregationService;
 use Exception;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Livewire\Component;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Actions\Action;
-use App\Services\InventoryDailyAggregationService;
-
 
 class GlobalActions extends Component implements HasActions, HasSchemas
 {
     use InteractsWithActions;
     use InteractsWithSchemas;
-
 
     public function toCashierAction(): Action
     {
@@ -35,6 +31,7 @@ class GlobalActions extends Component implements HasActions, HasSchemas
     {
 
         $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
+
         return Action::make('openDay')
             ->label('فتح اليوم')
             ->icon('heroicon-o-lock-open')
@@ -42,27 +39,28 @@ class GlobalActions extends Component implements HasActions, HasSchemas
             ->visible($isDayClosed && auth()->user()->isAdmin())
             ->action(function () {
                 $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
-                if (!$isDayClosed) {
+                if (! $isDayClosed) {
                     Notification::make()
                         ->title('خطأ')
                         ->body('اليوم مفتوح بالفعل.')
                         ->danger()
                         ->send();
+
                     return;
                 }
                 app(InventoryDailyAggregationService::class)->openDay();
-            })
-        ;
+            });
     }
 
     public function closeDayAction(): Action
     {
         $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
+
         return Action::make('closeDay')
             ->label('إغلاق اليوم')
             ->icon('heroicon-o-lock-closed')
             ->color('danger')
-            ->visible(!$isDayClosed && auth()->user()->isAdmin())
+            ->visible(! $isDayClosed && auth()->user()->isAdmin())
             ->action(function () {
                 try {
                     $isDayClosed = app(InventoryDailyAggregationService::class)->dayStatus() === null;
@@ -73,13 +71,12 @@ class GlobalActions extends Component implements HasActions, HasSchemas
                 } catch (Exception $e) {
                     Notification::make()
                         ->title('خطأ')
-                        ->body('حدث خطأ أثناء إغلاق اليوم: ' . $e->getMessage())
+                        ->body('حدث خطأ أثناء إغلاق اليوم: '.$e->getMessage())
                         ->danger()
                         ->send();
                 }
             });
     }
-
 
     public function render()
     {

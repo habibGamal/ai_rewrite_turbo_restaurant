@@ -2,50 +2,48 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\SettingsService;
-use App\Models\Shift;
-use Exception;
-use App\Models\Product;
-use InvalidArgumentException;
+use App\DTOs\Orders\CreateOrderDTO;
+use App\Enums\OrderStatus;
+use App\Enums\OrderType;
+use App\Enums\PaymentStatus;
 use App\Enums\ProductType;
-use App\Models\Order;
+use App\Http\Requests\CompleteOrderRequest;
+use App\Http\Requests\SaveOrderRequest;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Driver;
-use App\Models\Region;
-use App\Models\Payment;
-use App\Models\OrderItem;
-use App\Models\Expense;
 use App\Models\ExpenceType;
+use App\Models\Expense;
+use App\Models\Order;
+use App\Models\Payment;
+use App\Models\Product;
+use App\Models\Region;
+use App\Models\Shift;
 use App\Models\TableType;
-use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use App\Enums\PaymentMethod;
-use App\Enums\PaymentStatus;
-use App\DTOs\Orders\CreateOrderDTO;
-use App\DTOs\Orders\PaymentDTO;
 use App\Services\Orders\OrderService;
+use App\Services\OrderItemChangeService;
 use App\Services\PrintService;
-use App\Services\ShiftService;
+use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
-use App\Http\Requests\SaveOrderRequest;
-use App\Http\Requests\CompleteOrderRequest;
-use App\Http\Requests\UpdateOrderRequest;
+use App\Services\ShiftService;
+use Exception;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
+use InvalidArgumentException;
 
 class OrderController extends Controller
 {
     use AuthorizesRequests;
+
     public function __construct(
         private OrderService $orderService,
         private PrintService $printService,
         private ShiftService $shiftService,
-        private ShiftLoggingService $loggingService
-    ) {
-    }
+        private ShiftLoggingService $loggingService,
+        private OrderItemChangeService $orderItemChangeService
+    ) {}
 
     /**
      * Display the orders index page
@@ -54,7 +52,7 @@ class OrderController extends Controller
     {
         $currentShift = $this->shiftService->getCurrentShift();
 
-        if (!$currentShift) {
+        if (! $currentShift) {
             return redirect()->route('shifts.start');
         }
 
@@ -89,7 +87,7 @@ class OrderController extends Controller
      */
     public function showStartShift()
     {
-        if (!$this->shiftService->canStartShift()) {
+        if (! $this->shiftService->canStartShift()) {
             return redirect()->route('orders.index');
         }
 
@@ -106,7 +104,7 @@ class OrderController extends Controller
         ]);
         try {
 
-            if (!$this->shiftService->canStartShift()) {
+            if (! $this->shiftService->canStartShift()) {
                 return redirect()->route('orders.index')->with('info', 'لديك وردية نشطة بالفعل');
             }
 
@@ -149,10 +147,9 @@ class OrderController extends Controller
                 'start_cash' => $validated['start_cash'],
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء بدء الوردية: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء بدء الوردية: '.$e->getMessage()]);
         }
     }
-
 
     /**
      * Display the order management interface
@@ -166,7 +163,7 @@ class OrderController extends Controller
                 $query
                     ->whereNot('type', ProductType::RawMaterial)
                     ->where('legacy', false)->orderBy('name');
-            }
+            },
         ])->orderBy('name')->get();
 
         // Get all drivers for the dropdown
@@ -204,6 +201,7 @@ class OrderController extends Controller
             // Add product names to new items for logging
             $newItems = collect($itemsData)->map(function ($item) {
                 $product = Product::find($item['product_id']);
+
                 return array_merge($item, [
                     'product_name' => $product?->name ?? "المنتج رقم {$item['product_id']}",
                 ]);
@@ -211,8 +209,10 @@ class OrderController extends Controller
 
             $this->orderService->updateOrderItems($order->id, $itemsData);
 
-            // Log the changes
-            $this->loggingService->logOrderSave($order->id, $oldItems, $newItems);
+            // Calculate differences once and use for both logging and DB recording
+            $differences = $this->loggingService->calculateItemDifferences($oldItems, $newItems);
+            $this->loggingService->logOrderSave($order->id, $differences);
+            $this->orderItemChangeService->recordChanges($order->id, $differences);
 
             return back()->with('success', 'تم حفظ الطلب بنجاح');
         } catch (Exception $e) {
@@ -221,7 +221,7 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ الطلب: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -242,7 +242,7 @@ class OrderController extends Controller
             // Log order completion
             $this->loggingService->logOrderCompletion($order->id, $paymentsData, $completedOrder->total);
 
-            return redirect()->to(route('orders.index') . '#' . $order->type->value)
+            return redirect()->to(route('orders.index').'#'.$order->type->value)
                 ->with('success', 'تم إنهاء الطلب بنجاح');
         } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إتمام الطلب', [
@@ -251,7 +251,7 @@ class OrderController extends Controller
                 'payment_data' => $request->validated(),
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الطلب: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -260,7 +260,7 @@ class OrderController extends Controller
      */
     public function cancelOrder(Order $order)
     {
-        if (!auth()->user()->canCancelOrders()) {
+        if (! auth()->user()->canCancelOrders()) {
             abort(403, 'غير مسموح لك بإلغاء الطلبات');
         }
 
@@ -277,7 +277,7 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء إلغاء الطلب: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء إلغاء الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -452,7 +452,7 @@ class OrderController extends Controller
         try {
             $customer = Customer::where('phone', $validated['phone'])->first();
 
-            if (!$customer) {
+            if (! $customer) {
                 return response()->json(['error' => 'لم يتم العثور على العميل'], 404);
             }
 
@@ -472,7 +472,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            $customers = Customer::where('name', 'LIKE', '%' . $validated['name'] . '%')
+            $customers = Customer::where('name', 'LIKE', '%'.$validated['name'].'%')
                 ->limit(10)
                 ->get();
 
@@ -494,7 +494,7 @@ class OrderController extends Controller
         try {
             $driver = Driver::where('phone', $validated['phone'])->first();
 
-            if (!$driver) {
+            if (! $driver) {
                 return response()->json(['error' => 'لم يتم العثور على السائق'], 404);
             }
 
@@ -529,7 +529,7 @@ class OrderController extends Controller
 
             return back()->with([
                 'success' => 'تم ربط العميل بالطلب بنجاح',
-                'order' => $updatedOrder
+                'order' => $updatedOrder,
             ]);
         } catch (Exception $e) {
             $this->loggingService->logAction('فشل في ربط العميل بالطلب', [
@@ -566,7 +566,7 @@ class OrderController extends Controller
 
             return back()->with([
                 'success' => 'تم ربط السائق بالطلب بنجاح',
-                'order' => $updatedOrder
+                'order' => $updatedOrder,
             ]);
         } catch (Exception $e) {
             $this->loggingService->logAction('فشل في ربط السائق بالطلب', [
@@ -598,7 +598,7 @@ class OrderController extends Controller
 
             return back()->with('success', 'تم تغيير نوع الطلب بنجاح');
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء تغيير نوع الطلب: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء تغيير نوع الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -616,7 +616,7 @@ class OrderController extends Controller
 
             return back()->with('success', 'تم حفظ ملاحظات الطلب بنجاح');
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ ملاحظات الطلب: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ ملاحظات الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -625,7 +625,7 @@ class OrderController extends Controller
      */
     public function applyDiscount(Request $request, Order $order)
     {
-        if (!auth()->user()->canApplyDiscounts()) {
+        if (! auth()->user()->canApplyDiscounts()) {
             abort(403, 'غير مسموح لك بتطبيق خصم');
         }
 
@@ -649,7 +649,7 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء تطبيق الخصم: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء تطبيق الخصم: '.$e->getMessage()]);
         }
     }
 
@@ -707,23 +707,35 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'orderId' => 'required|integer|exists:orders,id',
+            'type' => 'nullable|string|in:normal,changes',
             'items' => 'nullable|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.name' => 'required|string',
-            'items.*.quantity' => 'required|numeric|min:0.001',
+            'items.*.quantity' => 'nullable|numeric',
+            'items.*.old_quantity' => 'nullable|numeric',
+            'items.*.new_quantity' => 'nullable|numeric',
+            'items.*.delta' => 'nullable|numeric',
             'items.*.notes' => 'nullable|string|max:500',
         ]);
 
         try {
-            // Use the new Browsershot implementation
-            $this->printService->printKitchenReceipt(
-                $validated['orderId'],
-                $validated['items'] ?? []
-            );
+            $type = $validated['type'] ?? 'normal';
+
+            if ($type === 'changes') {
+                $this->printService->printKitchenChangesReceipt(
+                    $validated['orderId'],
+                    $validated['items'] ?? []
+                );
+            } else {
+                $this->printService->printKitchenReceipt(
+                    $validated['orderId'],
+                    $validated['items'] ?? []
+                );
+            }
 
             return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ: '.$e->getMessage()]);
         }
     }
 
@@ -737,10 +749,9 @@ class OrderController extends Controller
 
             return back()->with('success', 'تم فتح درج الكاشير بنجاح');
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء فتح درج الكاشير: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء فتح درج الكاشير: '.$e->getMessage()]);
         }
     }
-
 
     /**
      * Create a new order
@@ -748,14 +759,14 @@ class OrderController extends Controller
     public function createOrder(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|in:' . implode(',', array_column(OrderType::cases(), 'value')),
+            'type' => 'required|in:'.implode(',', array_column(OrderType::cases(), 'value')),
             'table_number' => 'nullable|string|max:50',
         ]);
 
         try {
             $currentShift = $this->shiftService->getCurrentShift();
 
-            if (!$currentShift) {
+            if (! $currentShift) {
                 return back()->withErrors(['error' => 'لا يوجد شيفت نشط']);
             }
 
@@ -787,8 +798,9 @@ class OrderController extends Controller
 
             return redirect()->route('orders.manage', $order);
         } catch (Exception $e) {
-            logger()->error('Error creating order: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'حدث خطأ أثناء إنشاء الطلب: ' . $e->getMessage()]);
+            logger()->error('Error creating order: '.$e->getMessage());
+
+            return back()->withErrors(['error' => 'حدث خطأ أثناء إنشاء الطلب: '.$e->getMessage()]);
         }
     }
 
@@ -808,7 +820,7 @@ class OrderController extends Controller
                         'name' => 'صالة',
                         'created_at' => null,
                         'updated_at' => null,
-                    ]
+                    ],
                 ]);
             }
 
@@ -823,7 +835,7 @@ class OrderController extends Controller
      */
     public function endShift(Request $request)
     {
-        if (!auth()->user()->canManageOrders()) {
+        if (! auth()->user()->canManageOrders()) {
             abort(403, 'غير مسموح لك بإنهاء الشيفت');
         }
 
@@ -832,7 +844,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            if (!$this->shiftService->canEndShift()) {
+            if (! $this->shiftService->canEndShift()) {
                 return back()->withErrors(['error' => 'لا يوجد شيفت نشط']);
             }
 
@@ -855,8 +867,7 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 'error');
 
-            return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الشيفت: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الشيفت: '.$e->getMessage()]);
         }
     }
-
 }

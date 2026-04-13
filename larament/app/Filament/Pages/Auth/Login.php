@@ -17,8 +17,5 @@ class Login extends \Filament\Auth\Pages\Login
         }
     }
 
-    protected function rateLimit($maxAttempts, $decaySeconds = 60, $method = null, $component = null)
-    {
-
-    }
+    protected function rateLimit($maxAttempts, $decaySeconds = 60, $method = null, $component = null) {}
 }

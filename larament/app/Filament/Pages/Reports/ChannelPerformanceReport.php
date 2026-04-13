@@ -2,26 +2,25 @@
 
 namespace App\Filament\Pages\Reports;
 
-use Filament\Schemas\Schema;
-use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
-use App\Filament\Widgets\ChannelPerformanceStatsWidget;
-use App\Filament\Widgets\ChannelMarketShareWidget;
-use App\Filament\Traits\AdminAccess;
-use App\Filament\Traits\ViewerAccess;
-use App\Services\ChannelPerformanceReportService;
 use App\Filament\Components\PeriodFilterFormComponent;
+use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\ChannelMarketShareWidget;
+use App\Filament\Widgets\ChannelPerformanceStatsWidget;
+use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
+use App\Services\ChannelPerformanceReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Schema;
 
 class ChannelPerformanceReport extends BaseDashboard
 {
     use HasFiltersForm, ViewerAccess;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static string $routePath = 'channel-performance-report';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
+    protected static string|\UnitEnum|null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير أداء القنوات';
 

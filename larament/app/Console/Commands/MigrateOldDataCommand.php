@@ -2,38 +2,35 @@
 
 namespace App\Console\Commands;
 
+use App\Models\DailySnapshot;
+use App\Models\Driver;
+use App\Models\ExpenceType;
+use App\Models\Expense;
+use App\Models\InventoryItem;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Printer;
+use App\Models\Product;
+use App\Models\ProductComponent;
+use App\Models\PurchaseInvoice;
+use App\Models\PurchaseInvoiceItem;
+use App\Models\Region;
+use App\Models\ReturnPurchaseInvoice;
+use App\Models\ReturnPurchaseInvoiceItem;
+use App\Models\Setting;
+use App\Models\Shift;
+use App\Models\Stocktaking;
+use App\Models\StocktakingItem;
+use App\Models\Supplier;
+use App\Models\User;
+use App\Models\Waste;
+use App\Models\WastedItem;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Models\Category;
-use App\Models\Customer;
-use App\Models\Supplier;
-use App\Models\Product;
-use App\Models\Printer;
-use App\Models\Driver;
-use App\Models\DineTable;
-use App\Models\Region;
-use App\Models\ExpenceType;
-use App\Models\Setting;
-use App\Models\User;
-use App\Models\Shift;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use App\Models\InventoryItem;
-use App\Models\Expense;
-use App\Models\PurchaseInvoice;
-use App\Models\ReturnPurchaseInvoice;
-use App\Models\PurchaseInvoiceItem;
-use App\Models\ReturnPurchaseInvoiceItem;
-use App\Models\Stocktaking;
-use App\Models\StocktakingItem;
-use App\Models\Waste;
-use App\Models\WastedItem;
-use App\Models\ProductComponent;
-use App\Models\DailySnapshot;
-use Carbon\Carbon;
 
 class MigrateOldDataCommand extends Command
 {
@@ -46,8 +43,11 @@ class MigrateOldDataCommand extends Command
     protected $description = 'Migrate data from old Turbo Restaurant system to new Laravel schema';
 
     protected $oldConnection;
+
     protected $isDryRun;
+
     protected $chunkSize;
+
     protected $migratedData = [];
 
     public function handle()
@@ -64,17 +64,19 @@ class MigrateOldDataCommand extends Command
         }
 
         // Check old database connection
-        if (!$this->checkOldConnection()) {
+        if (! $this->checkOldConnection()) {
             $this->error('Cannot connect to old database. Please check your connection settings.');
+
             return 1;
         }
 
         // Clear existing data if not dry run
-        if (!$this->isDryRun && !$specificTable) {
+        if (! $this->isDryRun && ! $specificTable) {
             if ($this->confirm('This will clear all existing data. Are you sure?')) {
                 $this->clearExistingData();
             } else {
                 $this->info('Migration cancelled.');
+
                 return 0;
             }
         }
@@ -83,7 +85,7 @@ class MigrateOldDataCommand extends Command
             DB::beginTransaction();
 
             // Disable foreign key checks and prepare for ID preservation
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 $this->prepareDatabaseForMigration();
             }
 
@@ -119,8 +121,9 @@ class MigrateOldDataCommand extends Command
             ];
 
             if ($specificTable) {
-                if (!isset($migrationMethods[$specificTable])) {
+                if (! isset($migrationMethods[$specificTable])) {
                     $this->error("Table '{$specificTable}' is not supported for migration.");
+
                     return 1;
                 }
                 $this->{$migrationMethods[$specificTable]}();
@@ -131,7 +134,7 @@ class MigrateOldDataCommand extends Command
                 }
             }
 
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 DB::commit();
                 $this->finalizeDatabaseAfterMigration();
                 $this->info('Migration completed successfully!');
@@ -144,8 +147,9 @@ class MigrateOldDataCommand extends Command
 
         } catch (Exception $e) {
             DB::rollBack();
-            $this->error('Migration failed: ' . $e->getMessage());
-            $this->error('Stack trace: ' . $e->getTraceAsString());
+            $this->error('Migration failed: '.$e->getMessage());
+            $this->error('Stack trace: '.$e->getTraceAsString());
+
             return 1;
         }
 
@@ -156,6 +160,7 @@ class MigrateOldDataCommand extends Command
     {
         try {
             $result = DB::connection($this->oldConnection)->select('SELECT 1');
+
             return true;
         } catch (Exception $e) {
             return false;
@@ -217,7 +222,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldCategories as $oldCategory) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 DB::table('categories')->insert([
                     'id' => $oldCategory->id,
                     'name' => $oldCategory->name,
@@ -240,7 +245,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldRegions as $oldRegion) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Region::insert([
                     'id' => $oldRegion->id,
                     'name' => $oldRegion->name,
@@ -264,7 +269,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldCustomers as $oldCustomer) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 DB::table('customers')->insert([
                     'id' => $oldCustomer->id,
                     'name' => $oldCustomer->name,
@@ -292,7 +297,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldSuppliers as $oldSupplier) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Supplier::insert([
                     'id' => $oldSupplier->id,
                     'name' => $oldSupplier->name,
@@ -317,7 +322,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldPrinters as $oldPrinter) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Printer::insert([
                     'id' => $oldPrinter->id,
                     'name' => $oldPrinter->name,
@@ -341,7 +346,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldProducts as $oldProduct) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Product::insert([
                     'id' => $oldProduct->id,
                     'category_id' => $oldProduct->category_id,
@@ -371,7 +376,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldComponents as $oldComponent) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 ProductComponent::insert([
                     'id' => $oldComponent->id,
                     'product_id' => $oldComponent->product_id,
@@ -399,11 +404,12 @@ class MigrateOldDataCommand extends Command
         foreach ($oldPrinterProducts as $oldPrinterProduct) {
             $printerExists = DB::table('printers')->where('id', $oldPrinterProduct->printer_id)->exists();
             $productExists = DB::table('products')->where('id', $oldPrinterProduct->product_id)->exists();
-            if (!$printerExists || !$productExists) {
+            if (! $printerExists || ! $productExists) {
                 $skipped++;
+
                 continue;
             }
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 DB::table('printer_product')->insert([
                     'printer_id' => $oldPrinterProduct->printer_id,
                     'product_id' => $oldPrinterProduct->product_id,
@@ -427,7 +433,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldDrivers as $oldDriver) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Driver::insert([
                     'id' => $oldDriver->id,
                     'name' => $oldDriver->name,
@@ -443,7 +449,6 @@ class MigrateOldDataCommand extends Command
         $this->line("Migrated {$migrated} drivers");
     }
 
-
     protected function migrateExpenseTypes(): void
     {
         $oldExpenseTypes = DB::connection($this->oldConnection)
@@ -452,7 +457,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldExpenseTypes as $oldExpenseType) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 ExpenceType::insert([
                     'id' => $oldExpenseType->id,
                     'name' => $oldExpenseType->name,
@@ -475,7 +480,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldSettings as $oldSetting) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Setting::insert([
                     'id' => $oldSetting->id,
                     'key' => $oldSetting->key,
@@ -499,7 +504,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldUsers as $oldUser) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 User::insert([
                     'id' => $oldUser->id,
                     'name' => $oldUser->name ?? 'Unknown',
@@ -526,7 +531,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldShifts as $oldShift) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Shift::insert([
                     'id' => $oldShift->id,
                     'start_at' => $oldShift->start_at ?? now(),
@@ -538,7 +543,7 @@ class MigrateOldDataCommand extends Command
                     'real_cash' => $oldShift->real_cash,
                     'has_deficit' => $oldShift->has_deficit ?? false,
                     'closed' => $oldShift->closed ?? false,
-                    'created_at' =>  Carbon::parse($oldShift->end_at)->format('Y-m-d H:i:s'),
+                    'created_at' => Carbon::parse($oldShift->end_at)->format('Y-m-d H:i:s'),
                     'updated_at' => $oldShift->updated_at ?? now(),
                 ]);
             }
@@ -559,13 +564,13 @@ class MigrateOldDataCommand extends Command
         $user = User::first();
 
         foreach ($oldOrders as $oldOrder) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 $exists = Order::where('shift_id', $oldOrder->shift_id ?? 1)
                     ->where('order_number', $oldOrder->order_number ?? $oldOrder->id)
                     ->exists();
                 $orderNumber = $oldOrder->order_number;
                 if ($exists) {
-                    $orderNumber = 'FIX-' . rand(1000, 9999);
+                    $orderNumber = 'FIX-'.rand(1000, 9999);
                 }
                 Order::insert([
                     'id' => $oldOrder->id,
@@ -606,7 +611,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldOrderItems as $oldOrderItem) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 OrderItem::insert([
                     'id' => $oldOrderItem->id,
                     'order_id' => $oldOrderItem->order_id,
@@ -635,7 +640,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldPayments as $oldPayment) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Payment::insert([
                     'id' => $oldPayment->id,
                     'order_id' => $oldPayment->order_id,
@@ -661,7 +666,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldInventoryItems as $oldInventoryItem) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 InventoryItem::insert([
                     'id' => $oldInventoryItem->id,
                     'product_id' => $oldInventoryItem->product_id,
@@ -685,7 +690,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldExpenses as $oldExpense) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 Expense::insert([
                     'id' => $oldExpense->id,
                     'expence_type_id' => $oldExpense->expense_type_id ?? $oldExpense->expence_type_id,
@@ -711,7 +716,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldInvoices as $oldInvoice) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 PurchaseInvoice::insert([
                     'id' => $oldInvoice->id,
                     'supplier_id' => $oldInvoice->supplier_id,
@@ -738,7 +743,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldItems as $oldItem) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 PurchaseInvoiceItem::insert([
                     'id' => $oldItem->id,
                     'purchase_invoice_id' => $oldItem->purchase_invoice_id,
@@ -765,7 +770,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldInvoices as $oldInvoice) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 ReturnPurchaseInvoice::insert([
                     'id' => $oldInvoice->id,
                     'supplier_id' => $oldInvoice->supplier_id,
@@ -792,7 +797,7 @@ class MigrateOldDataCommand extends Command
 
         $migrated = 0;
         foreach ($oldItems as $oldItem) {
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 ReturnPurchaseInvoiceItem::insert([
                     'id' => $oldItem->id,
                     'return_purchase_invoice_id' => $oldItem->return_purchase_invoice_id,
@@ -952,7 +957,7 @@ class MigrateOldDataCommand extends Command
         $this->info("Total records migrated: {$total}");
 
         if ($this->isDryRun) {
-            $this->warn("This was a dry run - no data was actually migrated");
+            $this->warn('This was a dry run - no data was actually migrated');
         }
     }
 
@@ -998,7 +1003,7 @@ class MigrateOldDataCommand extends Command
             'stocktaking_items',
             'wastes',
             'wasted_items',
-            'daily_snapshots'
+            'daily_snapshots',
         ];
 
         foreach ($tables as $table) {
@@ -1012,7 +1017,7 @@ class MigrateOldDataCommand extends Command
                         $this->line("Set {$table} auto_increment to {$nextAutoIncrement}");
                     }
                 } catch (Exception $e) {
-                    $this->warn("Could not update auto_increment for {$table}: " . $e->getMessage());
+                    $this->warn("Could not update auto_increment for {$table}: ".$e->getMessage());
                 }
             }
         }

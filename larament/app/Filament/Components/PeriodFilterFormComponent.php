@@ -2,9 +2,9 @@
 
 namespace App\Filament\Components;
 
-use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Section;
 
 class PeriodFilterFormComponent
 {
@@ -39,47 +39,47 @@ class PeriodFilterFormComponent
                         match ($state) {
                             'today' => [
                                 $set('startDate', now()->startOfDay()->toDateString()),
-                                $set('endDate', now()->endOfDay()->toDateString())
+                                $set('endDate', now()->endOfDay()->toDateString()),
                             ],
                             'yesterday' => [
                                 $set('startDate', now()->subDay()->startOfDay()->toDateString()),
-                                $set('endDate', now()->subDay()->endOfDay()->toDateString())
+                                $set('endDate', now()->subDay()->endOfDay()->toDateString()),
                             ],
                             'last_7_days' => [
                                 $set('startDate', now()->subDays(6)->startOfDay()->toDateString()),
-                                $set('endDate', now()->endOfDay()->toDateString())
+                                $set('endDate', now()->endOfDay()->toDateString()),
                             ],
                             'last_14_days' => [
                                 $set('startDate', now()->subDays(13)->startOfDay()->toDateString()),
-                                $set('endDate', now()->endOfDay()->toDateString())
+                                $set('endDate', now()->endOfDay()->toDateString()),
                             ],
                             'last_30_days' => [
                                 $set('startDate', now()->subDays(29)->startOfDay()->toDateString()),
-                                $set('endDate', now()->endOfDay()->toDateString())
+                                $set('endDate', now()->endOfDay()->toDateString()),
                             ],
                             'this_week' => [
                                 $set('startDate', now()->startOfWeek()->toDateString()),
-                                $set('endDate', now()->endOfWeek()->toDateString())
+                                $set('endDate', now()->endOfWeek()->toDateString()),
                             ],
                             'last_week' => [
                                 $set('startDate', now()->subWeek()->startOfWeek()->toDateString()),
-                                $set('endDate', now()->subWeek()->endOfWeek()->toDateString())
+                                $set('endDate', now()->subWeek()->endOfWeek()->toDateString()),
                             ],
                             'this_month' => [
                                 $set('startDate', now()->startOfMonth()->toDateString()),
-                                $set('endDate', now()->endOfMonth()->toDateString())
+                                $set('endDate', now()->endOfMonth()->toDateString()),
                             ],
                             'last_month' => [
                                 $set('startDate', now()->subMonth()->startOfMonth()->toDateString()),
-                                $set('endDate', now()->subMonth()->endOfMonth()->toDateString())
+                                $set('endDate', now()->subMonth()->endOfMonth()->toDateString()),
                             ],
                             'last_3_months' => [
                                 $set('startDate', now()->subMonths(3)->startOfMonth()->toDateString()),
-                                $set('endDate', now()->endOfMonth()->toDateString())
+                                $set('endDate', now()->endOfMonth()->toDateString()),
                             ],
                             'this_year' => [
                                 $set('startDate', now()->startOfYear()->toDateString()),
-                                $set('endDate', now()->endOfYear()->toDateString())
+                                $set('endDate', now()->endOfYear()->toDateString()),
                             ],
                             default => null
                         };
@@ -88,13 +88,13 @@ class PeriodFilterFormComponent
                     ->label('تاريخ البداية')
                     ->default(now()->subDays($defaultDaysBack)->startOfDay())
                     ->maxDate(now())
-                    ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
+                    ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
                     ->live(),
                 DatePicker::make('endDate')
                     ->label('تاريخ النهاية')
                     ->default(now()->endOfDay())
                     ->maxDate(now())
-                    ->disabled(fn(callable $get) => $get('presetPeriod') !== 'custom')
+                    ->disabled(fn (callable $get) => $get('presetPeriod') !== 'custom')
                     ->live(),
             ])
             ->columns(3);

@@ -2,10 +2,10 @@
 
 namespace App\Filament\Exports;
 
-use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
+use App\Models\Order;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -63,9 +63,10 @@ class CurrentShiftOrdersExporter extends Exporter
                 ->state(function ($record) {
                     $methods = $record->payments
                         ->pluck('method')
-                        ->map(fn($method) => $method instanceof PaymentMethod ? $method->label() : $method)
+                        ->map(fn ($method) => $method instanceof PaymentMethod ? $method->label() : $method)
                         ->unique()
                         ->implode(', ');
+
                     return $methods ?: 'غير محدد';
                 }),
 
@@ -75,6 +76,7 @@ class CurrentShiftOrdersExporter extends Exporter
                     $amount = $record->payments
                         ->where('method', PaymentMethod::CASH)
                         ->sum('amount');
+
                     return number_format($amount, 2);
                 }),
 
@@ -84,6 +86,7 @@ class CurrentShiftOrdersExporter extends Exporter
                     $amount = $record->payments
                         ->where('method', PaymentMethod::CARD)
                         ->sum('amount');
+
                     return number_format($amount, 2);
                 }),
 
@@ -93,6 +96,7 @@ class CurrentShiftOrdersExporter extends Exporter
                     $amount = $record->payments
                         ->where('method', PaymentMethod::TALABAT_CARD)
                         ->sum('amount');
+
                     return number_format($amount, 2);
                 }),
 
@@ -110,10 +114,10 @@ class CurrentShiftOrdersExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير طلبات الشفت الحالي وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'طلب' : 'طلب') . '.';
+        $body = 'تم إكمال تصدير طلبات الشفت الحالي وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'طلب' : 'طلب').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'طلب' : 'طلب') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'طلب' : 'طلب').'.';
         }
 
         return $body;

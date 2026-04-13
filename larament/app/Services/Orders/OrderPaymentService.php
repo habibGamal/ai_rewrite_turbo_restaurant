@@ -2,14 +2,14 @@
 
 namespace App\Services\Orders;
 
-use InvalidArgumentException;
-use App\Enums\PaymentMethod;
 use App\DTOs\Orders\PaymentDTO;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\PaymentProcessed;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
+use InvalidArgumentException;
 
 class OrderPaymentService
 {
@@ -56,13 +56,13 @@ class OrderPaymentService
         $remainingBalance = $order->total - $totalPaid;
 
         // Calculate total of new payments
-        $totalNewPayments = array_sum(array_filter($paymentsData, fn($amount) => $amount > 0));
+        $totalNewPayments = array_sum(array_filter($paymentsData, fn ($amount) => $amount > 0));
 
         // Validate that total payments don't exceed order total
         if (($totalPaid + $totalNewPayments) > $order->total) {
             throw new InvalidArgumentException(
-                "إجمالي المدفوعات ({$totalPaid} + {$totalNewPayments} = " . ($totalPaid + $totalNewPayments) .
-                ") يتجاوز إجمالي الطلب (" . $order->total . ")"
+                "إجمالي المدفوعات ({$totalPaid} + {$totalNewPayments} = ".($totalPaid + $totalNewPayments).
+                ') يتجاوز إجمالي الطلب ('.$order->total.')'
             );
         }
 

@@ -9,9 +9,11 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class DailyPerformanceChartWidget extends ChartWidget
 {
     protected ?string $heading = 'أداء المبيعات حسب أيام الأسبوع';
+
     protected ?string $description = 'مقارنة الأداء عبر أيام الأسبوع المختلفة';
 
     protected ?string $maxHeight = '350px';
+
     protected static bool $isLazy = false;
 
     use InteractsWithPageFilters;
@@ -33,11 +35,12 @@ class DailyPerformanceChartWidget extends ChartWidget
         // Ensure we have data for all 7 days
         $dayMapping = [
             1 => 'الأحد', 2 => 'الاثنين', 3 => 'الثلاثاء', 4 => 'الأربعاء',
-            5 => 'الخميس', 6 => 'الجمعة', 7 => 'السبت'
+            5 => 'الخميس', 6 => 'الجمعة', 7 => 'السبت',
         ];
 
         $allDays = collect(range(1, 7))->map(function ($dayNum) use ($dailyData, $dayMapping) {
             $existing = $dailyData->firstWhere('day_of_week', $dayNum);
+
             return $existing ?: (object) [
                 'day_of_week' => $dayNum,
                 'day_label' => $dayMapping[$dayNum],

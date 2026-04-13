@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
-use App\Models\User;
 use App\Models\Supplier;
-use App\Models\Product;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class PurchaseInvoiceSeeder extends Seeder
 {
@@ -25,7 +25,7 @@ class PurchaseInvoiceSeeder extends Seeder
         for ($i = 1; $i <= 15; $i++) {
             $supplier = $suppliers->random();
             $user = $users->random();
-            
+
             // Create purchase invoice
             $purchaseInvoice = PurchaseInvoice::create([
                 'user_id' => $user->id,

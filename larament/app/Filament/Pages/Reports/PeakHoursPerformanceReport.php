@@ -2,27 +2,26 @@
 
 namespace App\Filament\Pages\Reports;
 
-use Filament\Schemas\Schema;
+use App\Filament\Components\PeriodFilterFormComponent;
+use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\DailyPerformanceChartWidget;
+use App\Filament\Widgets\HourlyPerformanceChartWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Filament\Widgets\PeakHoursStatsWidget;
-use App\Filament\Widgets\HourlyPerformanceChartWidget;
-use App\Filament\Widgets\DailyPerformanceChartWidget;
-use App\Filament\Traits\AdminAccess;
-use App\Filament\Traits\ViewerAccess;
 use App\Services\PeakHoursPerformanceReportService;
-use App\Filament\Components\PeriodFilterFormComponent;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Schema;
 
 class PeakHoursPerformanceReport extends BaseDashboard
 {
     use HasFiltersForm, ViewerAccess;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
     protected static string $routePath = 'peak-hours-performance-report';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
+    protected static string|\UnitEnum|null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير أداء ساعات الذروة';
 

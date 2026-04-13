@@ -2,15 +2,16 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Order;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Models\Order;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class WebOrdersStats extends BaseWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = '30s';
 
     public function getHeading(): string
@@ -23,11 +24,11 @@ class WebOrdersStats extends BaseWidget
         $statuses = [
             OrderStatus::PENDING,
             OrderStatus::PROCESSING,
-            OrderStatus::OUT_FOR_DELIVERY
+            OrderStatus::OUT_FOR_DELIVERY,
         ];
 
         $ordersQuery = Order::query()
-            ->whereIn('type', [OrderType::WEB_TAKEAWAY , OrderType::WEB_DELIVERY])
+            ->whereIn('type', [OrderType::WEB_TAKEAWAY, OrderType::WEB_DELIVERY])
             ->whereIn('status', $statuses);
         $pendingOrders = (clone $ordersQuery)
             ->where('status', OrderStatus::PENDING)
@@ -45,37 +46,37 @@ class WebOrdersStats extends BaseWidget
             ->first();
 
         return [
-            Stat::make('في الإنتظار', ($pendingOrders->count ?? 0) . ' أوردر')
-                ->description('بقيمة ' . number_format($pendingOrders->value ?? 0, 2) . ' جنيه - ربح ' . number_format($pendingOrders->profit ?? 0, 2) . ' جنيه')
+            Stat::make('في الإنتظار', ($pendingOrders->count ?? 0).' أوردر')
+                ->description('بقيمة '.number_format($pendingOrders->value ?? 0, 2).' جنيه - ربح '.number_format($pendingOrders->profit ?? 0, 2).' جنيه')
                 ->descriptionIcon('heroicon-m-clock')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<JS
-                        \$dispatch('filterUpdate',{filter:{status:'pending'}} )
+                    'wire:click' => <<<'JS'
+                        $dispatch('filterUpdate',{filter:{status:'pending'}} )
                         document.getElementById('web_orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('gray'),
 
-            Stat::make('تحت التشغيل', ($processingOrders->count ?? 0) . ' أوردر')
-                ->description('بقيمة ' . number_format($processingOrders->value ?? 0, 2) . ' جنيه - ربح ' . number_format($processingOrders->profit ?? 0, 2) . ' جنيه')
+            Stat::make('تحت التشغيل', ($processingOrders->count ?? 0).' أوردر')
+                ->description('بقيمة '.number_format($processingOrders->value ?? 0, 2).' جنيه - ربح '.number_format($processingOrders->profit ?? 0, 2).' جنيه')
                 ->descriptionIcon('heroicon-m-cog-6-tooth')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<JS
-                        \$dispatch('filterUpdate',{filter:{status:'processing'}} )
+                    'wire:click' => <<<'JS'
+                        $dispatch('filterUpdate',{filter:{status:'processing'}} )
                         document.getElementById('web_orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])
                 ->color('warning'),
 
-            Stat::make('في طريق التوصيل', ($outForDeliveryOrders->count ?? 0) . ' أوردر')
-                ->description('بقيمة ' . number_format($outForDeliveryOrders->value ?? 0, 2) . ' جنيه - ربح ' . number_format($outForDeliveryOrders->profit ?? 0, 2) . ' جنيه')
+            Stat::make('في طريق التوصيل', ($outForDeliveryOrders->count ?? 0).' أوردر')
+                ->description('بقيمة '.number_format($outForDeliveryOrders->value ?? 0, 2).' جنيه - ربح '.number_format($outForDeliveryOrders->profit ?? 0, 2).' جنيه')
                 ->descriptionIcon('heroicon-m-truck')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<JS
-                        \$dispatch('filterUpdate',{filter:{status:'out_for_delivery'}} )
+                    'wire:click' => <<<'JS'
+                        $dispatch('filterUpdate',{filter:{status:'out_for_delivery'}} )
                         document.getElementById('web_orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     JS
                 ])

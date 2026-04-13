@@ -2,8 +2,8 @@
 
 namespace App\Filament\Exports;
 
-use Carbon\Carbon;
 use App\Models\Customer;
+use Carbon\Carbon;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -62,7 +62,8 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->state(function ($record) {
                     $totalSales = $record->total_sales ?? 0;
                     $totalProfit = $record->total_profit ?? 0;
-                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1) . '%' : '0%';
+
+                    return $totalSales > 0 ? number_format(($totalProfit / $totalSales) * 100, 1).'%' : '0%';
                 }),
 
             ExportColumn::make('customer_segment')
@@ -145,8 +146,10 @@ class CustomersPerformanceTableExporter extends Exporter
                     if ($record->first_order_date && $record->last_order_date) {
                         $first = Carbon::parse($record->first_order_date);
                         $last = Carbon::parse($record->last_order_date);
+
                         return $first->diffInDays($last);
                     }
+
                     return 0;
                 }),
 
@@ -157,8 +160,10 @@ class CustomersPerformanceTableExporter extends Exporter
                         $first = Carbon::parse($record->first_order_date);
                         $last = Carbon::parse($record->last_order_date);
                         $months = $first->diffInMonths($last) ?: 1;
+
                         return number_format($record->total_orders / $months, 2);
                     }
+
                     return $record->total_orders ?? 0;
                 }),
         ];
@@ -166,10 +171,10 @@ class CustomersPerformanceTableExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير تقرير أداء العملاء وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'عميل' : 'عميل') . '.';
+        $body = 'تم إكمال تصدير تقرير أداء العملاء وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'عميل' : 'عميل').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'عميل' : 'عميل') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'عميل' : 'عميل').'.';
         }
 
         return $body;

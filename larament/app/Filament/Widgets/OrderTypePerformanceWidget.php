@@ -9,13 +9,14 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class OrderTypePerformanceWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
     protected ?string $heading = 'أداء المبيعات حسب نوع الطلب';
 
-    protected int | string | array $columnSpan = 2;
+    protected int|string|array $columnSpan = 2;
 
     protected ProductsSalesReportService $productsReportService;
 
@@ -92,9 +93,9 @@ class OrderTypePerformanceWidget extends ChartWidget
                                 style: "currency",
                                 currency: "EGP"
                             }).format(context.parsed.y);
-                        }'
-                    ]
-                ]
+                        }',
+                    ],
+                ],
             ],
             'scales' => [
                 'x' => [
@@ -117,8 +118,8 @@ class OrderTypePerformanceWidget extends ChartWidget
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 0
                             }).format(value);
-                        }'
-                    ]
+                        }',
+                    ],
                 ],
             ],
         ];

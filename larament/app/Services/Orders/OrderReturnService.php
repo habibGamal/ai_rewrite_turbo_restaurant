@@ -2,13 +2,12 @@
 
 namespace App\Services\Orders;
 
-use Exception;
-use App\Enums\MovementReason;
 use App\Enums\ReturnStatus;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -16,19 +15,14 @@ class OrderReturnService
 {
     public function __construct(
         private readonly OrderStockConversionService $stockConversionService
-    ) {
-    }
+    ) {}
 
     /**
      * Process an order return
      *
-     * @param Order $order
-     * @param array $returnItems [['order_item_id' => int, 'quantity' => float, 'refund_amount' => float], ...]
-     * @param string $reason
-     * @param array $refundDistribution [['method' => string, 'amount' => float], ...]
-     * @param int $shiftId
-     * @param bool $reverseStock
-     * @return OrderReturn
+     * @param  array  $returnItems  [['order_item_id' => int, 'quantity' => float, 'refund_amount' => float], ...]
+     * @param  array  $refundDistribution  [['method' => string, 'amount' => float], ...]
+     *
      * @throws Exception
      */
     public function processReturn(
@@ -93,7 +87,7 @@ class OrderReturnService
 
             DB::commit();
 
-            Log::info("Order return processed successfully", [
+            Log::info('Order return processed successfully', [
                 'order_id' => $order->id,
                 'return_id' => $orderReturn->id,
                 'total_refund' => $totalRefund,
@@ -104,7 +98,7 @@ class OrderReturnService
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Failed to process order return", [
+            Log::error('Failed to process order return', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -121,8 +115,8 @@ class OrderReturnService
         foreach ($returnItems as $item) {
             $orderItem = $order->items->firstWhere('id', $item['order_item_id']);
 
-            if (!$orderItem) {
-                throw new Exception("صنف الطلب غير موجود");
+            if (! $orderItem) {
+                throw new Exception('صنف الطلب غير موجود');
             }
 
             // Calculate already returned quantity
@@ -134,17 +128,17 @@ class OrderReturnService
 
             if ($item['quantity'] > $availableForReturn) {
                 throw new Exception(
-                    "الكمية المطلوب إرجاعها للصنف {$orderItem->product->name} أكبر من المتاح. " .
+                    "الكمية المطلوب إرجاعها للصنف {$orderItem->product->name} أكبر من المتاح. ".
                     "المتاح: {$availableForReturn}, المطلوب: {$item['quantity']}"
                 );
             }
 
             if ($item['quantity'] <= 0) {
-                throw new Exception("الكمية يجب أن تكون أكبر من صفر");
+                throw new Exception('الكمية يجب أن تكون أكبر من صفر');
             }
 
             if ($item['refund_amount'] < 0) {
-                throw new Exception("مبلغ الاسترجاع يجب أن يكون موجباً");
+                throw new Exception('مبلغ الاسترجاع يجب أن يكون موجباً');
             }
         }
     }
@@ -164,7 +158,7 @@ class OrderReturnService
 
         foreach ($refundDistribution as $refund) {
             if ($refund['amount'] <= 0) {
-                throw new Exception("مبلغ الاسترجاع يجب أن يكون أكبر من صفر");
+                throw new Exception('مبلغ الاسترجاع يجب أن يكون أكبر من صفر');
             }
         }
     }
@@ -175,7 +169,7 @@ class OrderReturnService
     private function reverseStockForReturnedItems(Order $order, array $returnItems): void
     {
         // Create a temporary order with only returned items for stock calculation
-        $tempOrder = new Order();
+        $tempOrder = new Order;
         $tempOrder->id = $order->id;
         $tempOrder->setRelation('items', collect());
 
@@ -191,7 +185,7 @@ class OrderReturnService
         // Use stock conversion service to add stock back
         $stockItems = $this->stockConversionService->convertOrderItemsToStockItems($tempOrder);
 
-        if (!empty($stockItems)) {
+        if (! empty($stockItems)) {
             $this->stockConversionService->addStockForCancelledOrder($tempOrder);
         }
     }
@@ -226,7 +220,7 @@ class OrderReturnService
 
         $orderItem = $order->items->firstWhere('id', $orderItemId);
 
-        if (!$orderItem) {
+        if (! $orderItem) {
             return 0;
         }
 

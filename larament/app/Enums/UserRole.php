@@ -12,6 +12,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
     case VIEWER = 'viewer';
     case CASHIER = 'cashier';
     case WATCHER = 'watcher';
+    case KITCHEN = 'kitchen';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
             self::VIEWER => 'متابع تقارير',
             self::CASHIER => 'كاشير',
             self::WATCHER => 'مراقب',
+            self::KITCHEN => 'مطبخ',
         };
     }
 
@@ -30,6 +32,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
             self::VIEWER => 'متابع تقارير',
             self::CASHIER => 'كاشير',
             self::WATCHER => 'مراقب',
+            self::KITCHEN => 'مطبخ',
         };
     }
 
@@ -50,7 +53,12 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
 
     public function canAccessReports(): bool
     {
-        return in_array($this, haystack: [self::ADMIN, self::VIEWER, self::WATCHER]);
+        return in_array($this, [self::ADMIN, self::VIEWER, self::WATCHER]);
+    }
+
+    public function canAccessKitchen(): bool
+    {
+        return in_array($this, [self::ADMIN, self::KITCHEN]);
     }
 
     public function getColor(): string
@@ -60,6 +68,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
             self::VIEWER => 'text-blue-500',
             self::CASHIER => 'text-green-500',
             self::WATCHER => 'text-yellow-500',
+            self::KITCHEN => 'text-orange-500',
         };
     }
 
@@ -70,6 +79,7 @@ enum UserRole: string implements HasColor, HasIcon, HasLabel
             self::VIEWER => 'heroicon-s-eye',
             self::CASHIER => 'heroicon-s-cash',
             self::WATCHER => 'heroicon-s-eye-off',
+            self::KITCHEN => 'heroicon-s-fire',
         };
     }
 }

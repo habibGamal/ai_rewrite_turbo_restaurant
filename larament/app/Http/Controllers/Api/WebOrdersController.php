@@ -2,18 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use Exception;
-use App\Http\Controllers\Controller;
-use App\Services\WebApiService;
-use App\Models\Order;
-use App\Models\OrderItem;
 use App\Enums\OrderType;
-use App\Enums\PaymentMethod;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Order;
+use App\Services\WebApiService;
+use Exception;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WebOrdersController extends Controller
 {
@@ -30,6 +27,7 @@ class WebOrdersController extends Controller
     public function canAcceptOrder(): JsonResponse
     {
         $canAccept = $this->webApiService->canAcceptOrder();
+
         return response()->json(['can_accept' => $canAccept]);
     }
 
@@ -39,6 +37,7 @@ class WebOrdersController extends Controller
     public function getShiftId(): JsonResponse
     {
         $shiftId = $this->webApiService->getShiftId();
+
         return response()->json(['shift_id' => $shiftId]);
     }
 
@@ -54,7 +53,7 @@ class WebOrdersController extends Controller
             'user.area' => 'required|string',
             'user.address' => 'required|string',
             'order' => 'required|array',
-            'order.type' => 'required|in:' . OrderType::WEB_DELIVERY->value . ',' . OrderType::WEB_TAKEAWAY->value,
+            'order.type' => 'required|in:'.OrderType::WEB_DELIVERY->value.','.OrderType::WEB_TAKEAWAY->value,
             'order.shiftId' => 'required|integer',
             'order.orderNumber' => 'required|string',
             'order.subTotal' => 'required|numeric',
@@ -78,7 +77,6 @@ class WebOrdersController extends Controller
             throw new ValidationException($validator);
         }
 
-
         try {
             $this->webApiService->placeOrder($request->all());
 
@@ -92,6 +90,4 @@ class WebOrdersController extends Controller
             ], 400);
         }
     }
-
-
 }

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Actions;
 
-use Exception;
 use App\Models\Waste;
 use App\Services\WasteService;
+use Exception;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -16,7 +16,7 @@ class CloseWasteAction
             ->label('إغلاق سجل التالف')
             ->icon('heroicon-o-lock-closed')
             ->color('danger')
-            ->visible(fn(Waste $record): bool => is_null($record->closed_at))
+            ->visible(fn (Waste $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق سجل التالف')
             ->modalDescription('هل أنت متأكد من إغلاق سجل التالف؟ سيتم خصم جميع الأصناف من المخزون ولن يمكن تعديل السجل بعد ذلك.')
@@ -50,7 +50,7 @@ class CloseWasteAction
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('danger')
-            ->visible(fn(Waste $record): bool => is_null($record->closed_at))
+            ->visible(fn (Waste $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق سجل التالف')
             ->modalDescription('هل أنت متأكد من إغلاق سجل التالف؟ سيتم خصم جميع الأصناف من المخزون ولن يمكن تعديل السجل بعد ذلك.')

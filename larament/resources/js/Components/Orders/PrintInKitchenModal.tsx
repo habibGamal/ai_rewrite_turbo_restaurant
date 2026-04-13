@@ -80,7 +80,6 @@ export default function PrintInKitchenModal({
 
     const mappingItemsToPrinters = async () => {
         onCancel();
-        message.loading('جاري الطباعة');
 
         try {
             // Send items data directly to backend for server-side processing

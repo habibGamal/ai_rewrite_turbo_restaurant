@@ -9,9 +9,11 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class ChannelMarketShareWidget extends ChartWidget
 {
     protected ?string $heading = 'الحصة السوقية للقنوات';
+
     protected ?string $description = 'توزيع الإيرادات والطلبات حسب قنوات البيع';
 
     protected ?string $maxHeight = '350px';
+
     protected static bool $isLazy = false;
 
     use InteractsWithPageFilters;

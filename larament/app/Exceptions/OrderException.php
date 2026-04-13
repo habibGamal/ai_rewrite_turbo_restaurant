@@ -6,7 +6,7 @@ use Exception;
 
 class OrderException extends Exception
 {
-    public function __construct(string $message = "", int $code = 0, ?Exception $previous = null)
+    public function __construct(string $message = '', int $code = 0, ?Exception $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }
@@ -15,7 +15,7 @@ class OrderException extends Exception
     {
         return response()->json([
             'message' => $this->getMessage(),
-            'error' => 'ORDER_ERROR'
+            'error' => 'ORDER_ERROR',
         ], 422);
     }
 }

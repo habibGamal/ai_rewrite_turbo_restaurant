@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\PurchaseInvoiceItem;
-use App\Models\PurchaseInvoice;
 use App\Models\Product;
+use App\Models\PurchaseInvoice;
+use App\Models\PurchaseInvoiceItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PurchaseInvoiceItemFactory extends Factory
 {

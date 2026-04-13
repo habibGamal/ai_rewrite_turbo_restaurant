@@ -2,9 +2,9 @@
 
 namespace App\Filament\Actions;
 
-use Exception;
 use App\Models\PurchaseInvoice;
 use App\Services\PurchaseService;
+use Exception;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -16,7 +16,7 @@ class ClosePurchaseInvoiceAction
             ->label('إغلاق الفاتورة')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
-            ->visible(fn(PurchaseInvoice $record): bool => is_null($record->closed_at))
+            ->visible(fn (PurchaseInvoice $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق فاتورة الشراء')
             ->modalDescription('هل أنت متأكد من إغلاق هذه الفاتورة؟ سيتم إضافة جميع الأصناف إلى المخزون ولن يمكن تعديل الفاتورة بعد ذلك.')
@@ -50,7 +50,7 @@ class ClosePurchaseInvoiceAction
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
-            ->visible(fn(PurchaseInvoice $record): bool => is_null($record->closed_at))
+            ->visible(fn (PurchaseInvoice $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق فاتورة الشراء')
             ->modalDescription('هل أنت متأكد من إغلاق هذه الفاتورة؟ سيتم إضافة جميع الأصناف إلى المخزون ولن يمكن تعديل الفاتورة بعد ذلك.')

@@ -2,26 +2,26 @@
 
 namespace App\Filament\Widgets;
 
-use Filament\Tables\Columns\TextColumn;
-use Filament\Actions\Action;
-use Filament\Actions\ExportAction;
+use App\Enums\ProductType;
 use App\Filament\Exports\StockReportExporter;
 use App\Models\Product;
-use App\Models\Category;
+use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
 use Filament\Tables;
-use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
-use App\Enums\ProductType;
 
 class StockReportTable extends BaseWidget
 {
     protected static bool $isLazy = false;
+
     protected static ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
@@ -92,7 +92,7 @@ class StockReportTable extends BaseWidget
                         $join->on('products.id', '=', 'dailyMovements.product_id')
                             ->whereBetween('dailyMovements.date', [$startDate, $endDate]);
                     })
-                    ->leftJoin('inventory_item_movement_daily as startDailyMovements', function ($join) use ($startDate, $endDate) {
+                    ->leftJoin('inventory_item_movement_daily as startDailyMovements', function ($join) use ($startDate) {
                         $join->on('products.id', '=', 'startDailyMovements.product_id')
                             ->whereRaw('startDailyMovements.date = (
                                 SELECT MAX(d.date)
@@ -208,6 +208,7 @@ class StockReportTable extends BaseWidget
                     ->getStateUsing(function ($record) {
                         $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0);
                         $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
+
                         return $totalQuantity - $totalConsumed;
                     })
                     ->color('primary')
@@ -258,8 +259,10 @@ class StockReportTable extends BaseWidget
                         return $actualRemaining - $idealRemaining;
                     })
                     ->color(function ($state) {
-                        if ($state == 0)
+                        if ($state == 0) {
                             return 'success';
+                        }
+
                         return $state < 0 ? 'danger' : 'warning';
                     })
                     ->weight('medium')
@@ -295,15 +298,20 @@ class StockReportTable extends BaseWidget
                         $actualRemaining = $record->actual_remaining_quantity ?? 0;
                         $deviation = $actualRemaining - $idealRemaining;
 
-                        if ($idealRemaining == 0)
+                        if ($idealRemaining == 0) {
                             return 0;
+                        }
+
                         return ($deviation / $idealRemaining) * 100;
                     })
                     ->color(function ($state) {
-                        if (abs($state) <= 5)
+                        if (abs($state) <= 5) {
                             return 'success';
-                        if (abs($state) <= 15)
+                        }
+                        if (abs($state) <= 15) {
                             return 'warning';
+                        }
+
                         return 'danger';
                     })
                     ->suffix('%')
@@ -368,16 +376,16 @@ class StockReportTable extends BaseWidget
                                 return $query->where('products.cost', '<', 10);
                             },
                         )->when(
-                                $data['value'] === 'medium',
-                                function (Builder $query): Builder {
-                                    return $query->whereBetween('products.cost', [10, 50]);
-                                },
-                            )->when(
-                                $data['value'] === 'high',
-                                function (Builder $query): Builder {
-                                    return $query->where('products.cost', '>', 50);
-                                },
-                            );
+                            $data['value'] === 'medium',
+                            function (Builder $query): Builder {
+                                return $query->whereBetween('products.cost', [10, 50]);
+                            },
+                        )->when(
+                            $data['value'] === 'high',
+                            function (Builder $query): Builder {
+                                return $query->where('products.cost', '>', 50);
+                            },
+                        );
                     }),
 
                 Filter::make('zero_cost')
@@ -420,7 +428,7 @@ class StockReportTable extends BaseWidget
                     // ->modifyQueryUsing(function (Builder $query) use ($startDate, $endDate) {
                     //     return $query;
                     // })
-                    ->fileName(fn() => 'stock-report-' . now()->format('Y-m-d-H-i-s') . '.xlsx')
+                    ->fileName(fn () => 'stock-report-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->recordAction(null)
             ->recordUrl(null)

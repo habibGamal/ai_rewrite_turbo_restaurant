@@ -2,31 +2,28 @@
 
 namespace App\Filament\Pages\Reports;
 
-use Filament\Schemas\Schema;
-use App\Filament\Widgets\StockReportTable;
-use App\Filament\Traits\AdminAccess;
-use App\Filament\Traits\ViewerAccess;
 use App\Filament\Components\PeriodFilterFormComponent;
-use Filament\Pages\Page;
+use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\StockReportTable;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Schema;
 
 class StockReport extends BaseDashboard
 {
     use HasFiltersForm ,ViewerAccess;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar-square';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
 
     protected static string $routePath = 'orders-report';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'التقارير';
+    protected static string|\UnitEnum|null $navigationGroup = 'التقارير';
 
     protected static ?string $navigationLabel = 'تقرير المخزون';
 
     protected static ?string $title = 'تقرير المخزون';
 
     protected static ?int $navigationSort = 1;
-
 
     public function filtersForm(Schema $schema): Schema
     {
@@ -46,5 +43,4 @@ class StockReport extends BaseDashboard
             StockReportTable::class,
         ];
     }
-
 }

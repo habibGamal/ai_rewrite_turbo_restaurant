@@ -2,16 +2,15 @@
 
 namespace App\Console\Commands;
 
-use Exception;
-use InvalidArgumentException;
 use App\Models\InventoryItem;
-use App\Models\InventoryItemMovement;
 use App\Models\InventoryItemMovementDaily;
 use App\Models\Product;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class FixInventoryDailyAggregationCommand extends Command
 {
@@ -28,7 +27,9 @@ class FixInventoryDailyAggregationCommand extends Command
     protected $description = 'Fix and recalculate InventoryItemMovementDaily records from inventory movements';
 
     protected bool $isDryRun = false;
+
     protected bool $verboseReport = false;
+
     protected array $stats = [
         'records_updated' => 0,
         'records_created' => 0,
@@ -54,6 +55,7 @@ class FixInventoryDailyAggregationCommand extends Command
 
             if ($daysToProcess->isEmpty()) {
                 $this->warn('لا توجد أيام لمعالجتها.');
+
                 return 0;
             }
 
@@ -77,10 +79,11 @@ class FixInventoryDailyAggregationCommand extends Command
 
         } catch (Exception $e) {
             $this->error("❌ فشل الإصلاح: {$e->getMessage()}");
-            Log::error("Fix inventory daily aggregation failed", [
+            Log::error('Fix inventory daily aggregation failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return 1;
         }
     }
@@ -96,11 +99,12 @@ class FixInventoryDailyAggregationCommand extends Command
         if ($specificDate) {
             try {
                 $date = Carbon::parse($specificDate);
+
                 return collect([
                     [
                         'date' => $date,
-                        'is_open' => InventoryItemMovementDaily::where('date', $date)->whereNull('closed_at')->exists()
-                    ]
+                        'is_open' => InventoryItemMovementDaily::where('date', $date)->whereNull('closed_at')->exists(),
+                    ],
                 ]);
             } catch (Exception $e) {
                 throw new InvalidArgumentException("تاريخ غير صالح: {$specificDate}");
@@ -117,7 +121,7 @@ class FixInventoryDailyAggregationCommand extends Command
                 ->map(function ($record) {
                     return [
                         'date' => Carbon::parse($record->date),
-                        'is_open' => (bool) $record->is_open
+                        'is_open' => (bool) $record->is_open,
                     ];
                 });
         }
@@ -127,15 +131,15 @@ class FixInventoryDailyAggregationCommand extends Command
             ->orderBy('date', 'desc')
             ->first();
 
-        if (!$openDay) {
+        if (! $openDay) {
             return collect([]);
         }
 
         return collect([
             [
                 'date' => Carbon::parse($openDay->date),
-                'is_open' => true
-            ]
+                'is_open' => true,
+            ],
         ]);
     }
 
@@ -148,7 +152,7 @@ class FixInventoryDailyAggregationCommand extends Command
         $isOpen = $dayData['is_open'];
         $dateString = $date->toDateString();
 
-        $this->info("📆 معالجة يوم: {$dateString} " . ($isOpen ? '(مفتوح)' : '(مغلق)'));
+        $this->info("📆 معالجة يوم: {$dateString} ".($isOpen ? '(مفتوح)' : '(مغلق)'));
 
         DB::beginTransaction();
 
@@ -158,9 +162,10 @@ class FixInventoryDailyAggregationCommand extends Command
                 ->orderBy('created_at', 'asc')
                 ->first();
 
-            if (!$dailyRecord) {
-                $this->warn("  ⚠️ لا توجد سجلات لهذا اليوم");
+            if (! $dailyRecord) {
+                $this->warn('  ⚠️ لا توجد سجلات لهذا اليوم');
                 DB::rollBack();
+
                 return;
             }
 
@@ -172,8 +177,9 @@ class FixInventoryDailyAggregationCommand extends Command
             $records = $query->get();
 
             if ($records->isEmpty()) {
-                $this->warn("  ⚠️ لا توجد سجلات للمعالجة");
+                $this->warn('  ⚠️ لا توجد سجلات للمعالجة');
                 DB::rollBack();
+
                 return;
             }
 
@@ -191,7 +197,7 @@ class FixInventoryDailyAggregationCommand extends Command
                 $this->updateDailyRecord($record, $aggregatedMovements, $isOpen);
             }
 
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 DB::commit();
             } else {
                 DB::rollBack();
@@ -204,7 +210,7 @@ class FixInventoryDailyAggregationCommand extends Command
             $this->error("  ❌ خطأ في معالجة اليوم {$dateString}: {$e->getMessage()}");
             $this->stats['errors']++;
             Log::error("Error processing day {$dateString}", [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -315,11 +321,12 @@ class FixInventoryDailyAggregationCommand extends Command
             if ($this->verboseReport) {
                 $this->line("    ⏭️ منتج #{$productId}: لا توجد تغييرات");
             }
+
             return;
         }
 
         // Apply changes
-        if (!$this->isDryRun) {
+        if (! $this->isDryRun) {
             $record->update($changes);
         }
 
@@ -379,8 +386,9 @@ class FixInventoryDailyAggregationCommand extends Command
             ->orderBy('date', 'desc')
             ->first();
 
-        if (!$openDay) {
+        if (! $openDay) {
             $this->warn('  ⚠️ لا يوجد يوم مفتوح');
+
             return;
         }
 
@@ -402,6 +410,7 @@ class FixInventoryDailyAggregationCommand extends Command
 
         if ($missingProductIds->isEmpty()) {
             $this->info('  ✅ لا توجد سجلات مفقودة');
+
             return;
         }
 
@@ -429,7 +438,7 @@ class FixInventoryDailyAggregationCommand extends Command
                 'closed_at' => null,
             ];
 
-            if (!$this->isDryRun) {
+            if (! $this->isDryRun) {
                 InventoryItemMovementDaily::create($data);
             }
 

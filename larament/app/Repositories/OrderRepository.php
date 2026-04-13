@@ -74,6 +74,7 @@ class OrderRepository implements OrderRepositoryInterface
         while (Order::where('shift_id', $shiftId)->where('order_number', $nextNumber)->exists()) {
             $nextNumber++;
         }
+
         return $nextNumber;
     }
 

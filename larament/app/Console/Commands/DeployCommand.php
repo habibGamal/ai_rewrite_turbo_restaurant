@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
 
 class DeployCommand extends Command
 {
-     /**
+    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -37,22 +37,22 @@ class DeployCommand extends Command
             // Execute deploy.sh script
             $deployScriptPath = base_path('deploy.sh');
 
-            if (!file_exists($deployScriptPath)) {
-                throw new Exception('Deploy script not found at: ' . $deployScriptPath);
+            if (! file_exists($deployScriptPath)) {
+                throw new Exception('Deploy script not found at: '.$deployScriptPath);
             }
 
             $this->info('� Executing deployment script...');
 
             // Make script executable (for Unix-like systems)
             if (PHP_OS_FAMILY !== 'Windows') {
-                Process::run('chmod +x ' . $deployScriptPath);
+                Process::run('chmod +x '.$deployScriptPath);
             }
 
             // Execute the deploy script
-            $result = Process::timeout(60*6)->run('sudo /bin/sh /var/www/turbo_restaurant/larament/deploy.sh');
+            $result = Process::timeout(60 * 6)->run('sudo /bin/sh /var/www/turbo_restaurant/larament/deploy.sh');
 
             if ($result->failed()) {
-                throw new Exception('Deployment script failed: ' . $result->errorOutput());
+                throw new Exception('Deployment script failed: '.$result->errorOutput());
             }
 
             // Show script output
@@ -71,7 +71,7 @@ class DeployCommand extends Command
             return Command::SUCCESS;
 
         } catch (Exception $e) {
-            $this->error('❌ Deployment failed: ' . $e->getMessage());
+            $this->error('❌ Deployment failed: '.$e->getMessage());
 
             // Try to bring the application back online
             $this->warn('⚠️ Attempting to bring application back online...');
@@ -81,5 +81,4 @@ class DeployCommand extends Command
         }
 
     }
-
 }

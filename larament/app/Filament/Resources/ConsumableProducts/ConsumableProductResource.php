@@ -2,35 +2,31 @@
 
 namespace App\Filament\Resources\ConsumableProducts;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
+use App\Enums\ProductType;
+use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
+use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
+use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
+use App\Filament\Resources\ConsumableProducts\Pages\ViewConsumableProduct;
+use App\Filament\Traits\AdminAccess;
+use App\Models\Category;
+use App\Models\Product;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
-use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
-use App\Filament\Resources\ConsumableProducts\Pages\ViewConsumableProduct;
-use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
-use App\Filament\Resources\ConsumableProductResource\Pages;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Printer;
-use App\Enums\ProductType;
-use Filament\Forms;
-use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use App\Filament\Traits\AdminAccess;
 
 class ConsumableProductResource extends Resource
 {
@@ -38,9 +34,9 @@ class ConsumableProductResource extends Resource
 
     protected static ?string $model = Product::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المنتجات';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المنتجات';
 
     protected static ?int $navigationSort = 4;
 

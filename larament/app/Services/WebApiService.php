@@ -2,18 +2,17 @@
 
 namespace App\Services;
 
-use Exception;
-use App\Enums\PaymentStatus;
-use App\Events\Orders\WebOrderReceived;
-use App\Models\Shift;
-use App\Models\Order;
-use App\Models\Customer;
-use App\Models\Product;
-use App\Models\DailySnapshot;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
+use App\Events\Orders\WebOrderReceived;
+use App\Models\Customer;
+use App\Models\DailySnapshot;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Shift;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +25,7 @@ class WebApiService
     {
         $this->settingsService = $settingsService;
     }
+
     /**
      * Check if we can accept new orders
      */
@@ -39,6 +39,7 @@ class WebApiService
 
         // Check if there was recent activity today
         $todayActivity = DailySnapshot::where('date', today()->format('Y-m-d'))->exists();
+
         return $todayActivity;
     }
 
@@ -48,6 +49,7 @@ class WebApiService
     public function getShiftId(): ?int
     {
         $activeShift = Shift::where('closed', false)->first();
+
         return $activeShift?->id;
     }
 
@@ -97,7 +99,7 @@ class WebApiService
 
         // Extract all product refs from items
         $productRefs = collect($items)
-            ->flatMap(fn($item) => $item['posRefObj'])
+            ->flatMap(fn ($item) => $item['posRefObj'])
             ->pluck('productRef')
             ->unique()
             ->toArray();
@@ -107,11 +109,11 @@ class WebApiService
 
         // Check if all products are found
         $notFoundProducts = collect($productRefs)
-            ->reject(fn($ref) => $products->has($ref))
+            ->reject(fn ($ref) => $products->has($ref))
             ->toArray();
 
-        if (!empty($notFoundProducts)) {
-            throw new Exception('منتجات غير موجودة: ' . json_encode($notFoundProducts));
+        if (! empty($notFoundProducts)) {
+            throw new Exception('منتجات غير موجودة: '.json_encode($notFoundProducts));
         }
 
         // Build order items
@@ -158,7 +160,7 @@ class WebApiService
         $order->discount = $realPosTotal - $order->total;
 
         // Calculate profit
-        $cost = $order->items->sum(fn($item) => $item->cost * $item->quantity);
+        $cost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
         $profitValue = $order->total - $cost;
 
         // Update order with calculated values
@@ -287,17 +289,17 @@ class WebApiService
         try {
             $websiteUrl = setting(SettingKey::WEBSITE_URL);
 
-            $response = Http::post($websiteUrl . '/api/order-status', [
+            $response = Http::post($websiteUrl.'/api/order-status', [
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);
             Log::info('إرسال تحديث الطلب إلى العميل', [
                 'order_id' => $order->id,
-                'url' => $websiteUrl . '/api/order-status',
+                'url' => $websiteUrl.'/api/order-status',
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);
-            if($response->failed()) {
+            if ($response->failed()) {
                 Log::error('خطأ في استجابة تحديث الطلب من العميل', [
                     'order_id' => $order->id,
                     'response_status' => $response->status(),
@@ -309,7 +311,7 @@ class WebApiService
         } catch (Exception $e) {
             Log::error('فشل في إرسال تحديث الطلب إلى العميل', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw new Exception('فشل في إرسال تحديث الطلب إلى العميل');
         }

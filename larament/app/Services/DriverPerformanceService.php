@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
 use App\Models\Driver;
 use App\Models\Order;
-use App\Enums\OrderStatus;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DriverPerformanceService
 {
@@ -16,7 +15,7 @@ class DriverPerformanceService
      */
     public function getDriverPerformanceData(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): Collection
     {
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $ordersQuery = Order::query()
                 ->whereIn('shift_id', $shiftIds)
                 ->whereNotNull('driver_id');
@@ -61,7 +60,7 @@ class DriverPerformanceService
             ->with(['customer', 'user', 'shift', 'payments'])
             ->where('driver_id', $driverId);
 
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $query->whereIn('shift_id', $shiftIds);
         } else {
             $shiftsReportService = app(ShiftsReportService::class);
@@ -69,7 +68,7 @@ class DriverPerformanceService
                 ->pluck('id')
                 ->toArray();
 
-            if (!empty($availableShiftIds)) {
+            if (! empty($availableShiftIds)) {
                 $query->whereIn('shift_id', $availableShiftIds);
             }
         }
@@ -82,7 +81,7 @@ class DriverPerformanceService
      */
     public function getDriverPerformanceSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
-        if ($shiftIds && !empty($shiftIds)) {
+        if ($shiftIds && ! empty($shiftIds)) {
             $ordersQuery = Order::query()
                 ->whereIn('shift_id', $shiftIds)
                 ->whereNotNull('driver_id')

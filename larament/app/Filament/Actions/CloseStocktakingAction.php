@@ -2,9 +2,9 @@
 
 namespace App\Filament\Actions;
 
-use Exception;
 use App\Models\Stocktaking;
 use App\Services\StocktakingService;
+use Exception;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -16,7 +16,7 @@ class CloseStocktakingAction
             ->label('إغلاق الجرد')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
-            ->visible(fn(Stocktaking $record): bool => is_null($record->closed_at))
+            ->visible(fn (Stocktaking $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق الجرد')
             ->modalDescription('هل أنت متأكد من إغلاق هذا الجرد؟ سيتم تحديث كميات المخزون بناءً على الكميات الفعلية ولن يمكن تعديل الجرد بعد ذلك.')
@@ -50,7 +50,7 @@ class CloseStocktakingAction
             ->label('إغلاق')
             ->icon('heroicon-o-lock-closed')
             ->color('success')
-            ->visible(fn(Stocktaking $record): bool => is_null($record->closed_at))
+            ->visible(fn (Stocktaking $record): bool => is_null($record->closed_at))
             ->requiresConfirmation()
             ->modalHeading('إغلاق الجرد')
             ->modalDescription('هل أنت متأكد من إغلاق هذا الجرد؟ سيتم تحديث كميات المخزون بناءً على الكميات الفعلية ولن يمكن تعديل الجرد بعد ذلك.')

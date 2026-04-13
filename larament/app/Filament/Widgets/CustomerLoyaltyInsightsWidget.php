@@ -2,16 +2,17 @@
 
 namespace App\Filament\Widgets;
 
-use Carbon\Carbon;
 use App\Services\CustomersPerformanceReportService;
+use Carbon\Carbon;
+use Filament\Support\Enums\IconPosition;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Filament\Support\Enums\IconPosition;
 
 class CustomerLoyaltyInsightsWidget extends BaseWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
@@ -30,12 +31,12 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
         $insights = $this->getCustomerLoyaltyInsights();
 
         return [
-            Stat::make('معدل العودة', number_format($insights['return_rate'], 1) . '%')
+            Stat::make('معدل العودة', number_format($insights['return_rate'], 1).'%')
                 ->description('نسبة العملاء الذين قاموا بطلب أكثر من مرة')
                 ->descriptionIcon('heroicon-m-arrow-path', IconPosition::Before)
                 ->color($insights['return_rate'] >= 50 ? 'success' : ($insights['return_rate'] >= 30 ? 'warning' : 'danger')),
 
-            Stat::make('متوسط مدة العلاقة', $insights['avg_customer_lifetime'] . ' يوم')
+            Stat::make('متوسط مدة العلاقة', $insights['avg_customer_lifetime'].' يوم')
                 ->description('متوسط المدة بين أول وآخر طلب للعميل')
                 ->descriptionIcon('heroicon-m-clock', IconPosition::Before)
                 ->color('info'),
@@ -55,7 +56,7 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-star', IconPosition::Before)
                 ->color('success'),
 
-            Stat::make('متوسط الفترة بين الطلبات', $insights['avg_days_between_orders'] . ' يوم')
+            Stat::make('متوسط الفترة بين الطلبات', $insights['avg_days_between_orders'].' يوم')
                 ->description('متوسط عدد الأيام بين الطلبات للعملاء المعاودين')
                 ->descriptionIcon('heroicon-m-calendar-days', IconPosition::Before)
                 ->color('gray'),
@@ -84,8 +85,9 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
                 return Carbon::parse($customer->first_order_date)
                     ->diffInDays(Carbon::parse($customer->last_order_date));
             }
+
             return 0;
-        })->filter(fn($lifetime) => $lifetime > 0);
+        })->filter(fn ($lifetime) => $lifetime > 0);
 
         $avgLifetime = $lifetimes->count() > 0 ? $lifetimes->avg() : 0;
 
@@ -115,6 +117,7 @@ class CustomerLoyaltyInsightsWidget extends BaseWidget
             $avgDaysBetweenOrders = $returningCustomersWithLifetime->map(function ($customer) {
                 $lifetime = Carbon::parse($customer->first_order_date)
                     ->diffInDays(Carbon::parse($customer->last_order_date));
+
                 return $customer->total_orders > 1 ? $lifetime / ($customer->total_orders - 1) : 0;
             })->avg();
         }

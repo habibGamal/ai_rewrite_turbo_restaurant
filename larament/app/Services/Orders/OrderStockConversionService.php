@@ -2,23 +2,20 @@
 
 namespace App\Services\Orders;
 
-use Exception;
+use App\Enums\MovementReason;
+use App\Enums\ProductType;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductComponent;
-use App\Enums\ProductType;
 use App\Services\StockService;
-use App\Enums\MovementReason;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class OrderStockConversionService
 {
     public function __construct(
         private readonly StockService $stockService
-    ) {
-    }
+    ) {}
 
     /**
      * Convert order items to stock items for stock reduction
@@ -48,10 +45,10 @@ class OrderStockConversionService
 
                 case ProductType::RawMaterial:
                     // Raw materials can't be sold directly in orders
-                    Log::warning("Raw material found in order items", [
+                    Log::warning('Raw material found in order items', [
                         'order_id' => $order->id,
                         'product_id' => $product->id,
-                        'product_name' => $product->name
+                        'product_name' => $product->name,
                     ]);
                     break;
             }
@@ -83,7 +80,7 @@ class OrderStockConversionService
                     'product_id' => $component->id,
                     'quantity' => $requiredQuantity,
                 ];
-            } else if ($component->type === ProductType::Manufactured) {
+            } elseif ($component->type === ProductType::Manufactured) {
                 // Recursively break down nested manufactured products
                 $nestedComponents = $this->getManufacturedProductComponents($component, $requiredQuantity);
                 $components = array_merge($components, $nestedComponents);
@@ -132,9 +129,9 @@ class OrderStockConversionService
             );
 
         } catch (Exception $e) {
-            Log::error("Failed to remove stock for completed order", [
+            Log::error('Failed to remove stock for completed order', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return false;
@@ -160,9 +157,9 @@ class OrderStockConversionService
             );
 
         } catch (Exception $e) {
-            Log::error("Failed to add stock back for cancelled order", [
+            Log::error('Failed to add stock back for cancelled order', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return false;

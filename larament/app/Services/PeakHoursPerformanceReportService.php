@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\OrderItem;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Order;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class PeakHoursPerformanceReportService
 {
@@ -52,6 +50,7 @@ class PeakHoursPerformanceReportService
                     $item->hour >= 17 && $item->hour < 21 => 'مساء',
                     default => 'ليل'
                 };
+
                 return $item;
             });
     }
@@ -87,6 +86,7 @@ class PeakHoursPerformanceReportService
                     'Saturday' => 'السبت',
                     default => $item->day_name
                 };
+
                 return $item;
             });
     }
@@ -121,6 +121,7 @@ class PeakHoursPerformanceReportService
                     Carbon::parse($item->week_start)->format('d/m'),
                     Carbon::parse($item->week_end)->format('d/m')
                 );
+
                 return $item;
             });
     }
@@ -151,9 +152,10 @@ class PeakHoursPerformanceReportService
                 $monthNames = [
                     1 => 'يناير', 2 => 'فبراير', 3 => 'مارس', 4 => 'أبريل',
                     5 => 'مايو', 6 => 'يونيو', 7 => 'يوليو', 8 => 'أغسطس',
-                    9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر'
+                    9 => 'سبتمبر', 10 => 'أكتوبر', 11 => 'نوفمبر', 12 => 'ديسمبر',
                 ];
                 $item->month_label = sprintf('%s %d', $monthNames[$item->month], $item->year);
+
                 return $item;
             });
     }
@@ -220,6 +222,7 @@ class PeakHoursPerformanceReportService
             ->map(function ($item) {
                 $item->hour_label = sprintf('%02d:00', $item->hour);
                 $item->type_label = $item->type->label();
+
                 return $item;
             });
     }
@@ -247,6 +250,7 @@ class PeakHoursPerformanceReportService
                 $item->total_orders / $item->unique_customers : 0;
             $item->revenue_per_customer = $item->unique_customers > 0 ?
                 $item->total_sales / $item->unique_customers : 0;
+
             return $item;
         });
 
@@ -272,6 +276,7 @@ class PeakHoursPerformanceReportService
         // Calculate workload score based on orders and sales
         $hourlyData = $hourlyData->map(function ($item) {
             $item->workload_score = ($item->total_orders * 0.6) + ($item->total_sales / 100 * 0.4);
+
             return $item;
         });
 
@@ -331,7 +336,7 @@ class PeakHoursPerformanceReportService
         $eveningOrders = $hourlyData->whereBetween('hour', [17, 22])->sum('total_orders');
 
         if ($eveningOrders > $morningOrders * 1.5) {
-            $recommendations[] = "التركيز على تقوية الطاقم المسائي - حيث تزيد الطلبات بنسبة 50% عن الصباح";
+            $recommendations[] = 'التركيز على تقوية الطاقم المسائي - حيث تزيد الطلبات بنسبة 50% عن الصباح';
         }
 
         return $recommendations;
@@ -342,7 +347,7 @@ class PeakHoursPerformanceReportService
      */
     public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
     {
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             return [
                 'title' => 'تقرير أداء ساعات الذروة - جميع الفترات',
                 'description' => 'تحليل أنماط المبيعات والذروة عبر الساعات والأيام والأسابيع',

@@ -2,22 +2,31 @@
 
 namespace App\Services;
 
-use App\Models\Setting;
 use App\Enums\SettingKey;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
 class SettingsService
 {
     // Setting keys constants for backward compatibility
     public const WEBSITE_URL = 'website_url';
+
     public const CASHIER_PRINTER_IP = 'cashier_printer_ip';
+
     public const RECEIPT_FOOTER = 'receipt_footer';
+
     public const DINE_IN_SERVICE_CHARGE = 'dine_in_service_charge';
+
     public const RESTAURANT_NAME = 'restaurant_name';
+
     public const RESTAURANT_PRINT_LOGO = 'restaurant_print_logo';
+
     public const RESTAURANT_OFFICIAL_LOGO = 'restaurant_official_logo';
+
     public const RESTAURANT_QR_LOGO = 'restaurant_qr_logo';
+
     public const NODE_TYPE = 'node_type';
+
     public const MASTER_NODE_LINK = 'master_node_link';
 
     /**
@@ -50,6 +59,7 @@ class SettingsService
     public function getDineInServiceCharge(): float
     {
         $value = $this->get(SettingKey::DINE_IN_SERVICE_CHARGE->value, SettingKey::DINE_IN_SERVICE_CHARGE->defaultValue());
+
         return (float) $value;
     }
 
@@ -115,6 +125,7 @@ class SettingsService
     public function isCashierDiscountsAllowed(): bool
     {
         $value = $this->get(SettingKey::ALLOW_CASHIER_DISCOUNTS->value, SettingKey::ALLOW_CASHIER_DISCOUNTS->defaultValue());
+
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
@@ -124,6 +135,7 @@ class SettingsService
     public function isCashierCancelOrdersAllowed(): bool
     {
         $value = $this->get(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value, SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->defaultValue());
+
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
@@ -133,6 +145,7 @@ class SettingsService
     public function isCashierItemChangesAllowed(): bool
     {
         $value = $this->get(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value, SettingKey::ALLOW_CASHIER_ITEM_CHANGES->defaultValue());
+
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
@@ -142,6 +155,7 @@ class SettingsService
     public function isWebOrdersShiftTransferAllowed(): bool
     {
         $value = $this->get(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value, SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->defaultValue());
+
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
@@ -151,6 +165,7 @@ class SettingsService
     public function get(string $key, mixed $default = null): mixed
     {
         $setting = Setting::where('key', $key)->first();
+
         return $setting?->value !== null && $setting->value !== '' ? $setting->value : $default;
     }
 
@@ -202,6 +217,7 @@ class SettingsService
         foreach (SettingKey::cases() as $settingKey) {
             $defaults[$settingKey->value] = $settingKey->defaultValue();
         }
+
         return $defaults;
     }
 
@@ -211,6 +227,7 @@ class SettingsService
     public function validate(string $key, mixed $value): bool
     {
         $settingKey = SettingKey::tryFrom($key);
+
         return $settingKey ? $settingKey->validate($value) : true;
     }
 
@@ -223,6 +240,7 @@ class SettingsService
         foreach (SettingKey::cases() as $settingKey) {
             $rules[$settingKey->value] = $settingKey->validationRules();
         }
+
         return $rules;
     }
 
@@ -231,6 +249,6 @@ class SettingsService
      */
     public function getAllKeys(): array
     {
-        return array_map(fn(SettingKey $key) => $key->value, SettingKey::cases());
+        return array_map(fn (SettingKey $key) => $key->value, SettingKey::cases());
     }
 }

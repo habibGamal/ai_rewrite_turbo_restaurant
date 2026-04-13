@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
-use Exception;
-use InvalidArgumentException;
-use App\Models\Product;
-use App\Models\InventoryItem;
-use App\Models\InventoryItemMovement;
+use App\DTOs\StockMovementDTO;
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
-use App\DTOs\StockMovementDTO;
+use App\Models\InventoryItem;
+use App\Models\InventoryItemMovement;
+use App\Models\Product;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
+use InvalidArgumentException;
 
 class StockService
 {
@@ -30,6 +30,7 @@ class StockService
         // Ensure we're using the Query Builder approach for better compatibility
         $this->dailyAggregationService = $dailyAggregationService;
     }
+
     /**
      * Add stock for multiple items
      */
@@ -48,6 +49,7 @@ class StockService
 
     /**
      * Legacy method for backward compatibility
+     *
      * @deprecated Use addStock() or removeStock() instead
      */
     public function processMultipleItems(array $items, string $operation = 'add', string|MovementReason $reason = 'bulk_operation', $referenceable = null): bool
@@ -84,15 +86,17 @@ class StockService
             // $this->logOperation($items, operation: $operation, $reason);
 
             DB::commit();
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Failed to process stock movement: " . $e->getMessage(), [
+            Log::error('Failed to process stock movement: '.$e->getMessage(), [
                 'operation' => $operation->value,
                 'reason' => $reason->value,
-                'items_count' => count($items)
+                'items_count' => count($items),
             ]);
+
             return false;
         }
     }
@@ -107,11 +111,11 @@ class StockService
         }
 
         foreach ($items as $index => $item) {
-            if (!isset($item['product_id']) || !isset($item['quantity'])) {
+            if (! isset($item['product_id']) || ! isset($item['quantity'])) {
                 throw new InvalidArgumentException("Item at index {$index} must have 'product_id' and 'quantity' keys");
             }
 
-            if (!is_numeric($item['product_id']) || !is_numeric($item['quantity'])) {
+            if (! is_numeric($item['product_id']) || ! is_numeric($item['quantity'])) {
                 throw new InvalidArgumentException("Item at index {$index} must have numeric 'product_id' and 'quantity' values");
             }
 
@@ -130,8 +134,8 @@ class StockService
         $existingProducts = Product::whereIn('id', $productIds)->pluck('id')->toArray();
         $missingProducts = array_diff($productIds, $existingProducts);
 
-        if (!empty($missingProducts)) {
-            throw new InvalidArgumentException("Products not found: " . implode(', ', $missingProducts));
+        if (! empty($missingProducts)) {
+            throw new InvalidArgumentException('Products not found: '.implode(', ', $missingProducts));
         }
     }
 
@@ -147,8 +151,8 @@ class StockService
 
         $insufficientItems = $this->validateStockAvailability($items);
 
-        if (!empty($insufficientItems)) {
-            $errorMessage = "Insufficient stock for: " .
+        if (! empty($insufficientItems)) {
+            $errorMessage = 'Insufficient stock for: '.
                 implode(', ', array_column($insufficientItems, 'product_name'));
             throw new InvalidArgumentException($errorMessage);
         }
@@ -254,7 +258,7 @@ class StockService
                 'product_id' => $movement->productId,
                 'quantity' => $movement->quantity,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
         }
 
@@ -281,7 +285,7 @@ class StockService
                 'referenceable_type' => $movement->referenceable ? get_class($movement->referenceable) : null,
                 'referenceable_id' => $movement->referenceable?->id,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
         }
 
@@ -295,21 +299,18 @@ class StockService
     {
         try {
             $today = Carbon::today();
-            $productIds = array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements));
+            $productIds = array_unique(array: array_map(fn ($movement) => $movement->productId, $stockMovements));
 
             // Then aggregate movements for better performance
             $this->dailyAggregationService->aggregateMultipleMovements($productIds, $today);
 
         } catch (Exception $e) {
             // Log error but don't fail the transaction as daily aggregation is not critical
-            Log::error("Failed to update daily aggregations: " . $e->getMessage(), [
-                'product_ids' => array_unique(array: array_map(fn($movement) => $movement->productId, $stockMovements))
+            Log::error('Failed to update daily aggregations: '.$e->getMessage(), [
+                'product_ids' => array_unique(array: array_map(fn ($movement) => $movement->productId, $stockMovements)),
             ]);
         }
     }
-
-
-
 
     /**
      * Log the operation
@@ -322,7 +323,7 @@ class StockService
         Log::info("Bulk stock {$operationType}: {$totalItems} items processed", [
             'operation' => $operation->value,
             'reason' => $reason->value,
-            'items_count' => $totalItems
+            'items_count' => $totalItems,
         ]);
     }
 
@@ -332,6 +333,7 @@ class StockService
     public function getCurrentStock(int $productId): float
     {
         $inventoryItem = InventoryItem::where('product_id', $productId)->first();
+
         return $inventoryItem ? $inventoryItem->quantity : 0;
     }
 
@@ -376,7 +378,7 @@ class StockService
                     'product_id' => $productId,
                     'product_name' => $product ? $product->name : 'Unknown',
                     'required_quantity' => $requiredQuantity,
-                    'available_quantity' => $availableQuantity
+                    'available_quantity' => $availableQuantity,
                 ];
             }
         }

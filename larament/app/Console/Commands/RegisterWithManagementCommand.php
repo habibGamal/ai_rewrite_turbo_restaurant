@@ -32,8 +32,9 @@ class RegisterWithManagementCommand extends Command
 
         try {
             $managementUrl = config('app.manage_operations_url');
-            if (!$managementUrl) {
+            if (! $managementUrl) {
                 $this->error('❌ MANAGE_OPERATIONS_URL is not configured');
+
                 return Command::FAILURE;
             }
 
@@ -67,33 +68,36 @@ class RegisterWithManagementCommand extends Command
             ];
 
             $response = Http::timeout(30)
-                ->post(rtrim($managementUrl, '/') . '/api/app-instances/register', $registrationData);
+                ->post(rtrim($managementUrl, '/').'/api/app-instances/register', $registrationData);
 
             if ($response->successful()) {
                 $this->info('✅ Successfully registered with management operations system');
-                $this->line('Instance ID: ' . config('app.id'));
-                $this->line('Management URL: ' . $managementUrl);
+                $this->line('Instance ID: '.config('app.id'));
+                $this->line('Management URL: '.$managementUrl);
                 Log::info('Successfully registered with management operations system', [
                     'app_id' => config('app.id'),
                     'management_url' => $managementUrl,
                 ]);
+
                 return Command::SUCCESS;
             } else {
                 $this->error('❌ Failed to register with management operations system');
-                $this->line('Response: ' . $response->body());
+                $this->line('Response: '.$response->body());
                 Log::error('Failed to register with management operations system', [
                     'status' => $response->status(),
                     'response' => $response->body(),
                 ]);
+
                 return Command::FAILURE;
             }
 
         } catch (Exception $e) {
-            $this->error('❌ Registration failed: ' . $e->getMessage());
+            $this->error('❌ Registration failed: '.$e->getMessage());
             Log::error('Registration with management operations failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return Command::FAILURE;
         }
     }
@@ -105,7 +109,7 @@ class RegisterWithManagementCommand extends Command
     {
         $envPath = base_path('.env');
 
-        if (!file_exists($envPath)) {
+        if (! file_exists($envPath)) {
             throw new Exception('.env file not found');
         }
 

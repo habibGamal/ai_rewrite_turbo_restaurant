@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\ExpenceType;
+use App\Models\Expense;
 use App\Models\Shift;
 use Illuminate\Database\Seeder;
-use App\Models\Expense;
-use App\Models\ExpenceType;
 
 class ExpenseSeeder extends Seeder
 {
@@ -24,7 +24,7 @@ class ExpenseSeeder extends Seeder
             Expense::create([
                 'expence_type_id' => $expenseType->id,
                 'amount' => rand(50, 1000),
-                'notes' => 'مصروف ' . $expenseType->name . ' - ' . 'شهر ' . now()->format('m/Y'),
+                'notes' => 'مصروف '.$expenseType->name.' - '.'شهر '.now()->format('m/Y'),
                 'shift_id' => Shift::factory()->create(['closed' => true])->id, // Create a new shift for each expense
                 'created_at' => now()->subDays(rand(1, 30)),
             ]);

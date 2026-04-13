@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            if (!Schema::hasColumn('products', 'product_ref')) {
+            if (! Schema::hasColumn('products', 'product_ref')) {
                 $table->string('product_ref')->nullable()->after('name');
             }
         });
@@ -23,7 +23,7 @@ return new class extends Migration
         foreach ($products as $product) {
             DB::table('products')
                 ->where('id', $product->id)
-                ->update(['product_ref' => 'PROD_' . str_pad($product->id, 6, '0', STR_PAD_LEFT)]);
+                ->update(['product_ref' => 'PROD_'.str_pad($product->id, 6, '0', STR_PAD_LEFT)]);
         }
 
         // Now make it required and unique

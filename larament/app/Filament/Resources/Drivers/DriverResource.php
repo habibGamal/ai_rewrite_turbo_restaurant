@@ -2,25 +2,22 @@
 
 namespace App\Filament\Resources\Drivers;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\Drivers\Pages\ListDrivers;
 use App\Filament\Resources\Drivers\Pages\CreateDriver;
-use App\Filament\Resources\Drivers\Pages\ViewDriver;
 use App\Filament\Resources\Drivers\Pages\EditDriver;
-use App\Filament\Resources\DriverResource\Pages;
+use App\Filament\Resources\Drivers\Pages\ListDrivers;
+use App\Filament\Resources\Drivers\Pages\ViewDriver;
+use App\Filament\Traits\AdminAccess;
 use App\Models\Driver;
-use Filament\Forms;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use \App\Filament\Traits\AdminAccess;
 
 class DriverResource extends Resource
 {
@@ -28,9 +25,9 @@ class DriverResource extends Resource
 
     protected static ?string $model = Driver::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-circle';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
 
     protected static ?int $navigationSort = 3;
 

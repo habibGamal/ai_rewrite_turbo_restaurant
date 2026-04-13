@@ -2,14 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
 use App\Models\Customer;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Collection;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class CustomersPerformanceReportService
 {
@@ -159,7 +157,7 @@ class CustomersPerformanceReportService
             ->limit(1)
             ->first();
 
-        if (!$summary) {
+        if (! $summary) {
             return [
                 'total_customers' => 0,
                 'total_orders' => 0,
@@ -263,7 +261,7 @@ class CustomersPerformanceReportService
      */
     public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
     {
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             return [
                 'title' => 'تقرير أداء العملاء - جميع الفترات',
                 'description' => 'أداء المبيعات والأرباح لجميع العملاء عبر جميع أنواع الطلبات',

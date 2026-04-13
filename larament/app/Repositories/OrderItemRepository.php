@@ -17,7 +17,8 @@ class OrderItemRepository implements OrderItemRepositoryInterface
 
     public function createManyForOrder(Order $order, array $itemDTOs): Collection
     {
-        $itemsData = array_map(fn($itemDTO) => $itemDTO->toArray(), $itemDTOs);
+        $itemsData = array_map(fn ($itemDTO) => $itemDTO->toArray(), $itemDTOs);
+
         return $order->items()->createMany($itemsData);
     }
 

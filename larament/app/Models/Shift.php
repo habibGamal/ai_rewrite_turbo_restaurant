@@ -51,7 +51,7 @@ class Shift extends Model
 
     public function getIsActiveAttribute(): bool
     {
-        return $this->end_at === null && !$this->closed;
+        return $this->end_at === null && ! $this->closed;
     }
 
     public function getDurationAttribute(): string
@@ -82,7 +82,7 @@ class Shift extends Model
 
     public function getDeficitAttribute(): float
     {
-        if (!$this->real_cash || !$this->end_cash) {
+        if (! $this->real_cash || ! $this->end_cash) {
             return 0;
         }
 

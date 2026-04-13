@@ -2,16 +2,15 @@
 
 namespace App\Filament\Actions\Forms;
 
-use Filament\Actions\Action;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Notifications\Notification;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Support\RawJs;
+use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Product;
-use App\Enums\ProductType;
+use Filament\Actions\Action;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class ProductComponentsImporterAction extends Action
 {
@@ -44,7 +43,7 @@ class ProductComponentsImporterAction extends Action
                     ->placeholder('جميع الفئات')
                     ->options(Category::all()->pluck('name', 'id'))
                     ->reactive()
-                    ->afterStateUpdated(fn($state, callable $set) => $set('selected_products', [])),
+                    ->afterStateUpdated(fn ($state, callable $set) => $set('selected_products', [])),
 
                 CheckboxList::make('selected_products')
                     ->label('اختر المكونات للإضافة إلى الوصفة')
@@ -60,20 +59,22 @@ class ProductComponentsImporterAction extends Action
 
                         // Filter by search term if provided
                         if ($search = $get('search_filter')) {
-                            $query->where('name', 'like', '%' . $search . '%');
+                            $query->where('name', 'like', '%'.$search.'%');
                         }
 
                         $this->products = $query->get();
+
                         return $this->products->mapWithKeys(function ($product) {
                             $price = $product->cost ?? $product->price;
                             $categoryName = $product->category ? $product->category->name : 'بدون فئة';
-                            $typeLabel = match($product->type->value) {
+                            $typeLabel = match ($product->type->value) {
                                 'raw_material' => 'مادة خام',
                                 'consumable' => 'استهلاكي',
                                 default => $product->type->value
                             };
+
                             return [
-                                $product->id => $product->name . ' - ' . $price . ' ج.م' . ' (' . $categoryName . ') - ' . $typeLabel
+                                $product->id => $product->name.' - '.$price.' ج.م'.' ('.$categoryName.') - '.$typeLabel,
                             ];
                         });
                     })
@@ -93,9 +94,10 @@ class ProductComponentsImporterAction extends Action
                             if ($product->unit) {
                                 $description .= " | الوحدة: {$product->unit}";
                             }
+
                             return [$product->id => $description];
                         });
-                    })
+                    }),
             ])
             ->action(function (array $data, Set $set, Get $get) {
                 $selectedProducts = $data['selected_collection'] ?? [];
@@ -112,6 +114,7 @@ class ProductComponentsImporterAction extends Action
                     // Skip if component already exists in the list
                     if (in_array($productId, $existingComponentIds)) {
                         $skippedCount++;
+
                         continue;
                     }
 

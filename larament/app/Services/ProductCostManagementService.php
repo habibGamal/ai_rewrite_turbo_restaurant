@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use Exception;
-use App\Enums\ProductType;
 use App\Models\Product;
-use Illuminate\Support\Collection;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -14,9 +12,6 @@ class ProductCostManagementService
     /**
      * Update product costs using average cost strategy
      * Formula: new cost = (old cost * old quantity + new cost * new quantity) / total quantity
-     *
-     * @param  $purchaseItems
-     * @return bool
      */
     public function updateProductCostsWithAverage($purchaseItems): bool
     {
@@ -37,13 +32,13 @@ class ProductCostManagementService
             }
 
             DB::commit();
+
             return true;
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Failed to update product costs: " . $e->getMessage());
+            Log::error('Failed to update product costs: '.$e->getMessage());
             throw $e;
         }
     }
-
 }

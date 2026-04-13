@@ -2,49 +2,43 @@
 
 namespace App\Filament\Resources\Wastes;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Actions;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\DatePicker;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\Wastes\Pages\ListWastes;
-use App\Filament\Resources\Wastes\Pages\CreateWaste;
-use App\Filament\Resources\Wastes\Pages\ViewWaste;
-use App\Filament\Resources\Wastes\Pages\EditWaste;
-use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\CloseWasteAction;
+use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintWasteAction;
 use App\Filament\Components\Forms\ProductSelector;
-use App\Filament\Resources\WasteResource\Pages;
-use App\Models\Waste;
+use App\Filament\Resources\Wastes\Pages\CreateWaste;
+use App\Filament\Resources\Wastes\Pages\EditWaste;
+use App\Filament\Resources\Wastes\Pages\ListWastes;
+use App\Filament\Resources\Wastes\Pages\ViewWaste;
+use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Waste;
 use App\Services\Resources\WasteCalculatorService;
-use App\Enums\ProductType;
-use Filament\Forms;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Notifications\Notification;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use \App\Filament\Traits\AdminAccess;
 
 class WasteResource extends Resource
 {
@@ -52,7 +46,7 @@ class WasteResource extends Resource
 
     protected static ?string $model = Waste::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-trash';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-trash';
 
     protected static ?string $navigationLabel = 'التالف';
 
@@ -60,7 +54,7 @@ class WasteResource extends Resource
 
     protected static ?string $pluralModelLabel = 'سجلات التالف';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المخزون';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المخزون';
 
     public static function form(Schema $schema): Schema
     {
@@ -92,16 +86,16 @@ class WasteResource extends Resource
 
                 Section::make('الأصناف التالفة')
                     ->extraAttributes([
-                        "x-init" => WasteCalculatorService::getJavaScriptCalculation(),
+                        'x-init' => WasteCalculatorService::getJavaScriptCalculation(),
                     ])
                     ->schema([
                         Actions::make([
                             ProductImporterAction::make('importProducts')
-                            ->additionalProps(function (Product $product) {
-                                return [
-                                    'stock_quantity' => $product->inventoryItem?->quantity ?? 0,
-                                ];
-                            }),
+                                ->additionalProps(function (Product $product) {
+                                    return [
+                                        'stock_quantity' => $product->inventoryItem?->quantity ?? 0,
+                                    ];
+                                }),
                         ])
                             ->alignStart(),
 
@@ -109,7 +103,7 @@ class WasteResource extends Resource
                             ->columnSpanFull(),
                         Repeater::make('items')
                             ->label('الأصناف')
-                            ->relationship('items', fn($query) => $query->with('product.inventoryItem'))
+                            ->relationship('items', fn ($query) => $query->with('product.inventoryItem'))
                             ->table([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
@@ -136,7 +130,7 @@ class WasteResource extends Resource
                                 TextInput::make('stock_quantity')
                                     ->label('الكمية الحالية')
                                     ->formatStateUsing(function ($record) {
-                                        return ($record->product?->inventoryItem->quantity ?? 'غير محدد');
+                                        return $record->product?->inventoryItem->quantity ?? 'غير محدد';
                                     })
                                     ->disabled(),
 
@@ -146,7 +140,6 @@ class WasteResource extends Resource
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),
-
 
                                 TextInput::make('price')
                                     ->label('سعر الوحدة (ج.م)')
@@ -198,7 +191,7 @@ class WasteResource extends Resource
                                 return $state ? 'مغلق' : 'مفتوح';
                             })
                             ->badge()
-                            ->color(fn($state): string => $state ? 'success' : 'warning'),
+                            ->color(fn ($state): string => $state ? 'success' : 'warning'),
 
                         TextEntry::make('created_at')
                             ->label('تاريخ الإنشاء')
@@ -238,7 +231,7 @@ class WasteResource extends Resource
                 TextColumn::make('notes')
                     ->label('ملاحظات')
                     ->limit(50)
-                    ->tooltip(fn($state): ?string => $state),
+                    ->tooltip(fn ($state): ?string => $state),
 
                 TextColumn::make('closed_at')
                     ->label('الحالة')
@@ -246,7 +239,7 @@ class WasteResource extends Resource
                         return $state ? 'مغلق' : 'مفتوح';
                     })
                     ->badge()
-                    ->color(fn($state): string => $state ? 'success' : 'warning')
+                    ->color(fn ($state): string => $state ? 'success' : 'warning')
                     ->sortable(),
 
                 TextColumn::make('created_at')
@@ -271,11 +264,11 @@ class WasteResource extends Resource
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     }),
 
@@ -285,9 +278,9 @@ class WasteResource extends Resource
                     ->trueLabel('مغلق')
                     ->falseLabel('مفتوح')
                     ->queries(
-                        true: fn(Builder $query) => $query->whereNotNull('closed_at'),
-                        false: fn(Builder $query) => $query->whereNull('closed_at'),
-                        blank: fn(Builder $query) => $query,
+                        true: fn (Builder $query) => $query->whereNotNull('closed_at'),
+                        false: fn (Builder $query) => $query->whereNull('closed_at'),
+                        blank: fn (Builder $query) => $query,
                     ),
             ])
             ->recordActions([

@@ -2,15 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use Filament\Actions\ExportAction;
-use App\Services\ProductsSalesReportService;
 use App\Filament\Exports\CategoryPerformanceExporter;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget as BaseWidget;
+use App\Services\ProductsSalesReportService;
+use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Illuminate\Database\Eloquent\Builder;
+use Filament\Widgets\TableWidget as BaseWidget;
 
 class CategoryPerformanceWidget extends BaseWidget
 {
@@ -19,6 +17,7 @@ class CategoryPerformanceWidget extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static bool $isLazy = false;
+
     protected static ?string $pollingInterval = null;
 
     protected static ?string $heading = 'أداء التصنيفات';
@@ -43,7 +42,7 @@ class CategoryPerformanceWidget extends BaseWidget
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(CategoryPerformanceExporter::class)
-                    ->fileName(fn () => 'category-performance-' . now()->format('Y-m-d-H-i-s') . '.xlsx'),
+                    ->fileName(fn () => 'category-performance-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->columns([
                 TextColumn::make('category_name')
@@ -75,7 +74,7 @@ class CategoryPerformanceWidget extends BaseWidget
                     ->label('هامش الربح %')
                     ->state(function ($record) {
                         return $record->total_sales > 0
-                            ? number_format(($record->total_profit / $record->total_sales) * 100, 1) . '%'
+                            ? number_format(($record->total_profit / $record->total_sales) * 100, 1).'%'
                             : '0%';
                     }),
 
@@ -83,14 +82,16 @@ class CategoryPerformanceWidget extends BaseWidget
                     ->label('متوسط المبيعات')
                     ->getStateUsing(function ($record) {
                         $avg = $record->total_quantity > 0 ? $record->total_sales / $record->total_quantity : 0;
-                        return number_format($avg, 2) . ' ج.م';
+
+                        return number_format($avg, 2).' ج.م';
                     }),
 
                 TextColumn::make('avg_profit_per_product')
                     ->label('متوسط الربح')
                     ->getStateUsing(function ($record) {
                         $avg = $record->total_quantity > 0 ? $record->total_profit / $record->total_quantity : 0;
-                        return number_format($avg, 2) . ' ج.م';
+
+                        return number_format($avg, 2).' ج.م';
                     }),
             ])
             ->defaultSort('total_sales', 'desc')

@@ -44,7 +44,6 @@ class PurchaseInvoiceCalculatorService
         return $total;
     }
 
-
     /**
      * Calculate total for all items in a purchase invoice
      */
@@ -76,13 +75,13 @@ class PurchaseInvoiceCalculatorService
      */
     public static function getJavaScriptCalculation(): string
     {
-        return <<<JS
-            \$watch('\$wire.data', value => {
-                let items = \$wire.data.items;
+        return <<<'JS'
+            $watch('$wire.data', value => {
+                let items = $wire.data.items;
                 if (!Array.isArray(items)) {
                     items = Object.values(items);
                 }
-                \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0).toFixed(2);
+                $wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0).toFixed(2);
                 items.forEach(item => {
                     item.total = ((item.quantity * item.price) || 0).toFixed(2);
                 });

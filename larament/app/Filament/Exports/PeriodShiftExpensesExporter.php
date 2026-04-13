@@ -41,8 +41,9 @@ class PeriodShiftExpensesExporter extends Exporter
                 ->label('متوسط المبلغ (جنيه)')
                 ->state(function ($record) {
                     $count = $record->expenses_count ?? 0;
-                        $total = $record->expenses_sum_amount ?? 0;
-                        $average = $count > 0 ? $total / $count : 0;
+                    $total = $record->expenses_sum_amount ?? 0;
+                    $average = $count > 0 ? $total / $count : 0;
+
                     return number_format($average, 2);
                 }),
         ];
@@ -50,10 +51,10 @@ class PeriodShiftExpensesExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'تم إكمال تصدير ملخص مصروفات فترة الشفتات وتم تصدير ' . number_format($export->successful_rows) . ' ' . ($export->successful_rows == 1 ? 'نوع مصروف' : 'نوع مصروف') . '.';
+        $body = 'تم إكمال تصدير ملخص مصروفات فترة الشفتات وتم تصدير '.number_format($export->successful_rows).' '.($export->successful_rows == 1 ? 'نوع مصروف' : 'نوع مصروف').'.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' فشل في تصدير ' . number_format($failedRowsCount) . ' ' . ($failedRowsCount == 1 ? 'نوع مصروف' : 'نوع مصروف') . '.';
+            $body .= ' فشل في تصدير '.number_format($failedRowsCount).' '.($failedRowsCount == 1 ? 'نوع مصروف' : 'نوع مصروف').'.';
         }
 
         return $body;

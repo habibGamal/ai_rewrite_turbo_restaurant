@@ -2,14 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Customer;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\Customer;
+use App\Models\Order;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ChannelPerformanceReportService
 {
@@ -55,6 +54,7 @@ class ChannelPerformanceReportService
             ->map(function ($item) {
                 $item->type_label = $item->type->label();
                 $item->market_share = 0; // Will be calculated later
+
                 return $item;
             });
     }
@@ -89,6 +89,7 @@ class ChannelPerformanceReportService
             ->map(function ($item) use ($period) {
                 $item->type_label = $item->type->label();
                 $item->period_label = $this->formatPeriodLabel($item->period, $period);
+
                 return $item;
             });
     }
@@ -111,11 +112,11 @@ class ChannelPerformanceReportService
                 Order::select([
                     'customer_id',
                     'type',
-                    DB::raw('MIN(created_at) as first_order_date')
+                    DB::raw('MIN(created_at) as first_order_date'),
                 ])
-                ->where('status', OrderStatus::COMPLETED)
-                ->whereNotNull('customer_id')
-                ->groupBy('customer_id', 'type'),
+                    ->where('status', OrderStatus::COMPLETED)
+                    ->whereNotNull('customer_id')
+                    ->groupBy('customer_id', 'type'),
                 'first_order',
                 'customers.id',
                 '=',
@@ -149,6 +150,7 @@ class ChannelPerformanceReportService
             ->get()
             ->map(function ($item) {
                 $item->channel_label = OrderType::from($item->acquisition_channel)->label();
+
                 return $item;
             });
     }
@@ -232,6 +234,7 @@ class ChannelPerformanceReportService
                     ($item->net_profit / $item->total_revenue) * 100 : 0;
                 $item->profit_per_order = $item->total_orders > 0 ?
                     $item->net_profit / $item->total_orders : 0;
+
                 return $item;
             });
     }
@@ -257,6 +260,7 @@ class ChannelPerformanceReportService
             ->map(function ($item) {
                 $item->hour_label = sprintf('%02d:00', $item->hour);
                 $item->type_label = $item->type->label();
+
                 return $item;
             });
     }
@@ -309,7 +313,7 @@ class ChannelPerformanceReportService
         return match ($periodType) {
             'hourly' => Carbon::parse($period)->format('d/m H:i'),
             'daily' => Carbon::parse($period)->format('d/m/Y'),
-            'weekly' => 'أسبوع ' . $period,
+            'weekly' => 'أسبوع '.$period,
             'monthly' => Carbon::createFromFormat('Y-m', $period)->format('M Y'),
             default => $period
         };
@@ -320,7 +324,7 @@ class ChannelPerformanceReportService
      */
     public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
     {
-        if (!$startDate && !$endDate) {
+        if (! $startDate && ! $endDate) {
             return [
                 'title' => 'تقرير أداء القنوات - جميع الفترات',
                 'description' => 'تحليل أداء جميع قنوات البيع والمقارنة بينها',

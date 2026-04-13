@@ -46,9 +46,11 @@ import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
 import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
+import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
 import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
+import axios from "axios";
 import { useSymbologyScanner } from "@use-symbology-scanner/react";
 import {
     STANDARD_SYMBOLOGY_KEYS,
@@ -119,6 +121,10 @@ export default function ManageOrder({
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isPrintInKitchenModalOpen, setIsPrintInKitchenModalOpen] =
         useState(false);
+    const [isPrintChangesModalOpen, setIsPrintChangesModalOpen] =
+        useState(false);
+    const [pendingChangedItems, setPendingChangedItems] = useState<ReturnType<typeof detectChangedItems>>([]);
+    const [isChangesLoading, setIsChangesLoading] = useState(false);
 
     useEffect(() => {
         dispatch({ type: "init", orderItems: initOrderItems, user });
@@ -171,6 +177,48 @@ export default function ManageOrder({
         router.post(`/orders/cancel-order/${order.id}`);
     };
 
+    const handleSave = (finish: () => void) => {
+        const changed = detectChangedItems(orderItems, initOrderItems);
+
+        if (changed.length > 0) {
+            setPendingChangedItems(changed);
+            setIsPrintChangesModalOpen(true);
+            finish();
+        } else {
+            save(undefined, finish);
+        }
+    };
+
+    const handleSaveOnly = () => {
+        setIsChangesLoading(true);
+        save(() => setIsPrintChangesModalOpen(false), () => setIsChangesLoading(false));
+    };
+
+    const handleSaveAndPrint = () => {
+        setIsChangesLoading(true);
+        save(async () => {
+            try {
+                await axios.post("/print-in-kitchen", {
+                    orderId: order.id,
+                    type: "changes",
+                    items: pendingChangedItems.map((item) => ({
+                        product_id: item.product_id,
+                        name: item.name,
+                        old_quantity: item.old_quantity,
+                        new_quantity: item.new_quantity,
+                        delta: item.delta,
+                        notes: item.notes || null,
+                    })),
+                });
+                message.success("تم إرسال التغييرات للمطبخ بنجاح");
+            } catch {
+                message.error("حدث خطأ أثناء إرسال التغييرات للمطبخ");
+            } finally {
+                setIsPrintChangesModalOpen(false);
+            }
+        }, () => setIsChangesLoading(false));
+    };
+
     const askForCustomerInfo = (finish: () => void) => {
         modal.confirm({
             title: "هل تريد اضافة بيانات العميل؟",
@@ -220,11 +268,11 @@ export default function ManageOrder({
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "F8") {
                 e.preventDefault();
-                // save();
+                // save(undefined,()=>{});
             }
             if (e.key === "F9") {
                 e.preventDefault();
-                // printWithCanvas();
+                // printWithCanvas(() => {});
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -382,9 +430,7 @@ export default function ManageOrder({
                             </CanAccess>
                             <LoadingButton
                                 disabled={disableAllControls}
-                                onCustomClick={(finish) =>
-                                    save(undefined, finish)
-                                }
+                                onCustomClick={handleSave}
                                 size="large"
                                 icon={<SaveOutlined />}
                                 type="primary"
@@ -498,6 +544,14 @@ export default function ManageOrder({
                     onCancel={() => setIsPrintInKitchenModalOpen(false)}
                     order={order}
                     orderItems={orderItems}
+                />
+                <PrintChangesModal
+                    open={isPrintChangesModalOpen}
+                    onCancel={() => setIsPrintChangesModalOpen(false)}
+                    onSaveOnly={handleSaveOnly}
+                    onSaveAndPrint={handleSaveAndPrint}
+                    loading={isChangesLoading}
+                    changedItems={pendingChangedItems}
                 />
             </div>
         </CashierLayout>

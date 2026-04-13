@@ -74,13 +74,13 @@ class WasteCalculatorService
      */
     public static function getJavaScriptCalculation(): string
     {
-        return <<<JS
-            \$watch('\$wire.data', value => {
-                let items = \$wire.data.items;
+        return <<<'JS'
+            $watch('$wire.data', value => {
+                let items = $wire.data.items;
                 if (!Array.isArray(items)) {
                     items = Object.values(items);
                 }
-                \$wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0);
+                $wire.data.total = items.reduce((total, item) => total + (item.quantity * item.price || 0), 0);
                 items.forEach(item => {
                     item.total = item.quantity * item.price || 0;
                 });

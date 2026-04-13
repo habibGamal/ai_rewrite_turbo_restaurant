@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\InventoryItem;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InventoryItemFactory extends Factory
 {

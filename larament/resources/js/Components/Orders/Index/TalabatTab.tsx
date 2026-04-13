@@ -1,8 +1,9 @@
 import React from "react";
-import { Link, router } from "@inertiajs/react";
-import { Button, Col, Empty, Row, Typography, Badge } from "antd";
+import { router } from "@inertiajs/react";
+import { Button, Col, Empty, Row, Typography } from "antd";
 import { PhoneOutlined } from "@ant-design/icons";
 import { orderStatus } from "@/helpers/orderState";
+import { OrderCard } from "./OrderCard";
 import type { Order } from "@/types";
 
 interface TalabatTabProps {
@@ -10,7 +11,6 @@ interface TalabatTabProps {
 }
 
 export const TalabatTab: React.FC<TalabatTabProps> = ({ orders }) => {
-    // Sort orders
     const sortedOrders = [...orders].sort((a, b) => {
         if (a.status === b.status) {
             return 0;
@@ -24,11 +24,11 @@ export const TalabatTab: React.FC<TalabatTabProps> = ({ orders }) => {
 
     return (
         <div>
-            <Row gutter={[24, 16]}>
+            <Row gutter={[16, 16]}>
                 <Col span={6}>
                     <Button
                         onClick={createOrder}
-                        className="h-32 w-full"
+                        className="h-36 w-full"
                         type="primary"
                         size="large"
                     >
@@ -46,33 +46,25 @@ export const TalabatTab: React.FC<TalabatTabProps> = ({ orders }) => {
                 </Col>
 
                 {sortedOrders.map((order) => (
-                    <Col span={6} key={order.id}>
-                        <Link href={`/orders/manage/${order.id}`}>
-                            <Badge.Ribbon {...orderStatus(order.status)}>
-                                <div className="isolate grid place-items-center gap-4 rounded p-4 border">
-                                    <Typography.Title level={4}>
-                                        # طلب رقم {order.order_number}
-                                    </Typography.Title>
-                                    <Typography.Title
-                                        className="flex items-center gap-2"
-                                        level={5}
-                                    >
-                                        <PhoneOutlined
-                                            style={{ color: "#d7a600" }}
-                                        />
-                                        رقم العميل{" "}
-                                        {order.customer?.phone || "غير معروف"}
-                                    </Typography.Title>
-                                </div>
-                            </Badge.Ribbon>
-                        </Link>
-                    </Col>
+                    <OrderCard
+                        key={order.id}
+                        order={order}
+                        headerTitle={`# طلب رقم ${order.order_number}`}
+                        statusConfig={orderStatus(order.status)}
+                        className="space-y-3"
+                    >
+                        <Typography.Text className="flex items-center gap-2">
+                            <PhoneOutlined style={{ color: "#d7a600" }} />
+                            رقم العميل{" "}
+                            {order.customer?.phone || "غير معروف"}
+                        </Typography.Text>
+                    </OrderCard>
                 ))}
             </Row>
 
             {sortedOrders.length === 0 && (
                 <Empty
-                    className="mx-auto"
+                    className="mx-auto mt-8"
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="لا يوجد طلبات"
                 />

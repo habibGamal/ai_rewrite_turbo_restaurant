@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\InventoryDailyAggregationService;
 use App\Enums\SettingKey;
+use App\Services\InventoryDailyAggregationService;
 use App\Services\SettingsService;
 
 /*
@@ -32,8 +32,10 @@ if (! function_exists('shouldDayBeOpen')) {
      */
     function shouldDayBeOpen(): bool
     {
-        if (app(InventoryDailyAggregationService::class)->dayStatus() === null)
+        if (app(InventoryDailyAggregationService::class)->dayStatus() === null) {
             throw new Exception('يجب فتح اليوم قبل إجراء أي عمليات على المخزون');
+        }
+
         return true;
     }
 }

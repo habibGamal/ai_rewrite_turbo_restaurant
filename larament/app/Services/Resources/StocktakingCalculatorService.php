@@ -78,13 +78,13 @@ class StocktakingCalculatorService
      */
     public static function getJavaScriptCalculation(): string
     {
-        return <<<JS
-            \$watch('\$wire.data', value => {
-                let items = \$wire.data.items;
+        return <<<'JS'
+            $watch('$wire.data', value => {
+                let items = $wire.data.items;
                 if (!Array.isArray(items)) {
                     items = Object.values(items);
                 }
-                \$wire.data.total = items.reduce((total, item) => {
+                $wire.data.total = items.reduce((total, item) => {
                     const stockQty = parseFloat(item.stock_quantity) || 0;
                     const realQty = parseFloat(item.real_quantity) || 0;
                     const price = parseFloat(item.price) || 0;

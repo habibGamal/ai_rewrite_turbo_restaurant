@@ -9,13 +9,14 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 class TopProductsByProfitWidget extends ChartWidget
 {
     protected static bool $isLazy = false;
+
     protected ?string $pollingInterval = null;
 
     use InteractsWithPageFilters;
 
     protected ?string $heading = 'أفضل 10 منتجات بالربحية';
 
-    protected int | string | array $columnSpan = 2;
+    protected int|string|array $columnSpan = 2;
 
     protected ProductsSalesReportService $productsReportService;
 
@@ -34,7 +35,7 @@ class TopProductsByProfitWidget extends ChartWidget
 
         foreach ($topProducts as $product) {
             $labels[] = mb_strlen($product->name) > 15 ?
-                mb_substr($product->name, 0, 15) . '...' :
+                mb_substr($product->name, 0, 15).'...' :
                 $product->name;
             $salesData[] = $product->total_sales;
             $profitData[] = $product->total_profit;

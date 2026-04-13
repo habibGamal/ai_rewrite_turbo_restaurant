@@ -2,25 +2,22 @@
 
 namespace App\Filament\Resources\Regions;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\Regions\Pages\ListRegions;
 use App\Filament\Resources\Regions\Pages\CreateRegion;
-use App\Filament\Resources\Regions\Pages\ViewRegion;
 use App\Filament\Resources\Regions\Pages\EditRegion;
-use App\Filament\Resources\RegionResource\Pages;
+use App\Filament\Resources\Regions\Pages\ListRegions;
+use App\Filament\Resources\Regions\Pages\ViewRegion;
+use App\Filament\Traits\AdminAccess;
 use App\Models\Region;
-use Filament\Forms;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use \App\Filament\Traits\AdminAccess;
 
 class RegionResource extends Resource
 {
@@ -28,9 +25,9 @@ class RegionResource extends Resource
 
     protected static ?string $model = Region::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
 
     protected static ?int $navigationSort = 4;
 

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Enums;
+
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;

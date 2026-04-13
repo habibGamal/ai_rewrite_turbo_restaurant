@@ -2,50 +2,40 @@
 
 namespace App\Filament\Resources\ReturnPurchaseInvoices;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Actions;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\DatePicker;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
-use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
-use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ViewReturnPurchaseInvoice;
-use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
-use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
+use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintReturnPurchaseInvoiceAction;
 use App\Filament\Components\Forms\ProductSelector;
-use App\Filament\Resources\ReturnPurchaseInvoiceResource\Pages;
-use App\Filament\Resources\ReturnPurchaseInvoiceResource\RelationManagers;
+use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
+use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
+use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
+use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ViewReturnPurchaseInvoice;
+use App\Filament\Traits\AdminAccess;
 use App\Models\ReturnPurchaseInvoice;
-use App\Models\Supplier;
-use App\Models\Product;
 use App\Models\User;
-use App\Models\Category;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
-use App\Services\PurchaseService;
-use Filament\Forms;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Notifications\Notification;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use \App\Filament\Traits\AdminAccess;
 
 class ReturnPurchaseInvoiceResource extends Resource
 {
@@ -53,7 +43,7 @@ class ReturnPurchaseInvoiceResource extends Resource
 
     protected static ?string $model = ReturnPurchaseInvoice::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-uturn-left';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
 
     protected static ?string $navigationLabel = 'مرتجع المشتريات';
 
@@ -61,7 +51,7 @@ class ReturnPurchaseInvoiceResource extends Resource
 
     protected static ?string $pluralModelLabel = 'مرتجع المشتريات';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'المشتريات';
+    protected static string|\UnitEnum|null $navigationGroup = 'المشتريات';
 
     public static function form(Schema $schema): Schema
     {
@@ -108,18 +98,18 @@ class ReturnPurchaseInvoiceResource extends Resource
 
                 Section::make('أصناف المرتجع')
                     ->extraAttributes([
-                        "x-init" => PurchaseInvoiceCalculatorService::getJavaScriptCalculation(),
+                        'x-init' => PurchaseInvoiceCalculatorService::getJavaScriptCalculation(),
                     ])
                     ->schema([
                         Actions::make([
-                            ProductImporterAction::make('importProducts')
+                            ProductImporterAction::make('importProducts'),
                         ])
                             ->alignStart(),
                         ProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
                             ->label('الأصناف')
-                            ->relationship('items', fn($query) => $query->with('product'))
+                            ->relationship('items', fn ($query) => $query->with('product'))
                             ->table([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
@@ -135,8 +125,10 @@ class ReturnPurchaseInvoiceResource extends Resource
                                 TextInput::make('product_name')
                                     ->label('المنتج')
                                     ->formatStateUsing(function ($record) {
-                                        if (!$record)
+                                        if (! $record) {
                                             return 'غير محدد';
+                                        }
+
                                         return $record->product_name != null ? $record->product_name : $record->product->name;
                                     })
                                     ->dehydrated(false)
@@ -202,7 +194,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                                 return $state ? 'مغلق' : 'مفتوح';
                             })
                             ->badge()
-                            ->color(fn(?string $state): string => $state ? 'success' : 'warning'),
+                            ->color(fn (?string $state): string => $state ? 'success' : 'warning'),
 
                         TextEntry::make('created_at')
                             ->label('تاريخ الإنشاء')
@@ -214,11 +206,11 @@ class ReturnPurchaseInvoiceResource extends Resource
                     ->schema([
                         TextEntry::make('items_count')
                             ->label('عدد الأصناف')
-                            ->getStateUsing(fn($record) => $record->items->count()),
+                            ->getStateUsing(fn ($record) => $record->items->count()),
 
                         TextEntry::make('total_quantity')
                             ->label('إجمالي الكمية')
-                            ->getStateUsing(fn($record) => $record->items->sum('quantity')),
+                            ->getStateUsing(fn ($record) => $record->items->sum('quantity')),
                     ])
                     ->columns(2),
             ]);
@@ -256,14 +248,14 @@ class ReturnPurchaseInvoiceResource extends Resource
                 TextColumn::make('notes')
                     ->label('ملاحظات')
                     ->limit(50)
-                    ->tooltip(fn($state): ?string => $state),
+                    ->tooltip(fn ($state): ?string => $state),
                 TextColumn::make('closed_at')
                     ->label('الحالة')
                     ->formatStateUsing(function ($state) {
                         return $state ? 'مغلق' : 'مفتوح';
                     })
                     ->badge()
-                    ->color(fn(string $state): string => $state ? 'success' : 'warning')
+                    ->color(fn (string $state): string => $state ? 'success' : 'warning')
                     ->sortable(),
 
                 TextColumn::make('created_at')
@@ -292,11 +284,11 @@ class ReturnPurchaseInvoiceResource extends Resource
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     }),
             ])
@@ -306,10 +298,10 @@ class ReturnPurchaseInvoiceResource extends Resource
                 ViewAction::make(),
 
                 EditAction::make()
-                    ->visible(fn(ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
+                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
 
                 DeleteAction::make()
-                    ->visible(fn(ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
+                    ->visible(fn (ReturnPurchaseInvoice $record): bool => is_null($record->closed_at)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

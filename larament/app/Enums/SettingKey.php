@@ -154,7 +154,7 @@ enum SettingKey: string
             self::RESTAURANT_OFFICIAL_LOGO => true, // Always valid for file path
             self::RESTAURANT_QR_LOGO => true, // Always valid for file path
             self::NODE_TYPE => in_array($value, ['master', 'slave', 'independent']),
-            self::MASTER_NODE_LINK => !$value || filter_var($value, FILTER_VALIDATE_URL) !== false,
+            self::MASTER_NODE_LINK => ! $value || filter_var($value, FILTER_VALIDATE_URL) !== false,
             self::SCALE_BARCODE_PREFIX => is_string($value) && preg_match('/^\d{1,4}$/', $value),
             self::ALLOW_CASHIER_DISCOUNTS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_CASHIER_CANCEL_ORDERS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),

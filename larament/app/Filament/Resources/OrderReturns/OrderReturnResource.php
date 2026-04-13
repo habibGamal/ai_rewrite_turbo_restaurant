@@ -2,34 +2,19 @@
 
 namespace App\Filament\Resources\OrderReturns;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\DatePicker;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Actions\ViewAction;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\RepeatableEntry;
-use App\Filament\Resources\OrderReturns\RelationManagers\ReturnedItemsRelationManager;
-use App\Filament\Resources\OrderReturns\Pages\ListOrderReturns;
-use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
-use App\Filament\Resources\OrderReturns\Pages\ViewOrderReturn;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
-use App\Filament\Resources\OrderReturnResource\Pages;
-use App\Filament\Resources\OrderReturnResource\RelationManagers;
+use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
+use App\Filament\Resources\OrderReturns\Pages\ListOrderReturns;
+use App\Filament\Resources\OrderReturns\Pages\ViewOrderReturn;
+use App\Filament\Resources\OrderReturns\RelationManagers\ReturnedItemsRelationManager;
 use App\Filament\Traits\AdminAccess;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Services\Orders\OrderReturnService;
 use App\Services\Resources\OrderReturnCalculatorService;
-use Filament\Forms;
+use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -37,9 +22,19 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -49,7 +44,7 @@ class OrderReturnResource extends Resource
 
     protected static ?string $model = OrderReturn::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-uturn-left';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
 
     protected static ?string $navigationLabel = 'مرتجعات الطلبات';
 
@@ -57,7 +52,7 @@ class OrderReturnResource extends Resource
 
     protected static ?string $pluralModelLabel = 'مرتجعات الطلبات';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
 
     protected static ?int $navigationSort = 2;
 
@@ -79,6 +74,7 @@ class OrderReturnResource extends Resource
                                             $label .= " - {$order->customer->name}";
                                         }
                                         $label .= " ({$order->total} ج.م)";
+
                                         return [$order->id => $label];
                                     });
                             })
@@ -86,20 +82,24 @@ class OrderReturnResource extends Resource
                             ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
-                                if (!$state) {
+                                if (! $state) {
                                     $set('return_items', []);
                                     $set('refund_distribution', []);
+
                                     return;
                                 }
 
                                 $order = Order::with(['items.product', 'returns.items', 'payments'])->find($state);
-                                if (!$order) return;
+                                if (! $order) {
+                                    return;
+                                }
 
                                 $returnService = app(OrderReturnService::class);
 
                                 // Set return items
                                 $returnItems = $order->items->map(function ($item) use ($returnService, $order) {
                                     $availableQty = $returnService->getAvailableQuantityForReturn($order, $item->id);
+
                                     return [
                                         'order_item_id' => $item->id,
                                         'product_name' => $item->product->name,
@@ -133,18 +133,20 @@ class OrderReturnResource extends Resource
                             ->label('معلومات الطلب')
                             ->content(function (Get $get) {
                                 $orderId = $get('order_id');
-                                if (!$orderId) {
+                                if (! $orderId) {
                                     return 'الرجاء اختيار طلب';
                                 }
 
                                 $order = Order::with(['customer', 'payments'])->find($orderId);
-                                if (!$order) return 'طلب غير موجود';
+                                if (! $order) {
+                                    return 'طلب غير موجود';
+                                }
 
                                 $info = "رقم الطلب: #{$order->order_number}\n";
                                 if ($order->customer) {
                                     $info .= "العميل: {$order->customer->name}\n";
                                 }
-                                $info .= "إجمالي الطلب: " . number_format((float)$order->total, 2) . " ج.م\n\n";
+                                $info .= 'إجمالي الطلب: '.number_format((float) $order->total, 2)." ج.م\n\n";
                                 $info .= "طرق الدفع المستخدمة:\n";
 
                                 $paymentsByMethod = $order->payments->groupBy('method')->map(function ($payments) {
@@ -153,7 +155,7 @@ class OrderReturnResource extends Resource
 
                                 foreach ($paymentsByMethod as $method => $amount) {
                                     $methodLabel = PaymentMethod::from($method)->getLabel();
-                                    $info .= "• {$methodLabel}: " . number_format((float)$amount, 2) . " ج.م\n";
+                                    $info .= "• {$methodLabel}: ".number_format((float) $amount, 2)." ج.م\n";
                                 }
 
                                 return $info;
@@ -220,7 +222,7 @@ class OrderReturnResource extends Resource
 
                         Placeholder::make('total_refund_info')
                             ->label('إجمالي الاسترجاع من الأصناف')
-                            ->content(fn(Get $get) => number_format((float)($get('total_refund_display') ?? 0), 2) . ' ج.م')
+                            ->content(fn (Get $get) => number_format((float) ($get('total_refund_display') ?? 0), 2).' ج.م')
                             ->columnSpanFull(),
                     ]),
 
@@ -258,10 +260,11 @@ class OrderReturnResource extends Resource
                         Placeholder::make('distribution_total_info')
                             ->label('إجمالي توزيع الاسترجاع')
                             ->content(function (Get $get) {
-                                $total = number_format((float)($get('distribution_total_display') ?? 0), 2);
+                                $total = number_format((float) ($get('distribution_total_display') ?? 0), 2);
                                 $matches = $get('distribution_matches') ?? false;
                                 $color = $matches ? 'text-green-600' : 'text-red-600';
                                 $icon = $matches ? '✓' : '✗';
+
                                 return "<span class='{$color} font-bold'>{$icon} {$total} ج.م</span>";
                             })
                             ->columnSpanFull(),
@@ -303,7 +306,7 @@ class OrderReturnResource extends Resource
                     ->label('رقم الطلب')
                     ->searchable()
                     ->sortable()
-                    ->url(fn($record) => route('filament.admin.resources.orders.view', ['record' => $record->order_id]))
+                    ->url(fn ($record) => route('filament.admin.resources.orders.view', ['record' => $record->order_id]))
                     ->color('primary'),
 
                 TextColumn::make('order.customer.name')
@@ -349,11 +352,11 @@ class OrderReturnResource extends Resource
                         return $query
                             ->when(
                                 $data['created_from'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
                             )
                             ->when(
                                 $data['created_until'],
-                                fn(Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     }),
 
@@ -389,7 +392,7 @@ class OrderReturnResource extends Resource
 
                         TextEntry::make('order.order_number')
                             ->label('رقم الطلب')
-                            ->url(fn($record) => route('filament.admin.resources.orders.view', ['record' => $record->order_id]))
+                            ->url(fn ($record) => route('filament.admin.resources.orders.view', ['record' => $record->order_id]))
                             ->color('primary'),
 
                         TextEntry::make('order.customer.name')
@@ -446,15 +449,15 @@ class OrderReturnResource extends Resource
                     ->schema([
                         TextEntry::make('items_count')
                             ->label('عدد الأصناف المرتجعة')
-                            ->getStateUsing(fn($record) => $record->items->count()),
+                            ->getStateUsing(fn ($record) => $record->items->count()),
 
                         TextEntry::make('total_quantity')
                             ->label('إجمالي الكمية المرتجعة')
-                            ->getStateUsing(fn($record) => $record->items->sum('quantity')),
+                            ->getStateUsing(fn ($record) => $record->items->sum('quantity')),
 
                         TextEntry::make('refunds_count')
                             ->label('عدد طرق الاسترجاع')
-                            ->getStateUsing(fn($record) => $record->refunds->count()),
+                            ->getStateUsing(fn ($record) => $record->refunds->count()),
                     ])
                     ->columns(3),
             ]);
