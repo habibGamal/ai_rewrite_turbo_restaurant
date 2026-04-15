@@ -100,7 +100,7 @@ class ProductsSalesReportService
                 //         ]);
                 // })
             })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+            ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('order_items.order_id', '=', 'orders.id');
 
                 if ($shiftIds !== null) {
