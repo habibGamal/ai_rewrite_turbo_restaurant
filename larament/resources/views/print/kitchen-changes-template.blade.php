@@ -33,7 +33,7 @@
 
         body {
             font-family: "DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", sans-serif;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             line-height: 1.4;
             color: black;
