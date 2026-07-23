@@ -19,7 +19,7 @@
 
     $logoPath =
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
-            ? Storage::path(setting(SettingKey::RESTAURANT_PRINT_LOGO))
+            ? Storage::disk('public')->path(setting(SettingKey::RESTAURANT_PRINT_LOGO))
             : null;
 
     // Format dates
