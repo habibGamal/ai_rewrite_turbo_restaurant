@@ -9,6 +9,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Database\Eloquent\Builder;
 
 class CategoryPerformanceWidget extends BaseWidget
 {
@@ -47,8 +48,12 @@ class CategoryPerformanceWidget extends BaseWidget
             ->columns([
                 TextColumn::make('category_name')
                     ->label('التصنيف')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('categories.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('categories.name', $direction);
+                    }),
 
                 TextColumn::make('products_count')
                     ->label('عدد المنتجات')

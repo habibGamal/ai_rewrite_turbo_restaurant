@@ -60,12 +60,18 @@ class DriverPerformanceTable extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('اسم السائق')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('drivers.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('drivers.name', $direction);
+                    }),
 
                 TextColumn::make('phone')
                     ->label('رقم الهاتف')
-                    ->searchable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('drivers.phone', 'like', "%{$search}%");
+                    }),
 
                 TextColumn::make('orders_count')
                     ->label('عدد الطلبات')

@@ -39,6 +39,22 @@ else
 
 fi
 
+if ! apk info -e font-droid-nonlatin > /dev/null 2>&1; then
+
+  echo "🖋 Installing font-droid-nonlatin..."
+
+  apk update && apk add font-droid-nonlatin
+
+  echo "✅ font-droid-nonlatin installed successfully."
+
+else
+
+  echo "✔ font-droid-nonlatin is already installed."
+
+fi
+
+
+
 cd /var/www/turbo_restaurant/larament
 # --- PHP Upgrade & Extension Section ---
 if ! php -v | grep -q "PHP 8.4"; then
@@ -117,3 +133,26 @@ php artisan view:cache
 php artisan cache:clear
 php artisan optimize:clear
 php artisan optimize
+
+echo "🔧 Configuring PHP 8.4 and Nginx Limits (Upload/Post: 300MB, Memory: 1536MB)..."
+
+PHP_INI="/etc/php84/php.ini"
+if [ -f "$PHP_INI" ]; then
+  sed -i 's|^upload_max_filesize =.*|upload_max_filesize = 300M|' "$PHP_INI"
+  sed -i 's|^post_max_size =.*|post_max_size = 300M|' "$PHP_INI"
+  sed -i 's|^memory_limit =.*|memory_limit = 1536M|' "$PHP_INI"
+  sed -i 's|^max_execution_time =.*|max_execution_time = 300|' "$PHP_INI"
+  sed -i 's|^max_input_time =.*|max_input_time = 300|' "$PHP_INI"
+  rc-service php-fpm84 restart
+fi
+
+echo "✅ PHP 8.4 and Nginx Limits Configured Successfully."
+# --- NGINX HTTP & VHOST CONFIGURATION ---
+if [ -f /etc/nginx/nginx.conf ]; then
+  if grep -q "client_max_body_size" /etc/nginx/nginx.conf; then
+    sed -i 's|client_max_body_size .*|client_max_body_size 300M;|' /etc/nginx/nginx.conf
+  else
+    sed -i '/http {/a \        client_max_body_size 300M;' /etc/nginx/nginx.conf
+  fi
+  rc-service nginx reload
+fi

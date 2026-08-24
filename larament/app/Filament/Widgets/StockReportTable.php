@@ -113,8 +113,12 @@ class StockReportTable extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('المنتج')
-                    ->searchable()
-                    ->sortable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('products.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('products.name', $direction);
+                    })
                     ->weight('medium')
                     ->color('primary'),
 

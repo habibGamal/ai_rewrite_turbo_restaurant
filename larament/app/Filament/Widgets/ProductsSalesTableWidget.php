@@ -69,12 +69,21 @@ class ProductsSalesTableWidget extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('اسم المنتج')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('products.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('products.name', $direction);
+                    }),
 
                 TextColumn::make('category_name')
                     ->label('التصنيف')
-                    ->sortable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('categories.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('categories.name', $direction);
+                    })
                     ->default('غير مصنف'),
 
                 TextColumn::make('total_quantity')

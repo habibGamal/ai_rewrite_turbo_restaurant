@@ -458,3 +458,266 @@ it('has correct page title', function () {
     expect($page->instance()->getTitle())
         ->toBe('تقرير أداء المنتجات في المبيعات');
 });
+
+// Table Search and Sort Tests
+it('can search categories by name in category performance table', function () {
+    $category1 = Category::factory()->create(['name' => 'عصائر طازجة']);
+    $category2 = Category::factory()->create(['name' => 'مشويات لحوم']);
+
+    $product1 = Product::factory()->create([
+        'category_id' => $category1->id,
+        'price' => 50,
+        'cost' => 20,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $product2 = Product::factory()->create([
+        'category_id' => $category2->id,
+        'price' => 150,
+        'cost' => 70,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $order = Order::factory()->create([
+        'type' => OrderType::DINE_IN,
+        'status' => OrderStatus::COMPLETED,
+        'created_at' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product1->id,
+        'quantity' => 1,
+        'price' => $product1->price,
+        'cost' => $product1->cost,
+        'total' => $product1->price,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product2->id,
+        'quantity' => 1,
+        'price' => $product2->price,
+        'cost' => $product2->cost,
+        'total' => $product2->price,
+    ]);
+
+    livewire(CategoryPerformanceWidget::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(29)->startOfDay()->toDateString(),
+            'endDate' => now()->endOfDay()->toDateString(),
+        ],
+    ])
+        ->searchTable('عصائر')
+        ->assertCanSeeTableRecords([$category1])
+        ->assertCanNotSeeTableRecords([$category2]);
+});
+
+it('can search products by name in products sales table', function () {
+    $category = Category::factory()->create(['name' => 'وجبات سريعة']);
+
+    $product1 = Product::factory()->create([
+        'name' => 'برجر دجاج سوبريم',
+        'category_id' => $category->id,
+        'price' => 100,
+        'cost' => 50,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $product2 = Product::factory()->create([
+        'name' => 'بيتزا مارجريتا حجم كبير',
+        'category_id' => $category->id,
+        'price' => 120,
+        'cost' => 60,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $order = Order::factory()->create([
+        'type' => OrderType::DINE_IN,
+        'status' => OrderStatus::COMPLETED,
+        'created_at' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product1->id,
+        'quantity' => 1,
+        'price' => $product1->price,
+        'cost' => $product1->cost,
+        'total' => $product1->price,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product2->id,
+        'quantity' => 1,
+        'price' => $product2->price,
+        'cost' => $product2->cost,
+        'total' => $product2->price,
+    ]);
+
+    livewire(ProductsSalesTableWidget::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(29)->startOfDay()->toDateString(),
+            'endDate' => now()->endOfDay()->toDateString(),
+        ],
+    ])
+        ->searchTable('برجر')
+        ->assertCanSeeTableRecords([$product1])
+        ->assertCanNotSeeTableRecords([$product2]);
+});
+
+it('can search products by category name in products sales table', function () {
+    $category1 = Category::factory()->create(['name' => 'مأكولات بحرية']);
+    $category2 = Category::factory()->create(['name' => 'حلويات شرقية']);
+
+    $product1 = Product::factory()->create([
+        'name' => 'جمبري مقلي',
+        'category_id' => $category1->id,
+        'price' => 200,
+        'cost' => 100,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $product2 = Product::factory()->create([
+        'name' => 'كنافة بالجبن',
+        'category_id' => $category2->id,
+        'price' => 80,
+        'cost' => 40,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $order = Order::factory()->create([
+        'type' => OrderType::DINE_IN,
+        'status' => OrderStatus::COMPLETED,
+        'created_at' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product1->id,
+        'quantity' => 1,
+        'price' => $product1->price,
+        'cost' => $product1->cost,
+        'total' => $product1->price,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product2->id,
+        'quantity' => 1,
+        'price' => $product2->price,
+        'cost' => $product2->cost,
+        'total' => $product2->price,
+    ]);
+
+    livewire(ProductsSalesTableWidget::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(29)->startOfDay()->toDateString(),
+            'endDate' => now()->endOfDay()->toDateString(),
+        ],
+    ])
+        ->searchTable('بحرية')
+        ->assertCanSeeTableRecords([$product1])
+        ->assertCanNotSeeTableRecords([$product2]);
+});
+
+it('can sort products by name and category in products sales table', function () {
+    $category = Category::factory()->create(['name' => 'أطباق رئيسية']);
+
+    $product1 = Product::factory()->create([
+        'name' => 'أرز بالخلطة',
+        'category_id' => $category->id,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $product2 = Product::factory()->create([
+        'name' => 'كباب مشوي',
+        'category_id' => $category->id,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $order = Order::factory()->create([
+        'type' => OrderType::DINE_IN,
+        'status' => OrderStatus::COMPLETED,
+        'created_at' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product1->id,
+        'quantity' => 1,
+        'price' => $product1->price,
+        'cost' => $product1->cost,
+        'total' => $product1->price,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product2->id,
+        'quantity' => 1,
+        'price' => $product2->price,
+        'cost' => $product2->cost,
+        'total' => $product2->price,
+    ]);
+
+    livewire(ProductsSalesTableWidget::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(29)->startOfDay()->toDateString(),
+            'endDate' => now()->endOfDay()->toDateString(),
+        ],
+    ])
+        ->sortTable('name')
+        ->assertCanSeeTableRecords([$product1, $product2], inOrder: true)
+        ->sortTable('category_name')
+        ->assertSuccessful();
+});
+
+it('can sort category performance table', function () {
+    $category1 = Category::factory()->create(['name' => 'أول تصنيف']);
+    $category2 = Category::factory()->create(['name' => 'ثاني تصنيف']);
+
+    $product1 = Product::factory()->create([
+        'category_id' => $category1->id,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $product2 = Product::factory()->create([
+        'category_id' => $category2->id,
+        'type' => ProductType::Consumable,
+    ]);
+
+    $order = Order::factory()->create([
+        'type' => OrderType::DINE_IN,
+        'status' => OrderStatus::COMPLETED,
+        'created_at' => now(),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product1->id,
+        'quantity' => 1,
+        'price' => $product1->price,
+        'cost' => $product1->cost,
+        'total' => $product1->price,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $product2->id,
+        'quantity' => 1,
+        'price' => $product2->price,
+        'cost' => $product2->cost,
+        'total' => $product2->price,
+    ]);
+
+    livewire(CategoryPerformanceWidget::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(29)->startOfDay()->toDateString(),
+            'endDate' => now()->endOfDay()->toDateString(),
+        ],
+    ])
+        ->sortTable('category_name')
+        ->assertSuccessful();
+});
+

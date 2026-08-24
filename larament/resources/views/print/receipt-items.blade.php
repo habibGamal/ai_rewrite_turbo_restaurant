@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: "DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", sans-serif;
+            font-family: "Droid Sans Arabic", serif;
             direction: rtl;
             font-size: 22px;
             font-weight: bold;

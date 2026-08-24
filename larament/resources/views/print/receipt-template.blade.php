@@ -61,7 +61,7 @@
 
         body {
             /* font-family: sans-serif; */
-            font-family: "DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", sans-serif;
+            font-family: "Droid Sans Arabic", serif;
             direction: rtl;
             font-size: 22px;
             font-weight: bold;
@@ -185,6 +185,7 @@
         <p class="order-number">Order #{{ $order->order_number }}</p>
 
         <p>الكاشير : {{ $order->user?->email }}</p>
+        <p>تمت الطباعة بواسطة : {{ auth()->user()->email }}</p>
         <p>تاريخ الطلب : {{ $orderDate }}</p>
         <p>تاريخ الطباعة : {{ $printDate }}</p>
         <p>نوع الطلب : {{ $getOrderTypeString($order->type) }} </p>

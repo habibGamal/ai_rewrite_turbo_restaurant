@@ -115,7 +115,12 @@ class CurrentShiftExpensesTable extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('نوع المصروف')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('expence_types.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('expence_types.name', $direction);
+                    })
                     ->weight('medium')
                     ->color('primary'),
 

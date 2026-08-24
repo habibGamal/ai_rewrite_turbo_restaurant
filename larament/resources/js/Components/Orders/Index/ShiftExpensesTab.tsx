@@ -51,7 +51,7 @@ const ExpenseForm = ({
                 start();
                 onFinish(form, values, finish);
             }}
-            className={`${initialValues ? "" : "isolate "}`}
+            className={`${initialValues ? "" : "isolate "} p-4`}
             layout="vertical"
         >
             <Typography.Title className="my-0 text-center" level={4}>
@@ -214,7 +214,7 @@ export const ShiftExpensesTab: React.FC = () => {
                 footer={() => {
                     // sum of expenses
                     const sum = expenses.reduce(
-                        (acc, curr) => acc + curr.amount,
+                        (acc, curr) => acc + Number(curr.amount),
                         0
                     );
                     return (

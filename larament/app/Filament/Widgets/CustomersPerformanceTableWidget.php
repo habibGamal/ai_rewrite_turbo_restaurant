@@ -53,17 +53,27 @@ class CustomersPerformanceTableWidget extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('اسم العميل')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('customers.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('customers.name', $direction);
+                    }),
 
                 TextColumn::make('phone')
                     ->label('رقم الهاتف')
-                    ->searchable()
-                    ->sortable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('customers.phone', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('customers.phone', $direction);
+                    }),
 
                 TextColumn::make('region')
                     ->label('المنطقة')
-                    ->sortable()
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('customers.region', $direction);
+                    })
                     ->default('غير محدد'),
 
                 TextColumn::make('total_orders')
