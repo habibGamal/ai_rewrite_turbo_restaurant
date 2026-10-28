@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\OrderStatus;
+use App\Enums\UserRole;
 use App\Filament\Pages\Reports\DriverPerformanceReport;
 use App\Filament\Widgets\DriverPerformanceStatsWidget;
 use App\Filament\Widgets\DriverPerformanceTable;
@@ -8,9 +10,8 @@ use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
-use App\Enums\UserRole;
-use App\Enums\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 

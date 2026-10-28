@@ -127,6 +127,7 @@ class StocktakingProductImporterAction extends Action
                         $currentItems[] = [
                             'product_id' => $product->id,
                             'product_name' => $product->name,
+                            'unit' => Product::formatUnit($product->unit),
                             'stock_quantity' => $stockQuantity,
                             'real_quantity' => $realQuantity,
                             'price' => $price,

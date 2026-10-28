@@ -1,11 +1,11 @@
 <?php
 
-use App\Filament\Pages\Settings;
-use App\Models\User;
-use App\Models\Setting;
-use App\Services\SettingsService;
-use App\Services\PrintService;
 use App\Enums\SettingKey;
+use App\Filament\Pages\Settings;
+use App\Models\Setting;
+use App\Models\User;
+use App\Services\PrintService;
+use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -81,6 +81,11 @@ it('has shift management fields', function () {
         ->assertSchemaComponentExists(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value);
 });
 
+it('has purchase management fields', function () {
+    livewire(Settings::class)
+        ->assertSchemaComponentExists(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value);
+});
+
 // ===== Form State Tests =====
 it('loads default settings correctly', function () {
     livewire(Settings::class)
@@ -101,6 +106,7 @@ it('loads boolean settings correctly', function () {
             SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
             SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
+            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => true,
         ]);
 });
 
@@ -164,6 +170,7 @@ it('can save boolean settings', function () {
             SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => true,
             SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => true,
+            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => false,
         ])
         ->call('save')
         ->assertNotified();
@@ -176,6 +183,8 @@ it('can save boolean settings', function () {
         ->toBe('false');
     expect(Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)->first()->value)
         ->toBe('true');
+    expect(Setting::where('key', SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)->first()->value)
+        ->toBe('false');
 });
 
 it('can save node type settings', function () {
@@ -335,7 +344,7 @@ it('persists all settings after save', function () {
             expect($setting->value)->toBe($value ? 'true' : 'false');
         } elseif ($key === SettingKey::DINE_IN_SERVICE_CHARGE->value) {
             // Handle decimal precision - 0.15 stays as 0.15
-            expect((float)$setting->value)->toBe((float)$value);
+            expect((float) $setting->value)->toBe((float) $value);
         } else {
             expect($setting->value)->toBe((string) $value);
         }

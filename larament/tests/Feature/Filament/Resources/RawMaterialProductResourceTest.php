@@ -82,7 +82,7 @@ it('can search by name', function () {
 it('can search by barcode', function () {
     $records = Product::factory(5)->create([
         'type' => ProductType::RawMaterial,
-        'barcode' => fn() => fake()->unique()->ean13(),
+        'barcode' => fn () => fake()->unique()->ean13(),
     ]);
 
     $value = $records->first()->barcode;

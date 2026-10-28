@@ -1,15 +1,14 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Events\Orders\OrderCreated;
-use App\Events\Orders\OrderCompleted;
+use App\Enums\OrderType;
+use App\Enums\PaymentMethod;
 use App\Events\Orders\OrderCancelled;
+use App\Events\Orders\OrderCompleted;
+use App\Events\Orders\OrderCreated;
 use App\Events\Orders\PaymentProcessed;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
-use App\Enums\OrderType;
-use App\Enums\PaymentMethod;
 use Illuminate\Broadcasting\PrivateChannel;
 
 uses(Tests\Unit\TestCase::class);

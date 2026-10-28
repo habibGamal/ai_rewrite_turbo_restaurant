@@ -259,7 +259,7 @@ it('has correct navigation sort', function () {
 });
 
 it('has correct title', function () {
-    $page = new CustomersPerformanceReport();
+    $page = new CustomersPerformanceReport;
     expect($page->getTitle())
         ->toBe('تقرير أداء العملاء في المبيعات');
 });

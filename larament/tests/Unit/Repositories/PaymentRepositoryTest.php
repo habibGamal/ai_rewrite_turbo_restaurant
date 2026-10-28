@@ -1,11 +1,10 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Repositories\PaymentRepository;
 use App\DTOs\Orders\PaymentDTO;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Repositories\PaymentRepository;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -67,7 +66,7 @@ describe('PaymentRepository', function () {
             $payments = $this->repository->getOrderPayments($this->order->id);
 
             expect($payments)->toHaveCount(2)
-                ->and($payments->every(fn($payment) => $payment->order_id === $this->order->id))->toBeTrue();
+                ->and($payments->every(fn ($payment) => $payment->order_id === $this->order->id))->toBeTrue();
         });
 
         it('returns empty collection for order with no payments', function () {

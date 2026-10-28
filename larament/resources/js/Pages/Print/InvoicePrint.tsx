@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 
 interface InvoiceItem {
     product_name: string;
+    unit?: string;
     quantity?: number;
     price?: number;
     total: number;
@@ -44,6 +45,7 @@ export default function InvoicePrint({ invoiceData }: Props) {
                 return (
                     <tr className="bg-gray-100">
                         <th className="border border-gray-400 px-4 py-2 text-right">المنتج</th>
+                        <th className="border border-gray-400 px-4 py-2 text-center">الوحدة</th>
                         {/* <th className="border border-gray-400 px-4 py-2 text-center">الكمية المخزنة</th> */}
                         <th className="border border-gray-400 px-4 py-2 text-center">الكمية الفعلية</th>
                         <th className="border border-gray-400 px-4 py-2 text-center">الفرق</th>
@@ -55,6 +57,7 @@ export default function InvoicePrint({ invoiceData }: Props) {
                 return (
                     <tr className="bg-gray-100">
                         <th className="border border-gray-400 px-4 py-2 text-right">المنتج</th>
+                        <th className="border border-gray-400 px-4 py-2 text-center">الوحدة</th>
                         <th className="border border-gray-400 px-4 py-2 text-center">الكمية</th>
                         <th className="border border-gray-400 px-4 py-2 text-center">السعر</th>
                         <th className="border border-gray-400 px-4 py-2 text-center">الإجمالي</th>
@@ -69,6 +72,7 @@ export default function InvoicePrint({ invoiceData }: Props) {
                 return (
                     <tr key={index}>
                         <td className="border border-gray-400 px-4 py-2 text-right">{item.product_name}</td>
+                        <td className="border border-gray-400 px-4 py-2 text-center">{item.unit || '-'}</td>
                         {/* <td className="border border-gray-400 px-4 py-2 text-center">{item.stock_quantity}</td> */}
                         <td className="border border-gray-400 px-4 py-2 text-center">{item.real_quantity}</td>
                         <td className={`border border-gray-400 px-4 py-2 text-center ${
@@ -85,6 +89,7 @@ export default function InvoicePrint({ invoiceData }: Props) {
                 return (
                     <tr key={index}>
                         <td className="border border-gray-400 px-4 py-2 text-right">{item.product_name}</td>
+                        <td className="border border-gray-400 px-4 py-2 text-center">{item.unit || '-'}</td>
                         <td className="border border-gray-400 px-4 py-2 text-center">{item.quantity}</td>
                         <td className="border border-gray-400 px-4 py-2 text-center">{item.price ? Number(item.price).toFixed(2) : '0.00'} ج.م</td>
                         <td className="border border-gray-400 px-4 py-2 text-center">{Number(item.total).toFixed(2)} ج.م</td>

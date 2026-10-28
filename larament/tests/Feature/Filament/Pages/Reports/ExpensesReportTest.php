@@ -3,10 +3,10 @@
 use App\Enums\UserRole;
 use App\Filament\Pages\Reports\ExpensesReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
-use App\Filament\Widgets\PeriodShiftExpensesTable;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
-use App\Models\Expense;
+use App\Filament\Widgets\PeriodShiftExpensesTable;
 use App\Models\ExpenceType;
+use App\Models\Expense;
 use App\Models\Shift;
 use App\Models\User;
 

@@ -720,4 +720,3 @@ it('can sort category performance table', function () {
         ->sortTable('category_name')
         ->assertSuccessful();
 });
-

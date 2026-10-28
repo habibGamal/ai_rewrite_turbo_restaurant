@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase as BaseTestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Providers\OrderServiceProvider;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {

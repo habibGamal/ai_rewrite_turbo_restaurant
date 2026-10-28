@@ -117,4 +117,54 @@ class Product extends Model
             $this->save();
         }
     }
+
+    /**
+     * Get available unit options mapped to Arabic names
+     *
+     * @return array<string, string>
+     */
+    public static function getUnitOptions(): array
+    {
+        return [
+            'packet' => 'باكت',
+            'kg' => 'كيلوجرام',
+            'gram' => 'جرام',
+            'liter' => 'لتر',
+            'ml' => 'ميليلتر',
+            'piece' => 'قطعة',
+            'box' => 'صندوق',
+            'bag' => 'كيس',
+            'bottle' => 'زجاجة',
+            'can' => 'علبة',
+            'cup' => 'كوب',
+            'tablespoon' => 'ملعقة كبيرة',
+            'teaspoon' => 'ملعقة صغيرة',
+            'dozen' => 'دستة',
+            'meter' => 'متر',
+            'cm' => 'سنتيمتر',
+            'roll' => 'رول',
+            'sheet' => 'ورقة',
+            'slice' => 'شريحة',
+            'loaf' => 'رغيف',
+            'plate' => 'طبق',
+            'dish' => 'طبق',
+        ];
+    }
+
+    /**
+     * Format a unit value to its Arabic display name
+     */
+    public static function formatUnit(?string $unit): string
+    {
+        if (empty($unit)) {
+            return '-';
+        }
+
+        return static::getUnitOptions()[$unit] ?? $unit;
+    }
+
+    public function getUnitNameAttribute(): string
+    {
+        return static::formatUnit($this->unit);
+    }
 }

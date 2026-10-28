@@ -6,7 +6,6 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Printer;
-use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -46,8 +45,8 @@ class PrintJobsTest extends TestCase
                 'product_id' => 1,
                 'quantity' => 2,
                 'name' => 'Test Product',
-                'notes' => 'Test notes'
-            ]
+                'notes' => 'Test notes',
+            ],
         ];
 
         // Dispatch job

@@ -7,9 +7,9 @@ use App\Filament\Resources\ManufacturedProducts\Pages\EditManufacturedProduct;
 use App\Filament\Resources\ManufacturedProducts\Pages\ListManufacturedProducts;
 use App\Filament\Resources\ManufacturedProducts\Pages\ViewManufacturedProduct;
 use App\Models\Category;
+use App\Models\Printer;
 use App\Models\Product;
 use App\Models\ProductComponent;
-use App\Models\Printer;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Str;
@@ -83,7 +83,7 @@ it('can search by name', function () {
 it('can search by barcode', function () {
     $records = Product::factory(5)->create([
         'type' => ProductType::Manufactured,
-        'barcode' => fn() => Str::random(10),
+        'barcode' => fn () => Str::random(10),
     ]);
     $value = $records->first()->barcode;
 

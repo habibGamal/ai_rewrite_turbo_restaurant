@@ -29,6 +29,8 @@ class SettingsService
 
     public const MASTER_NODE_LINK = 'master_node_link';
 
+    public const UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
+
     /**
      * Get website link from settings
      */
@@ -157,6 +159,24 @@ class SettingsService
         $value = $this->get(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value, SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->defaultValue());
 
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Check if product cost should be updated when closing a purchase invoice
+     */
+    public function shouldUpdateProductCostOnPurchase(): bool
+    {
+        $value = $this->get(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->defaultValue());
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Check if product cost update on purchase is prevented
+     */
+    public function isProductCostUpdatePrevented(): bool
+    {
+        return ! $this->shouldUpdateProductCostOnPurchase();
     }
 
     /**

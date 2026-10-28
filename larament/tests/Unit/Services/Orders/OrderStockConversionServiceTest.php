@@ -1,16 +1,14 @@
 <?php
 
+use App\Enums\MovementReason;
+use App\Enums\ProductType;
+use App\Models\Category;
 use App\Models\Order;
+use App\Models\Printer;
 use App\Models\Product;
 use App\Models\ProductComponent;
-use App\Models\Category;
-use App\Models\Printer;
-use App\Models\InventoryItem;
 use App\Services\Orders\OrderStockConversionService;
 use App\Services\StockService;
-use App\Enums\ProductType;
-use App\Enums\MovementReason;
-use Tests\Unit\TestCase;
 use Illuminate\Support\Facades\Log;
 
 uses(Tests\Unit\TestCase::class);
@@ -358,7 +356,7 @@ describe('OrderStockConversionService', function () {
             $order->load('items.product');
 
             $expectedStockItems = [
-                ['product_id' => $consumableProduct->id, 'quantity' => 2]
+                ['product_id' => $consumableProduct->id, 'quantity' => 2],
             ];
 
             $this->stockService->shouldReceive('removeStock')
@@ -449,7 +447,7 @@ describe('OrderStockConversionService', function () {
             $order->load('items.product');
 
             $expectedStockItems = [
-                ['product_id' => $consumableProduct->id, 'quantity' => 3]
+                ['product_id' => $consumableProduct->id, 'quantity' => 3],
             ];
 
             $this->stockService->shouldReceive('addStock')
@@ -513,7 +511,7 @@ describe('OrderStockConversionService', function () {
             $order->load('items.product');
 
             $expectedStockItems = [
-                ['product_id' => $consumableProduct->id, 'quantity' => 5]
+                ['product_id' => $consumableProduct->id, 'quantity' => 5],
             ];
 
             $expectedResult = [
@@ -522,7 +520,7 @@ describe('OrderStockConversionService', function () {
                     'product_name' => $consumableProduct->name,
                     'required_quantity' => 5,
                     'available_quantity' => 2,
-                ]
+                ],
             ];
 
             $this->stockService->shouldReceive('validateStockAvailability')
@@ -624,5 +622,3 @@ describe('OrderStockConversionService', function () {
         });
     });
 });
-
-

@@ -3,11 +3,10 @@
 namespace Tests\Unit\Services;
 
 use App\Enums\ProductType;
-use App\Models\Product;
 use App\Models\InventoryItem;
+use App\Models\Product;
 use App\Services\ProductCostManagementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 class ProductCostManagementServiceTest extends TestCase
@@ -19,7 +18,7 @@ class ProductCostManagementServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ProductCostManagementService();
+        $this->service = new ProductCostManagementService;
     }
 
     public function test_updates_raw_material_cost_with_average_strategy()
@@ -42,7 +41,7 @@ class ProductCostManagementServiceTest extends TestCase
                 'product_id' => $product->id,
                 'quantity' => 50,
                 'price' => 15.0,
-            ]
+            ],
         ]);
 
         // Update costs
@@ -79,7 +78,7 @@ class ProductCostManagementServiceTest extends TestCase
                 'product_id' => $product->id,
                 'quantity' => 100,
                 'price' => 8.0,
-            ]
+            ],
         ]);
 
         // Update costs
@@ -113,7 +112,7 @@ class ProductCostManagementServiceTest extends TestCase
                 'product_id' => $product->id,
                 'quantity' => 25,
                 'price' => 30.0,
-            ]
+            ],
         ]);
 
         // Update costs
@@ -222,7 +221,7 @@ class ProductCostManagementServiceTest extends TestCase
                 'product_id' => $product->id,
                 'quantity' => 25,
                 'price' => 20.0,
-            ]
+            ],
         ]);
 
         // Update costs

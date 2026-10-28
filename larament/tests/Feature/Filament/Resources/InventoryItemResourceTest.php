@@ -1,16 +1,15 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Enums\ProductType;
+use App\Enums\UserRole;
 use App\Filament\Resources\InventoryItems\InventoryItemResource;
 use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
 use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
+use App\Models\Category;
 use App\Models\InventoryItem;
 use App\Models\Product;
-use App\Models\Category;
 use App\Models\User;
-use App\Models\InventoryItemMovement;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -81,7 +80,7 @@ it('can render column', function (string $column) {
 it('can sort column', function (string $column) {
     $category = Category::factory()->create();
     $products = Product::factory(5)->create(['category_id' => $category->id]);
-    $records = $products->map(fn($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
+    $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     livewire(ListInventoryItems::class)
         ->sortTable($column)
@@ -94,7 +93,7 @@ it('can sort column', function (string $column) {
 it('can search by product name', function () {
     $category = Category::factory()->create();
     $products = Product::factory(5)->create(['category_id' => $category->id]);
-    $records = $products->map(fn($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
+    $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     $searchProduct = $products->first();
 
@@ -124,7 +123,7 @@ it('can search by category name', function () {
 it('can see table records', function () {
     $category = Category::factory()->create();
     $products = Product::factory(5)->create(['category_id' => $category->id]);
-    $records = $products->map(fn($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
+    $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     livewire(ListInventoryItems::class)
         ->assertCanSeeTableRecords($records);
@@ -133,7 +132,7 @@ it('can see table records', function () {
 it('can count table records', function () {
     $category = Category::factory()->create();
     $products = Product::factory(3)->create(['category_id' => $category->id]);
-    $products->each(fn($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
+    $products->each(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     livewire(ListInventoryItems::class)
         ->assertCountTableRecords(3);
@@ -339,7 +338,7 @@ it('does not have delete action on list page', function () {
 it('does not have bulk actions', function () {
     $category = Category::factory()->create();
     $products = Product::factory(3)->create(['category_id' => $category->id]);
-    $records = $products->map(fn($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
+    $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     livewire(ListInventoryItems::class)
         ->assertCanSeeTableRecords($records);

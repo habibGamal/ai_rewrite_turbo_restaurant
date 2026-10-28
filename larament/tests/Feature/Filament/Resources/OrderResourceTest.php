@@ -50,7 +50,7 @@ it('has column', function (string $column) {
     'payments_count',
     'user.name',
     'transaction_id',
-    'created_at'
+    'created_at',
 ]);
 
 it('can render column', function (string $column) {
@@ -67,7 +67,7 @@ it('can render column', function (string $column) {
     'return_status',
     'total',
     'payments_count',
-    'created_at'
+    'created_at',
 ]);
 
 // Table Sorting Tests

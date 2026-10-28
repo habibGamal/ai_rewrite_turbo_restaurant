@@ -31,8 +31,9 @@ class StocktakingProductSelector extends Select
                     $price = $product->cost ?? $product->price;
                     $categoryName = $product->category ? $product->category->name : 'بدون فئة';
                     $currentStock = $product->inventoryItem ? $product->inventoryItem->quantity : 0;
+                    $unit = $product->unit ? ' ('.Product::formatUnit($product->unit).')' : '';
 
-                    $label = $product->name.' - '.$price.' ج.م'.' ('.$categoryName.')';
+                    $label = $product->name.$unit.' - '.$price.' ج.م'.' ('.$categoryName.')';
 
                     return [$product->id => $label];
                 });
@@ -75,6 +76,7 @@ class StocktakingProductSelector extends Select
                 $newItem = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'unit' => Product::formatUnit($product->unit),
                     'stock_quantity' => $stockQuantity,
                     'real_quantity' => $realQuantity,
                     'price' => $price,

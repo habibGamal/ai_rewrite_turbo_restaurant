@@ -10,11 +10,13 @@ class DailyPerformanceChartWidget extends ChartWidget
 {
     protected ?string $heading = 'أداء المبيعات حسب أيام الأسبوع';
 
-    protected ?string $description = 'مقارنة الأداء عبر أيام الأسبوع المختلفة';
+    protected ?string $description = 'مقارنة الأداء عبر أيام الأسبوع المختلفة من السبت إلى الجمعة';
 
     protected ?string $maxHeight = '350px';
 
     protected static bool $isLazy = false;
+
+    protected int|string|array $columnSpan = 'full';
 
     use InteractsWithPageFilters;
 
@@ -32,13 +34,20 @@ class DailyPerformanceChartWidget extends ChartWidget
 
         $dailyData = $this->peakHoursReportService->getDailyPerformance($startDate, $endDate);
 
-        // Ensure we have data for all 7 days
+        // Ensure we have data for all 7 days, starting Saturday through Friday
         $dayMapping = [
-            1 => 'الأحد', 2 => 'الاثنين', 3 => 'الثلاثاء', 4 => 'الأربعاء',
-            5 => 'الخميس', 6 => 'الجمعة', 7 => 'السبت',
+            7 => 'السبت',
+            1 => 'الأحد',
+            2 => 'الاثنين',
+            3 => 'الثلاثاء',
+            4 => 'الأربعاء',
+            5 => 'الخميس',
+            6 => 'الجمعة',
         ];
 
-        $allDays = collect(range(1, 7))->map(function ($dayNum) use ($dailyData, $dayMapping) {
+        $orderedDays = [7, 1, 2, 3, 4, 5, 6];
+
+        $allDays = collect($orderedDays)->map(function ($dayNum) use ($dailyData, $dayMapping) {
             $existing = $dailyData->firstWhere('day_of_week', $dayNum);
 
             return $existing ?: (object) [

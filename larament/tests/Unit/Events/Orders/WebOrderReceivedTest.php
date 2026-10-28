@@ -1,12 +1,11 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Events\Orders\WebOrderReceived;
-use App\Models\Order;
-use App\Models\Customer;
-use App\Models\Shift;
-use App\Enums\OrderType;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
+use App\Events\Orders\WebOrderReceived;
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Shift;
 use Illuminate\Broadcasting\PrivateChannel;
 
 uses(Tests\Unit\TestCase::class);

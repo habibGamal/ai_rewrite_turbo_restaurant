@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PurchaseInvoices\RelationManagers;
 
+use App\Models\Product;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -31,6 +32,11 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('product.name')
                     ->label('المنتج')
                     ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('product.unit')
+                    ->label('الوحدة')
+                    ->formatStateUsing(fn (?string $state): string => Product::formatUnit($state))
                     ->searchable(),
 
                 TextColumn::make('quantity')

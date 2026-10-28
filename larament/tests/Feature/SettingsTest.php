@@ -31,6 +31,19 @@ class SettingsTest extends TestCase
         $this->assertEquals('192.168.1.100', $ip);
     }
 
+    public function test_can_get_default_update_product_cost_on_purchase(): void
+    {
+        $this->assertTrue($this->settingsService->shouldUpdateProductCostOnPurchase());
+        $this->assertFalse($this->settingsService->isProductCostUpdatePrevented());
+    }
+
+    public function test_can_prevent_update_product_cost_on_purchase(): void
+    {
+        $this->settingsService->set(\App\Enums\SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, 'false');
+        $this->assertFalse($this->settingsService->shouldUpdateProductCostOnPurchase());
+        $this->assertTrue($this->settingsService->isProductCostUpdatePrevented());
+    }
+
     public function test_can_set_and_get_setting(): void
     {
         $this->settingsService->set('test_key', 'test_value');
@@ -39,7 +52,7 @@ class SettingsTest extends TestCase
         $this->assertEquals('test_value', $value);
         $this->assertDatabaseHas('settings', [
             'key' => 'test_key',
-            'value' => 'test_value'
+            'value' => 'test_value',
         ]);
     }
 
@@ -47,7 +60,7 @@ class SettingsTest extends TestCase
     {
         $settings = [
             'key1' => 'value1',
-            'key2' => 'value2'
+            'key2' => 'value2',
         ];
 
         $this->settingsService->setMultiple($settings);

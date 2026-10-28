@@ -3,16 +3,16 @@
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Filament\Pages\Reports\PeakHoursPerformanceReport;
-use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
-use App\Filament\Widgets\PeakHoursStatsWidget;
-use App\Filament\Widgets\HourlyPerformanceChartWidget;
 use App\Filament\Widgets\DailyPerformanceChartWidget;
+use App\Filament\Widgets\HourlyPerformanceChartWidget;
+use App\Filament\Widgets\HourlyPerformanceTableWidget;
+use App\Filament\Widgets\NoPeakHoursSalesInPeriodWidget;
+use App\Filament\Widgets\PeakHoursStatsWidget;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\User;
 use App\Models\Shift;
-use Carbon\Carbon;
+use App\Models\User;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -38,9 +38,6 @@ it('has correct page title', function () {
 });
 
 // Filters Form Tests
-// Note: Dashboard pages use Schema, not Form, and filter components are nested in Section
-// Testing the filters is done through fillForm which validates they work
-
 it('can set filters with preset period', function () {
     livewire(PeakHoursPerformanceReport::class)
         ->fillForm([
@@ -63,9 +60,7 @@ it('can set filters with custom date range', function () {
 });
 
 // Widget Display Tests - With Orders
-// Skipped: Service uses MySQL HOUR() function which is not available in SQLite test database
 it('shows correct widgets when orders exist', function () {
-    // Create completed orders with items in the last 30 days
     $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
 
     $orders = Order::factory()
@@ -73,6 +68,8 @@ it('shows correct widgets when orders exist', function () {
         ->create([
             'status' => OrderStatus::COMPLETED,
             'shift_id' => $this->shift->id,
+            'total' => 200,
+            'profit' => 100,
             'created_at' => now()->subDays(5),
         ]);
 
@@ -88,19 +85,20 @@ it('shows correct widgets when orders exist', function () {
     }
 
     $component = livewire(PeakHoursPerformanceReport::class);
-
-    // Check that the component loaded successfully
     $component->assertSuccessful();
 
-    // Note: Widget rendering tests skipped due to SQLite limitations with HOUR() function
-    // In production with MySQL, widgets would be visible
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+    $widgets = $component->instance()->getWidgets();
+    expect($widgets)->toContain(PeakHoursStatsWidget::class)
+        ->and($widgets)->toContain(HourlyPerformanceChartWidget::class)
+        ->and($widgets)->toContain(DailyPerformanceChartWidget::class)
+        ->and($widgets)->toContain(HourlyPerformanceTableWidget::class);
+});
 
 // Widget Display Tests - No Orders
 it('shows no sales widget when no orders exist in period', function () {
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(NoCustomersSalesInPeriodWidget::class);
+        ->assertSeeLivewire(NoPeakHoursSalesInPeriodWidget::class);
 });
 
 it('shows no sales widget when no completed orders exist', function () {
@@ -115,7 +113,7 @@ it('shows no sales widget when no completed orders exist', function () {
 
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(NoCustomersSalesInPeriodWidget::class);
+        ->assertSeeLivewire(NoPeakHoursSalesInPeriodWidget::class);
 });
 
 // Date Range Filtering Tests
@@ -126,6 +124,8 @@ it('filters data by date range correctly', function () {
     $orderInRange = Order::factory()->create([
         'status' => OrderStatus::COMPLETED,
         'shift_id' => $this->shift->id,
+        'total' => 100,
+        'profit' => 50,
         'created_at' => now()->subDays(5),
     ]);
 
@@ -142,6 +142,8 @@ it('filters data by date range correctly', function () {
     $orderOutsideRange = Order::factory()->create([
         'status' => OrderStatus::COMPLETED,
         'shift_id' => $this->shift->id,
+        'total' => 100,
+        'profit' => 50,
         'created_at' => now()->subDays(60),
     ]);
 
@@ -164,7 +166,7 @@ it('filters data by date range correctly', function () {
             'endDate' => $endDate,
         ])
         ->assertSuccessful();
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+});
 
 // Preset Period Tests
 it('applies last 7 days preset correctly', function () {
@@ -234,6 +236,8 @@ it('integrates with peak hours report service', function () {
         $order = Order::factory()->create([
             'status' => OrderStatus::COMPLETED,
             'shift_id' => $this->shift->id,
+            'total' => 100,
+            'profit' => 50,
             'created_at' => now()->setHour($hour)->subDays(2),
         ]);
 
@@ -249,7 +253,7 @@ it('integrates with peak hours report service', function () {
 
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful();
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+});
 
 // Multiple Orders Scenario Tests
 it('displays widgets with multiple orders at peak hours', function () {
@@ -259,27 +263,30 @@ it('displays widgets with multiple orders at peak hours', function () {
     $peakHours = [12, 13, 14, 18, 19, 20];
 
     foreach ($peakHours as $hour) {
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 3; $i++) {
+            $qty = rand(1, 3);
             $order = Order::factory()->create([
                 'status' => OrderStatus::COMPLETED,
                 'shift_id' => $this->shift->id,
+                'total' => 150 * $qty,
+                'profit' => 75 * $qty,
                 'created_at' => now()->setHour($hour)->setMinute(rand(0, 59))->subDays(rand(1, 7)),
             ]);
 
             OrderItem::factory()->create([
                 'order_id' => $order->id,
                 'product_id' => $product->id,
-                'quantity' => rand(1, 3),
+                'quantity' => $qty,
                 'price' => 150,
                 'cost' => 75,
-                'total' => 150 * rand(1, 3),
+                'total' => 150 * $qty,
             ]);
         }
     }
 
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful();
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+});
 
 // Edge Cases
 it('handles empty date range gracefully', function () {
@@ -300,6 +307,8 @@ it('handles orders with different days of week', function () {
         $order = Order::factory()->create([
             'status' => OrderStatus::COMPLETED,
             'shift_id' => $this->shift->id,
+            'total' => 200,
+            'profit' => 100,
             'created_at' => now()->subDays($i)->setHour(12),
         ]);
 
@@ -315,7 +324,7 @@ it('handles orders with different days of week', function () {
 
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful();
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+});
 
 it('handles single order scenario', function () {
     $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
@@ -323,6 +332,8 @@ it('handles single order scenario', function () {
     $order = Order::factory()->create([
         'status' => OrderStatus::COMPLETED,
         'shift_id' => $this->shift->id,
+        'total' => 100,
+        'profit' => 50,
         'created_at' => now()->subDays(1),
     ]);
 
@@ -337,16 +348,14 @@ it('handles single order scenario', function () {
 
     livewire(PeakHoursPerformanceReport::class)
         ->assertSuccessful();
-})->skip('Service uses MySQL HOUR() function not available in SQLite');
+});
 
 // Default Filter State Tests
 it('has default filter values', function () {
     $component = livewire(PeakHoursPerformanceReport::class);
 
-    // The default should be last_30_days with corresponding dates
     $component->assertSuccessful();
 
-    // Verify default dates are set (last 29 days)
     $expectedStartDate = now()->subDays(29)->startOfDay()->toDateString();
     $expectedEndDate = now()->endOfDay()->toDateString();
 
@@ -373,12 +382,33 @@ it('has correct navigation sort order', function () {
 });
 
 it('has correct route path', function () {
-    // Dashboard pages store the route path in a static property
-    // We can access it via reflection since getRoutePath requires a Panel parameter
     $reflection = new ReflectionClass(PeakHoursPerformanceReport::class);
     $property = $reflection->getProperty('routePath');
     $property->setAccessible(true);
 
     expect($property->getValue())
         ->toBe('peak-hours-performance-report');
+});
+
+// Widget Isolated Rendering Tests
+it('renders individual peak hours widgets directly without error', function () {
+    Order::factory()->create([
+        'status' => OrderStatus::COMPLETED,
+        'shift_id' => $this->shift->id,
+        'total' => 300,
+        'profit' => 120,
+        'created_at' => now()->subDays(2)->setHour(14),
+    ]);
+
+    livewire(PeakHoursStatsWidget::class)
+        ->assertSuccessful();
+
+    livewire(HourlyPerformanceChartWidget::class)
+        ->assertSuccessful();
+
+    livewire(DailyPerformanceChartWidget::class)
+        ->assertSuccessful();
+
+    livewire(HourlyPerformanceTableWidget::class)
+        ->assertSuccessful();
 });

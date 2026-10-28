@@ -19,6 +19,7 @@ class NewSettingsSeeder extends Seeder
             SettingKey::RESTAURANT_OFFICIAL_LOGO->value => SettingKey::RESTAURANT_OFFICIAL_LOGO->defaultValue(),
             SettingKey::NODE_TYPE->value => SettingKey::NODE_TYPE->defaultValue(),
             SettingKey::MASTER_NODE_LINK->value => SettingKey::MASTER_NODE_LINK->defaultValue(),
+            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->defaultValue(),
         ];
 
         foreach ($newSettings as $key => $value) {

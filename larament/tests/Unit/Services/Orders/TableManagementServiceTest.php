@@ -1,9 +1,8 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Services\Orders\TableManagementService;
-use App\Models\DineTable;
 use App\Exceptions\OrderException;
+use App\Models\DineTable;
+use App\Services\Orders\TableManagementService;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -19,7 +18,7 @@ describe('TableManagementService', function () {
                 'order_id' => null,
             ]);
 
-            expect(fn() => $this->service->validateTableAvailability('T001'))
+            expect(fn () => $this->service->validateTableAvailability('T001'))
                 ->not->toThrow(OrderException::class);
         });
 
@@ -29,12 +28,12 @@ describe('TableManagementService', function () {
                 'order_id' => 1,
             ]);
 
-            expect(fn() => $this->service->validateTableAvailability('T001'))
+            expect(fn () => $this->service->validateTableAvailability('T001'))
                 ->toThrow(OrderException::class, 'هذه الطاولة محجوزة');
         });
 
         it('passes when table does not exist', function () {
-            expect(fn() => $this->service->validateTableAvailability('T999'))
+            expect(fn () => $this->service->validateTableAvailability('T999'))
                 ->not->toThrow(OrderException::class);
         });
     });
@@ -87,7 +86,7 @@ describe('TableManagementService', function () {
                 'order_id' => 1,
             ]);
 
-            expect(fn() => $this->service->reserveTable('T001', 2))
+            expect(fn () => $this->service->reserveTable('T001', 2))
                 ->toThrow(OrderException::class, 'هذه الطاولة محجوزة');
         });
     });
@@ -106,7 +105,7 @@ describe('TableManagementService', function () {
         });
 
         it('does nothing when table does not exist', function () {
-            expect(fn() => $this->service->freeTable('T999'))
+            expect(fn () => $this->service->freeTable('T999'))
                 ->not->toThrow(Exception::class);
         });
     });

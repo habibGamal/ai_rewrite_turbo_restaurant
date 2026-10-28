@@ -1,11 +1,10 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Repositories\OrderItemRepository;
 use App\DTOs\Orders\OrderItemDTO;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Repositories\OrderItemRepository;
 
 uses(Tests\Unit\TestCase::class);
 

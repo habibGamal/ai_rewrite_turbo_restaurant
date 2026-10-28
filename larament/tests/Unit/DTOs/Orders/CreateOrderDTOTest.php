@@ -61,7 +61,7 @@ describe('CreateOrderDTO', function () {
     });
 
     it('throws exception when table number is required but not provided', function () {
-        expect(fn() => new CreateOrderDTO(
+        expect(fn () => new CreateOrderDTO(
             type: OrderType::DINE_IN,
             shiftId: 1,
             userId: 1

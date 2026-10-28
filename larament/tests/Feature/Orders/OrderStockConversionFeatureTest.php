@@ -1,21 +1,18 @@
 <?php
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\DTOs\Orders\OrderItemDTO;
-use App\Enums\OrderType;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentStatus;
+use App\Enums\OrderType;
 use App\Enums\ProductType;
-use App\Enums\MovementReason;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\InventoryItem;
 use App\Models\Order;
+use App\Models\Printer;
 use App\Models\Product;
 use App\Models\ProductComponent;
-use App\Models\InventoryItem;
-use App\Models\Customer;
-use App\Models\User;
 use App\Models\Shift;
-use App\Models\Category;
-use App\Models\Printer;
+use App\Models\User;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\OrderStockConversionService;
 use App\Services\StockService;

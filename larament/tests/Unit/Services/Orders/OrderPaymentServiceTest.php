@@ -1,13 +1,12 @@
 <?php
 
-use App\Services\Orders\OrderPaymentService;
 use App\DTOs\Orders\PaymentDTO;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\PaymentProcessed;
 use App\Models\Order;
 use App\Models\Payment;
-use Tests\Unit\TestCase;
+use App\Services\Orders\OrderPaymentService;
 use Illuminate\Support\Facades\Event;
 
 uses(Tests\Unit\TestCase::class);

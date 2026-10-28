@@ -1,12 +1,11 @@
 <?php
 
-use Tests\Unit\TestCase;
-use App\Repositories\OrderRepository;
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderType;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Repositories\OrderRepository;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -95,7 +94,7 @@ describe('OrderRepository', function () {
         });
 
         it('throws exception for non-existing order', function () {
-            expect(fn() => $this->repository->findByIdOrFail(999))
+            expect(fn () => $this->repository->findByIdOrFail(999))
                 ->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
         });
     });
@@ -112,7 +111,7 @@ describe('OrderRepository', function () {
             $orders = $this->repository->getShiftOrders($shift1->id);
 
             expect($orders)->toHaveCount(2);
-            expect($orders->every(fn($order) => $order->shift_id === $shift1->id))->toBeTrue();
+            expect($orders->every(fn ($order) => $order->shift_id === $shift1->id))->toBeTrue();
         });
 
         it('returns empty collection when no orders', function () {
@@ -133,7 +132,7 @@ describe('OrderRepository', function () {
             $orders = $this->repository->getProcessingOrders($shift->id);
 
             expect($orders)->toHaveCount(2);
-            expect($orders->every(fn($order) => $order->status === OrderStatus::PROCESSING))->toBeTrue();
+            expect($orders->every(fn ($order) => $order->status === OrderStatus::PROCESSING))->toBeTrue();
         });
     });
 
@@ -202,7 +201,7 @@ describe('OrderRepository', function () {
             $orders = $this->repository->getOrdersWithPaymentStatus(PaymentStatus::PENDING->value);
 
             expect($orders)->toHaveCount(2);
-            expect($orders->every(fn($order) => $order->payment_status === PaymentStatus::PENDING))->toBeTrue();
+            expect($orders->every(fn ($order) => $order->payment_status === PaymentStatus::PENDING))->toBeTrue();
         });
     });
 });

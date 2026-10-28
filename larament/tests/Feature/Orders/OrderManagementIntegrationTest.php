@@ -1,18 +1,17 @@
 <?php
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\DTOs\Orders\OrderItemDTO;
-use App\Enums\OrderType;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\OrderCreated;
 use App\Events\Orders\OrderCompleted;
+use App\Events\Orders\OrderCreated;
+use App\Models\Customer;
+use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Customer;
-use App\Models\User;
 use App\Models\Shift;
-use App\Models\Driver;
+use App\Models\User;
 use App\Services\Orders\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -213,12 +212,12 @@ describe('Order Management Integration', function () {
             ]);
 
             // Should throw exception when trying to modify completed order
-            expect(fn() => $this->orderService->updateOrderItems($order->id, []))
+            expect(fn () => $this->orderService->updateOrderItems($order->id, []))
                 ->toThrow(Exception::class);
         });
 
         it('validates table requirements for dine-in orders', function () {
-            expect(fn() => new CreateOrderDTO(
+            expect(fn () => new CreateOrderDTO(
                 type: OrderType::DINE_IN,
                 shiftId: $this->shift->id,
                 userId: $this->user->id

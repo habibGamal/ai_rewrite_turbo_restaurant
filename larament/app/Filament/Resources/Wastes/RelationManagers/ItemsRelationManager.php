@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Wastes\RelationManagers;
 
+use App\Models\Product;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -61,6 +62,7 @@ class ItemsRelationManager extends RelationManager
 
                 TextColumn::make('product.unit')
                     ->label('الوحدة')
+                    ->formatStateUsing(fn (?string $state): string => Product::formatUnit($state))
                     ->searchable(),
             ])
             ->filters([

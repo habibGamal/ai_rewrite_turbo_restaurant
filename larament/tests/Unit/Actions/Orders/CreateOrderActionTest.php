@@ -1,11 +1,9 @@
 <?php
 
-use Tests\Unit\TestCase;
 use App\Actions\Orders\CreateOrderAction;
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderType;
 use App\Models\Order;
-use App\Services\Orders\OrderService;
 
 uses(Tests\Unit\TestCase::class);
 

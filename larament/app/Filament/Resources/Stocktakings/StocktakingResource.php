@@ -11,6 +11,7 @@ use App\Filament\Resources\Stocktakings\Pages\EditStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\ListStocktakings;
 use App\Filament\Resources\Stocktakings\Pages\ViewStocktaking;
 use App\Filament\Traits\AdminAccess;
+use App\Models\Product;
 use App\Models\Stocktaking;
 use App\Models\User;
 use App\Services\Resources\StocktakingCalculatorService;
@@ -100,6 +101,8 @@ class StocktakingResource extends Resource
                             ->table([
                                 TableColumn::make('المنتج')
                                     ->width('150px'),
+                                TableColumn::make('الوحدة')
+                                    ->width('100px'),
                                 TableColumn::make('الكمية الفعلية')
                                     ->width('120px'),
                                 TableColumn::make('سعر الوحدة (ج.م)')
@@ -113,10 +116,18 @@ class StocktakingResource extends Resource
                                 TextInput::make('product_name')
                                     ->label('المنتج')
                                     ->formatStateUsing(function ($record, $state) {
-                                        return $state ?? ($record->product?->name ?? 'غير محدد');
+                                        return $state ?? ($record?->product?->name ?? 'غير محدد');
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                TextInput::make('unit')
+                                    ->label('الوحدة')
+                                    ->formatStateUsing(function ($record, $state) {
+                                        return Product::formatUnit($state ?? $record?->product?->unit);
+                                    })
+                                    ->disabled()
+                                    ->dehydrated(false),
 
                                 Hidden::make('stock_quantity')
                                     ->label('الكمية المخزنة')

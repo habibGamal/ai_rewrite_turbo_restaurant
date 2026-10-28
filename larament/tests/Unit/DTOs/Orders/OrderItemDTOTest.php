@@ -80,7 +80,7 @@ describe('OrderItemDTO', function () {
     });
 
     it('throws exception when quantity is zero', function () {
-        expect(fn() => new OrderItemDTO(
+        expect(fn () => new OrderItemDTO(
             productId: 1,
             quantity: 0,
             price: 10.00,
@@ -89,7 +89,7 @@ describe('OrderItemDTO', function () {
     });
 
     it('throws exception when quantity is negative', function () {
-        expect(fn() => new OrderItemDTO(
+        expect(fn () => new OrderItemDTO(
             productId: 1,
             quantity: -1,
             price: 10.00,
@@ -98,7 +98,7 @@ describe('OrderItemDTO', function () {
     });
 
     it('throws exception when price is negative', function () {
-        expect(fn() => new OrderItemDTO(
+        expect(fn () => new OrderItemDTO(
             productId: 1,
             quantity: 1,
             price: -10.00,
@@ -107,7 +107,7 @@ describe('OrderItemDTO', function () {
     });
 
     it('throws exception when cost is negative', function () {
-        expect(fn() => new OrderItemDTO(
+        expect(fn () => new OrderItemDTO(
             productId: 1,
             quantity: 1,
             price: 10.00,

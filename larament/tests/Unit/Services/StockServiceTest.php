@@ -1,15 +1,12 @@
 <?php
 
-use App\Models\Product;
-use App\Models\InventoryItem;
-use App\Models\InventoryItemMovement;
-use App\Services\StockService;
-use App\Services\InventoryDailyAggregationService;
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
-use Tests\Unit\TestCase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Models\InventoryItem;
+use App\Models\InventoryItemMovement;
+use App\Models\Product;
+use App\Services\InventoryDailyAggregationService;
+use App\Services\StockService;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -30,7 +27,7 @@ describe('StockService', function () {
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 50.0],
                 ['product_id' => $products[1]->id, 'quantity' => 75.0],
-                ['product_id' => $products[2]->id, 'quantity' => 100.0]
+                ['product_id' => $products[2]->id, 'quantity' => 100.0],
             ];
 
             $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
@@ -39,7 +36,7 @@ describe('StockService', function () {
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity']
+                    'quantity' => $item['quantity'],
                 ]);
             }
         });
@@ -53,7 +50,7 @@ describe('StockService', function () {
 
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 25.0],
-                ['product_id' => $products[1]->id, 'quantity' => 20.0]
+                ['product_id' => $products[1]->id, 'quantity' => 20.0],
             ];
 
             $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
@@ -61,18 +58,18 @@ describe('StockService', function () {
             expect($result)->toBeTrue();
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 75.0 // 50 + 25
+                'quantity' => 75.0, // 50 + 25
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 50.0 // 30 + 20
+                'quantity' => 50.0, // 30 + 20
             ]);
         });
 
         it('fails to add stock when products dont exist', function () {
             $items = [
                 ['product_id' => 99999, 'quantity' => 50.0],
-                ['product_id' => 99998, 'quantity' => 75.0]
+                ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
             $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
@@ -91,14 +88,14 @@ describe('StockService', function () {
             foreach ($products as $product) {
                 InventoryItem::create([
                     'product_id' => $product->id,
-                    'quantity' => 100.0
+                    'quantity' => 100.0,
                 ]);
             }
 
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 20.0],
                 ['product_id' => $products[1]->id, 'quantity' => 30.0],
-                ['product_id' => $products[2]->id, 'quantity' => 40.0]
+                ['product_id' => $products[2]->id, 'quantity' => 40.0],
             ];
 
             $result = $this->stockService->removeStock($items, MovementReason::ORDER);
@@ -107,7 +104,7 @@ describe('StockService', function () {
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
-                    'quantity' => 100.0 - $item['quantity']
+                    'quantity' => 100.0 - $item['quantity'],
                 ]);
             }
         });
@@ -118,16 +115,16 @@ describe('StockService', function () {
             // Create initial inventory with limited stock
             InventoryItem::create([
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0
+                'quantity' => 10.0,
             ]);
             InventoryItem::create([
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0
+                'quantity' => 15.0,
             ]);
 
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 20.0], // More than available
-                ['product_id' => $products[1]->id, 'quantity' => 10.0]  // Within available
+                ['product_id' => $products[1]->id, 'quantity' => 10.0],  // Within available
             ];
 
             $result = $this->stockService->removeStock($items, MovementReason::ORDER);
@@ -136,18 +133,18 @@ describe('StockService', function () {
             // Quantities should remain unchanged due to transaction rollback
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0
+                'quantity' => 10.0,
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0
+                'quantity' => 15.0,
             ]);
         });
 
         it('fails to remove stock when products dont exist', function () {
             $items = [
                 ['product_id' => 99999, 'quantity' => 50.0],
-                ['product_id' => 99998, 'quantity' => 75.0]
+                ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
             $result = $this->stockService->removeStock($items, MovementReason::ORDER);
@@ -162,7 +159,7 @@ describe('StockService', function () {
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 50.0],
                 ['product_id' => $products[1]->id, 'quantity' => 75.0],
-                ['product_id' => $products[2]->id, 'quantity' => 100.0]
+                ['product_id' => $products[2]->id, 'quantity' => 100.0],
             ];
 
             $result = $this->stockService->processMultipleItems($items, 'add', MovementReason::PURCHASE);
@@ -171,7 +168,7 @@ describe('StockService', function () {
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity']
+                    'quantity' => $item['quantity'],
                 ]);
             }
         });
@@ -183,14 +180,14 @@ describe('StockService', function () {
             foreach ($products as $product) {
                 InventoryItem::create([
                     'product_id' => $product->id,
-                    'quantity' => 100.0
+                    'quantity' => 100.0,
                 ]);
             }
 
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 20.0],
                 ['product_id' => $products[1]->id, 'quantity' => 30.0],
-                ['product_id' => $products[2]->id, 'quantity' => 40.0]
+                ['product_id' => $products[2]->id, 'quantity' => 40.0],
             ];
 
             $result = $this->stockService->processMultipleItems($items, 'remove', MovementReason::ORDER);
@@ -199,7 +196,7 @@ describe('StockService', function () {
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
-                    'quantity' => 100.0 - $item['quantity']
+                    'quantity' => 100.0 - $item['quantity'],
                 ]);
             }
         });
@@ -207,17 +204,17 @@ describe('StockService', function () {
         it('fails to process multiple items when products dont exist', function () {
             $items = [
                 ['product_id' => 99999, 'quantity' => 50.0],
-                ['product_id' => 99998, 'quantity' => 75.0]
+                ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
             $result = $this->stockService->processMultipleItems($items, 'add', MovementReason::PURCHASE);
 
             expect($result)->toBeFalse();
             $this->assertDatabaseMissing('inventory_items', [
-                'product_id' => 99999
+                'product_id' => 99999,
             ]);
             $this->assertDatabaseMissing('inventory_items', [
-                'product_id' => 99998
+                'product_id' => 99998,
             ]);
         });
 
@@ -227,16 +224,16 @@ describe('StockService', function () {
             // Create initial inventory with limited stock
             InventoryItem::create([
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0
+                'quantity' => 10.0,
             ]);
             InventoryItem::create([
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0
+                'quantity' => 15.0,
             ]);
 
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 20.0], // More than available
-                ['product_id' => $products[1]->id, 'quantity' => 10.0]  // Within available
+                ['product_id' => $products[1]->id, 'quantity' => 10.0],  // Within available
             ];
 
             $result = $this->stockService->processMultipleItems($items, 'remove', MovementReason::ORDER);
@@ -245,11 +242,11 @@ describe('StockService', function () {
             // Quantities should remain unchanged due to transaction rollback
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0
+                'quantity' => 10.0,
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0
+                'quantity' => 15.0,
             ]);
         });
 
@@ -259,7 +256,7 @@ describe('StockService', function () {
             // Create inventory for first product only
             InventoryItem::create([
                 'product_id' => $products[0]->id,
-                'quantity' => 50.0
+                'quantity' => 50.0,
             ]);
 
             $items = [
@@ -273,15 +270,15 @@ describe('StockService', function () {
             expect($result)->toBeTrue();
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 80.0 // 50 + 30
+                'quantity' => 80.0, // 50 + 30
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 40.0
+                'quantity' => 40.0,
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[2]->id,
-                'quantity' => 60.0
+                'quantity' => 60.0,
             ]);
         });
     });
@@ -293,7 +290,7 @@ describe('StockService', function () {
 
             InventoryItem::create([
                 'product_id' => $product->id,
-                'quantity' => $quantity
+                'quantity' => $quantity,
             ]);
 
             $currentStock = $this->stockService->getCurrentStock($product->id);
@@ -317,7 +314,7 @@ describe('StockService', function () {
 
             InventoryItem::create([
                 'product_id' => $product->id,
-                'quantity' => $availableQuantity
+                'quantity' => $availableQuantity,
             ]);
 
             expect($this->stockService->hasSufficientStock($product->id, 50.0))->toBeTrue()
@@ -380,7 +377,7 @@ describe('StockService', function () {
             $products = Product::factory(2)->create();
             $items = [
                 ['product_id' => $products[0]->id, 'quantity' => 50.0],
-                ['product_id' => $products[1]->id, 'quantity' => 75.0]
+                ['product_id' => $products[1]->id, 'quantity' => 75.0],
             ];
 
             $result = $this->stockService->processMultipleItems($items, 'add', MovementReason::PURCHASE);

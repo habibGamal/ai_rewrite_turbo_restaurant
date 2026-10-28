@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Stocktaking;
@@ -29,6 +30,7 @@ class InvoicePrintService
             'items' => $invoice->items->map(function ($item) {
                 return [
                     'product_name' => $item->product_name ?? $item->product?->name,
+                    'unit' => Product::formatUnit($item->product?->unit),
                     'quantity' => $item->quantity,
                     'price' => $item->price,
                     'total' => $item->quantity * $item->price,
@@ -61,6 +63,7 @@ class InvoicePrintService
             'items' => $invoice->items->map(function ($item) {
                 return [
                     'product_name' => $item->product_name ?? $item->product?->name,
+                    'unit' => Product::formatUnit($item->product?->unit),
                     'quantity' => $item->quantity,
                     'price' => $item->price,
                     'total' => $item->quantity * $item->price,
@@ -92,6 +95,7 @@ class InvoicePrintService
             'items' => $stocktaking->items->map(function ($item) {
                 return [
                     'product_name' => $item->product_name ?? $item->product?->name,
+                    'unit' => Product::formatUnit($item->product?->unit),
                     'stock_quantity' => $item->stock_quantity,
                     'real_quantity' => $item->real_quantity,
                     'difference' => $item->real_quantity - $item->stock_quantity,
@@ -123,6 +127,7 @@ class InvoicePrintService
             'items' => $waste->items->map(function ($item) {
                 return [
                     'product_name' => $item->product_name ?? $item->product?->name,
+                    'unit' => Product::formatUnit($item->product?->unit),
                     'quantity' => $item->quantity,
                     'price' => $item->price,
                     'total' => $item->quantity * $item->price,

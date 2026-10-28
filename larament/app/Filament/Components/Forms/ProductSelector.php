@@ -55,8 +55,9 @@ class ProductSelector extends Select
                 return $products->mapWithKeys(function ($product) {
                     $price = $product->cost ?? $product->price;
                     $categoryName = $product->category ? $product->category->name : 'بدون فئة';
+                    $unit = $product->unit ? ' ('.Product::formatUnit($product->unit).')' : '';
 
-                    $label = $product->name.' - '.$price.' ج.م'.' ('.$categoryName.')';
+                    $label = $product->name.$unit.' - '.$price.' ج.م'.' ('.$categoryName.')';
 
                     return [$product->id => $label];
                 });
@@ -97,6 +98,7 @@ class ProductSelector extends Select
                 $newItem = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'unit' => Product::formatUnit($product->unit),
                     'quantity' => $quantity,
                     'price' => $price,
                     'total' => $total,

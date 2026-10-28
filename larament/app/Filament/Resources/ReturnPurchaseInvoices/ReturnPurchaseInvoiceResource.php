@@ -11,6 +11,7 @@ use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoic
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ViewReturnPurchaseInvoice;
 use App\Filament\Traits\AdminAccess;
+use App\Models\Product;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\User;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
@@ -113,6 +114,8 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ->table([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                TableColumn::make('الوحدة')
+                                    ->width('100px'),
                                 TableColumn::make('الكمية')
                                     ->width('100px'),
                                 TableColumn::make('سعر الوحدة (ج.م)')
@@ -129,10 +132,18 @@ class ReturnPurchaseInvoiceResource extends Resource
                                             return 'غير محدد';
                                         }
 
-                                        return $record->product_name != null ? $record->product_name : $record->product->name;
+                                        return $record->product_name != null ? $record->product_name : $record->product?->name;
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                TextInput::make('unit')
+                                    ->label('الوحدة')
+                                    ->formatStateUsing(function ($record, $state) {
+                                        return Product::formatUnit($state ?? $record?->product?->unit);
+                                    })
+                                    ->disabled()
+                                    ->dehydrated(false),
 
                                 TextInput::make('quantity')
                                     ->label('الكمية')

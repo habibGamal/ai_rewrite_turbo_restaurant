@@ -1,16 +1,14 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\WebOrderController;
 use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
 use App\Http\Controllers\KitchenController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WebOrderController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect()->to('/admin');
@@ -103,27 +101,27 @@ Route::middleware('auth')->group(function () {
         ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
 
 // Test route for broadcasting
 Route::get('/test-broadcast', function () {
     // Get the latest order or create a dummy one for testing
     $order = \App\Models\Order::with(['customer', 'items'])->latest()->first();
 
-    if (!$order) {
+    if (! $order) {
         return response()->json(['error' => 'No orders found. Create an order first.']);
     }
 
     // Log for debugging
-    \Log::info('Broadcasting test event for order: ' . $order->id);
-    \Log::info('Broadcasting connection: ' . config('broadcasting.default'));
+    \Log::info('Broadcasting test event for order: '.$order->id);
+    \Log::info('Broadcasting connection: '.config('broadcasting.default'));
     \Log::info('Reverb config: ', config('broadcasting.connections.reverb'));
 
     // Dispatch the event
     $event = new \App\Events\Orders\WebOrderReceived($order);
-    \Log::info('Event created: ' . get_class($event));
+    \Log::info('Event created: '.get_class($event));
     \Log::info('Broadcast channels: ', $event->broadcastOn());
-    \Log::info('Broadcast as: ' . $event->broadcastAs());
+    \Log::info('Broadcast as: '.$event->broadcastAs());
     \Log::info('Broadcast with: ', $event->broadcastWith());
 
     event($event);
@@ -135,7 +133,7 @@ Route::get('/test-broadcast', function () {
         'order_id' => $order->id,
         'order_number' => $order->order_number,
         'broadcast_connection' => config('broadcasting.default'),
-        'reverb_config' => config('broadcasting.connections.reverb')
+        'reverb_config' => config('broadcasting.connections.reverb'),
     ]);
 });
 
@@ -150,6 +148,6 @@ Route::get('/test-simple', function () {
 
     return response()->json([
         'message' => 'Simple test event dispatched',
-        'timestamp' => now()->format('H:i:s')
+        'timestamp' => now()->format('H:i:s'),
     ]);
 });

@@ -6,7 +6,6 @@ use App\Filament\Pages\Reports\StockReport;
 use App\Filament\Widgets\StockReportTable;
 use App\Models\Category;
 use App\Models\InventoryItem;
-use App\Models\InventoryItemMovementDaily;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -256,6 +255,67 @@ it('displays correct actual remaining quantity', function () {
     livewire(StockReportTable::class)
         ->assertCanSeeTableRecords([$product])
         ->assertSee('50');
+});
+
+it('displays inventory item quantity as actual remaining quantity when endDate is today', function () {
+    $product = Product::factory()->create(['type' => ProductType::Consumable]);
+    InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'quantity' => 75,
+    ]);
+
+    livewire(StockReportTable::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(7)->toDateString(),
+            'endDate' => now()->toDateString(),
+        ],
+    ])
+        ->assertCanSeeTableRecords([$product])
+        ->assertSee('75');
+});
+
+it('displays daily movement end quantity as actual remaining quantity when endDate is in the past', function () {
+    $product = Product::factory()->create(['type' => ProductType::Consumable]);
+    InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'quantity' => 100,
+    ]);
+
+    $pastDate = now()->subDays(5)->toDateString();
+
+    $movement = \App\Models\InventoryItemMovementDaily::factory()->create([
+        'product_id' => $product->id,
+        'date' => $pastDate,
+        'end_quantity' => 35,
+    ]);
+
+    livewire(StockReportTable::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(10)->toDateString(),
+            'endDate' => $pastDate,
+        ],
+    ])
+        ->assertCanSeeTableRecords([$product])
+        ->assertSee('35');
+});
+
+it('displays zero as actual remaining quantity when endDate is in the past and no daily record exists', function () {
+    $product = Product::factory()->create(['type' => ProductType::Consumable]);
+    InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'quantity' => 100,
+    ]);
+
+    $pastDate = now()->subDays(5)->toDateString();
+
+    livewire(StockReportTable::class, [
+        'pageFilters' => [
+            'startDate' => now()->subDays(10)->toDateString(),
+            'endDate' => $pastDate,
+        ],
+    ])
+        ->assertCanSeeTableRecords([$product])
+        ->assertSee('0');
 });
 
 it('displays products with zero cost', function () {

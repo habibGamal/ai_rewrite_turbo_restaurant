@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\UserRole;
-use App\Filament\Actions\CloseStocktakingAction;
 use App\Filament\Resources\Stocktakings\Pages\CreateStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\EditStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\ListStocktakings;
@@ -307,7 +306,7 @@ it('displays total as EGP currency', function () {
 it('can filter by user', function () {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
-    
+
     $recordsUser1 = Stocktaking::factory(3)->create(['user_id' => $user1->id]);
     $recordsUser2 = Stocktaking::factory(2)->create(['user_id' => $user2->id]);
 

@@ -1,22 +1,20 @@
 <?php
 
+use App\Enums\InventoryMovementOperation;
+use App\Enums\MovementReason;
 use App\Enums\ProductType;
-use App\Models\Product;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
 use App\Models\InventoryItemMovementDaily;
+use App\Models\Product;
 use App\Services\InventoryDailyAggregationService;
-use App\Enums\InventoryMovementOperation;
-use App\Enums\MovementReason;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Tests\Unit\TestCase;
 
 uses(Tests\Unit\TestCase::class);
 
 describe('InventoryDailyAggregationService', function () {
     beforeEach(function () {
-        $this->service = new InventoryDailyAggregationService();
+        $this->service = new InventoryDailyAggregationService;
 
         // Clear all data before each test
         InventoryItemMovementDaily::truncate();
@@ -261,7 +259,7 @@ describe('InventoryDailyAggregationService', function () {
         it('throws exception when no open day exists', function () {
             $product = Product::factory()->create();
 
-            expect(fn() => $this->service->bulkAggregateWithInsertSelect([$product->id]))
+            expect(fn () => $this->service->bulkAggregateWithInsertSelect([$product->id]))
                 ->toThrow(\Exception::class, 'No open day found. Please open a day first.');
         });
 
@@ -322,9 +320,7 @@ describe('InventoryDailyAggregationService', function () {
             // Open day for existing product only (this will create record for existing product)
             $this->service->openDay();
 
-
             $newProduct = Product::factory()->create(['type' => ProductType::RawMaterial]);
-
 
             $openDay = InventoryItemMovementDaily::whereNull('closed_at')->first();
 

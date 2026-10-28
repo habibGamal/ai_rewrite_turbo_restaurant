@@ -19,6 +19,7 @@ enum SettingKey: string
     case ALLOW_CASHIER_CANCEL_ORDERS = 'allow_cashier_cancel_orders';
     case ALLOW_CASHIER_ITEM_CHANGES = 'allow_cashier_item_changes';
     case ALLOW_WEB_ORDERS_SHIFT_TRANSFER = 'allow_web_orders_shift_transfer';
+    case UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
 
     /**
      * Get default value for this setting
@@ -41,6 +42,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'false',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'false',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'false',
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'true',
         };
     }
 
@@ -65,6 +67,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => ['required', 'boolean'],
             self::ALLOW_CASHIER_ITEM_CHANGES => ['required', 'boolean'],
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => ['required', 'boolean'],
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => ['required', 'boolean'],
         };
     }
 
@@ -89,6 +92,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'السماح للكاشير بإلغاء الطلبات',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'السماح للكاشير بتعديل الطلبات المحفوظة',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'نقل طلبات الويب المفتوحة إلى الوردية التالية',
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة المنتجات من فواتير الشراء',
         };
     }
 
@@ -113,6 +117,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'يسمح للكاشير بإلغاء الطلبات المكتملة',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'يسمح للكاشير بتعديل عناصر الطلبات المحفوظة مسبقاً',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'عند تفعيل هذا الخيار، طلبات الويب (دليفري وتيك أواي) المفتوحة سيتم نقلها تلقائياً للوردية الجديدة عند إغلاق الوردية الحالية',
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.',
         };
     }
 
@@ -127,6 +132,7 @@ enum SettingKey: string
             self::RECEIPT_FOOTER => 'أدخل النص الذي تريد أن يظهر في نهاية الفاتورة...',
             self::DINE_IN_SERVICE_CHARGE => '0.12',
             self::RESTAURANT_NAME => 'أدخل اسم المطعم...',
+            self::RESTAURANT_PRINT_LOGO => 'رفع شعار للطباعة',
             self::RESTAURANT_OFFICIAL_LOGO => '/images/logo.jpg',
             self::RESTAURANT_QR_LOGO => 'رفع شعار QR',
             self::NODE_TYPE => 'اختر نوع النقطة',
@@ -136,6 +142,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'تفعيل',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'تفعيل',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'تفعيل',
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تفعيل',
         };
     }
 
@@ -160,6 +167,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_CASHIER_ITEM_CHANGES => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
+            self::UPDATE_PRODUCT_COST_ON_PURCHASE => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
         };
     }
 }

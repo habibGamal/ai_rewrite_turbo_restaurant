@@ -1,27 +1,23 @@
 <?php
 
-use App\Models\User;
-use App\Models\Order;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\Customer;
-use App\Models\Driver;
-use App\Models\Shift;
-use App\Models\Expense;
-use App\Models\ExpenceType;
-use App\Models\Printer;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use App\Enums\UserRole;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Enums\PaymentStatus;
 use App\Enums\PaymentMethod;
-use App\Services\Orders\OrderService;
-use App\Services\PrintService;
-use App\Services\ShiftService;
+use App\Enums\PaymentStatus;
+use App\Enums\UserRole;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Driver;
+use App\Models\ExpenceType;
+use App\Models\Expense;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Printer;
+use App\Models\Product;
+use App\Models\Shift;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Feature\TestCase;
 
 uses(RefreshDatabase::class);
 
@@ -74,7 +70,7 @@ describe('OrderController Feature Tests', function () {
             $response = $this->get(route('orders.index'));
 
             $response->assertOk()
-                ->assertInertia(function ($page) use ($order, $expense) {
+                ->assertInertia(function ($page) {
                     $page->component('Orders/Index')
                         ->has('orders')
                         ->has('currentShift')
@@ -773,7 +769,7 @@ describe('OrderController Feature Tests', function () {
             $response = $this->post(route('print.kitchen'), [
                 'images' => [
                     [
-                        'printerId' => (string)$this->printer->id,
+                        'printerId' => (string) $this->printer->id,
                         'image' => 'base64_image_data',
                     ],
                 ],

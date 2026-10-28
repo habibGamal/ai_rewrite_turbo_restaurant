@@ -101,7 +101,8 @@ class ProductsSalesReportService
                 // })
             })
             ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('order_items.order_id', '=', 'orders.id');
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.status', OrderStatus::COMPLETED);
 
                 if ($shiftIds !== null) {
                     if (empty($shiftIds)) {
@@ -127,38 +128,19 @@ class ProductsSalesReportService
     public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
     {
         $summary = DB::table('products as p')
+            ->whereNot('p.type', ProductType::RawMaterial)
             ->select([
-                DB::raw('COUNT(DISTINCT p.id) as total_products'),
+                DB::raw('COUNT(DISTINCT order_items.product_id) as total_products'),
                 DB::raw('SUM(order_items.total) as total_sales'),
                 DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
                 DB::raw('AVG((order_items.total - (p.cost * order_items.quantity)) / order_items.total * 100) as avg_profit_margin'),
                 DB::raw('MAX(order_items.total) as best_selling_product_id'),
-            ])->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('p.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
-                        $query->select(DB::raw(1))
-                            ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id');
-
-                        if ($shiftIds !== null) {
-                            if (empty($shiftIds)) {
-                                $query->whereRaw('1 = 0');
-                            } else {
-                                $query->whereIn('orders.shift_id', $shiftIds);
-                            }
-
-                            return;
-                        }
-
-                        $query->whereBetween('orders.created_at', [
-                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
-                        ]);
-                    });
-            })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('order_items.order_id', '=', 'orders.id');
+            ])
+            ->join('order_items', 'p.id', '=', 'order_items.product_id')
+            ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.status', OrderStatus::COMPLETED);
 
                 if ($shiftIds !== null) {
                     if (empty($shiftIds)) {
@@ -178,6 +160,7 @@ class ProductsSalesReportService
             ->first();
 
         $mostProductQuery = DB::table('products as p')
+            ->whereNot('p.type', ProductType::RawMaterial)
             ->select([
                 'p.id',
                 'p.name',
@@ -185,31 +168,10 @@ class ProductsSalesReportService
                 DB::raw('SUM(order_items.total) as total_sales'),
                 DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
             ])
-            ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('p.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
-                        $query->select(DB::raw(1))
-                            ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id');
-
-                        if ($shiftIds !== null) {
-                            if (empty($shiftIds)) {
-                                $query->whereRaw('1 = 0');
-                            } else {
-                                $query->whereIn('orders.shift_id', $shiftIds);
-                            }
-
-                            return;
-                        }
-
-                        $query->whereBetween('orders.created_at', [
-                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
-                        ]);
-                    });
-            })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('order_items.order_id', '=', 'orders.id');
+            ->join('order_items', 'p.id', '=', 'order_items.product_id')
+            ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.status', OrderStatus::COMPLETED);
 
                 if ($shiftIds !== null) {
                     if (empty($shiftIds)) {
@@ -228,17 +190,17 @@ class ProductsSalesReportService
             })
             ->groupBy('p.id', 'p.name');
 
-        $mostProfitableProduct = $mostProductQuery
+        $mostProfitableProduct = (clone $mostProductQuery)
             ->orderByDesc('total_profit')
             ->limit(1)
             ->first();
 
-        $bestSellingProduct = $mostProductQuery
+        $bestSellingProduct = (clone $mostProductQuery)
             ->orderByDesc('total_sales')
             ->limit(1)
             ->first();
 
-        if (! $summary) {
+        if (! $summary || ! $summary->total_sales) {
             return [
                 'total_products' => 0,
                 'total_sales' => 0,
@@ -251,11 +213,11 @@ class ProductsSalesReportService
         }
 
         return [
-            'total_products' => $summary->total_products,
-            'total_sales' => $summary->total_sales,
-            'total_profit' => $summary->total_profit,
-            'total_quantity' => $summary->total_quantity,
-            'avg_profit_margin' => $summary->avg_profit_margin,
+            'total_products' => (int) $summary->total_products,
+            'total_sales' => (float) $summary->total_sales,
+            'total_profit' => (float) $summary->total_profit,
+            'total_quantity' => (float) $summary->total_quantity,
+            'avg_profit_margin' => (float) $summary->avg_profit_margin,
             'best_selling_product' => $bestSellingProduct,
             'most_profitable_product' => $mostProfitableProduct,
         ];
@@ -325,14 +287,17 @@ class ProductsSalesReportService
                 DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
             ])
-            ->leftJoin('products', 'categories.id', '=', 'products.category_id')
+            ->leftJoin('products', function ($join) {
+                $join->on('categories.id', '=', 'products.category_id')
+                    ->whereNot('products.type', ProductType::RawMaterial);
+            })
             ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('products.id', '=', 'order_items.product_id')
-                    ->whereNot('products.type', ProductType::RawMaterial)
                     ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
                         $query->select(DB::raw(1))
                             ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id');
+                            ->whereColumn('orders.id', 'order_items.order_id')
+                            ->where('orders.status', OrderStatus::COMPLETED);
 
                         if ($shiftIds !== null) {
                             if (empty($shiftIds)) {
@@ -351,7 +316,8 @@ class ProductsSalesReportService
                     });
             })
             ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('order_items.order_id', '=', 'orders.id');
+                $join->on('order_items.order_id', '=', 'orders.id')
+                    ->where('orders.status', OrderStatus::COMPLETED);
 
                 if ($shiftIds !== null) {
                     if (empty($shiftIds)) {

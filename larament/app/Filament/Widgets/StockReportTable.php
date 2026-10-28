@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\ProductType;
 use App\Filament\Exports\StockReportExporter;
 use App\Models\Product;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Tables;
@@ -32,8 +33,14 @@ class StockReportTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $startDate = $this->pageFilters['startDate'] ?? '2025-07-29';
-        $endDate = $this->pageFilters['endDate'] ?? '2025-08-1';
+        $startDate = isset($this->pageFilters['startDate'])
+            ? Carbon::parse($this->pageFilters['startDate'])->toDateString()
+            : now()->subDays(29)->toDateString();
+        $endDate = isset($this->pageFilters['endDate'])
+            ? Carbon::parse($this->pageFilters['endDate'])->toDateString()
+            : now()->toDateString();
+
+        $isToday = Carbon::parse($endDate)->isToday();
 
         return $table
             ->query(
@@ -46,7 +53,18 @@ class StockReportTable extends BaseWidget
                         'products.category_id',
                         'products.cost',
                         'inventory_items.id as inventory_item_id',
-                        'inventory_items.quantity as actual_remaining_quantity',
+                        $isToday
+                            ? 'inventory_items.quantity as actual_remaining_quantity'
+                            : DB::raw(
+                                "(
+                                SELECT COALESCE(dm.end_quantity, 0)
+                                FROM inventory_item_movement_daily dm
+                                WHERE dm.product_id = products.id
+                                    AND (dm.date = '{$endDate}' OR DATE(dm.date) = '{$endDate}')
+                                ORDER BY dm.id DESC
+                                LIMIT 1
+                            ) AS actual_remaining_quantity"
+                            ),
                         // end quantity of the previous day
                         DB::raw(
                             "(
@@ -66,10 +84,6 @@ class StockReportTable extends BaseWidget
                         DB::raw('COALESCE(SUM(dailyMovements.incoming_quantity), 0) as incoming'),
                         DB::raw('COALESCE(SUM(dailyMovements.sales_quantity), 0) - COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as sales'),
                         DB::raw('COALESCE(SUM(dailyMovements.return_waste_quantity), 0) as return_waste'),
-                        // DB::raw('COALESCE(SUM(dailyMovements.return_sales_quantity), 0) as return_sales'),
-                        // Created at of startDailyMovements
-                        // DB::raw('MAX(startDailyMovements.created_at) as start_created_at'),
-
                         DB::raw("(SELECT dm.created_at
                                             FROM inventory_item_movement_daily dm
                                             WHERE dm.product_id = products.id
@@ -91,15 +105,6 @@ class StockReportTable extends BaseWidget
                     ->leftJoin('inventory_item_movement_daily as dailyMovements', function ($join) use ($startDate, $endDate) {
                         $join->on('products.id', '=', 'dailyMovements.product_id')
                             ->whereBetween('dailyMovements.date', [$startDate, $endDate]);
-                    })
-                    ->leftJoin('inventory_item_movement_daily as startDailyMovements', function ($join) use ($startDate) {
-                        $join->on('products.id', '=', 'startDailyMovements.product_id')
-                            ->whereRaw('startDailyMovements.date = (
-                                SELECT MAX(d.date)
-                                FROM inventory_item_movement_daily d
-                                WHERE d.product_id = products.id
-                                AND d.date < ?
-                            )', [$startDate]);
                     })
                     ->groupBy([
                         'products.id',

@@ -5,10 +5,10 @@ use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
 use App\Filament\Resources\Wastes\Pages\ListWastes;
 use App\Filament\Resources\Wastes\Pages\ViewWaste;
+use App\Models\InventoryItem;
+use App\Models\Product;
 use App\Models\User;
 use App\Models\Waste;
-use App\Models\Product;
-use App\Models\InventoryItem;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Str;
 

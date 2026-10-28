@@ -1,10 +1,9 @@
 <?php
 
-use Tests\Unit\TestCase;
 use App\Actions\Orders\LinkCustomerAction;
 use App\Enums\OrderStatus;
-use App\Models\Order;
 use App\Models\Customer;
+use App\Models\Order;
 
 uses(Tests\Unit\TestCase::class);
 

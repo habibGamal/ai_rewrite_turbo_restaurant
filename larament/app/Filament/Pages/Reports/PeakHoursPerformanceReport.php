@@ -6,7 +6,8 @@ use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\DailyPerformanceChartWidget;
 use App\Filament\Widgets\HourlyPerformanceChartWidget;
-use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
+use App\Filament\Widgets\HourlyPerformanceTableWidget;
+use App\Filament\Widgets\NoPeakHoursSalesInPeriodWidget;
 use App\Filament\Widgets\PeakHoursStatsWidget;
 use App\Services\PeakHoursPerformanceReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -60,7 +61,7 @@ class PeakHoursPerformanceReport extends BaseDashboard
 
         if ($ordersCount === 0) {
             return [
-                NoCustomersSalesInPeriodWidget::class,
+                NoPeakHoursSalesInPeriodWidget::class,
             ];
         }
 
@@ -68,11 +69,7 @@ class PeakHoursPerformanceReport extends BaseDashboard
             PeakHoursStatsWidget::class,
             HourlyPerformanceChartWidget::class,
             DailyPerformanceChartWidget::class,
-            // \App\Filament\Widgets\PeriodPerformanceWidget::class,
-            // \App\Filament\Widgets\StaffOptimizationWidget::class,
-            // \App\Filament\Widgets\CustomerTrafficPatternsWidget::class,
-            // \App\Filament\Widgets\OrderTypeHourlyPerformanceWidget::class,
-            // \App\Filament\Widgets\HourlyPerformanceTableWidget::class,
+            HourlyPerformanceTableWidget::class,
         ];
     }
 }

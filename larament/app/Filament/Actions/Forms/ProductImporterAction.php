@@ -131,6 +131,7 @@ class ProductImporterAction extends Action
                         $currentItems[] = [
                             'product_id' => $product->id,
                             'product_name' => $product->name,
+                            'unit' => Product::formatUnit($product->unit),
                             'quantity' => $quantity,
                             'price' => $price,
                             'total' => $total,

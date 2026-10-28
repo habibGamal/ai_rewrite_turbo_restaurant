@@ -15,12 +15,16 @@ class PurchaseService
 
     protected ProductCostManagementService $costManagementService;
 
+    protected SettingsService $settingsService;
+
     public function __construct(
         StockService $stockService,
-        ProductCostManagementService $costManagementService
+        ProductCostManagementService $costManagementService,
+        ?SettingsService $settingsService = null
     ) {
         $this->stockService = $stockService;
         $this->costManagementService = $costManagementService;
+        $this->settingsService = $settingsService ?? app(SettingsService::class);
     }
 
     /**
@@ -52,8 +56,11 @@ class PurchaseService
                 ];
             })->toArray();
 
-            // Update product costs using average cost strategy
-            $this->costManagementService->updateProductCostsWithAverage($invoice->items);
+            // Update product costs using average cost strategy if allowed by settings
+            $shouldUpdateCost = $this->settingsService->shouldUpdateProductCostOnPurchase();
+            if ($shouldUpdateCost) {
+                $this->costManagementService->updateProductCostsWithAverage($items);
+            }
 
             // Add items to stock
             $success = $this->stockService->addStock(
@@ -71,7 +78,10 @@ class PurchaseService
 
             DB::commit();
 
-            Log::info("Purchase invoice {$invoice->id} closed successfully with cost updates");
+            $logMessage = $shouldUpdateCost
+                ? "Purchase invoice {$invoice->id} closed successfully with cost updates"
+                : "Purchase invoice {$invoice->id} closed successfully without cost updates (prevented by settings)";
+            Log::info($logMessage);
 
             return true;
 

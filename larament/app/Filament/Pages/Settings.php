@@ -23,6 +23,9 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * @property \Filament\Schemas\Schema $form
+ */
 class Settings extends Page implements HasForms
 {
     use AdminAccess, InteractsWithForms;
@@ -59,6 +62,7 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
+                    SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                 ])) {
                     $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 } else {
@@ -251,6 +255,16 @@ class Settings extends Page implements HasForms
                             ->helperText(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->helperText())
                             ->inline(false),
                     ]),
+
+                Section::make('إدارة المشتريات')
+                    ->description('إعدادات خاصة بفواتير الشراء وتكاليف المنتجات')
+                    ->icon('heroicon-m-shopping-cart')
+                    ->schema([
+                        Toggle::make(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)
+                            ->label(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->label())
+                            ->helperText(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->helperText())
+                            ->inline(false),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -269,6 +283,7 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
+                    SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                 ])) {
                     $cleanData[$key] = $value ? 'true' : 'false';
                 } else {

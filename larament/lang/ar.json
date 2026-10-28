@@ -63,5 +63,9 @@
     "الشعار الرسمي للمطعم (سيتم حفظه في public/images/logo.jpg)": "Official restaurant logo (will be saved to public/images/logo.jpg)",
     "تحديد نوع النقطة الحالية في شبكة الفروع": "Define the current node type in the branch network",
     "رابط النقطة الرئيسية (مطلوب فقط إذا كان النوع عبارة عن فرع)": "Master node link (required only if type is slave)",
-    "اختبار الطابعة": "Test Printer"
+    "اختبار الطابعة": "Test Printer",
+    "إدارة المشتريات": "Purchases Management",
+    "إعدادات خاصة بفواتير الشراء وتكاليف المنتجات": "Special settings for purchase invoices and product costs",
+    "تحديث تكلفة المنتجات من فواتير الشراء": "Update product costs from purchase invoices",
+    "تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.": "Automatically update product cost in products table when closing purchase invoice. Disable to prevent updating product costs."
 }

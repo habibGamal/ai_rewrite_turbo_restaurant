@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Enums\UserRole;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class KitchenController extends Controller

@@ -1,22 +1,22 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\UserRole;
 use App\Filament\Pages\Reports\PeriodShiftReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
+use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
+use App\Filament\Widgets\PeriodShiftExpensesTable;
 use App\Filament\Widgets\PeriodShiftInfoStats;
 use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersStats;
-use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
-use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
-use App\Filament\Widgets\PeriodShiftExpensesTable;
-use App\Models\User;
-use App\Models\Shift;
-use App\Models\Order;
-use App\Models\Expense;
 use App\Models\ExpenceType;
+use App\Models\Expense;
+use App\Models\Order;
+use App\Models\Shift;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
@@ -115,28 +115,28 @@ describe('Filters Form', function () {
     })->with([
         'today' => [
             'today',
-            fn() => [
+            fn () => [
                 'start' => now()->startOfDay()->toDateString(),
                 'end' => now()->endOfDay()->toDateString(),
             ],
         ],
         'yesterday' => [
             'yesterday',
-            fn() => [
+            fn () => [
                 'start' => now()->subDay()->startOfDay()->toDateString(),
                 'end' => now()->subDay()->endOfDay()->toDateString(),
             ],
         ],
         'last_7_days' => [
             'last_7_days',
-            fn() => [
+            fn () => [
                 'start' => now()->subDays(6)->startOfDay()->toDateString(),
                 'end' => now()->endOfDay()->toDateString(),
             ],
         ],
         'this_month' => [
             'this_month',
-            fn() => [
+            fn () => [
                 'start' => now()->startOfMonth()->toDateString(),
                 'end' => now()->endOfMonth()->toDateString(),
             ],

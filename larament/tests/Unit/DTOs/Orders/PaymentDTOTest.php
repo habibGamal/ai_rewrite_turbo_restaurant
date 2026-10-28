@@ -53,7 +53,7 @@ describe('PaymentDTO', function () {
     });
 
     it('throws exception when amount is zero', function () {
-        expect(fn() => new PaymentDTO(
+        expect(fn () => new PaymentDTO(
             amount: 0.00,
             method: PaymentMethod::CASH,
             orderId: 1,
@@ -62,7 +62,7 @@ describe('PaymentDTO', function () {
     });
 
     it('throws exception when amount is negative', function () {
-        expect(fn() => new PaymentDTO(
+        expect(fn () => new PaymentDTO(
             amount: -10.00,
             method: PaymentMethod::CASH,
             orderId: 1,

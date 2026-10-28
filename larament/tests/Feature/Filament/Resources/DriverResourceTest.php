@@ -5,7 +5,6 @@ use App\Filament\Resources\Drivers\Pages\CreateDriver;
 use App\Filament\Resources\Drivers\Pages\EditDriver;
 use App\Filament\Resources\Drivers\Pages\ListDrivers;
 use App\Filament\Resources\Drivers\Pages\ViewDriver;
-use App\Filament\Resources\Drivers\RelationManagers\OrdersRelationManager;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\User;

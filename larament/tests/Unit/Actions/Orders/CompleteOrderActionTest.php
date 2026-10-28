@@ -1,6 +1,5 @@
 <?php
 
-use Tests\Unit\TestCase;
 use App\Actions\Orders\CompleteOrderAction;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;

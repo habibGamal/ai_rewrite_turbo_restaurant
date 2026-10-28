@@ -107,6 +107,8 @@ class WasteResource extends Resource
                             ->table([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                TableColumn::make('الوحدة')
+                                    ->width('100px'),
                                 TableColumn::make('الكمية الحالية')
                                     ->width('100px'),
                                 TableColumn::make('الكمية')
@@ -122,10 +124,18 @@ class WasteResource extends Resource
                                 TextInput::make('product_name')
                                     ->label('المنتج')
                                     ->formatStateUsing(function ($record, $state) {
-                                        return $state ?? ($record->product?->name ?? 'غير محدد');
+                                        return $state ?? ($record?->product?->name ?? 'غير محدد');
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                TextInput::make('unit')
+                                    ->label('الوحدة')
+                                    ->formatStateUsing(function ($record, $state) {
+                                        return Product::formatUnit($state ?? $record?->product?->unit);
+                                    })
+                                    ->disabled()
+                                    ->dehydrated(false),
 
                                 TextInput::make('stock_quantity')
                                     ->label('الكمية الحالية')

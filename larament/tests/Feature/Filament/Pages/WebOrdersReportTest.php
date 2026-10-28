@@ -11,12 +11,10 @@ use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Livewire\livewire;
 
 uses(RefreshDatabase::class);
