@@ -97,6 +97,33 @@ describe('InventoryDailyAggregationService', function () {
         });
     });
 
+    describe('currentBusinessDate', function () {
+        it('returns today when no day is open', function () {
+            expect($this->service->currentBusinessDate()->toDateString())
+                ->toBe(Carbon::today()->toDateString());
+        });
+
+        it('returns the open day date when a day dated yesterday is still open', function () {
+            $product = Product::factory()->create();
+            $yesterday = Carbon::yesterday();
+
+            InventoryItemMovementDaily::create([
+                'product_id' => $product->id,
+                'date' => $yesterday->toDateString(),
+                'start_quantity' => 100.0,
+                'incoming_quantity' => 0.0,
+                'sales_quantity' => 0.0,
+                'return_sales_quantity' => 0.0,
+                'return_waste_quantity' => 0.0,
+                'end_quantity' => 100.0,
+                'closed_at' => null,
+            ]);
+
+            expect($this->service->currentBusinessDate()->toDateString())
+                ->toBe($yesterday->toDateString());
+        });
+    });
+
     describe('openDay', function () {
         it('creates daily movement records for all products with current stock', function () {
             // Create products with inventory
@@ -252,6 +279,51 @@ describe('InventoryDailyAggregationService', function () {
         it('returns 0 when no open day exists', function () {
             $result = $this->service->closeDay();
             expect($result)->toBe(0);
+        });
+
+        it('re-aggregates stale movements before closing the day', function () {
+            $product = Product::factory()->create();
+            InventoryItem::updateOrCreate(['product_id' => $product->id], ['quantity' => 100.0]);
+
+            $this->service->openDay();
+
+            $openDay = InventoryItemMovementDaily::where('product_id', $product->id)
+                ->whereNull('closed_at')
+                ->first();
+
+            expect($openDay)->not()->toBeNull();
+            expect((float) $openDay->incoming_quantity)->toEqual(0.0);
+            expect((float) $openDay->sales_quantity)->toEqual(0.0);
+
+            // Insert movements directly, bypassing StockService
+            InventoryItemMovement::create([
+                'product_id' => $product->id,
+                'operation' => InventoryMovementOperation::IN,
+                'quantity' => 50.0,
+                'reason' => MovementReason::PURCHASE,
+                'created_at' => $openDay->created_at->copy()->addMinutes(5),
+            ]);
+
+            InventoryItemMovement::create([
+                'product_id' => $product->id,
+                'operation' => InventoryMovementOperation::OUT,
+                'quantity' => 20.0,
+                'reason' => MovementReason::ORDER,
+                'created_at' => $openDay->created_at->copy()->addMinutes(10),
+            ]);
+
+            // Update live inventory to simulate movements effect
+            InventoryItem::updateOrCreate(['product_id' => $product->id], ['quantity' => 130.0]);
+
+            $this->service->closeDay();
+
+            $closedDay = InventoryItemMovementDaily::where('product_id', $product->id)->first();
+
+            expect($closedDay)->not()->toBeNull();
+            expect($closedDay->closed_at)->not()->toBeNull();
+            expect((float) $closedDay->incoming_quantity)->toEqual(50.0);
+            expect((float) $closedDay->sales_quantity)->toEqual(20.0);
+            expect((float) $closedDay->end_quantity)->toEqual(130.0);
         });
     });
 

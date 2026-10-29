@@ -2,7 +2,6 @@
 
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\CustomersPerformanceReport;
 use App\Models\Customer;
 use App\Models\Order;
@@ -14,7 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -25,7 +24,7 @@ it('can render the page', function () {
 });
 
 it('can be accessed by admin user', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(CustomersPerformanceReport::class)
@@ -33,7 +32,7 @@ it('can be accessed by admin user', function () {
 });
 
 it('can be accessed by viewer user', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(CustomersPerformanceReport::class)
@@ -41,7 +40,7 @@ it('can be accessed by viewer user', function () {
 });
 
 it('cannot be accessed by cashier user', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(CustomersPerformanceReport::class)

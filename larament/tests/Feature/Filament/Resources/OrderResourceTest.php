@@ -4,7 +4,6 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
-use App\Enums\UserRole;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Models\Customer;
@@ -16,7 +15,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 

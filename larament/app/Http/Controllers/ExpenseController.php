@@ -47,6 +47,10 @@ class ExpenseController extends Controller
      */
     public function store(Request $request)
     {
+        if (! auth()->user()->can('expense.create')) {
+            abort(403, 'غير مسموح بإضافة مصروف');
+        }
+
         $request->validate([
             'amount' => 'required|numeric|min:0',
             'expenseTypeId' => 'required|exists:expence_types,id',
@@ -157,6 +161,10 @@ class ExpenseController extends Controller
      */
     public function destroy(Expense $expense)
     {
+        if (! auth()->user()->can('expense.delete')) {
+            abort(403, 'غير مسموح بحذف المصروف');
+        }
+
         $currentShift = $this->shiftService->getCurrentShift();
 
         if (! $currentShift || $expense->shift_id !== $currentShift->id) {

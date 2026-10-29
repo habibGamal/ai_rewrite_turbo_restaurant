@@ -14,7 +14,6 @@ use App\Models\Product;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -199,14 +198,7 @@ class OrderService
             $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
 
             // Remove stock items after successful completion
-            $stockRemoved = $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
-
-            if (! $stockRemoved) {
-                // Log warning but don't fail the transaction as order is already completed
-                Log::warning('Failed to remove stock for completed order', [
-                    'order_id' => $completedOrder->id,
-                ]);
-            }
+            $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
 
             return $completedOrder;
         });
@@ -219,6 +211,10 @@ class OrderService
 
             if (! $order->status->canBeCancelled()) {
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
+            }
+
+            if ($order->status === OrderStatus::COMPLETED) {
+                shouldDayBeOpen();
             }
 
             // Store the original status to check if we need to restore stock
@@ -242,13 +238,7 @@ class OrderService
 
             // If order was completed, add stock back
             if ($wasCompleted) {
-                $stockRestored = $this->orderStockConversionService->addStockForCancelledOrder($order);
-
-                if (! $stockRestored) {
-                    Log::warning('Failed to restore stock for cancelled order', [
-                        'order_id' => $order->id,
-                    ]);
-                }
+                $this->orderStockConversionService->addStockForCancelledOrder($order);
             }
 
             // Fire event

@@ -3,10 +3,9 @@ export interface User {
   name: string;
   email: string;
   email_verified_at?: string;
-  role: string;
-  canApplyDiscounts?: boolean;
-  canCancelOrders?: boolean;
-  canChangeOrderItems?: boolean;
+  roles?: string[];
+  permissions?: string[];
+  isAdmin?: boolean;
 }
 
 export interface Category {

@@ -29,7 +29,7 @@ class InventoryItemMovement extends Model
     protected $casts = [
         'operation' => InventoryMovementOperation::class,
         'reason' => MovementReason::class,
-        'quantity' => 'decimal:2',
+        'quantity' => 'decimal:3',
     ];
 
     public function product(): BelongsTo

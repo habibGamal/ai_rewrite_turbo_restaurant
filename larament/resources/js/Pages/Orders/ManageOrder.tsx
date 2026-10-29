@@ -401,7 +401,7 @@ export default function ManageOrder({
                             >
                                 تغيير الطلب الى
                             </Button>
-                            <CanAccess permission="discounts">
+                            <CanAccess permission="order.apply_discount">
                                 <LoadingButton
                                     disabled={disableAllControls || hasItemDiscounts}
                                     onCustomClick={(finish) => {
@@ -447,7 +447,7 @@ export default function ManageOrder({
                                 انهاء الطلب
                             </LoadingButton>
                             {orderCompleted && (
-                                <CanAccess permission="cancelOrders">
+                                <CanAccess permission="order.cancel">
                                     <Popconfirm
                                         title="هل انت متأكد من الغاء الطلب؟"
                                         okText="نعم"

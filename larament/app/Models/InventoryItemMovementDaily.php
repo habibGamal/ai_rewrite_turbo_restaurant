@@ -27,12 +27,12 @@ class InventoryItemMovementDaily extends Model
 
     protected $casts = [
         'date' => 'date',
-        'start_quantity' => 'decimal:2',
-        'incoming_quantity' => 'decimal:2',
-        'return_sales_quantity' => 'decimal:2',
-        'sales_quantity' => 'decimal:2',
-        'return_waste_quantity' => 'decimal:2',
-        'end_quantity' => 'decimal:2',
+        'start_quantity' => 'decimal:3',
+        'incoming_quantity' => 'decimal:3',
+        'return_sales_quantity' => 'decimal:3',
+        'sales_quantity' => 'decimal:3',
+        'return_waste_quantity' => 'decimal:3',
+        'end_quantity' => 'decimal:3',
         'closed_at' => 'datetime',
     ];
 

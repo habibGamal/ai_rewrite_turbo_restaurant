@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\DailyComparisonReport;
 use App\Filament\Widgets\DailyComparisonChartWidget;
 use App\Filament\Widgets\DailyComparisonStatsWidget;
@@ -15,7 +14,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 
     $this->shift = Shift::factory()->create();
@@ -43,14 +42,14 @@ it('is in the reports navigation group and has correct attributes', function () 
 });
 
 it('allows viewer access', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     expect(DailyComparisonReport::canAccess())->toBeTrue();
 });
 
 it('denies cashier access', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     expect(DailyComparisonReport::canAccess())->toBeFalse();

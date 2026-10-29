@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Create admin user and authenticate
-    $this->admin = User::factory()->create(['role' => 'admin']);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 
     // Seed default settings
@@ -38,7 +38,7 @@ it('can render the settings page', function () {
 });
 
 it('only allows admins to access settings page', function () {
-    $cashier = User::factory()->create(['role' => 'cashier']);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(Settings::class)

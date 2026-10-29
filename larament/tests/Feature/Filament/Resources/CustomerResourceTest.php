@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
@@ -17,7 +16,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 

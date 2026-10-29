@@ -7,10 +7,10 @@ interface IsAdminProps {
 }
 
 export default function IsAdmin({ children }: IsAdminProps) {
-    const { auth } = usePage().props;
-    const user = auth.user as User;
+    const { auth } = usePage().props as unknown as { auth: { user: User } };
+    const user = auth?.user;
 
-    if (user.role !== 'admin') {
+    if (!user || (!user.isAdmin && !user.roles?.includes('admin') && !user.permissions?.includes('access_admin_panel'))) {
         return null;
     }
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Resources\InventoryItems\InventoryItemResource;
 use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
@@ -15,7 +14,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -41,7 +40,8 @@ it('cannot render create page as creation is disabled', function () {
 it('cannot edit records as editing is disabled', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canEdit($record))->toBeFalse();
 });
@@ -49,7 +49,8 @@ it('cannot edit records as editing is disabled', function () {
 it('cannot delete records as deletion is disabled', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canDelete($record))->toBeFalse();
 });
@@ -57,7 +58,8 @@ it('cannot delete records as deletion is disabled', function () {
 it('can view records', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canView($record))->toBeTrue();
 });
@@ -168,7 +170,8 @@ it('can filter by product type', function () {
     ]);
 
     $record1 = InventoryItem::factory()->create(['product_id' => $manufacturedProduct->id]);
-    $record2 = InventoryItem::factory()->create(['product_id' => $rawProduct->id]);
+    $record2 = InventoryItem::where('product_id', $rawProduct->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $rawProduct->id]);
 
     livewire(ListInventoryItems::class)
         ->filterTable('product_type', ['type' => ProductType::Manufactured->value])
@@ -274,7 +277,8 @@ it('can view inventory item details', function () {
         'cost' => 100.50,
         'type' => ProductType::RawMaterial,
     ]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(ViewInventoryItem::class, ['record' => $record->getRouteKey()])
         ->assertSchemaStateSet([
@@ -290,7 +294,8 @@ it('can view inventory item details', function () {
 it('can load movements relation manager', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(ViewInventoryItem::class, ['record' => $record->getRouteKey()])
         ->assertSeeLivewire(MovementsRelationManager::class);
@@ -299,7 +304,8 @@ it('can load movements relation manager', function () {
 it('movements relation manager shows correct columns', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(MovementsRelationManager::class, [
         'ownerRecord' => $record,

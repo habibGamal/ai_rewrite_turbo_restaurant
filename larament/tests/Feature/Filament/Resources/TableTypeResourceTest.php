@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\TableTypes\Pages\CreateTableType;
 use App\Filament\Resources\TableTypes\Pages\EditTableType;
 use App\Filament\Resources\TableTypes\Pages\ListTableTypes;
@@ -13,7 +12,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -282,7 +281,7 @@ it('displays empty state with correct Arabic text', function () {
 
 // Authorization Tests
 it('non-admin users cannot access table type resource', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(ListTableTypes::class)
@@ -290,7 +289,7 @@ it('non-admin users cannot access table type resource', function () {
 });
 
 it('non-admin users cannot create table types', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(CreateTableType::class)
@@ -298,7 +297,7 @@ it('non-admin users cannot create table types', function () {
 });
 
 it('non-admin users cannot edit table types', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     $record = TableType::factory()->create();
     actingAs($user);
 

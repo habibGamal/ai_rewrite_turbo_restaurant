@@ -16,11 +16,11 @@ class AddUserPermissions
         if (auth()->check()) {
             $user = auth()->user();
 
-            // Add permission flags to the user object
+            // Add roles and permissions to the user object
             Inertia::share('auth.user', array_merge($user->toArray(), [
-                'canApplyDiscounts' => $user->canApplyDiscounts(),
-                'canCancelOrders' => $user->canCancelOrders(),
-                'canChangeOrderItems' => $user->canChangeOrderItems(),
+                'roles' => $user->getRoleNames()->toArray(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+                'isAdmin' => $user->hasRole('admin'),
             ]));
         }
 

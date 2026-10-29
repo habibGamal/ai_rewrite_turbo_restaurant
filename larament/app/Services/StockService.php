@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTOs\StockMovementDTO;
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
+use App\Exceptions\StockOperationException;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
 use App\Models\Product;
@@ -14,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Throwable;
 
 class StockService
 {
@@ -67,10 +69,15 @@ class StockService
      */
     private function processStock(array $items, InventoryMovementOperation $operation, MovementReason $reason, $referenceable): bool
     {
-        try {
-            DB::beginTransaction();
+        $transactionStarted = false;
 
-            $this->validateItems($items);
+        try {
+            shouldDayBeOpen();
+
+            DB::beginTransaction();
+            $transactionStarted = true;
+
+            $items = $this->normalizeItems($items);
             $this->validateProducts($items);
 
             if ($operation->isOutgoing()) {
@@ -89,16 +96,52 @@ class StockService
 
             return true;
 
-        } catch (Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $e) {
+            // Only roll back our own transaction, never the caller's
+            if ($transactionStarted) {
+                DB::rollBack();
+            }
+
             Log::error('Failed to process stock movement: '.$e->getMessage(), [
                 'operation' => $operation->value,
                 'reason' => $reason->value,
                 'items_count' => count($items),
             ]);
 
-            return false;
+            throw new StockOperationException('فشل في تحديث المخزون: '.$e->getMessage(), (int) $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Normalize items: validate, group by product_id summing quantity, and round to 3 decimals
+     *
+     * @param  array<int, array{product_id: int, quantity: float|int}>  $items
+     * @return array<int, array{product_id: int, quantity: float}>
+     */
+    private function normalizeItems(array $items): array
+    {
+        $this->validateItems($items);
+
+        $grouped = [];
+        foreach ($items as $item) {
+            $productId = (int) $item['product_id'];
+            $quantity = (float) $item['quantity'];
+
+            if (isset($grouped[$productId])) {
+                $grouped[$productId]['quantity'] += $quantity;
+            } else {
+                $grouped[$productId] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                ];
+            }
+        }
+
+        foreach ($grouped as $productId => $item) {
+            $grouped[$productId]['quantity'] = round($item['quantity'], 3);
+        }
+
+        return array_values($grouped);
     }
 
     /**
@@ -166,6 +209,7 @@ class StockService
         $productIds = array_column($items, 'product_id');
 
         return InventoryItem::whereIn('product_id', $productIds)
+            ->lockForUpdate()
             ->get()
             ->keyBy('product_id');
     }
@@ -212,7 +256,7 @@ class StockService
         foreach ($stockMovements as $movement) {
             if ($movement->existingInventoryItem) {
                 $inventoryUpdates[] = $movement;
-            } elseif ($movement->operation->isIncoming()) {
+            } else {
                 $newInventoryItems[] = $movement;
             }
         }
@@ -232,13 +276,13 @@ class StockService
 
         /** @var StockMovementDTO $movement */
         foreach ($movements as $movement) {
-            $currentQuantity = $movement->existingInventoryItem->quantity;
-            $newQuantity = $movement->operation->isIncoming()
-                ? $currentQuantity + $movement->quantity
-                : $currentQuantity - $movement->quantity;
-
-            InventoryItem::where('id', $movement->existingInventoryItem->id)
-                ->update(['quantity' => $newQuantity, 'updated_at' => now()]);
+            if ($movement->operation->isIncoming()) {
+                InventoryItem::where('id', $movement->existingInventoryItem->id)
+                    ->increment('quantity', $movement->quantity);
+            } else {
+                InventoryItem::where('id', $movement->existingInventoryItem->id)
+                    ->decrement('quantity', $movement->quantity);
+            }
         }
     }
 
@@ -254,9 +298,13 @@ class StockService
         $items = [];
         /** @var StockMovementDTO $movement */
         foreach ($movements as $movement) {
+            $quantity = $movement->operation->isIncoming()
+                ? $movement->quantity
+                : -$movement->quantity;
+
             $items[] = [
                 'product_id' => $movement->productId,
-                'quantity' => $movement->quantity,
+                'quantity' => $quantity,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

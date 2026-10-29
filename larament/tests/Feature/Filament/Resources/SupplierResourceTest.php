@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\Suppliers\Pages\CreateSupplier;
 use App\Filament\Resources\Suppliers\Pages\EditSupplier;
 use App\Filament\Resources\Suppliers\Pages\ListSuppliers;
@@ -14,7 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -277,7 +276,7 @@ it('shows full address in tooltip when address is truncated', function () {
 
 // Authorization Tests
 it('non-admin users cannot access supplier resource', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(ListSuppliers::class)
@@ -285,7 +284,7 @@ it('non-admin users cannot access supplier resource', function () {
 });
 
 it('non-admin users cannot create suppliers', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(CreateSupplier::class)
@@ -293,7 +292,7 @@ it('non-admin users cannot create suppliers', function () {
 });
 
 it('non-admin users cannot edit suppliers', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     $record = Supplier::factory()->create();
     actingAs($user);
 
@@ -302,7 +301,7 @@ it('non-admin users cannot edit suppliers', function () {
 });
 
 it('non-admin users cannot view suppliers', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     $record = Supplier::factory()->create();
     actingAs($user);
 

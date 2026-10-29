@@ -472,8 +472,6 @@ class SpecificDataImportService extends ExcelImportService
             ];
 
         } catch (Exception $e) {
-            dd($e);
-
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }

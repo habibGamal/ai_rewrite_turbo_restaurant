@@ -5,7 +5,6 @@ namespace App\Filament\Resources\TableTypes;
 use App\Filament\Resources\TableTypes\Pages\CreateTableType;
 use App\Filament\Resources\TableTypes\Pages\EditTableType;
 use App\Filament\Resources\TableTypes\Pages\ListTableTypes;
-use App\Filament\Traits\AdminAccess;
 use App\Models\TableType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -20,8 +19,6 @@ use Filament\Tables\Table;
 
 class TableTypeResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = TableType::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';

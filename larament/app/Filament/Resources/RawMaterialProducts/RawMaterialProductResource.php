@@ -7,7 +7,6 @@ use App\Filament\Resources\RawMaterialProducts\Pages\CreateRawMaterialProduct;
 use App\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
 use App\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
 use App\Filament\Resources\RawMaterialProducts\Pages\ViewRawMaterialProduct;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
 use App\Models\Printer;
 use App\Models\Product;
@@ -31,8 +30,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class RawMaterialProductResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Product::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cube';

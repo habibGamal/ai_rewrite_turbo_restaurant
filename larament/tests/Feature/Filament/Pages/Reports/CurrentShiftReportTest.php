@@ -3,7 +3,6 @@
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\CurrentShiftReport;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
 use App\Filament\Widgets\CurrentShiftExpensesDetailsTable;
@@ -24,7 +23,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -51,7 +50,7 @@ it('can render the page without an active shift', function () {
 
 // Access Control Tests
 it('allows admin users to access the page', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(CurrentShiftReport::class)
@@ -59,7 +58,7 @@ it('allows admin users to access the page', function () {
 });
 
 it('allows viewer users to access the page', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(CurrentShiftReport::class)
@@ -67,7 +66,7 @@ it('allows viewer users to access the page', function () {
 });
 
 it('prevents non-admin and non-viewer users from accessing the page', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(CurrentShiftReport::class)
@@ -520,7 +519,7 @@ it('widgets can access current shift data', function () {
 
 // User Context Tests
 it('associates shift with correct user', function () {
-    $user = User::factory()->create(['role' => UserRole::ADMIN]);
+    $user = User::factory()->admin()->create();
     $shift = Shift::factory()->active()->create([
         'user_id' => $user->id,
     ]);

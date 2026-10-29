@@ -2,12 +2,10 @@
 
 namespace App\Filament\Resources\Users;
 
-use App\Enums\UserRole;
 use App\Filament\Actions\GeneratePasswordAction;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Traits\AdminAccess;
 use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -30,8 +28,6 @@ use Illuminate\Validation\Rules\Password;
 
 class UserResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = User::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
@@ -101,9 +97,11 @@ class UserResource extends Resource
                             ->required()
                             ->visible(fn (Get $get): bool => filled($get('password')))
                             ->dehydrated(false),
-                        Select::make('role')
-                            ->label('الدور')
-                            ->options(UserRole::class)
+                        Select::make('roles')
+                            ->label('الأدوار والصلاحيات')
+                            ->relationship('roles', 'name')
+                            ->multiple()
+                            ->preload()
                             ->required(),
                     ]),
             ]);
@@ -114,10 +112,17 @@ class UserResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label('الاسم')
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('email')
+                    ->label('البريد الإلكتروني')
                     ->sortable()
+                    ->searchable(),
+                TextColumn::make('roles.name')
+                    ->label('الأدوار')
+                    ->badge()
+                    ->color('info')
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()

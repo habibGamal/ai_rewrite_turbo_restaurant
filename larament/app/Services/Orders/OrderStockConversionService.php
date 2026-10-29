@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Services\StockService;
-use Exception;
 use Illuminate\Support\Facades\Log;
 
 class OrderStockConversionService
@@ -115,27 +114,17 @@ class OrderStockConversionService
      */
     public function removeStockForCompletedOrder(Order $order): bool
     {
-        try {
-            $stockItems = $this->convertOrderItemsToStockItems($order);
+        $stockItems = $this->convertOrderItemsToStockItems($order);
 
-            if (empty($stockItems)) {
-                return true;
-            }
-
-            return $this->stockService->removeStock(
-                $stockItems,
-                MovementReason::ORDER,
-                $order
-            );
-
-        } catch (Exception $e) {
-            Log::error('Failed to remove stock for completed order', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
+        if (empty($stockItems)) {
+            return true;
         }
+
+        return $this->stockService->removeStock(
+            $stockItems,
+            MovementReason::ORDER,
+            $order
+        );
     }
 
     /**
@@ -143,27 +132,17 @@ class OrderStockConversionService
      */
     public function addStockForCancelledOrder(Order $order): bool
     {
-        try {
-            $stockItems = $this->convertOrderItemsToStockItems($order);
+        $stockItems = $this->convertOrderItemsToStockItems($order);
 
-            if (empty($stockItems)) {
-                return true;
-            }
-
-            return $this->stockService->addStock(
-                $stockItems,
-                MovementReason::ORDER_RETURN,
-                $order
-            );
-
-        } catch (Exception $e) {
-            Log::error('Failed to add stock back for cancelled order', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
+        if (empty($stockItems)) {
+            return true;
         }
+
+        return $this->stockService->addStock(
+            $stockItems,
+            MovementReason::ORDER_RETURN,
+            $order
+        );
     }
 
     /**

@@ -30,6 +30,18 @@ class InventoryDailyAggregationService
     }
 
     /**
+     * Get the current business date.
+     *
+     * Returns the open day's date when a day is open, otherwise Carbon::today().
+     * This is the date reports should treat as "today" (a day opened before midnight
+     * keeps its date even after midnight).
+     */
+    public function currentBusinessDate(): Carbon
+    {
+        return $this->dayStatus() ?? Carbon::today();
+    }
+
+    /**
      * Open a new day by creating InventoryItemMovementDaily records for all products
      * Clones the last day's end_quantity as start_quantity for today
      */
@@ -61,14 +73,25 @@ class InventoryDailyAggregationService
                         ->orderBy('date', 'desc')
                         ->first();
 
+                    /** @var \App\Models\InventoryItem|null $inventoryItem */
+                    $inventoryItem = $product->inventoryItem;
+                    $liveQuantity = $inventoryItem ? $inventoryItem->quantity : 0;
+
                     $startQuantity = 0;
                     if ($lastRecord) {
                         // Use end_quantity from last record or calculate it if not set
                         $startQuantity = $lastRecord->end_quantity;
+
+                        if ((float) $lastRecord->end_quantity != (float) $liveQuantity) {
+                            Log::warning("Product {$product->id} live inventory differs from last day's end quantity", [
+                                'product_id' => $product->id,
+                                'last_end_quantity' => $lastRecord->end_quantity,
+                                'live_quantity' => $liveQuantity,
+                            ]);
+                        }
                     } else {
                         // If no previous record, use current inventory quantity
-                        $inventoryItem = $product->inventoryItem;
-                        $startQuantity = $inventoryItem ? $inventoryItem->quantity : 0;
+                        $startQuantity = $liveQuantity;
                     }
 
                     InventoryItemMovementDaily::create([
@@ -145,6 +168,11 @@ class InventoryDailyAggregationService
                     Log::info('No open day to close');
 
                     return 0;
+                }
+
+                $productIds = $openRecords->pluck('product_id')->filter()->unique()->values()->all();
+                if (! empty($productIds)) {
+                    $this->bulkAggregateWithInsertSelect($productIds);
                 }
 
                 $updatedCount = 0;
@@ -297,17 +325,15 @@ class InventoryDailyAggregationService
      */
     public function aggregateMultipleMovements(array $productIds, Carbon $date)
     {
-        return DB::transaction(callback: function () use ($productIds, $date) {
-            $dateString = $date->toDateString();
-
+        // Aggregation always targets the open day ($date parameter is unused)
+        DB::transaction(callback: function () use ($productIds) {
             try {
                 $this->bulkAggregateWithInsertSelect($productIds);
 
             } catch (Exception $e) {
-                Log::error("Failed to bulk aggregate movements for date {$dateString}", [
+                Log::error('Failed to bulk aggregate movements', [
                     'error' => $e->getMessage(),
                     'product_ids' => $productIds,
-                    'date' => $dateString,
                 ]);
                 throw $e;
             }

@@ -7,7 +7,6 @@ use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
 use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
 use App\Filament\Resources\InventoryItems\RelationManagers\UsedInProductsRelationManager;
-use App\Filament\Traits\AdminAccess;
 use App\Models\InventoryItem;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
@@ -23,8 +22,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class InventoryItemResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = InventoryItem::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';

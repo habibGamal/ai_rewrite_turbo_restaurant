@@ -3,7 +3,6 @@
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceReport;
 use App\Filament\Widgets\CategoryPerformanceWidget;
 use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
@@ -26,7 +25,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Create admin user for authentication (ViewerAccess trait allows viewers and admins)
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -38,7 +37,7 @@ it('can render the products sales performance report page', function () {
 
 // Access Control Tests
 it('can access page with admin role', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(ProductsSalesPerformanceReport::class)
@@ -46,7 +45,7 @@ it('can access page with admin role', function () {
 });
 
 it('can access page with viewer role', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(ProductsSalesPerformanceReport::class)
@@ -54,7 +53,7 @@ it('can access page with viewer role', function () {
 });
 
 it('cannot access page with cashier role', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(ProductsSalesPerformanceReport::class)

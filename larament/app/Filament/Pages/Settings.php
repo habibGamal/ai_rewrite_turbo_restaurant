@@ -3,7 +3,6 @@
 namespace App\Filament\Pages;
 
 use App\Enums\SettingKey;
-use App\Filament\Traits\AdminAccess;
 use App\Services\PrintService;
 use App\Services\SettingsService;
 use Exception;
@@ -28,7 +27,12 @@ use Illuminate\Support\Facades\Storage;
  */
 class Settings extends Page implements HasForms
 {
-    use AdminAccess, InteractsWithForms;
+    use InteractsWithForms;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('manage_settings') ?? false;
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 

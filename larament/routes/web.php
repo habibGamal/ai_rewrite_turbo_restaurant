@@ -20,7 +20,9 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
     // Kitchen Display Screen
-    Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen.index');
+    Route::get('/kitchen', [KitchenController::class, 'index'])
+        ->name('kitchen.index')
+        ->middleware('permission:kitchen.access');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -28,9 +30,15 @@ Route::middleware('auth')->group(function () {
 
     // Shift Management Routes
     Route::prefix('shifts')->name('shifts.')->group(function () {
-        Route::get('/start', [OrderController::class, 'showStartShift'])->name('start');
-        Route::post('/start', [OrderController::class, 'startShift'])->name('store');
-        Route::post('/end', [OrderController::class, 'endShift'])->name('end');
+        Route::get('/start', [OrderController::class, 'showStartShift'])
+            ->name('start')
+            ->middleware('permission:shift.start');
+        Route::post('/start', [OrderController::class, 'startShift'])
+            ->name('store')
+            ->middleware('permission:shift.start');
+        Route::post('/end', [OrderController::class, 'endShift'])
+            ->name('end')
+            ->middleware('permission:shift.end');
     });
 
     // Order Management Routes
@@ -48,15 +56,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
         Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver');
-    })->middleware(['shift']);
+    })->middleware(['shift', 'permission:pos.access']);
 
     // Quick operations routes
-    Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift']);
-    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['shift']);
-    Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift']);
-    Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift']);
-    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift']);
-    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift']);
+    Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift', 'permission:pos.access']);
+    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift', 'permission:pos.access']);
 
     // Web Order Management Routes
     Route::prefix('web-orders')->name('web-orders.')->group(function () {
@@ -67,19 +75,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/out-for-delivery/{order}', [WebOrderController::class, 'outForDelivery'])->name('outForDelivery');
         Route::post('/apply-discount/{order}', [WebOrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/save-order/{order}', [WebOrderController::class, 'saveOrder'])->name('saveOrder');
-    });
+    })->middleware('permission:web_order.manage');
 
     // Printer Management Routes
-    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print');
-    Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products');
-    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen');
-    Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer');
+    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware('permission:pos.access');
+    Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
+    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen')->middleware('permission:pos.access');
+    Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
 
     // Admin Printer Management Routes
     Route::prefix('admin/printers')->name('admin.printers.')->group(function () {
         Route::post('/test', [PrinterController::class, 'testPrinter'])->name('test');
         Route::post('/scan', [PrinterController::class, 'scanNetwork'])->name('scan');
-    });
+    })->middleware('permission:view_printers');
 
     // Expense Management Routes
     Route::prefix('expenses')->name('expenses.')->group(function () {
@@ -87,18 +95,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
-    })->middleware(['shift']);
+    })->middleware(['shift', 'permission:pos.access']);
 
     // Inventory Management Routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/day-status', [InventoryController::class, 'dayStatus'])->name('dayStatus');
-        Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay');
+        Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay')->middleware('permission:inventory.toggle_day');
     });
 
     // Invoice Print Routes
     Route::get('/print/invoice/{type}/{id}', [InvoicePrintController::class, 'show'])
         ->name('invoice.print')
-        ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+']);
+        ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+'])
+        ->middleware('permission:invoice.print');
 });
 
 require __DIR__.'/auth.php';

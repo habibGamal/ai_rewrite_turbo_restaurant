@@ -45,3 +45,27 @@ function something()
 {
     // ..
 }
+
+function openInventoryDay(?\App\Models\Product $product = null, ?\Carbon\Carbon $date = null): \App\Models\InventoryItemMovementDaily
+{
+    $date = $date ?? \Carbon\Carbon::today();
+    $product = $product ?? \App\Models\Product::first() ?? \App\Models\Product::factory()->create();
+
+    $daily = \App\Models\InventoryItemMovementDaily::firstOrNew([
+        'product_id' => $product->id,
+        'date' => $date->toDateString(),
+    ]);
+
+    $daily->fill([
+        'start_quantity' => $daily->start_quantity ?? 0,
+        'incoming_quantity' => $daily->incoming_quantity ?? 0,
+        'return_sales_quantity' => $daily->return_sales_quantity ?? 0,
+        'sales_quantity' => $daily->sales_quantity ?? 0,
+        'return_waste_quantity' => $daily->return_waste_quantity ?? 0,
+        'end_quantity' => $daily->end_quantity ?? 0,
+        'closed_at' => null,
+    ]);
+    $daily->save();
+
+    return $daily;
+}

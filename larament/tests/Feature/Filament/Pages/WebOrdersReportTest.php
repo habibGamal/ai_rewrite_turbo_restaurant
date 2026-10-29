@@ -3,7 +3,6 @@
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\WebOrdersReport;
 use App\Filament\Widgets\WebOrdersStats;
 use App\Filament\Widgets\WebOrdersTable;
@@ -21,7 +20,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Create admin user for authentication (ViewerAccess trait allows viewers and admins)
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -32,7 +31,7 @@ it('can render the web orders report page', function () {
 });
 
 it('can access page with viewer role', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(WebOrdersReport::class)
@@ -40,7 +39,7 @@ it('can access page with viewer role', function () {
 });
 
 it('cannot access page with cashier role', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(WebOrdersReport::class)

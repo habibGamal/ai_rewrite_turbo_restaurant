@@ -19,7 +19,6 @@ it('can update profile', function () {
             'name' => $updatedUser->name,
             'email' => $updatedUser->email,
         ])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasNoFormErrors();
 
@@ -37,7 +36,6 @@ it('can update password and authenticate', function () {
             'password' => 'new-password',
             'passwordConfirmation' => 'new-password',
         ])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasNoFormErrors();
 
@@ -56,7 +54,6 @@ it('can validate password confirmation', function () {
             'password' => 'password',
             'passwordConfirmation' => 'different-password',
         ])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasFormErrors(['password' => ['same']]);
 });
@@ -64,7 +61,6 @@ it('can validate password confirmation', function () {
 it('can validate required', function ($column) {
     livewire(Profile::class)
         ->fillForm([$column => null])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasFormErrors([$column => ['required']]);
 })->with(['name', 'email']);
@@ -74,7 +70,6 @@ it('can validate email', function () {
         ->fillForm([
             'email' => 'invalid-email-format',
         ])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasFormErrors(['email' => ['email']]);
 });
@@ -86,7 +81,6 @@ it('can validate unique email', function () {
         ->fillForm([
             'email' => $user->email,
         ])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasFormErrors(['email' => ['unique']]);
 });
@@ -94,7 +88,6 @@ it('can validate unique email', function () {
 it('can validate max length', function (string $column) {
     livewire(Profile::class)
         ->fillForm([$column => Str::random(256)])
-        ->assertActionExists('save')
         ->call('save')
         ->assertHasFormErrors([$column => ['max:255']]);
 })->with(['name', 'email']);

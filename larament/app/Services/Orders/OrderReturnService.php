@@ -33,6 +33,8 @@ class OrderReturnService
         int $shiftId,
         bool $reverseStock = true
     ): OrderReturn {
+        shouldDayBeOpen();
+
         try {
             DB::beginTransaction();
 

@@ -6,7 +6,6 @@ use App\Filament\Resources\ExpenseTypes\Pages\CreateExpenseType;
 use App\Filament\Resources\ExpenseTypes\Pages\EditExpenseType;
 use App\Filament\Resources\ExpenseTypes\Pages\ListExpenseTypes;
 use App\Filament\Resources\ExpenseTypes\Pages\ViewExpenseType;
-use App\Filament\Traits\AdminAccess;
 use App\Models\ExpenceType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -21,8 +20,6 @@ use Filament\Tables\Table;
 
 class ExpenseTypeResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = ExpenceType::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';

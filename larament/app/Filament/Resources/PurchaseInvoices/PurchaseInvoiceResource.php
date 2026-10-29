@@ -11,7 +11,6 @@ use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\EditPurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\ListPurchaseInvoices;
 use App\Filament\Resources\PurchaseInvoices\Pages\ViewPurchaseInvoice;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\User;
@@ -42,8 +41,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class PurchaseInvoiceResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = PurchaseInvoice::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
@@ -153,6 +150,7 @@ class PurchaseInvoiceResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),

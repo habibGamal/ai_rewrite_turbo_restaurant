@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\DriverPerformanceReport;
 use App\Filament\Widgets\DriverPerformanceStatsWidget;
 use App\Filament\Widgets\DriverPerformanceTable;
@@ -19,7 +18,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Create an admin user for authorization
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -31,7 +30,7 @@ it('can load the driver performance report page', function () {
 });
 
 it('requires admin or viewer access to view the page', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
 
     actingAs($viewer);
 
@@ -40,7 +39,7 @@ it('requires admin or viewer access to view the page', function () {
 });
 
 it('denies access to users without admin or viewer role', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
 
     actingAs($cashier);
 

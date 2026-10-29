@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
 use App\Filament\Resources\Wastes\Pages\ListWastes;
@@ -16,7 +15,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -117,7 +116,7 @@ it('can create a waste record without notes', function () {
 
 it('can update a waste record', function () {
     $record = Waste::factory()->create();
-    $newUser = User::factory()->create(['role' => UserRole::ADMIN]);
+    $newUser = User::factory()->admin()->create();
 
     livewire(EditWaste::class, ['record' => $record->getRouteKey()])
         ->fillForm([
@@ -323,8 +322,8 @@ it('displays status badge for closed waste records', function () {
 
 // Filter Tests
 it('can filter by user', function () {
-    $user1 = User::factory()->create(['role' => UserRole::ADMIN]);
-    $user2 = User::factory()->create(['role' => UserRole::ADMIN]);
+    $user1 = User::factory()->admin()->create();
+    $user2 = User::factory()->admin()->create();
 
     $waste1 = Waste::factory()->create(['user_id' => $user1->id]);
     $waste2 = Waste::factory()->create(['user_id' => $user2->id]);

@@ -28,6 +28,9 @@ export default function OrderItem({
     user,
     forWeb,
 }: OrderItemProps) {
+    const canApplyDiscounts = Boolean(
+        user.isAdmin || user.roles?.includes('admin') || user.permissions?.includes('order.apply_discount')
+    );
     const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
     const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
     const [notes, setNotes] = useState(orderItem.notes || "");
@@ -244,7 +247,7 @@ export default function OrderItem({
                             icon={<DeleteOutlined />}
                             size="small"
                         />
-                        {user.canApplyDiscounts && (
+                        {canApplyDiscounts && (
                             <Button
                                 disabled={disabled}
                                 onClick={onOpenDiscountModal}

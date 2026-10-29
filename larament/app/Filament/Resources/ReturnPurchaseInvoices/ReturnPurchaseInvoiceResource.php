@@ -10,7 +10,6 @@ use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvo
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ViewReturnPurchaseInvoice;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\User;
@@ -40,8 +39,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ReturnPurchaseInvoiceResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = ReturnPurchaseInvoice::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
@@ -148,6 +145,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),

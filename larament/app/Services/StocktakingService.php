@@ -18,6 +18,37 @@ class StocktakingService
     }
 
     /**
+     * Get items whose current stock differs from the snapshot taken when the item was counted.
+     *
+     * @return array<int, array{name: string, snapshot: float, current: float}>
+     */
+    public function getChangedItemsSinceCount(Stocktaking $stocktaking): array
+    {
+        $stocktaking->loadMissing(['items.product']);
+
+        $changed = [];
+
+        /** @var iterable<\App\Models\StocktakingItem> $items */
+        /** @phpstan-ignore-next-line */
+        $items = $stocktaking->items;
+
+        foreach ($items as $item) {
+            $snapshot = round((float) ($item->stock_quantity ?? 0), 3);
+            $current = round((float) $this->stockService->getCurrentStock((int) $item->product_id), 3);
+
+            if (abs($snapshot - $current) >= 0.0005) {
+                $changed[] = [
+                    'name' => (string) ($item->product->name ?? 'غير معروف'),
+                    'snapshot' => $snapshot,
+                    'current' => $current,
+                ];
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
      * Close the stocktaking and update inventory quantities using StockService
      */
     public function closeStocktaking(Stocktaking $stocktaking): void

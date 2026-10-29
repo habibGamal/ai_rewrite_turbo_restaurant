@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\StockReport;
 use App\Filament\Widgets\StockReportTable;
 use App\Models\Category;
@@ -16,7 +15,7 @@ use function Pest\Livewire\livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -27,7 +26,7 @@ it('can render the stock report page as admin', function () {
 });
 
 it('can render the stock report page as viewer', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(StockReport::class)
@@ -35,7 +34,7 @@ it('can render the stock report page as viewer', function () {
 });
 
 it('cannot access stock report page without admin or viewer role', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(StockReport::class)
@@ -191,7 +190,7 @@ it('has deviation percentage column', function () {
 // Table Rendering Tests
 it('can render all columns', function (string $column) {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    InventoryItem::factory()->create(['product_id' => $product->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product->id]);
 
     livewire(StockReportTable::class)
         ->assertCanRenderTableColumn($column);
@@ -223,8 +222,8 @@ it('excludes manufactured products from report', function () {
         'type' => ProductType::Manufactured,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $consumableProduct->id]);
-    InventoryItem::factory()->create(['product_id' => $manufacturedProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $consumableProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $manufacturedProduct->id]);
 
     livewire(StockReportTable::class)
         ->assertCanSeeTableRecords([$consumableProduct])
@@ -238,7 +237,7 @@ it('displays products with their categories', function () {
         'category_id' => $category->id,
         'type' => ProductType::Consumable,
     ]);
-    InventoryItem::factory()->create(['product_id' => $product->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product->id]);
 
     livewire(StockReportTable::class)
         ->assertCanSeeTableRecords([$product])
@@ -247,10 +246,10 @@ it('displays products with their categories', function () {
 
 it('displays correct actual remaining quantity', function () {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    $inventoryItem = InventoryItem::factory()->create([
-        'product_id' => $product->id,
-        'quantity' => 50,
-    ]);
+    $inventoryItem = InventoryItem::updateOrCreate(
+        ['product_id' => $product->id],
+        ['quantity' => 50],
+    );
 
     livewire(StockReportTable::class)
         ->assertCanSeeTableRecords([$product])
@@ -259,10 +258,10 @@ it('displays correct actual remaining quantity', function () {
 
 it('displays inventory item quantity as actual remaining quantity when endDate is today', function () {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    InventoryItem::factory()->create([
-        'product_id' => $product->id,
-        'quantity' => 75,
-    ]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id],
+        ['quantity' => 75],
+    );
 
     livewire(StockReportTable::class, [
         'pageFilters' => [
@@ -276,10 +275,10 @@ it('displays inventory item quantity as actual remaining quantity when endDate i
 
 it('displays daily movement end quantity as actual remaining quantity when endDate is in the past', function () {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    InventoryItem::factory()->create([
-        'product_id' => $product->id,
-        'quantity' => 100,
-    ]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id],
+        ['quantity' => 100],
+    );
 
     $pastDate = now()->subDays(5)->toDateString();
 
@@ -287,6 +286,7 @@ it('displays daily movement end quantity as actual remaining quantity when endDa
         'product_id' => $product->id,
         'date' => $pastDate,
         'end_quantity' => 35,
+        'closed_at' => now(),
     ]);
 
     livewire(StockReportTable::class, [
@@ -301,10 +301,10 @@ it('displays daily movement end quantity as actual remaining quantity when endDa
 
 it('displays zero as actual remaining quantity when endDate is in the past and no daily record exists', function () {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    InventoryItem::factory()->create([
-        'product_id' => $product->id,
-        'quantity' => 100,
-    ]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id],
+        ['quantity' => 100],
+    );
 
     $pastDate = now()->subDays(5)->toDateString();
 
@@ -323,7 +323,7 @@ it('displays products with zero cost', function () {
         'type' => ProductType::Consumable,
         'cost' => 0,
     ]);
-    InventoryItem::factory()->create(['product_id' => $product->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product->id]);
 
     livewire(StockReportTable::class)
         ->assertCanSeeTableRecords([$product]);
@@ -340,8 +340,8 @@ it('can search products by name', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $product1->id]);
-    InventoryItem::factory()->create(['product_id' => $product2->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product1->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product2->id]);
 
     livewire(StockReportTable::class)
         ->searchTable('بطاطس')
@@ -363,8 +363,8 @@ it('can search products by category name', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $product1->id]);
-    InventoryItem::factory()->create(['product_id' => $product2->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product1->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product2->id]);
 
     livewire(StockReportTable::class)
         ->searchTable('خضروات')
@@ -380,7 +380,7 @@ it('can sort products by name', function () {
         ->create(['type' => ProductType::Consumable]);
 
     $products->each(function ($product) {
-        InventoryItem::factory()->create(['product_id' => $product->id]);
+        InventoryItem::updateOrCreate(['product_id' => $product->id]);
     });
 
     livewire(StockReportTable::class)
@@ -401,7 +401,7 @@ it('can sort products by cost', function () {
         ->create(['type' => ProductType::Consumable]);
 
     $products->each(function ($product) {
-        InventoryItem::factory()->create(['product_id' => $product->id]);
+        InventoryItem::updateOrCreate(['product_id' => $product->id]);
     });
 
     livewire(StockReportTable::class)
@@ -425,8 +425,8 @@ it('can filter by category', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $product1->id]);
-    InventoryItem::factory()->create(['product_id' => $product2->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product1->id]);
+    InventoryItem::updateOrCreate(['product_id' => $product2->id]);
 
     livewire(StockReportTable::class)
         ->filterTable('category_id', $category1->id)
@@ -445,14 +445,14 @@ it('can filter products with stock', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create([
-        'product_id' => $productWithStock->id,
-        'quantity' => 10,
-    ]);
-    InventoryItem::factory()->create([
-        'product_id' => $productWithoutStock->id,
-        'quantity' => 0,
-    ]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $productWithStock->id],
+        ['quantity' => 10],
+    );
+    InventoryItem::updateOrCreate(
+        ['product_id' => $productWithoutStock->id],
+        ['quantity' => 0],
+    );
 
     livewire(StockReportTable::class)
         ->filterTable('has_stock', true)
@@ -471,14 +471,14 @@ it('can filter products without stock', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create([
-        'product_id' => $productWithStock->id,
-        'quantity' => 10,
-    ]);
-    InventoryItem::factory()->create([
-        'product_id' => $productWithoutStock->id,
-        'quantity' => 0,
-    ]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $productWithStock->id],
+        ['quantity' => 10],
+    );
+    InventoryItem::updateOrCreate(
+        ['product_id' => $productWithoutStock->id],
+        ['quantity' => 0],
+    );
 
     livewire(StockReportTable::class)
         ->filterTable('has_stock', false)
@@ -499,8 +499,8 @@ it('can filter by cost range - low', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $lowCostProduct->id]);
-    InventoryItem::factory()->create(['product_id' => $highCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $lowCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $highCostProduct->id]);
 
     livewire(StockReportTable::class)
         ->filterTable('cost_range', 'low')
@@ -521,8 +521,8 @@ it('can filter by cost range - medium', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $mediumCostProduct->id]);
-    InventoryItem::factory()->create(['product_id' => $highCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $mediumCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $highCostProduct->id]);
 
     livewire(StockReportTable::class)
         ->filterTable('cost_range', 'medium')
@@ -543,8 +543,8 @@ it('can filter by cost range - high', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $lowCostProduct->id]);
-    InventoryItem::factory()->create(['product_id' => $highCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $lowCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $highCostProduct->id]);
 
     livewire(StockReportTable::class)
         ->filterTable('cost_range', 'high')
@@ -565,8 +565,8 @@ it('can filter products with zero cost', function () {
         'type' => ProductType::Consumable,
     ]);
 
-    InventoryItem::factory()->create(['product_id' => $zeroCostProduct->id]);
-    InventoryItem::factory()->create(['product_id' => $normalProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $zeroCostProduct->id]);
+    InventoryItem::updateOrCreate(['product_id' => $normalProduct->id]);
 
     livewire(StockReportTable::class)
         ->filterTable('zero_cost')
@@ -583,7 +583,7 @@ it('has export action', function () {
 
 it('has view product action', function () {
     $product = Product::factory()->create(['type' => ProductType::Consumable]);
-    $inventoryItem = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $inventoryItem = InventoryItem::updateOrCreate(['product_id' => $product->id]);
 
     livewire(StockReportTable::class)
         ->assertTableActionExists('view_product');
@@ -596,7 +596,7 @@ it('shows correct record count', function () {
         ->create(['type' => ProductType::Consumable]);
 
     $products->each(function ($product) {
-        InventoryItem::factory()->create(['product_id' => $product->id]);
+        InventoryItem::updateOrCreate(['product_id' => $product->id]);
     });
 
     livewire(StockReportTable::class)
@@ -616,7 +616,7 @@ it('can paginate results', function () {
         ->create(['type' => ProductType::Consumable]);
 
     $products->each(function ($product) {
-        InventoryItem::factory()->create(['product_id' => $product->id]);
+        InventoryItem::updateOrCreate(['product_id' => $product->id]);
     });
 
     livewire(StockReportTable::class)

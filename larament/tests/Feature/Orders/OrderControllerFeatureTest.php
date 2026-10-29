@@ -4,7 +4,6 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Driver;
@@ -24,11 +23,9 @@ uses(RefreshDatabase::class);
 describe('OrderController Feature Tests', function () {
     beforeEach(function () {
         $this->user = User::factory()->create([
-            'role' => UserRole::CASHIER,
         ]);
 
         $this->adminUser = User::factory()->create([
-            'role' => UserRole::ADMIN,
         ]);
 
         $this->shift = Shift::factory()->create([
@@ -431,6 +428,7 @@ describe('OrderController Feature Tests', function () {
     describe('Order Cancellation', function () {
         it('allows admin to cancel completed order', function () {
             $this->actingAs($this->adminUser);
+            openInventoryDay();
 
             $order = Order::factory()->create([
                 'shift_id' => $this->shift->id,

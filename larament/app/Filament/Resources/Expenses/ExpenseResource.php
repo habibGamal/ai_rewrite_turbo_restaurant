@@ -6,7 +6,6 @@ use App\Filament\Resources\Expenses\Pages\CreateExpense;
 use App\Filament\Resources\Expenses\Pages\EditExpense;
 use App\Filament\Resources\Expenses\Pages\ListExpenses;
 use App\Filament\Resources\Expenses\Pages\ViewExpense;
-use App\Filament\Traits\AdminAccess;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use Filament\Actions\BulkActionGroup;
@@ -28,8 +27,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ExpenseResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Expense::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';

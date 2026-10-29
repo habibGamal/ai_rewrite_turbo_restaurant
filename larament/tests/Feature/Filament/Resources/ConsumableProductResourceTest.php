@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
@@ -17,7 +16,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 

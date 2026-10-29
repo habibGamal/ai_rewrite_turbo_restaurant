@@ -70,8 +70,8 @@ export const orderItemsReducer = (
         action.type !== "init" &&
         action.type !== "addByBarcode"
     ) {
-        const isAdmin = action.user.role === "admin";
-        const canChangeItems = action.user.canChangeOrderItems ?? false;
+        const isAdmin = Boolean(action.user.isAdmin || action.user.roles?.includes("admin"));
+        const canChangeItems = isAdmin || Boolean(action.user.permissions?.includes("order.change_items"));
         const orderItem = action.id
             ? state.find((item) => item.product_id === action.id!)
             : null;

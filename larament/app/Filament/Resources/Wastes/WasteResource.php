@@ -10,7 +10,6 @@ use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
 use App\Filament\Resources\Wastes\Pages\ListWastes;
 use App\Filament\Resources\Wastes\Pages\ViewWaste;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Waste;
@@ -42,8 +41,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class WasteResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Waste::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-trash';
@@ -147,6 +144,7 @@ class WasteResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),

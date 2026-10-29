@@ -3,7 +3,9 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
-    role: 'admin' | 'cashier' | 'waiter' | 'kitchen';
+    roles?: string[];
+    permissions?: string[];
+    isAdmin?: boolean;
 }
 
 export type OrderStatus = 'processing' | 'completed' | 'cancelled';

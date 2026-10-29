@@ -7,7 +7,6 @@ use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
 use App\Filament\Resources\ConsumableProducts\Pages\ViewConsumableProduct;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
 use App\Models\Product;
 use Filament\Actions\BulkActionGroup;
@@ -30,8 +29,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ConsumableProductResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Product::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';

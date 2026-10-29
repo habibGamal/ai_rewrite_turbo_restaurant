@@ -1,3 +1,4 @@
+import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import { User } from "@/types";
 import {
@@ -196,11 +197,13 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                         onClick={() => toAdmin()}
                     />
                 </IsAdmin>
-                <FloatButton
-                    tooltip="فتح درج الكاشير"
-                    icon={<DollarCircleOutlined />}
-                    onClick={() => openCashierDrawer()}
-                />
+                <CanAccess permission="cashier.open_drawer">
+                    <FloatButton
+                        tooltip="فتح درج الكاشير"
+                        icon={<DollarCircleOutlined />}
+                        onClick={() => openCashierDrawer()}
+                    />
+                </CanAccess>
                 <FloatButton
                     tooltip="تسجيل الخروج"
                     icon={<LogoutOutlined />}

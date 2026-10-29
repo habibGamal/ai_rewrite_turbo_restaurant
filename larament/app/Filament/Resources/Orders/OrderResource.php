@@ -11,7 +11,6 @@ use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\OrderReturnsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Order;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -28,8 +27,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class OrderResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Order::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';

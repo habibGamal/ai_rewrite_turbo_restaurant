@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\ExpensesReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
@@ -14,7 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -274,7 +273,7 @@ it('can filter by this year', function () {
 
 // Access Control Tests
 it('allows admin users to access', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(ExpensesReport::class)
@@ -282,7 +281,7 @@ it('allows admin users to access', function () {
 });
 
 it('allows viewer users to access', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(ExpensesReport::class)
@@ -290,7 +289,7 @@ it('allows viewer users to access', function () {
 });
 
 it('denies cashier users access', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(ExpensesReport::class)
@@ -298,7 +297,7 @@ it('denies cashier users access', function () {
 });
 
 it('denies watcher users access', function () {
-    $watcher = User::factory()->create(['role' => UserRole::WATCHER]);
+    $watcher = User::factory()->watcher()->create();
     actingAs($watcher);
 
     livewire(ExpensesReport::class)

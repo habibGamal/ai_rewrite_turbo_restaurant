@@ -25,7 +25,6 @@ use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     $this->admin = User::factory()->create([
-        'role' => 'admin',
     ]);
     $this->actingAs($this->admin);
 });

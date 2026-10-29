@@ -51,7 +51,7 @@ class MovementsRelationManager extends RelationManager
                     ->badge(),
                 TextColumn::make('quantity')
                     ->label('الكمية')
-                    ->numeric(decimalPlaces: 2)
+                    ->numeric(decimalPlaces: 3)
                     ->sortable(),
                 TextColumn::make('reason')
                     ->label('السبب')

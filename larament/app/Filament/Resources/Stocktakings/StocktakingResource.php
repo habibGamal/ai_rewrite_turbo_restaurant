@@ -10,7 +10,6 @@ use App\Filament\Resources\Stocktakings\Pages\CreateStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\EditStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\ListStocktakings;
 use App\Filament\Resources\Stocktakings\Pages\ViewStocktaking;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\Stocktaking;
 use App\Models\User;
@@ -42,8 +41,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class StocktakingResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Stocktaking::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
@@ -138,6 +135,7 @@ class StocktakingResource extends Resource
                                 TextInput::make('real_quantity')
                                     ->label('الكمية الفعلية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(0)
                                     ->minValue(0),

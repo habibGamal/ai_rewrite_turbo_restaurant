@@ -3,35 +3,33 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Enums\UserRole;
-use App\Services\SettingsService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $hidden = [
         'password',
@@ -48,74 +46,47 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => UserRole::class,
         ];
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        /* TODO: Please implement your own logic here. */
-        return true; // str_ends_with($this->email, '@larament.test');
+        return $this->can('access_admin_panel');
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::ADMIN;
+        return $this->hasRole('admin');
     }
 
     public function isViewer(): bool
     {
-        return $this->role === UserRole::VIEWER;
+        return $this->hasRole('viewer');
     }
 
     public function canManageOrders(): bool
     {
-        return $this->role?->canManageOrders() ?? false;
+        return $this->can('pos.access');
     }
 
     public function canCancelOrders(): bool
     {
-        if ($this->role === UserRole::ADMIN) {
-            return true;
-        }
-
-        if ($this->role === UserRole::CASHIER) {
-            return app(SettingsService::class)->isCashierCancelOrdersAllowed();
-        }
-
-        return $this->role?->canCancelOrders() ?? false;
+        return $this->can('order.cancel');
     }
 
     public function canApplyDiscounts(): bool
     {
-        if ($this->role === UserRole::ADMIN) {
-            return true;
-        }
-
-        if ($this->role === UserRole::CASHIER) {
-            return app(SettingsService::class)->isCashierDiscountsAllowed();
-        }
-
-        return $this->role?->canApplyDiscounts() ?? false;
+        return $this->can('order.apply_discount');
     }
 
     public function canChangeOrderItems(): bool
     {
-        if ($this->role === UserRole::ADMIN) {
-            return true;
-        }
-
-        if ($this->role === UserRole::CASHIER) {
-            return app(SettingsService::class)->isCashierItemChangesAllowed();
-        }
-
-        return true; // Default for other roles
+        return $this->can('order.change_items');
     }
 
     public function canAccessKitchen(): bool
     {
-        return $this->role === UserRole::ADMIN
-            || $this->role === UserRole::KITCHEN;
+        return $this->can('kitchen.access');
     }
 
     public function shifts()

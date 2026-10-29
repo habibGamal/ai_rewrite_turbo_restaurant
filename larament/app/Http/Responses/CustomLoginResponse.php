@@ -2,7 +2,6 @@
 
 namespace App\Http\Responses;
 
-use App\Enums\UserRole;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Illuminate\Http\RedirectResponse;
 use Livewire\Features\SupportRedirects\Redirector;
@@ -13,7 +12,7 @@ class CustomLoginResponse implements LoginResponse
     {
         $user = auth()->user();
 
-        if ($user->role === UserRole::CASHIER) {
+        if ($user && $user->hasRole('cashier')) {
             return redirect()->route('orders.index');
         }
 

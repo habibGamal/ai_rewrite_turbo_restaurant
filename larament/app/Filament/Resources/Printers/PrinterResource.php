@@ -7,7 +7,6 @@ use App\Filament\Resources\Printers\Pages\CreatePrinter;
 use App\Filament\Resources\Printers\Pages\EditPrinter;
 use App\Filament\Resources\Printers\Pages\ListPrinters;
 use App\Filament\Resources\Printers\Pages\ViewPrinter;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
 use App\Models\Printer;
 use App\Models\Product;
@@ -34,8 +33,6 @@ use Filament\Tables\Table;
 
 class PrinterResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Printer::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-printer';

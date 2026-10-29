@@ -46,14 +46,14 @@ class UsedInProductsRelationManager extends RelationManager
                     ->sortable(),
                 TextColumn::make('quantity')
                     ->label('الكمية لكل وحدة')
-                    ->numeric(decimalPlaces: 2)
+                    ->numeric(decimalPlaces: 3)
                     ->sortable(),
                 TextColumn::make('product.unit')
                     ->label('الوحدة')
                     ->badge(),
                 TextColumn::make('total_consumed')
                     ->label('إجمالي الاستهلاك')
-                    ->numeric(decimalPlaces: 2)
+                    ->numeric(decimalPlaces: 3)
                     ->state(function ($record) {
                         $shiftIds = $this->getSelectedShiftIds();
 

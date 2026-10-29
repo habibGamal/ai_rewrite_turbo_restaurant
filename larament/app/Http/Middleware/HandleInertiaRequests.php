@@ -35,12 +35,12 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $authData = ['user' => $user];
 
-        // Add permission flags if user is authenticated
+        // Add role and permission data if user is authenticated
         if ($user) {
             $authData['user'] = array_merge($user->toArray(), [
-                'canApplyDiscounts' => $user->canApplyDiscounts(),
-                'canCancelOrders' => $user->canCancelOrders(),
-                'canChangeOrderItems' => $user->canChangeOrderItems(),
+                'roles' => $user->getRoleNames()->toArray(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+                'isAdmin' => $user->hasRole('admin'),
             ]);
         }
 

@@ -6,7 +6,6 @@ use App\Filament\Resources\Categories\Pages\CreateCategory;
 use App\Filament\Resources\Categories\Pages\EditCategory;
 use App\Filament\Resources\Categories\Pages\ListCategories;
 use App\Filament\Resources\Categories\Pages\ViewCategory;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Category;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -21,8 +20,6 @@ use Filament\Tables\Table;
 
 class CategoryResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Category::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';

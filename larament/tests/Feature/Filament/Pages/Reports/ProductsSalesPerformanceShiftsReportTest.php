@@ -3,7 +3,6 @@
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceShiftsReport;
 use App\Filament\Widgets\CategoryPerformanceWidget;
 use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
@@ -26,7 +25,7 @@ use function Pest\Livewire\livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    actingAs(User::factory()->create(['role' => UserRole::ADMIN]));
+    actingAs(User::factory()->admin()->create());
 });
 
 it('can render the products sales shifts report page', function () {
@@ -35,7 +34,7 @@ it('can render the products sales shifts report page', function () {
 });
 
 it('can access page with viewer role', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(ProductsSalesPerformanceShiftsReport::class)
@@ -43,7 +42,7 @@ it('can access page with viewer role', function () {
 });
 
 it('cannot access page with cashier role', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(ProductsSalesPerformanceShiftsReport::class)

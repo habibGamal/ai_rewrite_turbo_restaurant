@@ -50,7 +50,7 @@ class ProductObserver
     }
 
     /**
-     * Handle the Product "saving" event.
+     * Handle the Product "saved" event.
      */
     public function saved(Product $product): void
     {
@@ -60,6 +60,15 @@ class ProductObserver
             $product->componentOf->each(function ($component) {
                 $component->updateManufacturedCost();
             });
+        }
+
+        if ($product->wasChanged('type') && $product->type !== ProductType::Manufactured) {
+            if (! InventoryItem::where('product_id', $product->id)->exists()) {
+                InventoryItem::create([
+                    'product_id' => $product->id,
+                    'quantity' => 0,
+                ]);
+            }
         }
     }
 

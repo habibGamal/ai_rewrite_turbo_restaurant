@@ -15,7 +15,7 @@ class StockReport extends BaseDashboard
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
 
-    protected static string $routePath = 'orders-report';
+    protected static string $routePath = 'stock-report';
 
     protected static string|\UnitEnum|null $navigationGroup = 'التقارير';
 

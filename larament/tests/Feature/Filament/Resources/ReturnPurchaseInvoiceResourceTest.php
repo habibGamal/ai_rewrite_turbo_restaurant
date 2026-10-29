@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
@@ -17,7 +16,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -101,8 +100,8 @@ it('can search return purchase invoices by supplier name', function () {
 });
 
 it('can search return purchase invoices by user name', function () {
-    $user1 = User::factory()->create(['name' => 'أحمد محمد', 'role' => UserRole::ADMIN]);
-    $user2 = User::factory()->create(['name' => 'محمود علي', 'role' => UserRole::ADMIN]);
+    $user1 = User::factory()->create(['name' => 'أحمد محمد']);
+    $user2 = User::factory()->create(['name' => 'محمود علي']);
     $supplier = Supplier::factory()->create();
 
     $invoice1 = ReturnPurchaseInvoice::factory()->create([
@@ -370,8 +369,8 @@ it('can filter by supplier', function () {
 });
 
 it('can filter by user', function () {
-    $user1 = User::factory()->create(['role' => UserRole::ADMIN]);
-    $user2 = User::factory()->create(['role' => UserRole::ADMIN]);
+    $user1 = User::factory()->admin()->create();
+    $user2 = User::factory()->admin()->create();
     $supplier = Supplier::factory()->create();
 
     $invoice1 = ReturnPurchaseInvoice::factory()->create([

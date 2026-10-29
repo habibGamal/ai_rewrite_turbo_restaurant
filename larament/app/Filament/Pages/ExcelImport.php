@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Traits\AdminAccess;
 use App\Services\SpecificDataImportService;
 use Exception;
 use Filament\Actions\Action;
@@ -21,7 +20,12 @@ use Illuminate\Support\Facades\Storage;
 
 class ExcelImport extends Page implements HasForms
 {
-    use AdminAccess , InteractsWithForms;
+    use InteractsWithForms;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('manage_excel_import') ?? false;
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-up-tray';
 
