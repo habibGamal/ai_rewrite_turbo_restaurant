@@ -68,6 +68,8 @@ return [
     'external_url' => env('APP_EXTERNAL_URL', env('APP_URL', 'http://localhost')),
     'manage_operations_url' => env('MANAGE_OPERATIONS_URL', 'http://localhost:8009'),
     'management_secret_key' => env('MANAGEMENT_SECRET_KEY', 'default-secret-key'),
+    'web_api_key' => env('WEB_API_KEY'),
+    'version' => env('APP_VERSION', '1.0.0'),
 
     /*
     |--------------------------------------------------------------------------

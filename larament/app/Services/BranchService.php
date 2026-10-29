@@ -50,6 +50,17 @@ class BranchService
     }
 
     /**
+     * Get an HTTP client instance configured for master node requests
+     */
+    private function masterHttp(): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::withOptions($this->querySettings)
+            ->withHeaders([
+                'X-Api-Key' => (string) config('app.web_api_key'),
+            ]);
+    }
+
+    /**
      * Test connection to master node
      */
     public function testMasterConnection(): bool
@@ -60,7 +71,7 @@ class BranchService
         }
 
         try {
-            $response = Http::withOptions($this->querySettings)
+            $response = $this->masterHttp()
                 ->get($masterLink.'/api/check');
 
             return $response->successful();
@@ -88,7 +99,7 @@ class BranchService
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
 
-            return Http::withOptions($this->querySettings)
+            return $this->masterHttp()
                 ->get($masterLink.'/api/all-products-refs-master');
         });
     }
@@ -98,7 +109,7 @@ class BranchService
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
 
-            return Http::withOptions($this->querySettings)
+            return $this->masterHttp()
                 ->get($masterLink.'/api/all-products-prices-master');
         });
     }
@@ -108,7 +119,7 @@ class BranchService
         return $this->tryMasterConnection(function () use ($ids) {
             $masterLink = $this->getMasterNodeLink();
 
-            return Http::withOptions($this->querySettings)
+            return $this->masterHttp()
                 ->get($masterLink.'/api/get-products-master?ids=,'.$ids);
         });
     }
@@ -118,7 +129,7 @@ class BranchService
         return $this->tryMasterConnection(function () use ($ids) {
             $masterLink = $this->getMasterNodeLink();
 
-            return Http::withOptions($this->querySettings)
+            return $this->masterHttp()
                 ->get($masterLink.'/api/get-products-prices-master?ids=,'.$ids);
         });
     }
@@ -128,7 +139,7 @@ class BranchService
         return $this->tryMasterConnection(function () {
             $masterLink = $this->getMasterNodeLink();
 
-            return Http::withOptions($this->querySettings)
+            return $this->masterHttp()
                 ->get($masterLink.'/api/all-products-recipes-master');
         });
     }

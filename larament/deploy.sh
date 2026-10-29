@@ -100,6 +100,20 @@ fi
 # --- Deployment Logic ---
 cd /var/www/turbo_restaurant/larament
 
+# Ensure scheduler cron entry exists
+CRON_JOB="* * * * * cd /var/www/turbo_restaurant/larament && php artisan schedule:run >> /dev/null 2>&1"
+(crontab -l 2>/dev/null | grep -qF "$CRON_JOB") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+
+# Export APP_VERSION into .env
+APP_VERSION=$(git describe --tags --always)
+if [ -f .env ]; then
+  if grep -q "^APP_VERSION=" .env; then
+    sed -i "s|^APP_VERSION=.*|APP_VERSION=${APP_VERSION}|" .env
+  else
+    echo "APP_VERSION=${APP_VERSION}" >> .env
+  fi
+fi
+
 echo "📦 Installing Dependencies..."
 composer install
 npm install && npm run build

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\ManagementController;
 use App\Http\Controllers\Api\WebOrdersController;
 use App\Http\Controllers\OrderController;
+use App\Http\Middleware\VerifyApiKey;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,20 +31,23 @@ Route::prefix('management')->name('management.')->group(function () {
     Route::get('/status', [ManagementController::class, 'status'])->name('status');
 });
 
-// Product search and management
-Route::get('/products/product_search', [ApiController::class, 'productSearch']);
-Route::post('/validate_products', [ApiController::class, 'validateProducts']);
-Route::get('/all-products', [ApiController::class, 'allProducts']);
-Route::get('/all-products-refs-master', [ApiController::class, 'allProductsRefsMaster']);
-Route::get('/all-products-prices-master', [ApiController::class, 'allProductsPricesMaster']);
-Route::get('/all-products-recipes-master', [ApiController::class, 'allProductsRecipesMaster']);
-Route::get('/get-products-master', [ApiController::class, 'getProductsMaster']);
-Route::get('/get-products-master-by-refs', [ApiController::class, 'getProductsMasterByRefs']);
-Route::get('/get-products-prices-master', [ApiController::class, 'getProductsPricesMaster']);
+// Protected endpoints requiring API key
+Route::middleware(VerifyApiKey::class)->group(function () {
+    // Product search and management
+    Route::get('/products/product_search', [ApiController::class, 'productSearch']);
+    Route::post('/validate_products', [ApiController::class, 'validateProducts']);
+    Route::get('/all-products', [ApiController::class, 'allProducts']);
+    Route::get('/all-products-refs-master', [ApiController::class, 'allProductsRefsMaster']);
+    Route::get('/all-products-prices-master', [ApiController::class, 'allProductsPricesMaster']);
+    Route::get('/all-products-recipes-master', [ApiController::class, 'allProductsRecipesMaster']);
+    Route::get('/get-products-master', [ApiController::class, 'getProductsMaster']);
+    Route::get('/get-products-master-by-refs', [ApiController::class, 'getProductsMasterByRefs']);
+    Route::get('/get-products-prices-master', [ApiController::class, 'getProductsPricesMaster']);
 
-// Web order endpoints
-Route::post('/web-orders/place-order', [WebOrdersController::class, 'createOrder']);
-Route::get('/can-accept-order', [WebOrdersController::class, 'canAcceptOrder']);
-Route::get('/get-shift-id', [WebOrdersController::class, 'getShiftId']);
+    // Web order endpoints
+    Route::post('/web-orders/place-order', [WebOrdersController::class, 'createOrder']);
+    Route::get('/can-accept-order', [WebOrdersController::class, 'canAcceptOrder']);
+    Route::get('/get-shift-id', [WebOrdersController::class, 'getShiftId']);
 
-Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
+    Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
+});

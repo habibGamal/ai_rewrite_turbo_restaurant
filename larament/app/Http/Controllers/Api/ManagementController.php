@@ -16,9 +16,10 @@ class ManagementController extends Controller
      */
     private function validateManagementKey(Request $request): ?JsonResponse
     {
-        $secretKey = $request->query('key') ?? $request->header('X-Management-Key');
+        $providedKey = $request->header('X-Management-Key');
+        $expectedKey = config('app.management_secret_key');
 
-        if ($secretKey !== config('app.management_secret_key')) {
+        if (! is_string($providedKey) || ! is_string($expectedKey) || $expectedKey === '' || ! hash_equals($expectedKey, $providedKey)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized access',
