@@ -69,3 +69,22 @@ function openInventoryDay(?\App\Models\Product $product = null, ?\Carbon\Carbon 
 
     return $daily;
 }
+
+function pairPlatform(string $token = 'test-token'): \App\Models\PlatformConnection
+{
+    \App\Models\PlatformConnection::flushCache();
+
+    $connection = \App\Models\PlatformConnection::create([
+        'url' => 'https://platform.test',
+        'branch_uuid' => '01930c11-0000-7000-8000-000000000001',
+        'token' => $token,
+        'branch_secret' => 'test-secret',
+        'timezone' => 'Africa/Cairo',
+        'status' => 'active',
+        'paired_at' => now(),
+    ]);
+
+    \App\Models\PlatformConnection::flushCache();
+
+    return $connection;
+}
