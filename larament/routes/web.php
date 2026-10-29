@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Order Management Routes
-    Route::prefix('orders')->name('orders.')->group(function () {
+    Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
         Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver');
-    })->middleware(['shift', 'permission:pos.access']);
+    });
 
     // Quick operations routes
     Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
@@ -67,7 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift', 'permission:pos.access']);
 
     // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->group(function () {
+    Route::prefix('web-orders')->name('web-orders.')->middleware('permission:web_order.manage')->group(function () {
         Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
         Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
         Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
@@ -75,7 +75,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/out-for-delivery/{order}', [WebOrderController::class, 'outForDelivery'])->name('outForDelivery');
         Route::post('/apply-discount/{order}', [WebOrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/save-order/{order}', [WebOrderController::class, 'saveOrder'])->name('saveOrder');
-    })->middleware('permission:web_order.manage');
+    });
 
     // Printer Management Routes
     Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware('permission:pos.access');
@@ -84,18 +84,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
 
     // Admin Printer Management Routes
-    Route::prefix('admin/printers')->name('admin.printers.')->group(function () {
+    Route::prefix('admin/printers')->name('admin.printers.')->middleware('permission:view_printers')->group(function () {
         Route::post('/test', [PrinterController::class, 'testPrinter'])->name('test');
         Route::post('/scan', [PrinterController::class, 'scanNetwork'])->name('scan');
-    })->middleware('permission:view_printers');
+    });
 
     // Expense Management Routes
-    Route::prefix('expenses')->name('expenses.')->group(function () {
+    Route::prefix('expenses')->name('expenses.')->middleware(['shift', 'permission:pos.access'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
-    })->middleware(['shift', 'permission:pos.access']);
+    });
 
     // Inventory Management Routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
