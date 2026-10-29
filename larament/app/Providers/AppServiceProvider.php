@@ -5,8 +5,24 @@ namespace App\Providers;
 use App\Http\Responses\CustomLoginResponse;
 use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
+use App\Models\Category;
+use App\Models\ExpenceType;
+use App\Models\Expense;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderReturn;
+use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductComponent;
+use App\Models\PurchaseInvoice;
+use App\Models\ReturnPurchaseInvoice;
+use App\Models\Shift;
+use App\Models\Stocktaking;
+use App\Models\Supplier;
+use App\Models\User;
+use App\Models\Waste;
 use App\Observers\ProductObserver;
+use App\Sync\SyncOutboxObserver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
 use Filament\Auth\Http\Responses\LoginResponse;
@@ -40,6 +56,24 @@ class AppServiceProvider extends ServiceProvider
 
         // Register model observers
         Product::observe(ProductObserver::class);
+
+        // Platform connector sync outbox observer
+        Order::observe(SyncOutboxObserver::class);
+        OrderItem::observe(SyncOutboxObserver::class);
+        Payment::observe(SyncOutboxObserver::class);
+        OrderReturn::observe(SyncOutboxObserver::class);
+        Shift::observe(SyncOutboxObserver::class);
+        Expense::observe(SyncOutboxObserver::class);
+        PurchaseInvoice::observe(SyncOutboxObserver::class);
+        ReturnPurchaseInvoice::observe(SyncOutboxObserver::class);
+        Waste::observe(SyncOutboxObserver::class);
+        Stocktaking::observe(SyncOutboxObserver::class);
+        Product::observe(SyncOutboxObserver::class);
+        Category::observe(SyncOutboxObserver::class);
+        Supplier::observe(SyncOutboxObserver::class);
+        ExpenceType::observe(SyncOutboxObserver::class);
+        User::observe(SyncOutboxObserver::class);
+        ProductComponent::observe(SyncOutboxObserver::class);
 
         JsonResource::withoutWrapping();
 

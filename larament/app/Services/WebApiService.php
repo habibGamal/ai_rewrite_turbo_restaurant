@@ -12,6 +12,8 @@ use App\Models\DailySnapshot;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shift;
+use App\Sync\DocumentType;
+use App\Sync\Outbox;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -235,6 +237,7 @@ class WebApiService
 
         // Delete any payments
         $order->payments()->delete();
+        Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
         $this->notifyWebOrderWithStatus($order);
     }

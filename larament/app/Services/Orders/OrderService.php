@@ -12,6 +12,8 @@ use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\Product;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Sync\DocumentType;
+use App\Sync\Outbox;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -233,6 +235,7 @@ class OrderService
 
             // Delete any payments
             $order->payments()->delete();
+            Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
             $order->refresh();
 
