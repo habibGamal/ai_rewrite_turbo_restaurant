@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,12 +10,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shift extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'user_id',
         'start_at',
         'end_at',
+        'business_date',
         'start_cash',
         'end_cash',
         'losses_amount',
@@ -30,6 +33,7 @@ class Shift extends Model
         'real_cash' => 'decimal:2',
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'business_date' => 'date',
         'has_deficit' => 'boolean',
         'closed' => 'boolean',
     ];

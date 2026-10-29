@@ -52,6 +52,7 @@ class WasteService
             // Mark waste as closed
             $waste->update([
                 'closed_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
                 'total' => $waste->items->sum('total'),
             ]);
 

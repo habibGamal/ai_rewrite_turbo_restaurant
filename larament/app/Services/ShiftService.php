@@ -44,6 +44,7 @@ class ShiftService
             $shift = Shift::create([
                 'start_cash' => $startCash,
                 'start_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
                 'closed' => false,
                 'user_id' => $user ? $user->id : auth()->id(),
             ]);

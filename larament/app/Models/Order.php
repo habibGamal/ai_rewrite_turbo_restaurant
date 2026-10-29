@@ -7,6 +7,7 @@ use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Enums\SettingKey;
+use App\Models\Concerns\HasSyncUuid;
 use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,9 +17,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'customer_id',
         'driver_id',
         'user_id',

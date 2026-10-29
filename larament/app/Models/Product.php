@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductType;
+use App\Models\Concerns\HasSyncUuid;
 use DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,9 +14,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'category_id',
         'name',
         'product_ref',

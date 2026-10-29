@@ -67,5 +67,21 @@
     "إدارة المشتريات": "Purchases Management",
     "إعدادات خاصة بفواتير الشراء وتكاليف المنتجات": "Special settings for purchase invoices and product costs",
     "تحديث تكلفة المنتجات من فواتير الشراء": "Update product costs from purchase invoices",
-    "تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.": "Automatically update product cost in products table when closing purchase invoice. Disable to prevent updating product costs."
+    "تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.": "Automatically update product cost in products table when closing purchase invoice. Disable to prevent updating product costs.",
+    "Category": "التصنيف",
+    "category": "التصنيف",
+    "Labor": "عمالة ورواتب",
+    "labor": "عمالة ورواتب",
+    "Rent": "إيجار",
+    "rent": "إيجار",
+    "Utilities": "مرافق",
+    "utilities": "مرافق",
+    "Marketing": "تسويق",
+    "marketing": "تسويق",
+    "Maintenance": "صيانة",
+    "maintenance": "صيانة",
+    "Raw Materials": "خامات",
+    "raw_materials": "خامات",
+    "Other": "أخرى",
+    "other": "أخرى"
 }

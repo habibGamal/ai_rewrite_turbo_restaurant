@@ -74,7 +74,10 @@ class PurchaseService
             }
 
             // Mark invoice as closed
-            $invoice->update(['closed_at' => now()]);
+            $invoice->update([
+                'closed_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
+            ]);
 
             DB::commit();
 
@@ -144,7 +147,10 @@ class PurchaseService
             }
 
             // Mark invoice as closed
-            $invoice->update(['closed_at' => now()]);
+            $invoice->update([
+                'closed_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
+            ]);
 
             DB::commit();
 

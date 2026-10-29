@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,9 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderReturn extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'order_id',
         'user_id',
         'shift_id',

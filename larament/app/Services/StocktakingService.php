@@ -103,6 +103,7 @@ class StocktakingService
             // Mark stocktaking as closed
             $stocktaking->update([
                 'closed_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
                 'total' => $stocktaking->items->sum('total'),
             ]);
 
