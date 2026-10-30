@@ -167,7 +167,7 @@ it('can create a customer', function () {
 
 it('can create a customer with whatsapp', function () {
     $region = Region::factory()->create();
-    $record = Customer::factory()->make(['has_whatsapp' => true]);
+    $record = Customer::factory()->make(['has_whatsapp' => true, 'phone' => '01012345678']);
 
     livewire(CreateCustomer::class)
         ->fillForm([
