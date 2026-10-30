@@ -171,7 +171,10 @@ it('can create a manufactured product with components', function () {
     $component1 = Product::factory()->create(['type' => ProductType::RawMaterial, 'cost' => 10]);
     $component2 = Product::factory()->create(['type' => ProductType::RawMaterial, 'cost' => 20]);
 
-    $record = Product::factory()->make(['type' => ProductType::Manufactured]);
+    $record = Product::factory()->make([
+        'name' => 'Manufactured Product '.Str::random(10),
+        'type' => ProductType::Manufactured,
+    ]);
 
     livewire(CreateManufacturedProduct::class)
         ->fillForm([
@@ -196,7 +199,9 @@ it('can create a manufactured product with components', function () {
         ->call('create')
         ->assertHasNoFormErrors();
 
-    $createdProduct = Product::where('name', $record->name)->first();
+    $createdProduct = Product::where('name', $record->name)
+        ->where('type', ProductType::Manufactured)
+        ->first();
     expect($createdProduct->productComponents)->toHaveCount(2);
 });
 
