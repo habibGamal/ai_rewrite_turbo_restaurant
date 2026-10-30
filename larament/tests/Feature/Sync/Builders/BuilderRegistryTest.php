@@ -36,11 +36,6 @@ it('resolves builders for all supported document types', function (DocumentType 
     [DocumentType::Supplier, SupplierBuilder::class],
     [DocumentType::ExpenseType, ExpenseTypeBuilder::class],
     [DocumentType::Staff, StaffBuilder::class],
+    [DocumentType::InventoryDay, \App\Sync\Builders\InventoryDayBuilder::class],
+    [DocumentType::DaySummary, \App\Sync\Builders\DaySummaryBuilder::class],
 ]);
-
-it('throws InvalidArgumentException for document types without a builder yet', function (DocumentType $type) {
-    BuilderRegistry::for($type);
-})->with([
-    DocumentType::InventoryDay,
-    DocumentType::DaySummary,
-])->throws(InvalidArgumentException::class);

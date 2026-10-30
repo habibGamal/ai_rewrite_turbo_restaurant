@@ -3,9 +3,11 @@
 namespace App\Sync;
 
 use App\Sync\Builders\CategoryBuilder;
+use App\Sync\Builders\DaySummaryBuilder;
 use App\Sync\Builders\DocumentBuilder;
 use App\Sync\Builders\ExpenseBuilder;
 use App\Sync\Builders\ExpenseTypeBuilder;
+use App\Sync\Builders\InventoryDayBuilder;
 use App\Sync\Builders\OrderBuilder;
 use App\Sync\Builders\OrderReturnBuilder;
 use App\Sync\Builders\ProductBuilder;
@@ -16,14 +18,11 @@ use App\Sync\Builders\StaffBuilder;
 use App\Sync\Builders\StocktakingBuilder;
 use App\Sync\Builders\SupplierBuilder;
 use App\Sync\Builders\WasteBuilder;
-use InvalidArgumentException;
 
 class BuilderRegistry
 {
     /**
      * Resolve the document builder for the given document type.
-     *
-     * @throws InvalidArgumentException
      */
     public static function for(DocumentType $type): DocumentBuilder
     {
@@ -42,7 +41,8 @@ class BuilderRegistry
             DocumentType::Supplier => app(SupplierBuilder::class),
             DocumentType::ExpenseType => app(ExpenseTypeBuilder::class),
             DocumentType::Staff => app(StaffBuilder::class),
-            default => throw new InvalidArgumentException("No builder registered for document type: {$type->value}"),
+            DocumentType::InventoryDay => app(InventoryDayBuilder::class),
+            DocumentType::DaySummary => app(DaySummaryBuilder::class),
         };
     }
 }

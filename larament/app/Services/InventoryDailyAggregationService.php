@@ -4,11 +4,16 @@ namespace App\Services;
 
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovementDaily;
+use App\Models\PlatformConnection;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Stocktaking;
 use App\Models\Waste;
+use App\Sync\DateDocument;
+use App\Sync\DocumentType;
+use App\Sync\Outbox;
+use App\Sync\Payload;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -196,6 +201,16 @@ class InventoryDailyAggregationService
                     'records_updated' => $updatedCount,
                     'closed_at' => $currentTime,
                 ]);
+
+                $closedDate = Payload::date($openRecords->first()->date);
+
+                if ($closedDate && PlatformConnection::active()) {
+                    $inventoryDayUuid = DateDocument::uuid(DocumentType::InventoryDay, $closedDate);
+                    Outbox::record(DocumentType::InventoryDay, $inventoryDayUuid, key: $closedDate);
+
+                    $daySummaryUuid = DateDocument::uuid(DocumentType::DaySummary, $closedDate);
+                    Outbox::record(DocumentType::DaySummary, $daySummaryUuid, key: $closedDate);
+                }
 
                 return $updatedCount;
 

@@ -39,4 +39,68 @@ class PlatformClient
             ->withBody($compressed, 'application/json')
             ->post($url);
     }
+
+    /**
+     * Pair the POS with the platform.
+     */
+    public function pair(string $url, string $code): Response
+    {
+        $endpoint = rtrim($url, '/').'/api/v1/pair';
+
+        return Http::withHeaders([
+            'Accept' => 'application/json',
+            'X-Schema-Version' => '1',
+            'X-Pos-Version' => (string) config('app.version'),
+        ])
+            ->timeout(30)
+            ->connectTimeout(10)
+            ->withOptions(['verify' => true])
+            ->asJson()
+            ->post($endpoint, [
+                'code' => $code,
+                'pos_version' => (string) config('app.version'),
+            ]);
+    }
+
+    /**
+     * Rotate the connection token.
+     */
+    public function rotate(PlatformConnection $connection): Response
+    {
+        $endpoint = rtrim($connection->url, '/').'/api/v1/pair/rotate';
+
+        return Http::withToken($connection->token)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Schema-Version' => '1',
+                'X-Pos-Version' => (string) config('app.version'),
+            ])
+            ->timeout(30)
+            ->connectTimeout(10)
+            ->withOptions(['verify' => true])
+            ->asJson()
+            ->post($endpoint);
+    }
+
+    /**
+     * Send heartbeat to the platform.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    public function heartbeat(PlatformConnection $connection, array $body): Response
+    {
+        $endpoint = rtrim($connection->url, '/').'/api/v1/heartbeat';
+
+        return Http::withToken($connection->token)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Schema-Version' => '1',
+                'X-Pos-Version' => (string) config('app.version'),
+            ])
+            ->timeout(30)
+            ->connectTimeout(10)
+            ->withOptions(['verify' => true])
+            ->asJson()
+            ->post($endpoint, $body);
+    }
 }
