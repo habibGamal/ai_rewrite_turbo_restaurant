@@ -27,8 +27,11 @@ php artisan platform:repair-shift-dates --apply --from-created-at
 php artisan platform:sync --max-seconds=120
 ```
 
-The repair only selects shifts whose start date is after their end date and whose
-historical creation timestamp is present and no later than the end. Normal shifts,
+For closed shifts, the repair selects start dates after their end date when the
+historical creation timestamp is present and no later than the end. It also handles
+open shifts when created_at is on an earlier date than start_at and historical
+orders prove that the shift was already in use before its overwritten start date.
+An open shift without that order evidence is preserved. Normal shifts,
 valid after-midnight business dates and ambiguous records are preserved. It backs
 up original shift records under the private local disk's `repairs/shift-dates/`
 directory before changing anything. An audit-write failure aborts the repair.

@@ -88,3 +88,24 @@ it('does not modify dates if the audit backup cannot be saved', function () {
     $this->artisan('platform:repair-shift-dates --apply --from-created-at')->assertFailed();
     expect($shift->fresh()->business_date->toDateString())->toBe('2026-10-30');
 });
+
+it('repairs an overwritten open shift when historical orders prove it started earlier', function () {
+    $shift = Shift::factory()->create([
+        'start_at' => '2026-10-30 13:42:11', 'end_at' => null,
+        'created_at' => '2026-10-29 10:02:59', 'business_date' => '2026-10-30', 'closed' => false,
+    ]);
+    $order = Order::factory()->create(['shift_id' => $shift->id, 'created_at' => '2026-10-29 11:00:00']);
+    $this->artisan('platform:repair-shift-dates --apply --from-created-at')->assertSuccessful();
+    expect($shift->fresh()->start_at->format('Y-m-d H:i:s'))->toBe('2026-10-29 10:02:59')
+        ->and($shift->fresh()->business_date->toDateString())->toBe('2026-10-29')
+        ->and(app(OrderBuilder::class)->build($order->uuid)['business_date'])->toBe('2026-10-29');
+});
+
+it('preserves an open shift without historical orders proving timestamp damage', function () {
+    $shift = Shift::factory()->create([
+        'start_at' => '2026-10-30 13:42:11', 'end_at' => null,
+        'created_at' => '2026-10-29 10:02:59', 'business_date' => '2026-10-30', 'closed' => false,
+    ]);
+    $this->artisan('platform:repair-shift-dates --apply --from-created-at')->assertSuccessful();
+    expect($shift->fresh()->business_date->toDateString())->toBe('2026-10-30');
+});

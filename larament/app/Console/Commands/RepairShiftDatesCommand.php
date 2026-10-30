@@ -22,12 +22,12 @@ class RepairShiftDatesCommand extends Command
         {--apply : Apply the previewed repair and queue corrected documents}
         {--from-created-at : Confirm historical created_at is a trustworthy shift opening timestamp}';
 
-    protected $description = 'Preview or repair shifts whose start was overwritten after their historical end';
+    protected $description = 'Preview or repair shifts with overwritten historical opening timestamps';
 
     public function handle(): int
     {
         $count = $this->candidates()->count();
-        $this->info("Found {$count} shifts with reversed calendar dates and usable historical created_at.");
+        $this->info("Found {$count} shifts with overwritten opening dates and usable historical created_at.");
         $this->table(['ID', 'Start currently', 'End', 'Proposed start', 'Current business date'],
             $this->candidates()->limit(20)->get()->map(fn (Shift $shift): array => [
                 $shift->id, $shift->getRawOriginal('start_at'), $shift->getRawOriginal('end_at'),
@@ -109,9 +109,18 @@ class RepairShiftDatesCommand extends Command
     /** @return Builder<Shift> */
     private function candidates(): Builder
     {
-        return Shift::query()->whereNotNull('end_at')->whereNotNull('created_at')
-            ->whereRaw('DATE(start_at) > DATE(end_at)')
-            ->whereColumn('created_at', '<=', 'end_at')->orderBy('id');
+        return Shift::query()->whereNotNull('created_at')->where(function (Builder $query): void {
+            $query->where(function (Builder $closed): void {
+                $closed->whereNotNull('end_at')->whereRaw('DATE(start_at) > DATE(end_at)')
+                    ->whereColumn('created_at', '<=', 'end_at');
+            })->orWhere(function (Builder $open): void {
+                $open->whereNull('end_at')->whereRaw('DATE(created_at) < DATE(start_at)')
+                    ->whereHas('orders', function (Builder $orders): void {
+                        $orders->whereColumn('orders.created_at', '>=', 'shifts.created_at')
+                            ->whereRaw('DATE(orders.created_at) < DATE(shifts.start_at)');
+                    });
+            });
+        })->orderBy('id');
     }
 
     private function ensureStartCannotAutoUpdate(): void
