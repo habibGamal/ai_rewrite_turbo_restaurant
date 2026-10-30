@@ -246,8 +246,8 @@ describe('OrderController Feature Tests', function () {
                 'table_number' => 'T001',
             ]);
 
-            $response->assertRedirect()
-                ->assertSessionHasErrors('error');
+            $response->assertRedirect(route('shifts.start'));
+            expect(Order::count())->toBe(0);
         });
     });
 
