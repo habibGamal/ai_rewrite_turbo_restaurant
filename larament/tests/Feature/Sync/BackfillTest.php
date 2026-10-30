@@ -298,3 +298,110 @@ it('succeeds platform:backfill on no-op cases', function () {
         ->assertSuccessful()
         ->expectsOutputToContain('Total documents queued: 0');
 });
+
+it('recovers incomplete backfill via platform:backfill --recover', function () {
+    Product::factory()->create();
+
+    $today = Carbon::today();
+    $connection = PlatformConnection::create([
+        'url' => 'https://platform.test',
+        'branch_uuid' => '01930c11-0000-7000-8000-000000000099',
+        'token' => 'recover-token',
+        'branch_secret' => 'recover-secret',
+        'timezone' => 'Africa/Cairo',
+        'status' => 'active',
+        'paired_at' => now(),
+        'backfill_status' => 'pending',
+        'backfill_catalog_queued' => false,
+        'backfill_range_queued' => false,
+        'backfill_range_from' => $today->copy()->subDays(90)->toDateString(),
+        'backfill_range_to' => $today->toDateString(),
+        'backfill_attempts' => 0,
+        'backfill_next_attempt_at' => null,
+    ]);
+
+    $this->artisan('platform:backfill', ['--recover' => true])
+        ->assertSuccessful()
+        ->expectsOutputToContain('Initial backfill recovered successfully.');
+
+    expect($connection->fresh()->backfill_status)->toBe('completed')
+        ->and(SyncOutbox::where('doc_type', 'product')->exists())->toBeTrue();
+});
+
+it('prevents duplicate outbox entries across multiple recovery attempts on partial progress', function () {
+    $product = Product::factory()->create();
+    $category = Category::factory()->create();
+    $shift = Shift::factory()->create(['business_date' => Carbon::today()->subDays(2)->toDateString()]);
+    $order = Order::factory()->create(['shift_id' => $shift->id, 'status' => 'completed']);
+
+    $today = Carbon::today();
+    $connection = PlatformConnection::create([
+        'url' => 'https://platform.test',
+        'branch_uuid' => '01930c11-0000-7000-8000-000000000088',
+        'token' => 'dup-token',
+        'branch_secret' => 'dup-secret',
+        'timezone' => 'Africa/Cairo',
+        'status' => 'active',
+        'paired_at' => now(),
+        'backfill_status' => 'in_progress',
+        'backfill_catalog_queued' => true, // Partial progress: catalog already completed
+        'backfill_range_queued' => false,
+        'backfill_range_from' => $today->copy()->subDays(90)->toDateString(),
+        'backfill_range_to' => $today->toDateString(),
+        'backfill_attempts' => 1,
+        'backfill_lock_owner' => 'crashed-worker-prior',
+        'backfill_locked_at' => now()->subMinutes(20), // Expired lease
+    ]);
+
+    SyncOutbox::truncate();
+    // Simulate catalog outbox rows that were committed during the catalog step
+    SyncOutbox::create([
+        'doc_type' => 'product',
+        'doc_uuid' => $product->uuid,
+        'op' => 'upsert',
+        'priority' => 1,
+        'occurred_at' => now()->subMinutes(20),
+    ]);
+    SyncOutbox::create([
+        'doc_type' => 'category',
+        'doc_uuid' => $category->uuid,
+        'op' => 'upsert',
+        'priority' => 1,
+        'occurred_at' => now()->subMinutes(20),
+    ]);
+
+    $catalogCountBefore = SyncOutbox::count();
+    expect($catalogCountBefore)->toBe(2);
+
+    $service = app(BackfillService::class);
+
+    // 1st Recovery attempt
+    $recovered1 = $service->recoverInitialBackfillIfNeeded($connection);
+    expect($recovered1)->toBeTrue();
+
+    $fresh1 = $connection->fresh();
+    expect($fresh1->backfill_status)->toBe('completed')
+        ->and($fresh1->backfill_catalog_queued)->toBeTrue()
+        ->and($fresh1->backfill_range_queued)->toBeTrue()
+        ->and($fresh1->backfill_lock_owner)->toBeNull();
+
+    // Catalog documents were NOT re-queued or duplicated
+    expect(SyncOutbox::where('doc_type', 'product')->count())->toBe(1)
+        ->and(SyncOutbox::where('doc_type', 'category')->count())->toBe(1)
+        ->and(SyncOutbox::where('doc_type', 'order')->where('doc_uuid', $order->uuid)->count())->toBe(1);
+
+    $totalCountAfterFirstRecovery = SyncOutbox::count();
+
+    // 2nd Recovery attempt (should be a clean no-op because backfill is already completed)
+    $recovered2 = $service->recoverInitialBackfillIfNeeded($connection);
+    expect($recovered2)->toBeTrue();
+
+    // Outbox count is completely unchanged: zero duplicates
+    expect(SyncOutbox::count())->toBe($totalCountAfterFirstRecovery);
+
+    // 3rd Recovery attempt via artisan command
+    $this->artisan('platform:backfill', ['--recover' => true])
+        ->assertSuccessful();
+
+    expect(SyncOutbox::count())->toBe($totalCountAfterFirstRecovery);
+});

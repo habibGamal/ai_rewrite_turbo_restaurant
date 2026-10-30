@@ -29,6 +29,16 @@ class PlatformConnection extends Model
         'last_success_at',
         'last_heartbeat_at',
         'last_error',
+        'backfill_status',
+        'backfill_catalog_queued',
+        'backfill_range_queued',
+        'backfill_range_from',
+        'backfill_range_to',
+        'backfill_attempts',
+        'backfill_next_attempt_at',
+        'backfill_completed_at',
+        'backfill_lock_owner',
+        'backfill_locked_at',
     ];
 
     /**
@@ -78,6 +88,14 @@ class PlatformConnection extends Model
             'paired_at' => 'datetime',
             'last_success_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
+            'backfill_catalog_queued' => 'boolean',
+            'backfill_range_queued' => 'boolean',
+            'backfill_range_from' => 'date',
+            'backfill_range_to' => 'date',
+            'backfill_attempts' => 'integer',
+            'backfill_next_attempt_at' => 'datetime',
+            'backfill_completed_at' => 'datetime',
+            'backfill_locked_at' => 'datetime',
         ];
     }
 

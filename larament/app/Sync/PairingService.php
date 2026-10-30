@@ -6,6 +6,7 @@ use App\Models\PlatformConnection;
 use App\Sync\Exceptions\PairingFailed;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PairingService
@@ -53,7 +54,11 @@ class PairingService
             throw new PairingFailed('فشل ربط المنصة: استجابة الخادم غير صالحة أو ناقصة');
         }
 
-        $connection = DB::transaction(function () use ($cleanUrl, $data) {
+        $today = Carbon::today();
+        $rangeFrom = $today->copy()->subDays(90)->toDateString();
+        $rangeTo = $today->toDateString();
+
+        $connection = DB::transaction(function () use ($cleanUrl, $data, $rangeFrom, $rangeTo) {
             PlatformConnection::where('status', '!=', 'revoked')->update(['status' => 'revoked']);
 
             $connection = PlatformConnection::create([
@@ -64,6 +69,16 @@ class PairingService
                 'timezone' => (string) $data['timezone'],
                 'status' => 'active',
                 'paired_at' => now(),
+                'backfill_status' => 'pending',
+                'backfill_catalog_queued' => false,
+                'backfill_range_queued' => false,
+                'backfill_range_from' => $rangeFrom,
+                'backfill_range_to' => $rangeTo,
+                'backfill_attempts' => 0,
+                'backfill_next_attempt_at' => null,
+                'backfill_completed_at' => null,
+                'backfill_lock_owner' => null,
+                'backfill_locked_at' => null,
             ]);
 
             PlatformConnection::flushCache();
@@ -71,12 +86,19 @@ class PairingService
             return $connection;
         });
 
-        // After saving, queue catalog and 90 days of history
-        $today = Carbon::today();
-        $this->backfill->queueCatalog();
-        $this->backfill->queueRange($today->copy()->subDays(90), $today);
+        // Attempt initial backfill immediately
+        try {
+            $this->backfill->processInitialBackfill($connection);
+        } catch (Throwable $e) {
+            Log::error('Initial backfill failed after pairing: '.$e->getMessage(), [
+                'connection_id' => $connection->id,
+                'exception' => $e,
+            ]);
+        } finally {
+            PlatformConnection::flushCache();
+        }
 
-        return $connection;
+        return $connection->fresh();
     }
 
     /**

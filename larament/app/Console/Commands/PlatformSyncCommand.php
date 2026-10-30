@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Sync\BackfillService;
 use App\Sync\BatchSender;
 use Illuminate\Console\Command;
 use Throwable;
@@ -13,7 +14,7 @@ class PlatformSyncCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'platform:sync {--max-seconds=50 : Maximum execution time in seconds}';
+    protected $signature = 'platform:sync {--max-seconds=50 : Maximum execution time in seconds} {--no-recovery : Skip initial backfill recovery}';
 
     /**
      * The console command description.
@@ -25,11 +26,15 @@ class PlatformSyncCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(BatchSender $sender): int
+    public function handle(BatchSender $sender, BackfillService $backfill): int
     {
         $maxSeconds = (int) ($this->option('max-seconds') ?: 50);
 
         try {
+            if (! $this->option('no-recovery')) {
+                $backfill->recoverInitialBackfillIfNeeded();
+            }
+
             $result = $sender->run($maxSeconds);
 
             $this->info(sprintf(

@@ -14,7 +14,7 @@ class PlatformBackfillCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'platform:backfill {--from= : Start date (YYYY-MM-DD)} {--to= : End date (YYYY-MM-DD)} {--catalog : Backfill catalog documents}';
+    protected $signature = 'platform:backfill {--from= : Start date (YYYY-MM-DD)} {--to= : End date (YYYY-MM-DD)} {--catalog : Backfill catalog documents} {--recover : Recover incomplete initial backfill}';
 
     /**
      * The console command description.
@@ -29,6 +29,13 @@ class PlatformBackfillCommand extends Command
     public function handle(BackfillService $backfill): int
     {
         try {
+            if ($this->option('recover')) {
+                $recovered = $backfill->recoverInitialBackfillIfNeeded();
+                $this->info($recovered ? 'Initial backfill recovered successfully.' : 'No initial backfill needed recovery or recovery locked.');
+
+                return self::SUCCESS;
+            }
+
             $doCatalog = (bool) $this->option('catalog');
             $fromOption = $this->option('from');
             $toOption = $this->option('to');
