@@ -5,6 +5,7 @@ use App\Filament\Resources\Categories\Pages\EditCategory;
 use App\Filament\Resources\Categories\Pages\ListCategories;
 use App\Filament\Resources\Categories\Pages\ViewCategory;
 use App\Models\Category;
+use App\Models\KitchenStation;
 use App\Models\Product;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
@@ -223,4 +224,70 @@ it('can count table records', function () {
 
     livewire(ListCategories::class)
         ->assertCountTableRecords(3);
+});
+
+// ===== Kitchen Display System (شاشة المطبخ) Fields =====
+it('can render the kitchen station column', function () {
+    Category::factory()->create();
+
+    livewire(ListCategories::class)
+        ->assertCanRenderTableColumn('kitchenStation.name');
+});
+
+it('can create a category with kitchen display fields', function () {
+    $station = KitchenStation::factory()->create();
+
+    livewire(CreateCategory::class)
+        ->fillForm([
+            'name' => 'فئة المطبخ',
+            'kitchen_station_id' => $station->id,
+            'show_on_kds' => true,
+            'prep_minutes' => 8,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $record = Category::where('name', 'فئة المطبخ')->first();
+
+    expect($record->kitchen_station_id)->toBe($station->id);
+    expect($record->show_on_kds)->toBeTrue();
+    expect($record->prep_minutes)->toBe(8);
+});
+
+it('can update a category kitchen display fields', function () {
+    $station = KitchenStation::factory()->create();
+    $record = Category::factory()->create(['kitchen_station_id' => $station->id]);
+
+    livewire(EditCategory::class, ['record' => $record->getRouteKey()])
+        ->fillForm([
+            'kitchen_station_id' => null,
+            'show_on_kds' => false,
+            'prep_minutes' => 5,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $record->refresh();
+    expect($record->kitchen_station_id)->toBeNull();
+    expect($record->show_on_kds)->toBeFalse();
+    expect($record->prep_minutes)->toBe(5);
+});
+
+it('leaves prep minutes empty to use the default time', function () {
+    $record = Category::factory()->create();
+
+    livewire(EditCategory::class, ['record' => $record->getRouteKey()])
+        ->fillForm(['prep_minutes' => null])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($record->refresh()->prep_minutes)->toBeNull();
+});
+
+it('shows the kitchen station name in the table', function () {
+    $station = KitchenStation::factory()->create(['name' => 'شواية']);
+    Category::factory()->create(['kitchen_station_id' => $station->id]);
+
+    livewire(ListCategories::class)
+        ->assertSee('شواية');
 });

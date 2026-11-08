@@ -6,6 +6,7 @@ use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
 use App\Filament\Resources\ConsumableProducts\Pages\ViewConsumableProduct;
 use App\Models\Category;
+use App\Models\KitchenStation;
 use App\Models\Printer;
 use App\Models\Product;
 use App\Models\User;
@@ -423,4 +424,81 @@ it('can toggle legacy status', function () {
         'id' => $record->id,
         'legacy' => true,
     ]);
+});
+
+// ===== Kitchen Display System (شاشة المطبخ) Fields =====
+it('maps the product tri-state show_on_kds onto a nullable boolean column', function (string $state, ?bool $expected) {
+    $category = Category::factory()->create();
+    $record = Product::factory()->make(['type' => ProductType::Consumable]);
+
+    livewire(CreateConsumableProduct::class)
+        ->fillForm([
+            'name' => $record->name,
+            'category_id' => $category->id,
+            'price' => $record->price,
+            'cost' => $record->cost,
+            'min_stock' => $record->min_stock,
+            'unit' => $record->unit,
+            'type' => ProductType::Consumable->value,
+            'show_on_kds' => $state,
+            'prep_minutes' => null,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $createdProduct = Product::where('name', $record->name)
+        ->where('type', ProductType::Consumable)
+        ->first();
+    expect($createdProduct->show_on_kds)->toBe($expected);
+    expect($createdProduct->prep_minutes)->toBeNull();
+})->with([
+    'inherit from category' => ['', null],
+    'show on kds' => ['1', true],
+    'hide from kds' => ['0', false],
+]);
+
+it('creates a product with a station category override', function () {
+    $station = KitchenStation::factory()->create();
+    $category = Category::factory()->create();
+    $record = Product::factory()->make(['type' => ProductType::Consumable]);
+
+    livewire(CreateConsumableProduct::class)
+        ->fillForm([
+            'name' => $record->name,
+            'category_id' => $category->id,
+            'price' => $record->price,
+            'cost' => $record->cost,
+            'min_stock' => $record->min_stock,
+            'unit' => $record->unit,
+            'type' => ProductType::Consumable->value,
+            'kitchen_station_id' => $station->id,
+            'prep_minutes' => 6,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $createdProduct = Product::where('name', $record->name)
+        ->where('type', ProductType::Consumable)
+        ->first();
+    expect($createdProduct->kitchen_station_id)->toBe($station->id);
+    expect($createdProduct->prep_minutes)->toBe(6);
+});
+
+it('round-trips the product kitchen display fields on edit', function () {
+    $station = KitchenStation::factory()->create();
+    $record = Product::factory()->create(['type' => ProductType::Consumable]);
+
+    livewire(EditConsumableProduct::class, ['record' => $record->getRouteKey()])
+        ->fillForm([
+            'kitchen_station_id' => $station->id,
+            'show_on_kds' => '1',
+            'prep_minutes' => 4,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $record->refresh();
+    expect($record->kitchen_station_id)->toBe($station->id);
+    expect($record->show_on_kds)->toBeTrue();
+    expect($record->prep_minutes)->toBe(4);
 });

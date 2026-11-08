@@ -12,11 +12,15 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CategoryResource extends Resource
 {
@@ -46,6 +50,36 @@ class CategoryResource extends Resource
                     ->label('اسم الفئة')
                     ->required()
                     ->maxLength(255),
+
+                Section::make('شاشة المطبخ')
+                    ->description('توجيه أصناف هذه الفئة داخل شاشة المطبخ')
+                    ->icon('heroicon-m-tv')
+                    ->columns(3)
+                    ->schema([
+                        Select::make('kitchen_station_id')
+                            ->label('محطة المطبخ')
+                            ->relationship(
+                                'kitchenStation',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true)
+                            )
+                            ->placeholder('بدون محطة (عام)')
+                            ->searchable()
+                            ->nullable(),
+
+                        Toggle::make('show_on_kds')
+                            ->label('يظهر في شاشة المطبخ')
+                            ->default(true)
+                            ->inline(false),
+
+                        TextInput::make('prep_minutes')
+                            ->label('وقت التحضير')
+                            ->numeric()
+                            ->minValue(1)
+                            ->suffix('دقيقة')
+                            ->helperText('يترك فارغاً لاستخدام الوقت الافتراضي')
+                            ->nullable(),
+                    ]),
             ]);
     }
 
@@ -61,6 +95,10 @@ class CategoryResource extends Resource
                     ->label('عدد المنتجات')
                     ->counts('products')
                     ->sortable(),
+                TextColumn::make('kitchenStation.name')
+                    ->label('محطة المطبخ')
+                    ->searchable()
+                    ->placeholder('عام'),
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()
