@@ -20,9 +20,30 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
     // Kitchen Display Screen
-    Route::get('/kitchen', [KitchenController::class, 'index'])
-        ->name('kitchen.index')
-        ->middleware('permission:kitchen.access');
+    Route::prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('/', [KitchenController::class, 'index'])
+            ->name('index')
+            ->middleware('permission:kitchen.access');
+
+        Route::post('/items/{item}/start', [KitchenController::class, 'startItem'])
+            ->name('items.start')
+            ->middleware('permission:kitchen.access');
+        Route::post('/items/{item}/done', [KitchenController::class, 'finishItem'])
+            ->name('items.done')
+            ->middleware('permission:kitchen.access');
+        Route::post('/items/{item}/undo', [KitchenController::class, 'undoItem'])
+            ->name('items.undo')
+            ->middleware('permission:kitchen.access');
+        Route::post('/tickets/{ticket}/done', [KitchenController::class, 'finishTicket'])
+            ->name('tickets.done')
+            ->middleware('permission:kitchen.access');
+        Route::post('/tickets/{ticket}/acknowledge', [KitchenController::class, 'acknowledge'])
+            ->name('tickets.acknowledge')
+            ->middleware('permission:kitchen.access');
+        Route::post('/tickets/{ticket}/rush', [KitchenController::class, 'rush'])
+            ->name('tickets.rush')
+            ->middleware('permission:kitchen.access|pos.access');
+    });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -10,8 +10,10 @@ use App\Events\Orders\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\DailySnapshot;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shift;
+use App\Services\Kitchen\KitchenTicketService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Exception;
@@ -23,8 +25,10 @@ class WebApiService
 {
     protected SettingsService $settingsService;
 
-    public function __construct(SettingsService $settingsService)
-    {
+    public function __construct(
+        SettingsService $settingsService,
+        protected KitchenTicketService $kitchenTicketService,
+    ) {
         $this->settingsService = $settingsService;
     }
 
@@ -135,7 +139,7 @@ class WebApiService
             }
         }
 
-        $order->items()->createMany($orderItemsData);
+        $order->items()->createMany($orderItemsData); // @phpstan-ignore argument.type
     }
 
     /**
@@ -162,7 +166,13 @@ class WebApiService
         $order->discount = $realPosTotal - $order->total;
 
         // Calculate profit
-        $cost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
+        $cost = $order->items->sum(function (mixed $item): float {
+            if (! $item instanceof OrderItem) {
+                return 0;
+            }
+
+            return (float) $item->cost * (float) $item->quantity;
+        });
         $profitValue = $order->total - $cost;
 
         // Update order with calculated values
@@ -184,7 +194,7 @@ class WebApiService
             $customer->delivery_cost = $data['order']['service'] ?? 0;
             $customer->save();
 
-            $order = $customer->orders()->create([
+            $created = $customer->orders()->create([
                 'shift_id' => $data['order']['shiftId'],
                 'status' => OrderStatus::PENDING,
                 'type' => OrderType::from($data['order']['type']),
@@ -200,6 +210,10 @@ class WebApiService
                 'payment_status' => PaymentStatus::PENDING,
                 'web_preferences' => $data['order']['webPreferences'] ?? null,
             ]);
+            if (! $created instanceof Order) {
+                throw new Exception('فشل في إنشاء الطلب');
+            }
+            $order = $created;
 
             $this->fillOrderItems($order, $data['order']['items']);
             $this->handlePayments($order, $data['order']);
@@ -223,6 +237,9 @@ class WebApiService
         $order->status = OrderStatus::PROCESSING;
         $order->save();
 
+        // Web orders are placed as pending and reach the kitchen only once accepted.
+        $this->kitchenTicketService->syncOrder($order);
+
         $this->notifyWebOrderWithStatus($order);
     }
 
@@ -238,6 +255,8 @@ class WebApiService
         // Delete any payments
         $order->payments()->delete();
         Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
+
+        $this->kitchenTicketService->cancelForOrder($order);
 
         $this->notifyWebOrderWithStatus($order);
     }
@@ -263,6 +282,8 @@ class WebApiService
 
         $order->status = OrderStatus::COMPLETED;
         $order->save();
+
+        $this->kitchenTicketService->autoFinishForOrder($order);
 
         $this->notifyWebOrderWithStatus($order);
 
