@@ -1,5 +1,6 @@
 import { useKds } from '@/Components/Kitchen/kdsContext';
 import KdsBlock from '@/Components/Kitchen/KdsTicketBlocks';
+import { kdsTokens } from '@/Components/Kitchen/kdsTokens';
 import { CARD_CHROME_HEIGHT, CONTINUATION_MARKER_HEIGHT, type PackedFragment } from '@/Components/Kitchen/packTickets';
 import { ticketUrgency } from '@/Components/Kitchen/ticketModel';
 import type { KdsTicket } from '@/types/kitchen';
@@ -10,75 +11,63 @@ interface KdsTicketFragmentProps {
 }
 
 export default function KdsTicketFragment({ ticket, fragment }: KdsTicketFragmentProps) {
-    const { nowMs, kdsSettings, highlightedId, acknowledge } = useKds();
+    const { nowMs, kdsSettings, highlightedId } = useKds();
     const urgency = ticketUrgency(ticket, nowMs, kdsSettings.warning_percent);
     const cancelled = ticket.status === 'cancelled';
     const highlighted = highlightedId === ticket.id;
-    const borderColor = cancelled
-        ? '#ef4444'
+    const accent = cancelled
+        ? kdsTokens.stripLate
         : urgency === 'late'
-          ? '#ef4444'
+          ? kdsTokens.stripLate
           : urgency === 'warning'
-            ? '#f59e0b'
-            : '#3f3f46';
-    const shadows: string[] = [];
-    if (ticket.is_rush) {
-        shadows.push('0 0 0 3px #7c3aed');
-    }
+            ? kdsTokens.stripWarning
+            : kdsTokens.stripNormal;
+    const shadows = ['inset 0 0 0 1px rgba(255,255,255,0.06)'];
     if (highlighted) {
-        shadows.push('0 0 0 4px #facc15');
+        shadows.push(`0 0 0 3px ${kdsTokens.highlight}`);
     }
 
     return (
-        <div className="shrink-0">
-            {fragment.continued && <ContinuationMarker ticket={ticket} />}
+        <div className="kds-card-enter shrink-0" data-kds-ticket={ticket.id}>
+            {fragment.continued && <ContinuationMarker ticket={ticket} edge="top" />}
             <article
-                data-kds-ticket={ticket.id}
                 data-order-number={ticket.order_number}
-                className="relative box-border overflow-hidden rounded-xl bg-zinc-900"
+                className="relative box-border overflow-hidden"
                 style={{
-                    borderWidth: CARD_CHROME_HEIGHT / 2,
-                    borderStyle: 'solid',
-                    borderColor,
-                    boxShadow: shadows.length > 0 ? shadows.join(', ') : undefined,
+                    borderTopWidth: CARD_CHROME_HEIGHT,
+                    borderTopStyle: 'solid',
+                    borderTopColor: accent,
+                    borderRadius: kdsTokens.radius,
+                    background: cancelled ? kdsTokens.cancelled : kdsTokens.card,
+                    boxShadow: shadows.join(', '),
                 }}
             >
                 {fragment.blockKeys.map((blockKey) => (
                     <KdsBlock key={blockKey} ticket={ticket} blockKey={blockKey} />
                 ))}
-                {cancelled && (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-red-950/80 p-2 text-center">
-                        <div className="text-3xl font-black text-white">الطلب ملغي</div>
-                        <button
-                            type="button"
-                            className="min-h-12 min-w-36 rounded-xl bg-white px-4 text-xl font-black text-red-700"
-                            onClick={() => acknowledge(ticket)}
-                        >
-                            تم الاطلاع
-                        </button>
-                    </div>
-                )}
             </article>
-            {fragment.bottomMarker && <ContinuationMarker ticket={ticket} />}
+            {fragment.bottomMarker && <ContinuationMarker ticket={ticket} edge="bottom" />}
         </div>
     );
 }
 
-function ContinuationMarker({ ticket }: { ticket: KdsTicket }) {
-    const cancelled = ticket.status === 'cancelled';
+function ContinuationMarker({ ticket, edge }: { ticket: KdsTicket; edge: 'top' | 'bottom' }) {
     return (
         <div
-            className="flex items-center justify-center overflow-hidden px-2 font-black"
+            className="flex items-center justify-center overflow-hidden px-2 text-xs font-bold"
             style={{
                 height: CONTINUATION_MARKER_HEIGHT,
-                background: cancelled ? '#dc2626' : ticket.is_rush ? '#7c3aed' : '#fbbf24',
-                color: cancelled || ticket.is_rush ? '#ffffff' : '#111827',
+                lineHeight: `${CONTINUATION_MARKER_HEIGHT}px`,
+                color: kdsTokens.textDim,
             }}
         >
-            <span className="truncate">
-                يتبع #{ticket.order_number}
-                {cancelled ? ' — الطلب ملغي' : ''}
-            </span>
+            {edge === 'bottom' ? (
+                <span>
+                    يتبع <span dir="ltr">←</span>
+                </span>
+            ) : (
+                <span>تابع #{ticket.order_number}</span>
+            )}
         </div>
     );
 }

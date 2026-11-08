@@ -1,4 +1,5 @@
 import { useKds } from '@/Components/Kitchen/kdsContext';
+import { kdsPx, kdsTokens } from '@/Components/Kitchen/kdsTokens';
 import {
     formatDuration,
     formatQty,
@@ -7,21 +8,22 @@ import {
     lineAction,
     openRoundElapsedSeconds,
     roundElapsedSeconds,
+    ticketNeedsAttention,
     ticketPlaceLabel,
     ticketUrgency,
 } from '@/Components/Kitchen/ticketModel';
 import type { KdsItem, KdsTicket } from '@/types/kitchen';
 import {
-    CheckOutlined,
-    FireOutlined,
     GlobalOutlined,
     HomeOutlined,
+    MoreOutlined,
     ShopOutlined,
     ShoppingCartOutlined,
     ShoppingOutlined,
     TruckOutlined,
 } from '@ant-design/icons';
-import type { ReactNode } from 'react';
+import { Dropdown } from 'antd';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 
 const TYPE_ICONS: Record<string, ReactNode> = {
     dine_in: <HomeOutlined />,
@@ -32,10 +34,6 @@ const TYPE_ICONS: Record<string, ReactNode> = {
     web_delivery: <GlobalOutlined />,
     web_takeaway: <GlobalOutlined />,
 };
-
-function px(base: number, scale: number): number {
-    return Math.round(base * scale);
-}
 
 function typeIcon(orderType: string): ReactNode {
     return Object.hasOwn(TYPE_ICONS, orderType) ? TYPE_ICONS[orderType] : null;
@@ -59,6 +57,9 @@ export default function KdsBlock({ ticket, blockKey, measureKey }: KdsBlockProps
     if (blockKey === 'header') {
         return <HeaderBlock ticket={ticket} measureKey={measureKey} />;
     }
+    if (blockKey === 'cancelled') {
+        return <CancelledBanner measureKey={measureKey} />;
+    }
     if (blockKey === 'notes') {
         return <NotesBlock ticket={ticket} measureKey={measureKey} />;
     }
@@ -77,75 +78,153 @@ export default function KdsBlock({ ticket, blockKey, measureKey }: KdsBlockProps
 }
 
 function HeaderBlock({ ticket, measureKey }: { ticket: KdsTicket; measureKey?: string }) {
-    const { nowMs, scale, kdsSettings, toggleRush } = useKds();
+    const { nowMs, scale, kdsSettings, acknowledge } = useKds();
     const cancelled = ticket.status === 'cancelled';
     const urgency = ticketUrgency(ticket, nowMs, kdsSettings.warning_percent);
-    const background = cancelled
-        ? '#991b1b'
-        : urgency === 'late'
-          ? '#dc2626'
-          : urgency === 'warning'
-            ? '#f59e0b'
-            : '#27272a';
-    const color = !cancelled && urgency === 'warning' ? '#111827' : '#ffffff';
     const place = ticketPlaceLabel(ticket);
-    const kitchen = kitchenElapsedSeconds(ticket, nowMs);
     const openElapsed = openRoundElapsedSeconds(ticket, nowMs);
-    const showRound = openElapsed != null && ticket.closed_rounds_seconds > 0;
+    const elapsed = openElapsed ?? kitchenElapsedSeconds(ticket, nowMs);
+    const timerColor = cancelled
+        ? kdsTokens.textDim
+        : urgency === 'late'
+          ? kdsTokens.timerLate
+          : urgency === 'warning'
+            ? kdsTokens.timerWarning
+            : kdsTokens.timer;
+    const needsAck = ticketNeedsAttention(ticket);
+    const timerText = formatDuration(elapsed);
 
     return (
-        <div data-measure-key={measureKey} className="block w-full px-3 py-2" style={{ background, color }}>
-            <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span dir="ltr" className="font-black leading-none tabular-nums" style={{ fontSize: px(44, scale) }}>
-                            #{ticket.order_number}
-                        </span>
-                        {ticket.is_rush && (
-                            <span className="rounded-md bg-purple-600 px-2 py-1 text-base font-black text-white">عاجل</span>
-                        )}
-                        {ticket.seen_at == null && (
-                            <span className="animate-pulse rounded-md bg-emerald-400 px-2 py-1 text-base font-black text-black">
-                                جديد
-                            </span>
-                        )}
+        <div data-measure-key={measureKey} className="flex w-full items-start gap-1 px-2.5 py-2">
+            <button
+                type="button"
+                className="flex min-w-0 flex-1 items-start gap-2 border-0 bg-transparent p-0 text-start text-inherit"
+                onClick={() => acknowledge(ticket)}
+                aria-label={needsAck ? `تم الاطلاع على الطلب ${ticket.order_number}` : `طلب ${ticket.order_number}`}
+            >
+                <div className="min-w-0 flex-1">
+                    <div
+                        dir="ltr"
+                        className="text-end font-black leading-none tabular-nums"
+                        style={{ fontSize: kdsPx(40, scale) }}
+                    >
+                        #{ticket.order_number}
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 font-bold" style={{ fontSize: px(20, scale) }}>
+                    <div
+                        className="mt-1 flex flex-wrap items-center gap-1.5 font-bold"
+                        style={{ fontSize: kdsPx(16, scale), color: kdsTokens.textSoft }}
+                    >
                         {typeIcon(ticket.order_type)}
                         <span>{ticket.order_type_label}</span>
-                        {place && <span className="opacity-90">· {place}</span>}
+                        {ticket.seen_at == null && <NewBadge scale={scale} />}
+                        {ticket.is_rush && <RushBadge scale={scale} />}
                     </div>
-                </div>
-                <div className="text-end">
-                    <div dir="ltr" className="font-black leading-none tabular-nums" style={{ fontSize: px(36, scale) }}>
-                        {formatDuration(kitchen)}
-                    </div>
-                    {showRound && (
-                        <div className="mt-1 font-bold" style={{ fontSize: px(16, scale) }}>
-                            الجولة <span dir="ltr">{formatDuration(openElapsed)}</span>
+                    {place && (
+                        <div className="mt-0.5 truncate font-black" style={{ fontSize: kdsPx(20, scale) }}>
+                            {place}
                         </div>
                     )}
+                </div>
+                <div className="shrink-0 text-end">
+                    <div
+                        dir="ltr"
+                        className={`font-black leading-none tabular-nums ${urgency === 'late' && !cancelled ? 'kds-late-timer' : ''}`}
+                        style={{
+                            fontSize: kdsPx(34, scale),
+                            color: timerColor,
+                            minWidth: timerText.length > 5 ? '8ch' : '5.6ch',
+                        }}
+                    >
+                        {timerText}
+                    </div>
                     {ticket.open_round_target_minutes != null && !cancelled && (
-                        <div className="font-semibold opacity-80" style={{ fontSize: px(14, scale) }}>
-                            هدف {ticket.open_round_target_minutes} د
+                        <div
+                            className="mt-1 font-bold tabular-nums"
+                            style={{ fontSize: kdsPx(15, scale), color: kdsTokens.textSoft }}
+                        >
+                            الهدف {ticket.open_round_target_minutes}د
                         </div>
                     )}
                 </div>
-            </div>
-            {cancelled ? (
-                <div className="mt-2 text-2xl font-black">الطلب ملغي</div>
-            ) : (
-                <button
-                    type="button"
-                    onClick={() => toggleRush(ticket)}
-                    className={`mt-2 min-h-12 rounded-lg px-3 font-black ${
-                        ticket.is_rush ? 'bg-purple-700 text-white' : 'bg-black/25 text-current'
-                    }`}
-                    style={{ fontSize: px(16, scale) }}
+            </button>
+            {!cancelled && <OverflowMenu ticket={ticket} />}
+        </div>
+    );
+}
+
+function NewBadge({ scale }: { scale: number }) {
+    return (
+        <span
+            className="rounded px-1.5 py-0.5 font-black leading-none"
+            style={{ background: kdsTokens.fresh, color: kdsTokens.freshInk, fontSize: kdsPx(12, scale) }}
+        >
+            جديد
+        </span>
+    );
+}
+
+function RushBadge({ scale }: { scale: number }) {
+    return (
+        <span
+            className="rounded px-1.5 py-0.5 font-black leading-none text-white"
+            style={{ background: kdsTokens.rush, fontSize: kdsPx(12, scale) }}
+        >
+            عاجل
+        </span>
+    );
+}
+
+function OverflowMenu({ ticket }: { ticket: KdsTicket }) {
+    const { toggleRush } = useKds();
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dropdown
+            open={open}
+            onOpenChange={setOpen}
+            trigger={['click']}
+            placement="bottomLeft"
+            popupRender={() => (
+                <div
+                    className="min-w-[180px] rounded-xl p-1 shadow-2xl"
+                    style={{ background: kdsTokens.cardAlt, border: `1px solid ${kdsTokens.line}` }}
                 >
-                    {ticket.is_rush ? 'إلغاء العاجل' : 'عاجل'}
-                </button>
+                    <button
+                        type="button"
+                        className="kds-press min-h-12 w-full rounded-lg border-0 bg-transparent px-3 text-start text-base font-black"
+                        style={{ color: kdsTokens.text }}
+                        onClick={() => {
+                            setOpen(false);
+                            toggleRush(ticket);
+                        }}
+                    >
+                        {ticket.is_rush ? 'إلغاء العاجل' : 'تعليم كعاجل'}
+                    </button>
+                </div>
             )}
+        >
+            <button
+                type="button"
+                aria-label="المزيد"
+                aria-haspopup="menu"
+                className="kds-press flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border-0"
+                style={{ background: 'transparent', color: kdsTokens.textSoft }}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <MoreOutlined />
+            </button>
+        </Dropdown>
+    );
+}
+
+function CancelledBanner({ measureKey }: { measureKey?: string }) {
+    return (
+        <div
+            data-measure-key={measureKey}
+            className="px-3 py-2 text-center text-2xl font-black text-white"
+            style={{ background: kdsTokens.cancelledBanner }}
+        >
+            الطلب ملغي
         </div>
     );
 }
@@ -156,12 +235,18 @@ function NotesBlock({ ticket, measureKey }: { ticket: KdsTicket; measureKey?: st
         return null;
     }
     return (
-        <div data-measure-key={measureKey} className="block w-full bg-amber-400 px-3 py-3 text-black">
-            <div className="mb-1 flex items-center gap-2 text-sm font-black">
-                <FireOutlined />
+        <div
+            data-measure-key={measureKey}
+            className="px-3 py-2"
+            style={{
+                background: 'rgba(251, 191, 36, 0.1)',
+                boxShadow: `inset -3px 0 0 ${kdsTokens.ack}`,
+            }}
+        >
+            <div className="text-xs font-black" style={{ color: kdsTokens.note }}>
                 ملاحظات المطبخ
             </div>
-            <div className="whitespace-pre-wrap break-words font-black" style={{ fontSize: px(22, scale) }}>
+            <div className="mt-0.5 whitespace-pre-wrap break-words font-black" style={{ fontSize: kdsPx(18, scale), color: kdsTokens.noteStrong }}>
                 {ticket.kitchen_notes}
             </div>
         </div>
@@ -185,12 +270,21 @@ function RoundBlock({
     return (
         <div
             data-measure-key={measureKey}
-            className="flex w-full items-center justify-between gap-2 bg-amber-950 px-3 py-2 text-amber-100"
+            className="flex w-full items-center gap-1.5 overflow-hidden whitespace-nowrap px-3 font-bold"
+            style={{
+                minHeight: 28,
+                color: kdsTokens.textSoft,
+                borderTop: `1px solid ${kdsTokens.line}`,
+                fontSize: kdsPx(13, scale),
+            }}
         >
-            <span className="font-black" style={{ fontSize: px(20, scale) }}>
-                إضافة {round.number} — <span dir="ltr">{formatTime(round.started_at)}</span>
+            <span>إضافة {round.number}</span>
+            <span aria-hidden>·</span>
+            <span dir="ltr" className="tabular-nums">
+                {formatTime(round.started_at)}
             </span>
-            <span dir="ltr" className="font-black tabular-nums" style={{ fontSize: px(22, scale) }}>
+            <span aria-hidden>·</span>
+            <span dir="ltr" className="tabular-nums">
                 {formatDuration(roundElapsedSeconds(round, nowMs))}
             </span>
         </div>
@@ -214,83 +308,63 @@ function LineBlock({
     const action = lineAction(ticket, item, kds.kdsSettings, kds.nowMs);
     const stationName = item.station_id == null ? null : kds.stationNames.get(item.station_id) ?? null;
     const showStation = kds.stationId == null && stationName;
-    const touch = Math.max(48, px(48, kds.scale));
-    const reduced = item.quantity < item.original_quantity;
+    const reduced = item.quantity < item.original_quantity && item.status !== 'voided';
     const delta = item.original_quantity - item.quantity;
-
-    const background = item.needs_ack
-        ? '#78350f'
-        : item.kind === 'increased'
-          ? '#064e3b'
-          : item.status === 'started'
-            ? '#0c4a6e'
-            : item.status === 'voided'
-              ? '#1c1917'
-              : 'transparent';
+    const done = item.status === 'done';
+    const voided = item.status === 'voided';
+    const started = item.status === 'started';
+    const stripe = item.needs_ack ? kdsTokens.ack : started ? kdsTokens.started : 'transparent';
+    const nameColor = voided ? kdsTokens.textDim : done ? kdsTokens.textDim : kdsTokens.text;
 
     const body = (
         <>
-            <Quantity item={item} reduced={reduced} scale={kds.scale} />
+            <span
+                className="mt-1 inline-flex w-5 shrink-0 items-center justify-center font-black leading-none"
+                style={{ color: kdsTokens.check, fontSize: kdsPx(18, kds.scale) }}
+                aria-hidden
+            >
+                {done ? '✓' : ''}
+            </span>
+            <Quantity item={item} scale={kds.scale} voided={voided} done={done} />
             <div className="min-w-0 flex-1">
                 <div
-                    className={`font-black leading-snug ${item.status === 'voided' || item.voided_after_done ? 'line-through' : ''}`}
-                    style={{ fontSize: px(26, kds.scale) }}
+                    className="font-black leading-snug"
+                    style={{
+                        fontSize: kdsPx(22, kds.scale),
+                        color: nameColor,
+                        textDecoration: voided || done ? 'line-through' : undefined,
+                        textDecorationThickness: '1px',
+                        textDecorationColor: voided ? kdsTokens.voidTag : 'rgba(154,166,181,0.7)',
+                    }}
                 >
                     {item.product_name}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-1">
-                    {item.kind === 'increased' && (
-                        <span className="rounded bg-emerald-400 px-2 py-0.5 font-black text-black" style={{ fontSize: px(18, kds.scale) }}>
-                            +{formatQty(item.quantity)} جديد
-                        </span>
-                    )}
-                    {reduced && (
-                        <span className="rounded bg-red-600 px-2 py-0.5 font-black text-white" style={{ fontSize: px(18, kds.scale) }}>
-                            −{formatQty(delta)}
-                        </span>
-                    )}
-                    {item.status === 'voided' && !item.voided_after_done && (
-                        <span className="font-black text-zinc-300" style={{ fontSize: px(18, kds.scale) }}>
-                            ملغي
-                        </span>
-                    )}
-                    {item.voided_after_done && (
-                        <span className="font-black text-red-300" style={{ fontSize: px(18, kds.scale) }}>
-                            ملغي بعد التحضير
-                        </span>
-                    )}
-                    {item.status === 'started' && (
-                        <span className="font-black text-sky-300" style={{ fontSize: px(16, kds.scale) }}>
-                            بدأ
-                        </span>
-                    )}
-                    {showStation && (
-                        <span className="font-bold text-zinc-400" style={{ fontSize: px(14, kds.scale) }}>
-                            {stationName}
-                        </span>
-                    )}
-                </div>
                 {item.notes && (
-                    <div
-                        className="mt-1 inline-block rounded bg-amber-400 px-2 py-1 font-black text-black"
-                        style={{ fontSize: px(18, kds.scale) }}
-                    >
+                    <div className="mt-0.5 font-bold leading-snug" style={{ color: kdsTokens.note, fontSize: kdsPx(16, kds.scale) }}>
                         {item.notes}
                     </div>
                 )}
+                <LineTags
+                    item={item}
+                    reduced={reduced}
+                    delta={delta}
+                    started={started}
+                    voided={voided}
+                    stationName={showStation ? stationName : null}
+                    scale={kds.scale}
+                />
             </div>
-            {item.status === 'done' && <CheckOutlined className="text-2xl text-emerald-400" />}
         </>
     );
 
-    const className = `flex w-full items-start gap-3 border-b border-white/10 px-3 py-2 text-start ${
-        item.status === 'done' ? 'opacity-45' : ''
-    } ${item.needs_ack ? 'animate-pulse' : ''} ${action ? 'cursor-pointer active:bg-white/10' : ''}`;
     const style = {
-        background,
-        minHeight: touch,
-        boxShadow: item.needs_ack ? 'inset 0 0 0 3px #fbbf24' : undefined,
+        minHeight: kdsTokens.touch,
+        boxShadow: `inset -3px 0 0 ${stripe}`,
+        background: 'transparent',
     };
+    const className = `flex w-full items-start gap-2 border-0 px-2 py-1.5 text-start text-inherit ${
+        item.needs_ack ? 'kds-ack-once' : ''
+    } ${action ? 'kds-press cursor-pointer' : ''}`;
 
     if (!action) {
         return (
@@ -300,12 +374,16 @@ function LineBlock({
         );
     }
 
+    const label =
+        action === 'undo' ? `تراجع ${item.product_name}` : action === 'start' ? `بدء ${item.product_name}` : `تم ${item.product_name}`;
+
     return (
         <button
             type="button"
             data-measure-key={measureKey}
             className={className}
             style={style}
+            aria-label={label}
             onClick={() => kds.tapItem(ticket, item)}
         >
             {body}
@@ -313,65 +391,152 @@ function LineBlock({
     );
 }
 
-function Quantity({ item, reduced, scale }: { item: KdsItem; reduced: boolean; scale: number }) {
-    const size = { fontSize: px(36, scale) };
-    if (item.kind === 'increased') {
-        return (
-            <span dir="ltr" className="font-black leading-none tabular-nums text-emerald-300" style={size}>
-                +{formatQty(item.quantity)}
-            </span>
-        );
-    }
-    if (reduced) {
-        return (
-            <span dir="ltr" className="font-black leading-none tabular-nums" style={size}>
-                <span className="line-through opacity-60">{formatQty(item.original_quantity)}</span>
-                <span className="mx-1">→</span>
-                <span>{formatQty(item.quantity)}</span>
-            </span>
-        );
-    }
+function Quantity({
+    item,
+    scale,
+    voided,
+    done,
+}: {
+    item: KdsItem;
+    scale: number;
+    voided: boolean;
+    done: boolean;
+}) {
     return (
         <span
             dir="ltr"
-            className={`font-black leading-none tabular-nums ${item.status === 'voided' ? 'line-through opacity-60' : ''}`}
-            style={size}
+            className="mt-0.5 inline-flex shrink-0 items-center justify-center rounded-md font-black leading-none tabular-nums"
+            style={{
+                width: kdsPx(44, scale),
+                minHeight: kdsPx(36, scale),
+                background: voided || done ? 'transparent' : kdsTokens.qtyBg,
+                color: voided || done ? kdsTokens.textDim : kdsTokens.qtyInk,
+                fontSize: kdsPx(22, scale),
+                boxShadow: voided || done ? `inset 0 0 0 1px ${kdsTokens.line}` : undefined,
+            }}
         >
             {formatQty(item.quantity)}
         </span>
     );
 }
 
+function LineTags({
+    item,
+    reduced,
+    delta,
+    started,
+    voided,
+    stationName,
+    scale,
+}: {
+    item: KdsItem;
+    reduced: boolean;
+    delta: number;
+    started: boolean;
+    voided: boolean;
+    stationName: string | null;
+    scale: number;
+}) {
+    const tags: ReactNode[] = [];
+    const size = { fontSize: kdsPx(13, scale) };
+    if (item.kind === 'increased' && !voided) {
+        tags.push(
+            <Tag key="inc" style={{ ...size, color: kdsTokens.increase }}>
+                +{formatQty(item.quantity)} جديد
+            </Tag>,
+        );
+    }
+    if (reduced) {
+        tags.push(
+            <Tag key="arrow" style={{ ...size, color: kdsTokens.textSoft }}>
+                {formatQty(item.original_quantity)}→{formatQty(item.quantity)}
+            </Tag>,
+        );
+        tags.push(
+            <Tag key="red" style={{ ...size, color: kdsTokens.reduce }}>
+                −{formatQty(delta)}
+            </Tag>,
+        );
+    }
+    if (item.voided_after_done) {
+        tags.push(
+            <Tag key="vad" style={{ ...size, color: kdsTokens.voidAfter }}>
+                ملغي بعد التحضير
+            </Tag>,
+        );
+    } else if (voided) {
+        tags.push(
+            <Tag key="void" style={{ ...size, color: kdsTokens.voidTag }}>
+                ملغي
+            </Tag>,
+        );
+    }
+    if (started) {
+        tags.push(
+            <Tag key="started" style={{ ...size, color: kdsTokens.started }}>
+                بدأ
+            </Tag>,
+        );
+    }
+    if (stationName) {
+        tags.push(
+            <Tag key="station" style={{ ...size, color: kdsTokens.textDim }}>
+                {stationName}
+            </Tag>,
+        );
+    }
+    if (tags.length === 0) {
+        return null;
+    }
+    return <div className="mt-1 flex flex-wrap items-center gap-1.5">{tags}</div>;
+}
+
+function Tag({ children, style }: { children: ReactNode; style: CSSProperties }) {
+    return (
+        <span className="font-black leading-none" style={style}>
+            {children}
+        </span>
+    );
+}
+
 function FooterBlock({ ticket, measureKey }: { ticket: KdsTicket; measureKey?: string }) {
-    const { scale, stationId, acknowledge, finishTicket } = useKds();
-    const touch = Math.max(48, px(52, scale));
-    const needsAck = ticket.seen_at == null || ticket.items.some((item) => item.needs_ack);
+    const { scale, acknowledge, finishTicket } = useKds();
+    const cancelled = ticket.status === 'cancelled';
+    const needsAck = ticket.seen_at == null || ticket.items.some((item) => item.needs_ack) || cancelled;
+    const font = Math.min(22, kdsPx(18, scale));
 
     return (
-        <div data-measure-key={measureKey} className="block w-full bg-zinc-950 p-2">
-            <div className="flex flex-col gap-2">
-                {needsAck && (
-                    <button
-                        type="button"
-                        className="w-full rounded-xl bg-amber-400 font-black text-black"
-                        style={{ minHeight: touch, fontSize: px(22, scale) }}
-                        onClick={() => acknowledge(ticket)}
-                    >
-                        تم الاطلاع
-                    </button>
-                )}
+        <div
+            data-measure-key={measureKey}
+            className="flex w-full items-center gap-2 px-2"
+            style={{ height: kdsTokens.footerHeight, borderTop: `1px solid ${kdsTokens.line}` }}
+        >
+            {needsAck && (
                 <button
                     type="button"
-                    className="w-full rounded-xl bg-emerald-600 font-black text-white"
-                    style={{ minHeight: touch, fontSize: px(24, scale) }}
+                    className="kds-press h-12 shrink-0 whitespace-nowrap rounded-lg border-0 px-3 font-black"
+                    style={{
+                        background: kdsTokens.ack,
+                        color: kdsTokens.ackInk,
+                        fontSize: font,
+                        minWidth: cancelled ? undefined : 112,
+                        flex: cancelled ? '1 1 auto' : undefined,
+                    }}
+                    onClick={() => acknowledge(ticket)}
+                >
+                    تم الاطلاع
+                </button>
+            )}
+            {!cancelled && (
+                <button
+                    type="button"
+                    className="kds-press h-12 min-w-0 flex-1 whitespace-nowrap rounded-lg border-0 font-black"
+                    style={{ background: kdsTokens.done, color: kdsTokens.doneInk, fontSize: font }}
                     onClick={() => finishTicket(ticket)}
                 >
                     تم
-                    {stationId != null && (
-                        <span className="block text-sm font-bold text-emerald-100">لهذه المحطة</span>
-                    )}
                 </button>
-            </div>
+            )}
         </div>
     );
 }

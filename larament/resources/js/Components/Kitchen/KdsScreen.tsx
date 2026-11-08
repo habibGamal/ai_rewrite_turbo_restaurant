@@ -8,16 +8,11 @@ import { KdsProvider, type KdsContextValue } from '@/Components/Kitchen/kdsConte
 import { isConnectionLost, useKitchenChannel } from '@/Components/Kitchen/hooks/useKitchenChannel';
 import { useKdsClock } from '@/Components/Kitchen/hooks/useKdsClock';
 import { useKdsSounds } from '@/Components/Kitchen/hooks/useKdsSounds';
+import { useOptimisticTickets } from '@/Components/Kitchen/hooks/useOptimisticTickets';
 import { useScreenSettings } from '@/Components/Kitchen/hooks/useScreenSettings';
 import { useViewportWidth } from '@/Components/Kitchen/hooks/useViewportWidth';
-import {
-    acknowledgeTicket,
-    doneItem,
-    finishTicket,
-    setTicketRush,
-    startItem,
-    undoItem,
-} from '@/Components/Kitchen/kitchenActions';
+import { KDS_CSS, kdsCssVars, kdsTokens } from '@/Components/Kitchen/kdsTokens';
+import { fadeLeavingTicket } from '@/Components/Kitchen/leaveFade';
 import {
     FRAGMENT_GAP,
     emptyPackedPage,
@@ -87,15 +82,26 @@ export default function KdsScreen({
     const { modal, message } = AntApp.useApp();
     const screen = useScreenSettings();
     const viewportWidth = useViewportWidth();
-    const { nowMs } = useKdsClock(serverNow);
+    const { nowMs, now } = useKdsClock(serverNow);
     const stationId = resolveStationId(
         screen.settings.stationId,
         stations.map((station) => station.id),
     );
-    const columnCount =
-        screen.settings.columns === 'auto' ? autoColumnCount(viewportWidth) : screen.settings.columns;
+    const optimistic = useOptimisticTickets({
+        tickets,
+        now,
+        stationId,
+        onLeaving: fadeLeavingTicket,
+    });
 
-    const filtered = useMemo(() => applyStationFilter(tickets, stationId), [tickets, stationId]);
+    const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
+    const layoutWidth = boardSize.width > 0 ? boardSize.width : viewportWidth;
+    const columnCount = screen.settings.columns === 'auto' ? autoColumnCount(layoutWidth) : screen.settings.columns;
+
+    const filtered = useMemo(
+        () => applyStationFilter(optimistic.tickets, stationId),
+        [optimistic.tickets, stationId],
+    );
     const board = useMemo(() => sortBoardTickets(filtered.filter(isBoardTicket)), [filtered]);
     const recall = useMemo(() => sortRecallTickets(filtered), [filtered]);
     const counts = useMemo(
@@ -119,9 +125,8 @@ export default function KdsScreen({
     const [recallOpen, setRecallOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [heights, setHeights] = useState<Map<string, number>>(() => new Map());
-    const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
     const highlightTimer = useRef<number | null>(null);
-    const pendingTaps = useRef<Set<number>>(new Set());
+    const confirming = useRef(false);
 
     const columnWidth =
         columnCount > 0 ? Math.floor((boardSize.width - FRAGMENT_GAP * (columnCount - 1)) / columnCount) : 0;
@@ -213,38 +218,39 @@ export default function KdsScreen({
     };
 
     const confirmUndo = useCallback(
-        (item: KdsItem) => {
+        (item: KdsItem, ticket: KdsTicket) => {
+            if (confirming.current) {
+                return;
+            }
+            confirming.current = true;
             modal.confirm({
                 title: 'تراجع عن التجهيز؟',
                 content: item.product_name,
                 okText: 'تراجع',
                 cancelText: 'إلغاء',
                 okButtonProps: { danger: true },
-                onOk: () => undoItem(item.id),
+                onOk: () => optimistic.applyItem(ticket, item, 'undo'),
+                afterClose: () => {
+                    confirming.current = false;
+                },
             });
         },
-        [modal],
+        [modal, optimistic],
     );
 
     const tapItem = useCallback(
         (ticket: KdsTicket, item: KdsItem) => {
             const action = lineAction(ticket, item, kdsSettings, nowMs);
-            if (!action || pendingTaps.current.has(item.id)) {
+            if (!action) {
                 return;
             }
             if (action === 'undo') {
-                confirmUndo(item);
+                confirmUndo(item, ticket);
                 return;
             }
-            pendingTaps.current.add(item.id);
-            window.setTimeout(() => pendingTaps.current.delete(item.id), 400);
-            if (action === 'start') {
-                startItem(item.id);
-                return;
-            }
-            doneItem(item.id);
+            optimistic.applyItem(ticket, item, action);
         },
-        [confirmUndo, kdsSettings, nowMs],
+        [confirmUndo, kdsSettings, nowMs, optimistic],
     );
 
     const context = useMemo<KdsContextValue>(
@@ -256,11 +262,11 @@ export default function KdsScreen({
             stationNames: new Map(stations.map((station) => [station.id, station.name])),
             highlightedId: highlightId,
             tapItem,
-            finishTicket: (ticket) => finishTicket(ticket.id, stationId),
-            acknowledge: (ticket) => acknowledgeTicket(ticket.id),
-            toggleRush: (ticket) => setTicketRush(ticket.id, !ticket.is_rush),
+            finishTicket: (ticket) => optimistic.finishTicket(ticket),
+            acknowledge: (ticket) => optimistic.acknowledge(ticket),
+            toggleRush: (ticket) => optimistic.toggleRush(ticket),
         }),
-        [nowMs, screen.settings.fontScale, kdsSettings, stationId, stations, highlightId, tapItem],
+        [nowMs, screen.settings.fontScale, kdsSettings, stationId, stations, highlightId, tapItem, optimistic],
     );
 
     const empty = emptyKind(tickets, board, hasActiveShift, stationId);
@@ -270,18 +276,20 @@ export default function KdsScreen({
         nowMs,
         kdsSettings.warning_percent,
     );
-    const next = edgeStats(
-        otherPageTicketIds(pages, pageIndex, 'next'),
-        board,
-        nowMs,
-        kdsSettings.warning_percent,
-    );
+    const next = edgeStats(otherPageTicketIds(pages, pageIndex, 'next'), board, nowMs, kdsSettings.warning_percent);
 
     return (
         <KdsProvider value={context}>
-            <div className="flex min-h-0 flex-1 touch-manipulation select-none flex-col bg-[#0b0e14] text-white">
+            <style>{KDS_CSS}</style>
+            <div
+                className="flex min-h-0 flex-1 touch-manipulation select-none flex-col"
+                style={kdsCssVars}
+            >
                 {isConnectionLost(channel.connection) && (
-                    <div className="shrink-0 bg-red-700 px-4 py-2 text-center text-xl font-black">
+                    <div
+                        className="shrink-0 px-4 text-center text-base font-black text-white"
+                        style={{ height: 36, lineHeight: '36px', background: kdsTokens.danger }}
+                    >
                         انقطع الاتصال — يتم التحديث كل 30 ثانية
                     </div>
                 )}
@@ -310,6 +318,7 @@ export default function KdsScreen({
                         pageIndex={pageIndex}
                         columnCount={columnCount}
                         columnWidth={Math.max(0, columnWidth)}
+                        clock={formatClock(nowMs)}
                         onMeasure={onMeasure}
                         onViewport={onViewport}
                         onPageIndex={setPageIndex}
@@ -327,7 +336,7 @@ export default function KdsScreen({
                 nowMs={nowMs}
                 recallMinutes={kdsSettings.recall_minutes}
                 highlightedId={highlightId}
-                onUndo={confirmUndo}
+                onUndo={(item, ticket) => confirmUndo(item, ticket)}
             />
             <KdsSettingsDrawer
                 open={settingsOpen}

@@ -64,14 +64,22 @@ export function writeScreenSettings(settings: KdsScreenSettings): void {
     }
 }
 
-export function autoColumnCount(viewportWidth: number): 3 | 4 | 5 | 6 {
-    if (viewportWidth >= 2200) {
+/**
+ * Target card width ~320px (within 300–340). 1918px → 6 columns (~308px).
+ * Always 3–6. A forced screen setting overrides this.
+ */
+export function autoColumnCount(availableWidth: number): 3 | 4 | 5 | 6 {
+    const gap = 10;
+    const target = 320;
+    const usable = Math.max(0, availableWidth);
+    const count = Math.round((usable + gap) / (target + gap));
+    if (count >= 6) {
         return 6;
     }
-    if (viewportWidth >= 1800) {
+    if (count >= 5) {
         return 5;
     }
-    if (viewportWidth >= 1400) {
+    if (count >= 4) {
         return 4;
     }
     return 3;

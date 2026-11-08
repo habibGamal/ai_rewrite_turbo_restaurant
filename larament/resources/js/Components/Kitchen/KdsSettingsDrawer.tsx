@@ -1,5 +1,8 @@
+import { kdsTokens } from '@/Components/Kitchen/kdsTokens';
 import type { KdsColumnSetting } from '@/Components/Kitchen/screenSettings';
 import type { KdsSound, KdsStation } from '@/types/kitchen';
+import { LogoutOutlined } from '@ant-design/icons';
+import { router, usePage } from '@inertiajs/react';
 import { Drawer, Slider, Switch } from 'antd';
 
 const COLUMN_OPTIONS: { value: KdsColumnSetting; label: string }[] = [
@@ -46,6 +49,17 @@ export default function KdsSettingsDrawer({
     onMuted,
     onTestSound,
 }: KdsSettingsDrawerProps) {
+    const { auth } = usePage().props;
+    const user = auth.user;
+
+    const logout = (): void => {
+        router.post('/logout', undefined, {
+            onFinish: () => {
+                window.location.href = '/login';
+            },
+        });
+    };
+
     return (
         <Drawer title="إعدادات الشاشة" placement="left" open={open} onClose={onClose} width={420} destroyOnClose={false}>
             <div className="flex flex-col gap-6 pb-8">
@@ -69,7 +83,9 @@ export default function KdsSettingsDrawer({
 
                 <section>
                     <h3 className="mb-2 text-lg font-black">عدد الأعمدة</h3>
-                    <p className="mb-2 text-sm text-zinc-400">تلقائي: 3 حتى 1400، ثم 4 / 5 / 6 حسب عرض الشاشة.</p>
+                    <p className="mb-2 text-sm" style={{ color: kdsTokens.textDim }}>
+                        تلقائي: عرض البطاقة حوالي 320px (3–6 أعمدة). شاشة 1920 تظهر 6 أعمدة.
+                    </p>
                     <div className="grid grid-cols-5 gap-2">
                         {COLUMN_OPTIONS.map((option) => (
                             <ChoiceButton
@@ -104,7 +120,9 @@ export default function KdsSettingsDrawer({
                 <section className="flex items-center justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-black">كتم الصوت</h3>
-                        <p className="text-sm text-zinc-400">لهذه الشاشة فقط. تجربة الصوت تعمل رغم الكتم.</p>
+                        <p className="text-sm" style={{ color: kdsTokens.textDim }}>
+                            لهذه الشاشة فقط. تجربة الصوت تعمل رغم الكتم.
+                        </p>
                     </div>
                     <Switch checked={muted} onChange={onMuted} aria-label="كتم الصوت" />
                 </section>
@@ -116,13 +134,30 @@ export default function KdsSettingsDrawer({
                             <button
                                 key={entry.sound}
                                 type="button"
-                                className="min-h-12 rounded-xl bg-zinc-700 px-3 font-black text-white"
+                                className="kds-press min-h-12 rounded-xl border-0 px-3 font-black text-white"
+                                style={{ background: kdsTokens.cardAlt }}
                                 onClick={() => onTestSound(entry.sound)}
                             >
                                 تجربة {entry.label}
                             </button>
                         ))}
                     </div>
+                </section>
+
+                <section className="rounded-xl p-3" style={{ background: kdsTokens.cardAlt }}>
+                    <h3 className="mb-1 text-lg font-black">الحساب</h3>
+                    <p className="mb-3 text-base font-bold" style={{ color: kdsTokens.textSoft }}>
+                        {user?.name ?? '—'}
+                    </p>
+                    <button
+                        type="button"
+                        className="kds-press inline-flex min-h-12 items-center gap-2 rounded-xl border-0 px-4 font-black text-white"
+                        style={{ background: kdsTokens.danger }}
+                        onClick={logout}
+                    >
+                        <LogoutOutlined />
+                        خروج
+                    </button>
                 </section>
             </div>
         </Drawer>
@@ -142,9 +177,11 @@ function ChoiceButton({
         <button
             type="button"
             onClick={onClick}
-            className={`min-h-12 rounded-xl px-3 text-lg font-black ${
-                active ? 'bg-violet-600 text-white' : 'bg-zinc-800 text-zinc-100'
-            }`}
+            className="min-h-12 rounded-xl border-0 px-3 text-lg font-black"
+            style={{
+                background: active ? kdsTokens.done : kdsTokens.cardAlt,
+                color: active ? kdsTokens.doneInk : kdsTokens.text,
+            }}
         >
             {children}
         </button>

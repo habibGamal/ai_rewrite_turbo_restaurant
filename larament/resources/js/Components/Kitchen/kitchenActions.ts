@@ -1,49 +1,41 @@
 import type { KdsBroadcastReason, KdsSettings, KdsSound } from '@/types/kitchen';
 import { router } from '@inertiajs/react';
-import { message } from 'antd';
 
-const partialReload = {
+export interface KitchenVisitHandlers {
+    onSuccess?: () => void;
+    onError?: (errors: Record<string, string>) => void;
+    onFinish?: () => void;
+}
+
+const visit = {
     preserveScroll: true,
     preserveState: true,
     only: ['tickets'] as string[],
     async: true,
-    onError: (errors: Record<string, string>) => {
-        if (Object.keys(errors).length === 0) {
-            message.error('تعذر تنفيذ الإجراء');
-        }
-    },
+    showProgress: false,
 };
 
-function post(url: string, data: Record<string, string | number | boolean> = {}): void {
-    router.post(url, data, partialReload);
+export function postKitchen(
+    url: string,
+    data: Record<string, string | number | boolean> = {},
+    handlers: KitchenVisitHandlers = {},
+): void {
+    router.post(url, data, {
+        ...visit,
+        onSuccess: () => handlers.onSuccess?.(),
+        onError: (errors) => handlers.onError?.(errors),
+        onFinish: () => handlers.onFinish?.(),
+    });
 }
 
-export function startItem(itemId: number): void {
-    post(`/kitchen/items/${itemId}/start`);
-}
-
-export function doneItem(itemId: number): void {
-    post(`/kitchen/items/${itemId}/done`);
-}
-
-export function undoItem(itemId: number): void {
-    post(`/kitchen/items/${itemId}/undo`);
-}
-
-export function finishTicket(ticketId: number, stationId: number | null): void {
-    post(
-        `/kitchen/tickets/${ticketId}/done`,
-        stationId == null ? {} : { station_id: stationId },
-    );
-}
-
-export function acknowledgeTicket(ticketId: number): void {
-    post(`/kitchen/tickets/${ticketId}/acknowledge`);
-}
-
-export function setTicketRush(ticketId: number, isRush: boolean): void {
-    post(`/kitchen/tickets/${ticketId}/rush`, { is_rush: isRush });
-}
+export const kitchenUrls = {
+    start: (itemId: number): string => `/kitchen/items/${itemId}/start`,
+    done: (itemId: number): string => `/kitchen/items/${itemId}/done`,
+    undo: (itemId: number): string => `/kitchen/items/${itemId}/undo`,
+    ticketDone: (ticketId: number): string => `/kitchen/tickets/${ticketId}/done`,
+    acknowledge: (ticketId: number): string => `/kitchen/tickets/${ticketId}/acknowledge`,
+    rush: (ticketId: number): string => `/kitchen/tickets/${ticketId}/rush`,
+};
 
 export function soundForReason(reason: KdsBroadcastReason, settings: KdsSettings): KdsSound {
     if (reason === 'new') {

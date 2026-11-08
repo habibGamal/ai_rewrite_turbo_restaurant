@@ -293,6 +293,9 @@ export function groupItemsByRound(ticket: KdsTicket): RoundGroup[] {
 
 export function ticketBlockKeys(ticket: KdsTicket): string[] {
     const keys = ['header'];
+    if (ticket.status === 'cancelled') {
+        keys.push('cancelled');
+    }
     if (ticket.kitchen_notes) {
         keys.push('notes');
     }
@@ -304,9 +307,7 @@ export function ticketBlockKeys(ticket: KdsTicket): string[] {
             keys.push(`line-${item.id}`);
         }
     }
-    if (ticket.status !== 'cancelled') {
-        keys.push('footer');
-    }
+    keys.push('footer');
     return keys;
 }
 

@@ -1,10 +1,7 @@
 import KdsBlock from '@/Components/Kitchen/KdsTicketBlocks';
 import KdsTicketFragment from '@/Components/Kitchen/KdsTicketFragment';
-import {
-    FRAGMENT_GAP,
-    CARD_CHROME_HEIGHT,
-    type PackedPage,
-} from '@/Components/Kitchen/packTickets';
+import { kdsTokens } from '@/Components/Kitchen/kdsTokens';
+import { FRAGMENT_GAP, type PackedPage } from '@/Components/Kitchen/packTickets';
 import { measureKey, ticketBlockKeys } from '@/Components/Kitchen/ticketModel';
 import type { KdsTicket } from '@/types/kitchen';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
@@ -21,6 +18,7 @@ interface KdsBoardProps {
     pageIndex: number;
     columnCount: number;
     columnWidth: number;
+    clock: string;
     onMeasure: (heights: Map<string, number>) => void;
     onViewport: (size: { width: number; height: number }) => void;
     onPageIndex: (index: number) => void;
@@ -36,6 +34,7 @@ export default function KdsBoard({
     pageIndex,
     columnCount,
     columnWidth,
+    clock,
     onMeasure,
     onViewport,
     onPageIndex,
@@ -90,7 +89,7 @@ export default function KdsBoard({
                 if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) {
                     return;
                 }
-                if (target.closest('.ant-drawer, .ant-modal, .ant-slider')) {
+                if (target.closest('.ant-drawer, .ant-modal, .ant-slider, .ant-dropdown')) {
                     return;
                 }
             }
@@ -138,7 +137,7 @@ export default function KdsBoard({
     return (
         <div className="relative min-h-0 flex-1 p-2" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             {empty ? (
-                <EmptyState kind={empty} />
+                <EmptyState kind={empty} clock={clock} />
             ) : (
                 <div ref={rowRef} className="flex h-full" style={{ gap: FRAGMENT_GAP }}>
                     {(page?.columns ?? []).map((column, index) => (
@@ -165,7 +164,7 @@ export default function KdsBoard({
                 </div>
             )}
 
-            {pageCount > 1 && (
+            {pageCount > 1 && !empty && (
                 <>
                     <PageButton side="previous" stats={previous} disabled={pageIndex <= 0} onClick={goPrev} />
                     <PageButton side="next" stats={next} disabled={pageIndex >= pageCount - 1} onClick={goNext} />
@@ -180,11 +179,7 @@ export default function KdsBoard({
             >
                 {columnWidth > 0 &&
                     tickets.map((ticket) => (
-                        <div
-                            key={ticket.id}
-                            className="box-border"
-                            style={{ width: columnWidth, borderWidth: CARD_CHROME_HEIGHT / 2, borderStyle: 'solid', borderColor: 'transparent' }}
-                        >
+                        <div key={ticket.id} style={{ width: columnWidth }}>
                             {ticketBlockKeys(ticket).map((blockKey) => (
                                 <KdsBlock
                                     key={blockKey}
@@ -218,32 +213,57 @@ function PageButton({
             disabled={disabled}
             onClick={onClick}
             aria-label={`${label}، ${stats.count} طلبات`}
-            className={`absolute top-1/2 z-20 flex h-24 w-16 -translate-y-1/2 flex-col items-center justify-center rounded-2xl bg-zinc-800/95 text-white shadow-xl ${
+            className={`kds-press absolute top-1/2 z-20 flex h-16 w-12 -translate-y-1/2 flex-col items-center justify-center rounded-xl border-0 text-white ${
                 disabled ? 'pointer-events-none opacity-30' : ''
             }`}
-            style={side === 'previous' ? { right: 8 } : { left: 8 }}
+            style={{
+                ...(side === 'previous' ? { right: 6 } : { left: 6 }),
+                background: 'rgba(16, 20, 28, 0.88)',
+                boxShadow: `0 0 0 1px ${kdsTokens.line}`,
+            }}
         >
-            {stats.hasLate && <span className="absolute -top-1 h-5 w-5 rounded-full bg-red-500 ring-2 ring-black" style={side === 'previous' ? { left: -4 } : { right: -4 }} />}
-            {side === 'previous' ? <RightOutlined className="text-xl" /> : <LeftOutlined className="text-xl" />}
-            <span className="text-sm font-black">{label}</span>
+            {stats.hasLate && (
+                <span
+                    className="absolute -top-1 h-3.5 w-3.5 rounded-full"
+                    style={{ background: kdsTokens.danger, ...(side === 'previous' ? { left: -2 } : { right: -2 }) }}
+                />
+            )}
+            {side === 'previous' ? <RightOutlined /> : <LeftOutlined />}
             {stats.count > 0 && (
-                <span className={`text-xl font-black tabular-nums ${stats.hasLate ? 'text-red-400' : ''}`}>{stats.count}</span>
+                <span className={`text-sm font-black tabular-nums ${stats.hasLate ? '' : ''}`} style={{ color: stats.hasLate ? kdsTokens.timerLate : kdsTokens.text }}>
+                    {stats.count}
+                </span>
             )}
         </button>
     );
 }
 
-function EmptyState({ kind }: { kind: 'shift' | 'station' | 'none' }) {
+function EmptyState({ kind, clock }: { kind: 'shift' | 'station' | 'none'; clock: string }) {
     const title =
-        kind === 'shift' ? 'لا يوجد وردية نشطة' : kind === 'station' ? 'لا توجد طلبات لهذه المحطة' : 'لا توجد طلبات في المطبخ';
+        kind === 'shift'
+            ? 'لا يوجد وردية نشطة'
+            : kind === 'station'
+              ? 'لا توجد طلبات لهذه المحطة'
+              : 'لا توجد طلبات حالياً';
     const detail =
-        kind === 'shift' ? 'يرجى بدء وردية جديدة من شاشة الكاشير' : kind === 'station' ? 'غيّر المحطة من الإعدادات لعرض الكل' : 'بانتظار طلبات جديدة';
+        kind === 'shift'
+            ? 'يرجى بدء وردية جديدة من شاشة الكاشير'
+            : kind === 'station'
+              ? 'غيّر المحطة من الإعدادات لعرض الكل'
+              : null;
 
     return (
         <div className="flex h-full items-center justify-center">
             <div className="text-center">
-                <div className="text-4xl font-black">{title}</div>
-                <div className="mt-3 text-xl font-bold text-zinc-400">{detail}</div>
+                <div dir="ltr" className="text-6xl font-black tabular-nums tracking-wide">
+                    {clock}
+                </div>
+                <div className="mt-6 text-3xl font-black">{title}</div>
+                {detail && (
+                    <div className="mt-2 text-xl font-bold" style={{ color: kdsTokens.textDim }}>
+                        {detail}
+                    </div>
+                )}
             </div>
         </div>
     );

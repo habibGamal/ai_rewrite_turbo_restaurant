@@ -1,11 +1,14 @@
-// Newspaper-column packing for the KDS board.
-// Tickets flow down a column; a block that does not fit continues in the next
-// column (RTL: the next column is to the left) with a "يتبع" marker. Pages are
-// horizontal. Heights are measured by the caller — this function is pure.
+// Masonry packing for the KDS board. Pure: heights come from the caller.
+//
+// Each ticket is placed whole into the column with the most remaining space
+// (tie → lowest index). Column 0 is the rightmost column in the RTL board, so
+// oldest-first order reads right-to-left. A ticket is split only when it is
+// taller than an entire empty column — never just because the current column
+// is partly full. Pages stay horizontal.
 
-export const CONTINUATION_MARKER_HEIGHT = 40;
-export const FRAGMENT_GAP = 8;
-/** Vertical border of a ticket fragment (2px top + 2px bottom). */
+export const CONTINUATION_MARKER_HEIGHT = 22;
+export const FRAGMENT_GAP = 10;
+/** Top accent strip of a ticket fragment. Side borders are box-shadows and do not add height. */
 export const CARD_CHROME_HEIGHT = 4;
 
 export interface BlockMeasure {
@@ -21,9 +24,9 @@ export interface TicketMeasure {
 export interface PackedFragment {
     ticketId: number;
     blockKeys: string[];
-    /** Ticket already started in a previous column — show يتبع above. */
+    /** Ticket already started in a previous column — show تابع above. */
     continued: boolean;
-    /** Ticket continues in a later column — the next fragment shows يتبع. */
+    /** Ticket continues in a later column. */
     continues: boolean;
     /** Bottom يتبع fits in this column. */
     bottomMarker: boolean;
@@ -37,14 +40,6 @@ export interface PackedPage {
     columns: PackedColumn[];
 }
 
-interface OpenFragment {
-    ticketId: number;
-    blockKeys: string[];
-    continued: boolean;
-    continues: boolean;
-    bottomMarker: boolean;
-}
-
 export function emptyPackedPage(columnCount: number): PackedPage {
     return {
         columns: Array.from({ length: Math.max(1, columnCount) }, () => ({ fragments: [] })),
@@ -55,11 +50,15 @@ function pageHasFragments(page: PackedPage): boolean {
     return page.columns.some((column) => column.fragments.length > 0);
 }
 
-export function packTickets(
-    tickets: TicketMeasure[],
-    columnHeight: number,
-    columnCount: number,
-): PackedPage[] {
+function blockSum(ticket: TicketMeasure): number {
+    return ticket.blocks.reduce((sum, block) => sum + Math.max(0, block.height), 0);
+}
+
+function wholeHeight(ticket: TicketMeasure): number {
+    return CARD_CHROME_HEIGHT + blockSum(ticket);
+}
+
+export function packTickets(tickets: TicketMeasure[], columnHeight: number, columnCount: number): PackedPage[] {
     const columns = Math.max(1, Math.floor(columnCount));
     const height = Math.floor(columnHeight);
 
@@ -69,130 +68,154 @@ export function packTickets(
 
     const pages: PackedPage[] = [];
     let page = emptyPackedPage(columns);
-    let col = 0;
-    let used = 0;
-    let open: OpenFragment | null = null;
+    let used = new Array<number>(columns).fill(0);
 
-    const commit = (): void => {
-        if (!open) {
-            return;
+    const pushPage = (): void => {
+        if (pageHasFragments(page)) {
+            pages.push(page);
         }
-        page.columns[col].fragments.push(open);
-        open = null;
-    };
-
-    const advance = (): void => {
-        col += 1;
-        used = 0;
-        if (col < columns) {
-            return;
-        }
-        pages.push(page);
         page = emptyPackedPage(columns);
-        col = 0;
+        used = new Array<number>(columns).fill(0);
     };
 
-    const spill = (): void => {
-        if (open) {
-            open.continues = true;
-            if (height - used >= CONTINUATION_MARKER_HEIGHT) {
-                used += CONTINUATION_MARKER_HEIGHT;
-                open.bottomMarker = true;
-            }
-            commit();
-        }
-        advance();
+    const neededIn = (ticket: TicketMeasure, col: number): number => {
+        const gap = page.columns[col].fragments.length > 0 ? FRAGMENT_GAP : 0;
+        return gap + wholeHeight(ticket);
     };
 
-    const tryPlace = (ticketId: number, block: BlockMeasure, continued: boolean): 'placed' | 'retry-continued' | 'retry-fresh' => {
-        const adding = open?.ticketId === ticketId;
-        let overhead = 0;
-        if (!adding) {
-            if (page.columns[col].fragments.length > 0) {
-                overhead += FRAGMENT_GAP;
+    const bestColumn = (ticket: TicketMeasure): number | null => {
+        let best: number | null = null;
+        let bestSpace = -1;
+        for (let col = 0; col < columns; col += 1) {
+            const space = height - used[col];
+            if (neededIn(ticket, col) > space) {
+                continue;
             }
-            overhead += CARD_CHROME_HEIGHT;
-            if (continued) {
-                overhead += CONTINUATION_MARKER_HEIGHT;
+            if (space > bestSpace) {
+                best = col;
+                bestSpace = space;
             }
         }
+        return best;
+    };
 
-        const blockHeight = Math.max(0, block.height);
-        if (used + overhead + blockHeight <= height) {
-            if (!adding) {
-                used += overhead;
-                open = {
-                    ticketId,
-                    blockKeys: [],
-                    continued,
-                    continues: false,
-                    bottomMarker: false,
-                };
+    const placeWhole = (ticket: TicketMeasure, col: number): void => {
+        const gap = page.columns[col].fragments.length > 0 ? FRAGMENT_GAP : 0;
+        used[col] += gap + wholeHeight(ticket);
+        page.columns[col].fragments.push({
+            ticketId: ticket.id,
+            blockKeys: ticket.blocks.map((block) => block.key),
+            continued: false,
+            continues: false,
+            bottomMarker: false,
+        });
+    };
+
+    const firstEmptyColumn = (): number | null => {
+        for (let col = 0; col < columns; col += 1) {
+            if (used[col] === 0 && page.columns[col].fragments.length === 0) {
+                return col;
             }
-            open?.blockKeys.push(block.key);
-            used += blockHeight;
-            return 'placed';
+        }
+        return null;
+    };
+
+    const splitAcross = (ticket: TicketMeasure): void => {
+        let col = firstEmptyColumn();
+        if (col == null) {
+            pushPage();
+            col = 0;
         }
 
-        // Empty column and the block still does not fit: place it anyway so we
-        // cannot loop. The column clips the overflow; later blocks continue.
-        if (used === 0 && !adding) {
-            used += overhead;
-            open = {
-                ticketId,
-                blockKeys: [block.key],
+        let index = 0;
+        let continued = false;
+        let guard = 0;
+
+        while (index < ticket.blocks.length && guard < 200) {
+            guard += 1;
+            if (col >= columns) {
+                pushPage();
+                col = 0;
+            }
+            if (used[col] > 0) {
+                col += 1;
+                continue;
+            }
+
+            const fragment: PackedFragment = {
+                ticketId: ticket.id,
+                blockKeys: [],
                 continued,
                 continues: false,
                 bottomMarker: false,
             };
-            used += blockHeight;
-            return 'placed';
-        }
+            let cursor = CARD_CHROME_HEIGHT + (continued ? CONTINUATION_MARKER_HEIGHT : 0);
 
-        const midTicket = adding;
-        spill();
-        return midTicket ? 'retry-continued' : 'retry-fresh';
+            while (index < ticket.blocks.length) {
+                const block = ticket.blocks[index];
+                const blockHeight = Math.max(0, block.height);
+                const moreAfter = index < ticket.blocks.length - 1;
+                const reserve = moreAfter ? CONTINUATION_MARKER_HEIGHT : 0;
+                if (cursor + blockHeight + reserve <= height) {
+                    fragment.blockKeys.push(block.key);
+                    cursor += blockHeight;
+                    index += 1;
+                    continue;
+                }
+                if (fragment.blockKeys.length === 0) {
+                    fragment.blockKeys.push(block.key);
+                    cursor += blockHeight;
+                    index += 1;
+                }
+                break;
+            }
+
+            const more = index < ticket.blocks.length;
+            if (more) {
+                fragment.continues = true;
+                if (cursor + CONTINUATION_MARKER_HEIGHT <= height) {
+                    cursor += CONTINUATION_MARKER_HEIGHT;
+                    fragment.bottomMarker = true;
+                }
+            }
+
+            if (fragment.blockKeys.length > 0) {
+                page.columns[col].fragments.push(fragment);
+                used[col] = cursor;
+            }
+            if (more) {
+                col += 1;
+                continued = true;
+            }
+        }
     };
 
     for (const ticket of tickets) {
-        const current = open as OpenFragment | null;
-        if (current !== null && current.ticketId !== ticket.id) {
-            commit();
+        if (ticket.blocks.length === 0) {
+            continue;
         }
-
-        let continued = false;
-        for (const block of ticket.blocks) {
-            let guard = 0;
-            let placed = false;
-            while (!placed && guard < 80) {
-                guard += 1;
-                const result = tryPlace(ticket.id, block, continued);
-                if (result === 'placed') {
-                    placed = true;
-                } else if (result === 'retry-continued') {
-                    continued = true;
-                } else {
-                    continued = false;
-                }
+        if (wholeHeight(ticket) <= height) {
+            const col = bestColumn(ticket);
+            if (col != null) {
+                placeWhole(ticket, col);
+            } else {
+                pushPage();
+                placeWhole(ticket, 0);
             }
+            continue;
         }
+        splitAcross(ticket);
     }
 
-    if (open) {
-        commit();
-    }
     if (pageHasFragments(page) || pages.length === 0) {
         pages.push(page);
     }
-
     return pages;
 }
 
 export function pageOfTicket(pages: PackedPage[], ticketId: number): number {
     return pages.findIndex((page) =>
-        page.columns.some((column) =>
-            column.fragments.some((fragment) => fragment.ticketId === ticketId),
-        ),
+        page.columns.some((column) => column.fragments.some((fragment) => fragment.ticketId === ticketId)),
     );
 }
 
