@@ -12,6 +12,7 @@ use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\Product;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Services\Kitchen\KitchenTicketService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Illuminate\Database\Eloquent\Collection;
@@ -33,6 +34,7 @@ class OrderService
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
         private readonly OrderStockConversionService $orderStockConversionService,
+        private readonly KitchenTicketService $kitchenTicketService,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
@@ -112,7 +114,10 @@ class OrderService
 
             $itemDTOs = array_map(fn ($item) => OrderItemDTO::fromArray($item), $itemsData);
 
-            return $this->orderCreationService->updateOrderItems($order, $itemDTOs);
+            $order = $this->orderCreationService->updateOrderItems($order, $itemDTOs);
+            $this->kitchenTicketService->syncOrder($order);
+
+            return $order;
         });
     }
 
@@ -201,6 +206,7 @@ class OrderService
 
             // Remove stock items after successful completion
             $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
+            $this->kitchenTicketService->autoFinishForOrder($completedOrder);
 
             return $completedOrder;
         });
@@ -243,6 +249,8 @@ class OrderService
             if ($wasCompleted) {
                 $this->orderStockConversionService->addStockForCancelledOrder($order);
             }
+
+            $this->kitchenTicketService->cancelForOrder($order);
 
             // Fire event
             OrderCancelled::dispatch($order, $reason);
@@ -296,6 +304,7 @@ class OrderService
 
             // Recalculate totals as service charges might change
             $this->orderCalculationService->calculateOrderTotals($order);
+            $this->kitchenTicketService->rebroadcastForOrder($order);
 
             return $order;
         });
