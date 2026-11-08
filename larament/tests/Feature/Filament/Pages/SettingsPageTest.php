@@ -366,3 +366,162 @@ it('settings service can retrieve saved settings', function () {
     expect($settingsService->getCashierPrinterIp())->toBe('192.168.1.101');
     expect($settingsService->isCashierDiscountsAllowed())->toBeTrue();
 });
+
+// ===== KDS (شاشة المطبخ) Settings Tests =====
+it('has all KDS settings fields', function () {
+    livewire(Settings::class)
+        ->assertSchemaComponentExists(SettingKey::KDS_ITEM_TRACKING->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_REQUIRE_START->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in')
+        ->assertSchemaComponentExists(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery')
+        ->assertSchemaComponentExists(SettingKey::KDS_WARNING_PERCENT->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_RECALL_MINUTES->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_NEW_ORDER_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_CHANGE_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_CANCEL_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_SOUND_VOLUME->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_REMINDER_SECONDS->value);
+});
+
+it('loads KDS settings defaults', function () {
+    livewire(Settings::class)
+        ->assertSchemaStateSet([
+            SettingKey::KDS_ITEM_TRACKING->value => true,
+            SettingKey::KDS_REQUIRE_START->value => false,
+            SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => true,
+            SettingKey::KDS_DEFAULT_PREP_MINUTES->value => '10',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '',
+            SettingKey::KDS_WARNING_PERCENT->value => '75',
+            SettingKey::KDS_RECALL_MINUTES->value => '15',
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'chime',
+            SettingKey::KDS_CHANGE_SOUND->value => 'bell',
+            SettingKey::KDS_CANCEL_SOUND->value => 'alert',
+            SettingKey::KDS_SOUND_VOLUME->value => '80',
+            SettingKey::KDS_REMINDER_SECONDS->value => '30',
+        ]);
+});
+
+it('loads saved order-type targets into per-type fields', function () {
+    Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)
+        ->update(['value' => '{"dine_in":12,"web_delivery":20}']);
+
+    livewire(Settings::class)
+        ->assertSchemaStateSet([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '12',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '20',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.delivery' => '',
+        ]);
+});
+
+it('can save KDS toggles persisted as true/false strings', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ITEM_TRACKING->value => false,
+            SettingKey::KDS_REQUIRE_START->value => true,
+            SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => false,
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ITEM_TRACKING->value)->first()->value)
+        ->toBe('false');
+    expect(Setting::where('key', SettingKey::KDS_REQUIRE_START->value)->first()->value)
+        ->toBe('true');
+    expect(Setting::where('key', SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)->first()->value)
+        ->toBe('false');
+});
+
+it('can save KDS numeric values and sounds', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_DEFAULT_PREP_MINUTES->value => '20',
+            SettingKey::KDS_WARNING_PERCENT->value => '60',
+            SettingKey::KDS_RECALL_MINUTES->value => '45',
+            SettingKey::KDS_SOUND_VOLUME->value => '50',
+            SettingKey::KDS_REMINDER_SECONDS->value => '90',
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'beep',
+            SettingKey::KDS_CHANGE_SOUND->value => 'alert',
+            SettingKey::KDS_CANCEL_SOUND->value => 'none',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_DEFAULT_PREP_MINUTES->value)->first()->value)
+        ->toBe('20');
+    expect(Setting::where('key', SettingKey::KDS_WARNING_PERCENT->value)->first()->value)
+        ->toBe('60');
+    expect(Setting::where('key', SettingKey::KDS_RECALL_MINUTES->value)->first()->value)
+        ->toBe('45');
+    expect(Setting::where('key', SettingKey::KDS_SOUND_VOLUME->value)->first()->value)
+        ->toBe('50');
+    expect(Setting::where('key', SettingKey::KDS_REMINDER_SECONDS->value)->first()->value)
+        ->toBe('90');
+    expect(Setting::where('key', SettingKey::KDS_NEW_ORDER_SOUND->value)->first()->value)
+        ->toBe('beep');
+    expect(Setting::where('key', SettingKey::KDS_CHANGE_SOUND->value)->first()->value)
+        ->toBe('alert');
+    expect(Setting::where('key', SettingKey::KDS_CANCEL_SOUND->value)->first()->value)
+        ->toBe('none');
+});
+
+it('saves order-type targets as JSON and drops empty entries', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '12',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '20',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{"dine_in":12,"web_delivery":20}');
+});
+
+it('keeps empty order-type targets as an empty JSON object', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{}');
+});
+
+it('round-trips order-type targets through mount and save', function () {
+    Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)
+        ->update(['value' => '{"dine_in":12,"delivery":8}']);
+
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.delivery' => '25',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{"delivery":25}');
+});
+
+it('rejects an invalid warning percent', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_WARNING_PERCENT->value => '150',
+        ])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_WARNING_PERCENT->value]);
+});
+
+it('rejects an invalid sound value', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'fake_sound',
+        ])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_NEW_ORDER_SOUND->value]);
+});

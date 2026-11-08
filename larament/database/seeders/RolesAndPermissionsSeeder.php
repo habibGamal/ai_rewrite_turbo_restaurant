@@ -52,6 +52,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_printers' => 'إضافة طابعة',
                 'update_printers' => 'تعديل طابعة',
                 'delete_printers' => 'حذف طابعة',
+
+                'view_kitchen_stations' => 'عرض محطات المطبخ',
+                'create_kitchen_stations' => 'إضافة محطة مطبخ',
+                'update_kitchen_stations' => 'تعديل محطة مطبخ',
+                'delete_kitchen_stations' => 'حذف محطة مطبخ',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',

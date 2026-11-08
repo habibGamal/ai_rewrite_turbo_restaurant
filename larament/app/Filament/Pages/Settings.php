@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\KdsSound;
+use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Services\PrintService;
 use App\Services\SettingsService;
@@ -16,11 +18,13 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property \Filament\Schemas\Schema $form
@@ -67,12 +71,31 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                     SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
+                    SettingKey::KDS_ITEM_TRACKING->value,
+                    SettingKey::KDS_REQUIRE_START->value,
+                    SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
                     $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 } else {
                     $this->data[$key] = is_array($value) ? json_encode($value) : (string) $value;
                 }
             }
+        }
+
+        // Decode the stored kds_order_type_targets JSON object into one
+        // numeric state per order type so each input gets its own value.
+        $targets = [];
+        $storedTargets = $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] ?? '{}';
+        if (is_string($storedTargets)) {
+            $targets = json_decode($storedTargets, true) ?: [];
+        }
+
+        $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = [];
+        foreach (OrderType::cases() as $type) {
+            $minutes = $targets[$type->value] ?? null;
+            $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value][$type->value] = ($minutes === null || $minutes === '')
+                ? ''
+                : (string) $minutes;
         }
 
         $this->form->fill($this->data);
@@ -269,6 +292,105 @@ class Settings extends Page implements HasForms
                             ->helperText(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->helperText())
                             ->inline(false),
                     ]),
+
+                Section::make('شاشة المطبخ (KDS)')
+                    ->description('إعدادات نظام عرض المطبخ')
+                    ->icon('heroicon-m-tv')
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                Toggle::make(SettingKey::KDS_ITEM_TRACKING->value)
+                                    ->label(SettingKey::KDS_ITEM_TRACKING->label())
+                                    ->helperText(SettingKey::KDS_ITEM_TRACKING->helperText())
+                                    ->inline(false),
+
+                                Toggle::make(SettingKey::KDS_REQUIRE_START->value)
+                                    ->label(SettingKey::KDS_REQUIRE_START->label())
+                                    ->helperText(SettingKey::KDS_REQUIRE_START->helperText())
+                                    ->inline(false),
+
+                                Toggle::make(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
+                                    ->label(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->label())
+                                    ->helperText(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->helperText())
+                                    ->inline(false),
+                            ]),
+
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
+                                    ->label(SettingKey::KDS_DEFAULT_PREP_MINUTES->label())
+                                    ->helperText(SettingKey::KDS_DEFAULT_PREP_MINUTES->helperText())
+                                    ->numeric()
+                                    ->rules(SettingKey::KDS_DEFAULT_PREP_MINUTES->validationRules())
+                                    ->placeholder(SettingKey::KDS_DEFAULT_PREP_MINUTES->placeholder()),
+
+                                TextInput::make(SettingKey::KDS_WARNING_PERCENT->value)
+                                    ->label(SettingKey::KDS_WARNING_PERCENT->label())
+                                    ->helperText(SettingKey::KDS_WARNING_PERCENT->helperText())
+                                    ->numeric()
+                                    ->suffix('%')
+                                    ->rules(SettingKey::KDS_WARNING_PERCENT->validationRules())
+                                    ->placeholder(SettingKey::KDS_WARNING_PERCENT->placeholder()),
+
+                                TextInput::make(SettingKey::KDS_RECALL_MINUTES->value)
+                                    ->label(SettingKey::KDS_RECALL_MINUTES->label())
+                                    ->helperText(SettingKey::KDS_RECALL_MINUTES->helperText())
+                                    ->numeric()
+                                    ->rules(SettingKey::KDS_RECALL_MINUTES->validationRules())
+                                    ->placeholder(SettingKey::KDS_RECALL_MINUTES->placeholder()),
+
+                                TextInput::make(SettingKey::KDS_SOUND_VOLUME->value)
+                                    ->label(SettingKey::KDS_SOUND_VOLUME->label())
+                                    ->helperText(SettingKey::KDS_SOUND_VOLUME->helperText())
+                                    ->numeric()
+                                    ->rules(SettingKey::KDS_SOUND_VOLUME->validationRules())
+                                    ->placeholder(SettingKey::KDS_SOUND_VOLUME->placeholder()),
+
+                                TextInput::make(SettingKey::KDS_REMINDER_SECONDS->value)
+                                    ->label(SettingKey::KDS_REMINDER_SECONDS->label())
+                                    ->helperText(SettingKey::KDS_REMINDER_SECONDS->helperText())
+                                    ->numeric()
+                                    ->rules(SettingKey::KDS_REMINDER_SECONDS->validationRules())
+                                    ->placeholder(SettingKey::KDS_REMINDER_SECONDS->placeholder()),
+                            ]),
+
+                        Grid::make(2)
+                            ->schema([
+                                Select::make(SettingKey::KDS_NEW_ORDER_SOUND->value)
+                                    ->label(SettingKey::KDS_NEW_ORDER_SOUND->label())
+                                    ->helperText(SettingKey::KDS_NEW_ORDER_SOUND->helperText())
+                                    ->options($this->kdsSoundOptions())
+                                    ->rules(SettingKey::KDS_NEW_ORDER_SOUND->validationRules())
+                                    ->placeholder(SettingKey::KDS_NEW_ORDER_SOUND->placeholder()),
+
+                                Select::make(SettingKey::KDS_CHANGE_SOUND->value)
+                                    ->label(SettingKey::KDS_CHANGE_SOUND->label())
+                                    ->helperText(SettingKey::KDS_CHANGE_SOUND->helperText())
+                                    ->options($this->kdsSoundOptions())
+                                    ->rules(SettingKey::KDS_CHANGE_SOUND->validationRules())
+                                    ->placeholder(SettingKey::KDS_CHANGE_SOUND->placeholder()),
+
+                                Select::make(SettingKey::KDS_CANCEL_SOUND->value)
+                                    ->label(SettingKey::KDS_CANCEL_SOUND->label())
+                                    ->helperText(SettingKey::KDS_CANCEL_SOUND->helperText())
+                                    ->options($this->kdsSoundOptions())
+                                    ->rules(SettingKey::KDS_CANCEL_SOUND->validationRules())
+                                    ->placeholder(SettingKey::KDS_CANCEL_SOUND->placeholder()),
+                            ]),
+
+                        Fieldset::make('الوقت المستهدف حسب نوع الطلب (اختياري)')
+                            ->columns(3)
+                            ->schema(collect(OrderType::cases())
+                                ->map(fn (OrderType $type): TextInput => TextInput::make(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.'.$type->value)
+                                    ->label($type->getLabel())
+                                    ->helperText('يُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->maxValue(240)
+                                    ->placeholder('-')
+                                    ->nullable())
+                                ->all()),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -277,6 +399,23 @@ class Settings extends Page implements HasForms
     {
         try {
             $data = $this->form->getState();
+
+            // Encode the optional per-order-type minutes back into a JSON
+            // object string, dropping empty entries for order types
+            // that were not given a target.
+            $targets = [];
+            $targetsState = $data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] ?? [];
+            if (is_array($targetsState)) {
+                foreach (OrderType::cases() as $type) {
+                    $minutes = $targetsState[$type->value] ?? null;
+                    if ($minutes === null || (is_string($minutes) && trim($minutes) === '')) {
+                        continue;
+                    }
+
+                    $targets[$type->value] = (int) $minutes;
+                }
+            }
+            unset($data[SettingKey::KDS_ORDER_TYPE_TARGETS->value]);
 
             // Ensure all values are strings before saving
             $cleanData = [];
@@ -288,12 +427,19 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                     SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
+                    SettingKey::KDS_ITEM_TRACKING->value,
+                    SettingKey::KDS_REQUIRE_START->value,
+                    SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
                     $cleanData[$key] = $value ? 'true' : 'false';
                 } else {
                     $cleanData[$key] = is_array($value) ? json_encode($value) : (string) $value;
                 }
             }
+
+            $cleanData[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = count($targets) > 0
+                ? json_encode($targets)
+                : '{}';
 
             $settingsService = app(SettingsService::class);
             $settingsService->setMultiple($cleanData);
@@ -305,6 +451,9 @@ class Settings extends Page implements HasForms
                 ->iconColor('success')
                 ->send();
 
+        } catch (ValidationException $e) {
+            // Let Filament/Livewire show the validation errors
+            throw $e;
         } catch (Exception $e) {
             logger()->error('Error saving settings: '.$e->getMessage());
             Notification::make()
@@ -364,6 +513,18 @@ class Settings extends Page implements HasForms
                 ->iconColor('danger')
                 ->send();
         }
+    }
+
+    /**
+     * Options for the KDS sound selects: sound value => Arabic label.
+     *
+     * @return array<string, string>
+     */
+    private function kdsSoundOptions(): array
+    {
+        return collect(KdsSound::cases())
+            ->mapWithKeys(fn (KdsSound $sound): array => [$sound->value => $sound->getLabel()])
+            ->all();
     }
 
     protected function getFormActions(): array

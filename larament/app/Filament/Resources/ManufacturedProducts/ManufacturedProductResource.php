@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ManufacturedProducts;
 
 use App\Enums\ProductType;
 use App\Filament\Actions\Forms\ProductComponentsImporterAction;
+use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Components\Forms\ProductComponentSelector;
 use App\Models\Category;
 use App\Models\Product;
@@ -70,7 +71,7 @@ class ManufacturedProductResource extends Resource
                             ->placeholder('اختياري'),
                         Select::make('category_id')
                             ->label('الفئة')
-                            ->options(Category::all()->pluck('name', 'id'))
+                            ->options(Category::query()->pluck('name', 'id'))
                             ->required()
                             ->searchable(),
                         TextInput::make('price')
@@ -126,6 +127,8 @@ class ManufacturedProductResource extends Resource
                             ->default(false),
                     ])
                     ->columns(3),
+
+                ...KitchenDisplayFields::components(),
 
                 Section::make('مكونات المنتج (الوصفة)')
                     ->schema([
@@ -296,7 +299,7 @@ class ManufacturedProductResource extends Resource
             ->filters([
                 SelectFilter::make('category_id')
                     ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id')),
+                    ->options(Category::query()->pluck('name', 'id')),
                 SelectFilter::make('printers')
                     ->label('الطابعة')
                     ->relationship('printers', 'name')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ConsumableProducts;
 
 use App\Enums\ProductType;
+use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
@@ -66,7 +67,7 @@ class ConsumableProductResource extends Resource
                     ->placeholder('اختياري'),
                 Select::make('category_id')
                     ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id'))
+                    ->options(Category::query()->pluck('name', 'id'))
                     ->required()
                     ->searchable(),
                 TextInput::make('price')
@@ -120,6 +121,7 @@ class ConsumableProductResource extends Resource
                 Toggle::make('legacy')
                     ->label('غير نشط')
                     ->default(false),
+                ...KitchenDisplayFields::components(),
             ]);
     }
 
@@ -197,7 +199,7 @@ class ConsumableProductResource extends Resource
             ->filters([
                 SelectFilter::make('category_id')
                     ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id')),
+                    ->options(Category::query()->pluck('name', 'id')),
                 SelectFilter::make('printers')
                     ->label('الطابعة')
                     ->relationship('printers', 'name')
