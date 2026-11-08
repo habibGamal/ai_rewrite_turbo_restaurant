@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use Closure;
+
 enum SettingKey: string
 {
     case WEBSITE_URL = 'website_url';
@@ -20,6 +22,18 @@ enum SettingKey: string
     case ALLOW_CASHIER_ITEM_CHANGES = 'allow_cashier_item_changes';
     case ALLOW_WEB_ORDERS_SHIFT_TRANSFER = 'allow_web_orders_shift_transfer';
     case UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
+    case KDS_ITEM_TRACKING = 'kds_item_tracking';
+    case KDS_REQUIRE_START = 'kds_require_start';
+    case KDS_DEFAULT_PREP_MINUTES = 'kds_default_prep_minutes';
+    case KDS_ORDER_TYPE_TARGETS = 'kds_order_type_targets';
+    case KDS_WARNING_PERCENT = 'kds_warning_percent';
+    case KDS_AUTO_FINISH_ON_COMPLETE = 'kds_auto_finish_on_complete';
+    case KDS_RECALL_MINUTES = 'kds_recall_minutes';
+    case KDS_NEW_ORDER_SOUND = 'kds_new_order_sound';
+    case KDS_CHANGE_SOUND = 'kds_change_sound';
+    case KDS_CANCEL_SOUND = 'kds_cancel_sound';
+    case KDS_SOUND_VOLUME = 'kds_sound_volume';
+    case KDS_REMINDER_SECONDS = 'kds_reminder_seconds';
 
     /**
      * Get default value for this setting
@@ -43,6 +57,18 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => 'false',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'false',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'true',
+            self::KDS_ITEM_TRACKING => 'true',
+            self::KDS_REQUIRE_START => 'false',
+            self::KDS_DEFAULT_PREP_MINUTES => '10',
+            self::KDS_ORDER_TYPE_TARGETS => '{}',
+            self::KDS_WARNING_PERCENT => '75',
+            self::KDS_AUTO_FINISH_ON_COMPLETE => 'true',
+            self::KDS_RECALL_MINUTES => '15',
+            self::KDS_NEW_ORDER_SOUND => 'chime',
+            self::KDS_CHANGE_SOUND => 'bell',
+            self::KDS_CANCEL_SOUND => 'alert',
+            self::KDS_SOUND_VOLUME => '80',
+            self::KDS_REMINDER_SECONDS => '30',
         };
     }
 
@@ -68,6 +94,20 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => ['required', 'boolean'],
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => ['required', 'boolean'],
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => ['required', 'boolean'],
+            // Settings are stored as strings. Laravel's `boolean` rule rejects
+            // "true"/"false", so these accept the stored form and real booleans.
+            self::KDS_ITEM_TRACKING => self::storedBooleanRules(),
+            self::KDS_REQUIRE_START => self::storedBooleanRules(),
+            self::KDS_DEFAULT_PREP_MINUTES => ['required', 'integer', 'min:1', 'max:240'],
+            self::KDS_ORDER_TYPE_TARGETS => ['nullable', 'json'],
+            self::KDS_WARNING_PERCENT => ['required', 'integer', 'min:1', 'max:100'],
+            self::KDS_AUTO_FINISH_ON_COMPLETE => self::storedBooleanRules(),
+            self::KDS_RECALL_MINUTES => ['required', 'integer', 'min:1', 'max:240'],
+            self::KDS_NEW_ORDER_SOUND => self::kdsSoundRules(),
+            self::KDS_CHANGE_SOUND => self::kdsSoundRules(),
+            self::KDS_CANCEL_SOUND => self::kdsSoundRules(),
+            self::KDS_SOUND_VOLUME => ['required', 'integer', 'min:0', 'max:100'],
+            self::KDS_REMINDER_SECONDS => ['required', 'integer', 'min:0', 'max:600'],
         };
     }
 
@@ -93,6 +133,18 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => 'السماح للكاشير بتعديل الطلبات المحفوظة',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'نقل طلبات الويب المفتوحة إلى الوردية التالية',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة المنتجات من فواتير الشراء',
+            self::KDS_ITEM_TRACKING => 'تتبع الأصناف بشكل منفصل',
+            self::KDS_REQUIRE_START => 'تفعيل خطوة بدء التحضير',
+            self::KDS_DEFAULT_PREP_MINUTES => 'وقت التحضير الافتراضي (دقائق)',
+            self::KDS_ORDER_TYPE_TARGETS => 'الوقت المستهدف لكل نوع طلب',
+            self::KDS_WARNING_PERCENT => 'نسبة التحذير من الوقت المستهدف',
+            self::KDS_AUTO_FINISH_ON_COMPLETE => 'إنهاء تذكرة المطبخ عند إنهاء الطلب',
+            self::KDS_RECALL_MINUTES => 'مدة استرجاع التذاكر المنتهية',
+            self::KDS_NEW_ORDER_SOUND => 'صوت الطلب الجديد',
+            self::KDS_CHANGE_SOUND => 'صوت تعديل الطلب',
+            self::KDS_CANCEL_SOUND => 'صوت إلغاء الطلب',
+            self::KDS_SOUND_VOLUME => 'مستوى الصوت',
+            self::KDS_REMINDER_SECONDS => 'تكرار التنبيه (ثواني، 0 = إيقاف)',
         };
     }
 
@@ -118,6 +170,18 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => 'يسمح للكاشير بتعديل عناصر الطلبات المحفوظة مسبقاً',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'عند تفعيل هذا الخيار، طلبات الويب (دليفري وتيك أواي) المفتوحة سيتم نقلها تلقائياً للوردية الجديدة عند إغلاق الوردية الحالية',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.',
+            self::KDS_ITEM_TRACKING => 'عند التفعيل يستطيع الطاهي تعليم كل صنف كمنتهٍ بمفرده. عند الإيقاف يُنهى الطلب كاملاً فقط، وتأخذ الأصناف وقت التذكرة.',
+            self::KDS_REQUIRE_START => 'يضيف خطوة «بدء» قبل إنهاء الصنف، ويُحسب وقت التحضير من لحظة البدء بدل وقت وصول الصنف للمطبخ.',
+            self::KDS_DEFAULT_PREP_MINUTES => 'الوقت المستهدف المستخدم إذا لم يُحدد وقت للصنف أو للتصنيف أو لنوع الطلب.',
+            self::KDS_ORDER_TYPE_TARGETS => 'كائن JSON يربط نوع الطلب بالدقائق المستهدفة، ويُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً. اتركه {} إذا لم ترد تخصيصاً.',
+            self::KDS_WARNING_PERCENT => 'تتحول بطاقة الطلب إلى حالة تحذير عند بلوغ هذه النسبة من الوقت المستهدف، وإلى متأخر بعد تجاوز الوقت.',
+            self::KDS_AUTO_FINISH_ON_COMPLETE => 'عند إكمال الطلب أو تحصيله تُنهى تذكرة المطبخ تلقائياً، وتُعلَّم الأصناف بأنها أُنهيت تلقائياً ولا تُحتسب في إحصاءات وقت التحضير.',
+            self::KDS_RECALL_MINUTES => 'عدد الدقائق التي تبقى فيها التذاكر المنتهية ظاهرة وقابلة للاسترجاع أو للتراجع عن إنهاء صنف.',
+            self::KDS_NEW_ORDER_SOUND => 'النغمة التي تُشغَّل عند وصول طلب جديد إلى شاشة المطبخ. تُولَّد النغمات في المتصفح دون ملفات صوت.',
+            self::KDS_CHANGE_SOUND => 'النغمة التي تُشغَّل عند تعديل أصناف طلب موجود على شاشة المطبخ.',
+            self::KDS_CANCEL_SOUND => 'النغمة التي تُشغَّل عند إلغاء طلب معروض على شاشة المطبخ.',
+            self::KDS_SOUND_VOLUME => 'مستوى صوت تنبيهات شاشة المطبخ من 0 (صامت) إلى 100.',
+            self::KDS_REMINDER_SECONDS => 'يعيد تشغيل التنبيه طالما توجد تذاكر جديدة أو معدّلة لم يطّلع عليها المطبخ. ضع 0 لإيقاف التكرار.',
         };
     }
 
@@ -143,6 +207,18 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => 'تفعيل',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'تفعيل',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تفعيل',
+            self::KDS_ITEM_TRACKING => 'تفعيل',
+            self::KDS_REQUIRE_START => 'تفعيل',
+            self::KDS_DEFAULT_PREP_MINUTES => '10',
+            self::KDS_ORDER_TYPE_TARGETS => '{}',
+            self::KDS_WARNING_PERCENT => '75',
+            self::KDS_AUTO_FINISH_ON_COMPLETE => 'تفعيل',
+            self::KDS_RECALL_MINUTES => '15',
+            self::KDS_NEW_ORDER_SOUND => 'chime',
+            self::KDS_CHANGE_SOUND => 'bell',
+            self::KDS_CANCEL_SOUND => 'alert',
+            self::KDS_SOUND_VOLUME => '80',
+            self::KDS_REMINDER_SECONDS => '30',
         };
     }
 
@@ -168,6 +244,68 @@ enum SettingKey: string
             self::ALLOW_CASHIER_ITEM_CHANGES => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
+            self::KDS_ITEM_TRACKING, self::KDS_REQUIRE_START, self::KDS_AUTO_FINISH_ON_COMPLETE => self::isStoredBoolean($value),
+            self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
+            self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
+            self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
+            self::KDS_REMINDER_SECONDS => self::isIntInRange($value, 0, 600),
+            self::KDS_ORDER_TYPE_TARGETS => self::isJsonValue($value),
+            self::KDS_NEW_ORDER_SOUND, self::KDS_CHANGE_SOUND, self::KDS_CANCEL_SOUND => is_string($value) && KdsSound::tryFrom($value) !== null,
         };
+    }
+
+    /**
+     * Boolean settings are stored as the strings "true" and "false".
+     * Laravel's boolean rule rejects those strings, so accept the stored form too.
+     *
+     * @return array<int, string|Closure(string, mixed, Closure): void>
+     */
+    private static function storedBooleanRules(): array
+    {
+        return [
+            'required',
+            function (string $attribute, mixed $value, Closure $fail): void {
+                if (! self::isStoredBoolean($value)) {
+                    $fail(__('validation.boolean', ['attribute' => $attribute]));
+                }
+            },
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function kdsSoundRules(): array
+    {
+        $sounds = implode(',', array_map(fn (KdsSound $sound): string => $sound->value, KdsSound::cases()));
+
+        return ['required', 'in:'.$sounds];
+    }
+
+    private static function isStoredBoolean(mixed $value): bool
+    {
+        return is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0], true);
+    }
+
+    private static function isIntInRange(mixed $value, int $min, int $max): bool
+    {
+        $int = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $int !== false && $int >= $min && $int <= $max;
+    }
+
+    private static function isJsonValue(mixed $value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (! is_string($value)) {
+            return false;
+        }
+
+        json_decode($value);
+
+        return json_last_error() === JSON_ERROR_NONE;
     }
 }

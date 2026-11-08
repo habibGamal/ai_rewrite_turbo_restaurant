@@ -28,10 +28,15 @@ class Product extends Model
         'type',
         'unit',
         'legacy',
+        'kitchen_station_id',
+        'show_on_kds',
+        'prep_minutes',
     ];
 
     protected $casts = [
         'type' => ProductType::class,
+        'show_on_kds' => 'boolean',
+        'prep_minutes' => 'integer',
     ];
 
     protected $appends = [
@@ -55,6 +60,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function kitchenStation(): BelongsTo
+    {
+        return $this->belongsTo(KitchenStation::class);
     }
 
     public function printers(): BelongsToMany
