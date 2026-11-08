@@ -71,7 +71,7 @@ Four things land on the same ordering flow:
 **`OrderRepository`** (98 lines) is a fine persistence wrapper, except:
 
 - `getNextOrderNumber()` holds a web behavior rule.
-- `getNextOrderNumber()` reads max + 1 without a lock. The unique `(shift_id, order_number)` index turns two concurrent creates into an exception. The `while (exists)` loop is a symptom of this.
+- `getNextOrderNumber()` reads max + 1 without a lock. The unique `(shift_id, order_number)` index turns two concurrent creates into an exception.
 - `getProcessingOrders()` and `getOrdersWithPaymentStatus()` are unused. In `OrderItemRepository`, `createForOrder()` and `getOrderItems()` are unused.
 - `OrderRepositoryInterface`, `OrderItemRepositoryInterface`, and `PaymentRepositoryInterface` each have exactly one implementation. They are bound in `OrderServiceProvider` and never mocked in tests.
 
@@ -159,7 +159,7 @@ The rules match today's behavior and are now explicit:
 ### Repositories
 
 - Delete the three `Contracts/*RepositoryInterface` files and the `OrderServiceProvider` bindings. Type-hint the concrete classes.
-- `getNextOrderNumber(int $shiftId, array $excludedCodes)` runs inside the create transaction after `Shift::whereKey($shiftId)->lockForUpdate()`. Then max + 1 is safe and the `while` loop goes. Until Phase A, the caller passes the two web codes. From Phase A, it passes `$catalog->codesWhere(fn ($b) => ! $b->usesPosOrderNumber())`. The repository does not import `OrderType` or the catalog.
+- `getNextOrderNumber(int $shiftId, array $excludedCodes)` runs inside the create transaction after `Shift::whereKey($shiftId)->lockForUpdate()`. Then max + 1 is safe. The `while (exists)` loop stays: web orders carry the website's own number in the same shift, and the loop skips numbers they already took. Until Phase A, the caller passes the two web codes. From Phase A, it passes `$catalog->codesWhere(fn ($b) => ! $b->usesPosOrderNumber())`. The repository does not import `OrderType` or the catalog.
 - Delete `getProcessingOrders()`, `getOrdersWithPaymentStatus()`, `OrderItemRepository::createForOrder()`, and `getOrderItems()`.
 - `update(Order, array)` stays an untyped bag. Do not invent a typed method per column.
 
