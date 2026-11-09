@@ -111,6 +111,12 @@ class CategoryPerformanceWidget extends BaseWidget
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getCategoryPerformance($startDate, $endDate, $shiftIds);
+        return $this->productsReportService->getCategoryPerformance(
+            $startDate,
+            $endDate,
+            $shiftIds,
+            ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null),
+            ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null),
+        );
     }
 }

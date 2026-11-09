@@ -117,7 +117,13 @@ class TopProductsByProfitWidget extends ChartWidget
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
         return $this->productsReportService
-            ->getProductsSalesPerformanceQuery($startDate, $endDate, $shiftIds)
+            ->getProductsSalesPerformanceQuery(
+                $startDate,
+                $endDate,
+                $shiftIds,
+                ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null),
+                ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null),
+            )
             ->orderBy('total_profit', 'desc')
             ->limit(10)
             ->get();

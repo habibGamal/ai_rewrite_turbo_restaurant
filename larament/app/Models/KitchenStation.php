@@ -78,7 +78,18 @@ class KitchenStation extends Model
                                     $sub->selectRaw('1')
                                         ->from('categories')
                                         ->whereColumn('categories.id', 'products.category_id')
-                                        ->whereColumn('categories.kitchen_station_id', 'kitchen_stations.id');
+                                        ->where(function ($station) {
+                                            $station->whereColumn('categories.kitchen_station_id', 'kitchen_stations.id')
+                                                ->orWhere(function ($inherited) {
+                                                    $inherited->whereNull('categories.kitchen_station_id')
+                                                        ->whereExists(function ($parent) {
+                                                            $parent->selectRaw('1')
+                                                                ->from('categories as parent_categories')
+                                                                ->whereColumn('parent_categories.id', 'categories.parent_id')
+                                                                ->whereColumn('parent_categories.kitchen_station_id', 'kitchen_stations.id');
+                                                        });
+                                                });
+                                        });
                                 });
                         });
                 }),
@@ -124,7 +135,13 @@ class KitchenStation extends Model
                 $query->where('kitchen_station_id', $this->id)
                     ->orWhere(function (Builder $q) {
                         $q->whereNull('kitchen_station_id')
-                            ->whereHas('category', fn (Builder $catQuery) => $catQuery->where('kitchen_station_id', $this->id));
+                            ->whereHas('category', function (Builder $catQuery) {
+                                $catQuery->where('kitchen_station_id', $this->id)
+                                    ->orWhere(function (Builder $inherited) {
+                                        $inherited->whereNull('kitchen_station_id')
+                                            ->whereHas('parent', fn (Builder $parent) => $parent->where('kitchen_station_id', $this->id));
+                                    });
+                            });
                     });
             })
             ->count();

@@ -38,9 +38,19 @@ class WebOrderController extends Controller
     {
         $order->load(['customer', 'driver', 'items.product', 'payments']);
 
-        $categories = Category::with(['products' => function ($query) {
-            $query->where('type', 'manufactured');
-        }])->get();
+        $categories = Category::with([
+            'products' => function ($query) {
+                $query->where('type', 'manufactured');
+            },
+            'blockedOrderTypes',
+            'parent.blockedOrderTypes',
+        ])->get()
+            ->filter(fn (Category $category): bool => ! $category->isBlockedFor((string) $order->type))
+            ->each(function (Category $category): void {
+                $category->unsetRelation('blockedOrderTypes');
+                $category->unsetRelation('parent');
+            })
+            ->values();
 
         // Get all drivers for the dropdown
         $drivers = Driver::orderBy('name')->get();

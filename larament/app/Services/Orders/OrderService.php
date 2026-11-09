@@ -44,6 +44,7 @@ class OrderService
         private readonly OrderItemChangeService $orderItemChangeService,
         private readonly OrderTypeCatalog $catalog,
         private readonly ExternalSellerSettlementService $sellerSettlements,
+        private readonly OrderCategoryBlock $categoryBlock,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
@@ -69,6 +70,7 @@ class OrderService
     public function updateOrderItems(int $orderId, array $itemsData): Order
     {
         return $this->locked($orderId, 'لا يمكن تعديل الطلب في هذه المرحلة', function (Order $order) use ($itemsData) {
+            $this->assertNewItemsAllowed($order, $itemsData);
             $oldItems = $this->itemLines($order);
 
             $this->orderCalculationService->clearOrderDiscountForItemDiscounts($order, $itemsData);
@@ -291,6 +293,24 @@ class OrderService
 
             return $order;
         });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $itemsData
+     */
+    private function assertNewItemsAllowed(Order $order, array $itemsData): void
+    {
+        $existingIds = $order->items()->pluck('product_id')->map(fn (mixed $id): int => (int) $id)->all();
+        $newIds = collect($itemsData)
+            ->pluck('product_id')
+            ->filter(fn (mixed $id): bool => $id !== null && $id !== '')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->reject(fn (int $id): bool => in_array($id, $existingIds, true))
+            ->values()
+            ->all();
+
+        $this->categoryBlock->assertCanAdd((string) $order->type, $newIds);
     }
 
     /**

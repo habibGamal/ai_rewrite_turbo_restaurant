@@ -95,7 +95,7 @@ class ApiController extends Controller
      */
     public function allProductsRefsMaster()
     {
-        $categories = Category::select(['id', 'name'])
+        $categories = Category::select(['id', 'name', 'parent_id'])
             ->with(['products' => function ($query) {
                 $query->select(['id', 'name', 'product_ref', 'type', 'category_id']);
             }])
@@ -121,7 +121,7 @@ class ApiController extends Controller
      */
     public function allProductsPricesMaster()
     {
-        $categories = Category::select(['id', 'name'])
+        $categories = Category::select(['id', 'name', 'parent_id'])
             ->with(['products' => function ($query) {
                 $query->select(['id', 'name', 'product_ref', 'price', 'cost', 'type', 'category_id']);
             }])
@@ -135,13 +135,13 @@ class ApiController extends Controller
      */
     public function allProductsRecipesMaster()
     {
-        $categories = Category::select(['id', 'name'])
+        $categories = Category::select(['id', 'name', 'parent_id'])
             ->with(['products' => function ($query) {
                 $query->select(['id', 'name', 'product_ref', 'type', 'category_id'])
                     ->where('type', ProductType::Manufactured)
                     ->with(['components' => function ($subQuery) {
                         $subQuery->select(['products.id', 'products.name', 'products.product_ref', 'products.type'])
-                            ->with('category:id,name');
+                            ->with('category:id,name,parent_id');
                     }]);
             }])
             ->get()
@@ -170,6 +170,7 @@ class ApiController extends Controller
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
+                    'parent_id' => $category->parent_id,
                     'products' => $products,
                 ];
             });

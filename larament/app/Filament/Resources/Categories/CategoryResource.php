@@ -7,6 +7,7 @@ use App\Filament\Resources\Categories\Pages\EditCategory;
 use App\Filament\Resources\Categories\Pages\ListCategories;
 use App\Filament\Resources\Categories\Pages\ViewCategory;
 use App\Models\Category;
+use Closure;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -51,6 +52,39 @@ class CategoryResource extends Resource
                     ->required()
                     ->maxLength(255),
 
+                Select::make('parent_id')
+                    ->label('التصنيف الرئيسي')
+                    ->placeholder('تصنيف رئيسي')
+                    ->options(fn (?Category $record): array => Category::query()
+                        ->whereNull('parent_id')
+                        ->when($record, fn (Builder $query) => $query->whereKeyNot($record->getKey()))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->disabled(fn (?Category $record): bool => $record !== null && $record->children()->exists())
+                    ->helperText('اتركه فارغاً ليبقى تصنيفاً رئيسياً. التصنيف الفرعي لا يمكن أن يكون له تصنيف فرعي.')
+                    ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+
+                        $parent = Category::query()->find($value);
+                        if (! $parent instanceof Category || $parent->parent_id !== null) {
+                            $fail('لا يمكن إنشاء أكثر من مستويين للتصنيفات.');
+                        }
+                    }),
+
+                Select::make('blockedOrderTypes')
+                    ->label('أنواع الطلبات المحظورة')
+                    ->relationship('blockedOrderTypes', 'label')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->helperText('قائمة حظر. حظر التصنيف الرئيسي يسري على تصنيفاته الفرعية، والفرعي يمكنه إضافة حظر خاص به.'),
+
                 Section::make('شاشة المطبخ')
                     ->description('توجيه أصناف هذه الفئة داخل شاشة المطبخ')
                     ->icon('heroicon-m-tv')
@@ -91,6 +125,13 @@ class CategoryResource extends Resource
                     ->label('اسم الفئة')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('parent.name')
+                    ->label('التصنيف الرئيسي')
+                    ->placeholder('رئيسي'),
+                TextColumn::make('blockedOrderTypes.label')
+                    ->label('أنواع محظورة')
+                    ->badge()
+                    ->placeholder('—'),
                 TextColumn::make('products_count')
                     ->label('عدد المنتجات')
                     ->counts('products')
@@ -123,6 +164,11 @@ class CategoryResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['parent', 'blockedOrderTypes']);
     }
 
     public static function getPages(): array

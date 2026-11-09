@@ -16,7 +16,10 @@ export type PaymentStatus = 'pending' | 'partial_paid' | 'full_paid';
 export interface Category {
     id: number;
     name: string;
+    parent_id?: number | null;
+    blocked_order_type_codes?: string[];
     products: Product[];
+    children?: Category[];
 }
 
 export interface Product {
