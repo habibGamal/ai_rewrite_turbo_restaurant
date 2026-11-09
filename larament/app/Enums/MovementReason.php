@@ -16,12 +16,22 @@ enum MovementReason: string implements HasColor, HasIcon, HasLabel
     case STOCKTAKING = 'stocktaking';
     case ADJUSTMENT = 'adjustment';
     case TRANSFER = 'transfer';
+    case TRANSFER_IN = 'transfer_in';
+    case TRANSFER_OUT = 'transfer_out';
+    case MANUFACTURING_IN = 'manufacturing_in';
+    case MANUFACTURING_OUT = 'manufacturing_out';
+    case STOCK_ISSUE = 'stock_issue';
     case INITIAL_STOCK = 'initial_stock';
     case MANUAL = 'manual';
 
     public function label(): string
     {
         return match ($this) {
+            self::TRANSFER_IN => 'تحويل وارد',
+            self::TRANSFER_OUT => 'تحويل صادر',
+            self::MANUFACTURING_IN => 'تصنيع وارد',
+            self::MANUFACTURING_OUT => 'تصنيع صادر',
+            self::STOCK_ISSUE => 'صرف',
             self::PURCHASE => 'مشتريات',
             self::PURCHASE_RETURN => 'مرتجع مشتريات',
             self::ORDER => 'طلب',
@@ -43,6 +53,9 @@ enum MovementReason: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string
     {
         return match ($this) {
+            self::TRANSFER_IN, self::MANUFACTURING_IN => 'success',
+            self::TRANSFER_OUT, self::MANUFACTURING_OUT => 'warning',
+            self::STOCK_ISSUE => 'danger',
             self::PURCHASE => 'success',
             self::PURCHASE_RETURN => 'danger',
             self::ORDER => 'danger',
@@ -59,6 +72,10 @@ enum MovementReason: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): string
     {
         return match ($this) {
+            self::TRANSFER_IN => 'heroicon-o-arrow-down-tray',
+            self::TRANSFER_OUT => 'heroicon-o-arrow-up-tray',
+            self::MANUFACTURING_IN, self::MANUFACTURING_OUT => 'heroicon-o-cog-6-tooth',
+            self::STOCK_ISSUE => 'heroicon-o-arrow-right-start-on-rectangle',
             self::PURCHASE => 'heroicon-o-shopping-cart',
             self::PURCHASE_RETURN => 'heroicon-o-arrow-uturn-left',
             self::ORDER => 'heroicon-o-receipt-refund',
@@ -75,6 +92,8 @@ enum MovementReason: string implements HasColor, HasIcon, HasLabel
     public function isIncoming(): bool
     {
         return in_array($this, [
+            self::TRANSFER_IN,
+            self::MANUFACTURING_IN,
             self::PURCHASE,
             self::ORDER_RETURN,
             self::INITIAL_STOCK,
@@ -85,6 +104,9 @@ enum MovementReason: string implements HasColor, HasIcon, HasLabel
     public function isOutgoing(): bool
     {
         return in_array($this, [
+            self::TRANSFER_OUT,
+            self::MANUFACTURING_OUT,
+            self::STOCK_ISSUE,
             self::PURCHASE_RETURN,
             self::ORDER,
             self::WASTE,

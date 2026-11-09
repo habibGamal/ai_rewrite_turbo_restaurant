@@ -362,7 +362,7 @@ describe('OrderStockConversionService', function () {
             $this->stockService->shouldReceive('removeStock')
                 ->once()
                 ->with($expectedStockItems, MovementReason::ORDER, $order)
-                ->andReturn(true);
+                ->andReturn(collect([new \App\Models\InventoryItemMovement]));
 
             $result = $this->orderStockConversionService->removeStockForCompletedOrder($order);
 
@@ -453,7 +453,7 @@ describe('OrderStockConversionService', function () {
             $this->stockService->shouldReceive('addStock')
                 ->once()
                 ->with($expectedStockItems, MovementReason::ORDER_RETURN, $order)
-                ->andReturn(true);
+                ->andReturn(collect([new \App\Models\InventoryItemMovement]));
 
             $result = $this->orderStockConversionService->addStockForCancelledOrder($order);
 

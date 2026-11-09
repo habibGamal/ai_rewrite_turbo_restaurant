@@ -15,6 +15,9 @@ readonly class StockMovementDTO
         public MovementReason $reason,
         public mixed $referenceable = null,
         public ?InventoryItem $existingInventoryItem = null,
+        public int $warehouseId = 0,
+        public float $unitCost = 0,
+        public ?int $userId = null,
     ) {}
 
     public function isNewInventoryItem(): bool

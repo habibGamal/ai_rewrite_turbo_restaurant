@@ -79,6 +79,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'update_return_purchase_invoices' => 'تعديل مرتجع مشتريات',
                 'delete_return_purchase_invoices' => 'حذف مرتجع مشتريات',
 
+                'view_warehouses' => 'عرض المخازن',
+                'create_warehouses' => 'إضافة مخزن',
+                'update_warehouses' => 'تعديل مخزن',
+                'delete_warehouses' => 'حذف مخزن',
+
                 'view_inventory_items' => 'عرض عناصر المخزون',
                 'create_inventory_items' => 'إضافة عنصر مخزون',
                 'update_inventory_items' => 'تعديل عنصر مخزون',

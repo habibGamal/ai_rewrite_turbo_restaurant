@@ -124,7 +124,7 @@ class OrderStockConversionService
             $stockItems,
             MovementReason::ORDER,
             $order
-        );
+        )->isNotEmpty();
     }
 
     /**
@@ -142,6 +142,6 @@ class OrderStockConversionService
             $stockItems,
             MovementReason::ORDER_RETURN,
             $order
-        );
+        )->isNotEmpty();
     }
 }

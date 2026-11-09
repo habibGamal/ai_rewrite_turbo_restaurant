@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\InventoryItemMovementDaily;
 use App\Models\Product;
+use App\Models\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,6 +24,12 @@ class InventoryItemMovementDailyFactory extends Factory
     {
         return [
             'product_id' => Product::factory(),
+            'warehouse_id' => fn () => Warehouse::default()->id,
+            'transfer_in_quantity' => 0,
+            'transfer_out_quantity' => 0,
+            'manufacturing_in_quantity' => 0,
+            'manufacturing_out_quantity' => 0,
+            'issue_quantity' => 0,
             'date' => $this->faker->dateTimeBetween('-30 days', 'now')->format('Y-m-d'),
             'start_quantity' => $this->faker->randomFloat(2, 0, 1000),
             'incoming_quantity' => $this->faker->randomFloat(2, 0, 500),
