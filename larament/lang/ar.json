@@ -118,5 +118,10 @@
     "تم فك ربط المنصة بنجاح": "Platform disconnected successfully",
     "اكتملت المزامنة": "Sync completed",
     "تمت إعادة جدولة السجلات الفاشلة": "Failed records rescheduled",
-    "تمت جدولة إعادة الإرسال": "Resend scheduled"
+    "تمت جدولة إعادة الإرسال": "Resend scheduled",
+    "وصفات التصنيع": "Manufacturing Recipes",
+    "وصفة تصنيع": "Manufacturing Recipe",
+    "المخرج الرئيسي": "Main Output",
+    "المدخلات": "Inputs",
+    "المخرجات": "Outputs"
 }

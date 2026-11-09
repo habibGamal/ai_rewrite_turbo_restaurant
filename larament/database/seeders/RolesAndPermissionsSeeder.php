@@ -98,6 +98,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_wastes' => 'تسجيل هالك',
                 'update_wastes' => 'تعديل هالك',
                 'delete_wastes' => 'حذف هالك',
+
+                'view_manufacturing_recipes' => 'عرض وصفات التصنيع',
+                'create_manufacturing_recipes' => 'إضافة وصفة تصنيع',
+                'update_manufacturing_recipes' => 'تعديل وصفة تصنيع',
+                'delete_manufacturing_recipes' => 'حذف وصفة تصنيع',
             ],
             'العملاء والسائقين والمصروفات' => [
                 'view_customers' => 'عرض العملاء',
