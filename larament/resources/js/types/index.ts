@@ -103,10 +103,39 @@ export interface TabPresentation {
   cardTitle: 'table' | 'order_number';
 }
 
-export interface FloorRect { col: number; row: number; colSpan: number; rowSpan: number; [key: string]: any }
-export interface FloorTable extends FloorRect { number: string; capacity: number; zone: string; active: boolean }
-export interface FloorSection extends FloorRect { name: string; zone: string; color: string }
-export interface FloorLayout { version: number; enabled: boolean; columns: number; rows: number; tables: FloorTable[]; sections: FloorSection[]; [key: string]: any }
+export type TableShape = 'square' | 'round';
+
+export interface FloorRect {
+  col: number;
+  row: number;
+  colSpan: number;
+  rowSpan: number;
+  [key: string]: any;
+}
+
+export interface FloorTable extends FloorRect {
+  number: string;
+  capacity: number;
+  shape?: TableShape;
+  zone: string;
+  active: boolean;
+}
+
+export interface FloorSection extends FloorRect {
+  name: string;
+  zone: string;
+  color: string;
+}
+
+export interface FloorLayout {
+  version: number;
+  enabled: boolean;
+  columns: number;
+  rows: number;
+  tables: FloorTable[];
+  sections: FloorSection[];
+  [key: string]: any;
+}
 export interface CashierTab {
   key: string;
   kind: 'type' | 'system';

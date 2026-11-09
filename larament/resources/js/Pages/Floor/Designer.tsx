@@ -1,376 +1,392 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Alert, Button, Form, Input, InputNumber, Modal, Space, Switch } from 'antd';
+import { message } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
-import type { FloorLayout, FloorRect, FloorSection, FloorTable } from '@/types';
+import type { FloorLayout, FloorSection, FloorTable } from '@/types';
+import {
+    assignTableZones,
+    checkGridResize,
+    findTableAtCell,
+    findZoneForCell,
+    isSectionPlacementValid,
+    isTablePlacementValid,
+    nextTableNumber,
+    validateFloorLayout,
+    type Cell,
+    type SelectionTarget,
+    type ToolMode,
+} from '@/Components/Floor/floorLayout';
+import { DesignerToolbar } from '@/Components/Floor/DesignerToolbar';
+import { FloorCanvas } from '@/Components/Floor/FloorCanvas';
+import { PropertiesPanel } from '@/Components/Floor/PropertiesPanel';
+import { useDesignerShortcuts } from '@/Components/Floor/hooks/useDesignerShortcuts';
+import { useFloorDrag } from '@/Components/Floor/hooks/useFloorDrag';
+import { useLayoutHistory } from '@/Components/Floor/hooks/useLayoutHistory';
+import { useUnsavedGuard } from '@/Components/Floor/hooks/useUnsavedGuard';
 
 interface DesignerProps {
     code: string;
+    label?: string;
+    backUrl?: string;
     layout: FloorLayout | null;
 }
 
-interface Cell {
-    col: number;
-    row: number;
-}
+export default function Designer({
+    code,
+    label,
+    backUrl,
+    layout: initialLayout,
+}: DesignerProps) {
+    const pageErrors = usePage().props.errors as
+        | Record<string, string>
+        | undefined;
 
-const emptyLayout: FloorLayout = {
-    version: 1,
-    enabled: false,
-    columns: 8,
-    rows: 6,
-    tables: [],
-    sections: [],
-};
+    const [tool, setTool] = useState<ToolMode>('select');
+    const [selection, setSelection] = useState<SelectionTarget | null>(null);
+    const [zoom, setZoom] = useState<number>(100);
+    const [numberPrefix, setNumberPrefix] = useState<string>('');
+    const [serverErrors, setServerErrors] = useState<string[]>([]);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
 
-function gridPosition(rect: FloorRect): React.CSSProperties {
-    return {
-        gridColumn: `${rect.col + 1} / span ${rect.colSpan}`,
-        gridRow: `${rect.row + 1} / span ${rect.rowSpan}`,
-    };
-}
+    const {
+        layout,
+        savedTableFlags,
+        isDirty,
+        canUndo,
+        canRedo,
+        commitChange,
+        undo,
+        redo,
+        markSaved,
+    } = useLayoutHistory(initialLayout, () => {
+        setSelection(null);
+    });
 
-interface FloorGridProps {
-    layout: FloorLayout;
-    selected: number | null;
-    onPlace: (cell: Cell) => void;
-    onSelect: (index: number) => void;
-}
+    const { isSavingRef, confirmLeaveIfDirty } = useUnsavedGuard(isDirty);
 
-function FloorGrid({ layout, selected, onPlace, onSelect }: FloorGridProps) {
-    return (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${layout.columns}, minmax(65px, 1fr))`,
-                gridTemplateRows: `repeat(${layout.rows}, 70px)`,
-                gap: 3,
-                overflowX: 'auto',
-            }}
-        >
-            {layout.sections.map((section, index) => (
-                <div
-                    key={`section-${index}`}
-                    style={{ ...gridPosition(section), background: section.color }}
-                >
-                    {section.name}
-                </div>
-            ))}
-            {Array.from({ length: layout.rows * layout.columns }, (_, index) => (
-                <button
-                    key={index}
-                    type="button"
-                    onClick={() => onPlace({
-                        col: index % layout.columns,
-                        row: Math.floor(index / layout.columns),
-                    })}
-                    style={{
-                        gridColumn: index % layout.columns + 1,
-                        gridRow: Math.floor(index / layout.columns) + 1,
-                        zIndex: 1,
-                        border: '1px solid #bbb',
-                        background: 'transparent',
-                    }}
-                />
-            ))}
-            {layout.tables.map((table, index) => (
-                <button
-                    key={table.number}
-                    type="button"
-                    onClick={() => onSelect(index)}
-                    style={{
-                        ...gridPosition(table),
-                        zIndex: 2,
-                        background: index === selected ? '#bae0ff' : 'white',
-                        border: '1px solid #1677ff',
-                    }}
-                >
-                    {table.number}
-                </button>
-            ))}
-        </div>
+    const problems = useMemo(() => validateFloorLayout(layout), [layout]);
+
+    const allServerErrorMessages = useMemo(() => {
+        const fromPage = pageErrors ? Object.values(pageErrors) : [];
+        return Array.from(new Set([...serverErrors, ...fromPage]));
+    }, [pageErrors, serverErrors]);
+
+    const handleAddTableAtCell = useCallback(
+        (cell: Cell) => {
+            const existingIndex = findTableAtCell(layout.tables, cell);
+            if (existingIndex !== null) {
+                message.warning('هذه الخلية مشغولة بطاولة أخرى');
+                return;
+            }
+
+            const newNumber = nextTableNumber(layout.tables, numberPrefix);
+            const zone = findZoneForCell(layout.sections, cell);
+            const newTable: FloorTable = {
+                number: newNumber,
+                capacity: 4,
+                shape: 'square',
+                zone,
+                active: true,
+                col: cell.col,
+                row: cell.row,
+                colSpan: 1,
+                rowSpan: 1,
+            };
+
+            const nextTables = [...layout.tables, newTable];
+            const nextFlags = [...savedTableFlags, false];
+            commitChange({ ...layout, tables: nextTables }, nextFlags);
+            setSelection({ kind: 'table', index: nextTables.length - 1 });
+        },
+        [commitChange, layout, numberPrefix, savedTableFlags],
     );
-}
 
-interface TableEditorProps {
-    table: FloorTable;
-    onChange: (changes: Partial<FloorTable>) => void;
-    onDelete: () => void;
-}
+    const {
+        gridRef,
+        ghostPreview,
+        cancelDrag,
+        clearHoverCell,
+        handlePointerMoveOnGrid,
+        handleCellPointerDown,
+        handleSectionPointerDown,
+        handleSectionResizePointerDown,
+        handleTablePointerDown,
+        handleTableResizePointerDown,
+    } = useFloorDrag({
+        layout,
+        tool,
+        numberPrefix,
+        onAddTableAtCell: handleAddTableAtCell,
+        onCommitLayout: commitChange,
+        onSelect: setSelection,
+        onSwitchTool: setTool,
+    });
 
-function TableEditor({ table, onChange, onDelete }: TableEditorProps) {
-    return (
-        <Space wrap>
-            طاولة {table.number}
-            السعة
-            <InputNumber
-                min={1}
-                value={table.capacity}
-                onChange={(value) => value && onChange({ capacity: value })}
-            />
-            المنطقة
-            <Input
-                value={table.zone}
-                onChange={(event) => onChange({ zone: event.target.value })}
-            />
-            العرض
-            <InputNumber
-                min={1}
-                value={table.colSpan}
-                onChange={(value) => value && onChange({ colSpan: value })}
-            />
-            الارتفاع
-            <InputNumber
-                min={1}
-                value={table.rowSpan}
-                onChange={(value) => value && onChange({ rowSpan: value })}
-            />
-            نشطة
-            <Switch
-                checked={table.active}
-                onChange={(active) => onChange({ active })}
-            />
-            <Button danger onClick={onDelete}>
-                حذف
-            </Button>
-        </Space>
+    const handleUndo = useCallback(() => {
+        cancelDrag();
+        undo();
+    }, [cancelDrag, undo]);
+
+    const handleRedo = useCallback(() => {
+        cancelDrag();
+        redo();
+    }, [cancelDrag, redo]);
+
+    const updateSelectedTable = useCallback(
+        (changes: Partial<FloorTable>) => {
+            if (!selection || selection.kind !== 'table') {
+                return;
+            }
+
+            const currentTable = layout.tables[selection.index];
+            if (!currentTable) {
+                return;
+            }
+
+            const candidate: FloorTable = { ...currentTable, ...changes };
+            const geometryChanged =
+                changes.col !== undefined ||
+                changes.row !== undefined ||
+                changes.colSpan !== undefined ||
+                changes.rowSpan !== undefined;
+
+            if (
+                geometryChanged &&
+                !isTablePlacementValid(layout, candidate, selection.index)
+            ) {
+                message.warning(
+                    'الحجم أو الموضع الجديد يتجاوز حدود الشبكة أو يتداخل مع طاولة أخرى',
+                );
+                return;
+            }
+
+            const nextTables = layout.tables.map((item, idx) =>
+                idx === selection.index ? candidate : item,
+            );
+            commitChange({ ...layout, tables: nextTables });
+        },
+        [commitChange, layout, selection],
     );
-}
 
-interface SectionEditorProps {
-    section: FloorSection;
-    onChange: (changes: Partial<FloorSection>) => void;
-    onDelete: () => void;
-}
+    const updateSelectedSection = useCallback(
+        (changes: Partial<FloorSection>) => {
+            if (!selection || selection.kind !== 'section') {
+                return;
+            }
 
-function SectionEditor({ section, onChange, onDelete }: SectionEditorProps) {
-    return (
-        <Space wrap>
-            الاسم
-            <Input
-                value={section.name}
-                onChange={(event) => onChange({ name: event.target.value })}
-            />
-            المنطقة
-            <Input
-                value={section.zone}
-                onChange={(event) => onChange({ zone: event.target.value })}
-            />
-            اللون
-            <Input
-                type="color"
-                value={section.color}
-                onChange={(event) => onChange({ color: event.target.value })}
-            />
-            العمود
-            <InputNumber
-                min={0}
-                value={section.col}
-                onChange={(value) => value !== null && onChange({ col: value })}
-            />
-            الصف
-            <InputNumber
-                min={0}
-                value={section.row}
-                onChange={(value) => value !== null && onChange({ row: value })}
-            />
-            العرض
-            <InputNumber
-                min={1}
-                value={section.colSpan}
-                onChange={(value) => value && onChange({ colSpan: value })}
-            />
-            الارتفاع
-            <InputNumber
-                min={1}
-                value={section.rowSpan}
-                onChange={(value) => value && onChange({ rowSpan: value })}
-            />
-            <Button danger onClick={onDelete}>
-                حذف القسم
-            </Button>
-        </Space>
+            const currentSection = layout.sections[selection.index];
+            if (!currentSection) {
+                return;
+            }
+
+            const candidate: FloorSection = { ...currentSection, ...changes };
+            if (changes.name !== undefined) {
+                candidate.zone = changes.name;
+            }
+
+            const geometryChanged =
+                changes.col !== undefined ||
+                changes.row !== undefined ||
+                changes.colSpan !== undefined ||
+                changes.rowSpan !== undefined;
+
+            if (
+                geometryChanged &&
+                !isSectionPlacementValid(layout, candidate, selection.index)
+            ) {
+                message.warning(
+                    'الحجم أو الموضع الجديد يتجاوز حدود الشبكة أو يتداخل مع قسم آخر',
+                );
+                return;
+            }
+
+            const nextSections = layout.sections.map((item, idx) =>
+                idx === selection.index ? candidate : item,
+            );
+            commitChange({ ...layout, sections: nextSections });
+        },
+        [commitChange, layout, selection],
     );
-}
 
-export default function Designer({ code, layout }: DesignerProps) {
-    const { errors } = usePage().props;
-    const [document, setDocument] = useState<FloorLayout>(layout ?? emptyLayout);
-    const [selected, setSelected] = useState<number | null>(null);
-    const [selectedSection, setSelectedSection] = useState<number | null>(null);
-    const [newTableCell, setNewTableCell] = useState<Cell | null>(null);
-    const [form] = Form.useForm<{ number: string }>();
-
-    const patch = (changes: Partial<FloorLayout>) => {
-        setDocument((current) => ({ ...current, ...changes }));
-    };
-
-    const updateTable = (changes: Partial<FloorTable>) => {
-        patch({
-            tables: document.tables.map((table, index) =>
-                index === selected ? { ...table, ...changes } : table
-            ),
-        });
-    };
-
-    const updateSection = (changes: Partial<FloorSection>) => {
-        patch({
-            sections: document.sections.map((section, index) =>
-                index === selectedSection ? { ...section, ...changes } : section
-            ),
-        });
-    };
-
-    const placeTable = (cell: Cell) => {
-        if (selected !== null) {
-            updateTable(cell);
+    const deleteSelection = useCallback(() => {
+        if (!selection) {
             return;
         }
 
-        form.resetFields();
-        setNewTableCell(cell);
-    };
+        if (selection.kind === 'table') {
+            const nextTables = layout.tables.filter(
+                (_, idx) => idx !== selection.index,
+            );
+            const nextFlags = savedTableFlags.filter(
+                (_, idx) => idx !== selection.index,
+            );
+            commitChange({ ...layout, tables: nextTables }, nextFlags);
+            setSelection(null);
+            return;
+        }
 
-    const addTable = ({ number }: { number: string }) => {
-        if (!newTableCell) return;
+        const nextSections = layout.sections.filter(
+            (_, idx) => idx !== selection.index,
+        );
+        commitChange({ ...layout, sections: nextSections });
+        setSelection(null);
+    }, [commitChange, layout, savedTableFlags, selection]);
 
-        patch({
-            tables: [...document.tables, {
-                number,
-                capacity: 4,
-                zone: '',
-                active: true,
-                ...newTableCell,
-                colSpan: 1,
-                rowSpan: 1,
-            }],
+    useDesignerShortcuts({
+        layout,
+        selection,
+        onUndo: handleUndo,
+        onRedo: handleRedo,
+        onEscape: () => {
+            cancelDrag();
+            setSelection(null);
+        },
+        onDeleteSelection: deleteSelection,
+        onCommitLayout: commitChange,
+    });
+
+    const handleGridColumnsChange = useCallback(
+        (newColumns: number | null) => {
+            if (newColumns === null || newColumns < 1 || newColumns > 100) {
+                return;
+            }
+            const stranded = checkGridResize(layout, newColumns, layout.rows);
+            if (stranded.length > 0) {
+                message.error(`لا يمكن تصغير الأعمدة: ${stranded.join('، ')}`);
+                return;
+            }
+            commitChange({ ...layout, columns: newColumns });
+        },
+        [commitChange, layout],
+    );
+
+    const handleGridRowsChange = useCallback(
+        (newRows: number | null) => {
+            if (newRows === null || newRows < 1 || newRows > 100) {
+                return;
+            }
+            const stranded = checkGridResize(layout, layout.columns, newRows);
+            if (stranded.length > 0) {
+                message.error(`لا يمكن تصغير الصفوف: ${stranded.join('، ')}`);
+                return;
+            }
+            commitChange({ ...layout, rows: newRows });
+        },
+        [commitChange, layout],
+    );
+
+    const handleSave = useCallback(() => {
+        if (problems.length > 0) {
+            message.error('يرجى حل المشكلات الموضحة قبل الحفظ');
+            return;
+        }
+
+        const payload = assignTableZones(layout);
+        setServerErrors([]);
+        setIsSaving(true);
+        isSavingRef.current = true;
+
+        router.put(route('floor.save', code), payload as any, {
+            preserveScroll: true,
+            onSuccess: () => {
+                markSaved(payload);
+                message.success('تم حفظ المخطط بنجاح');
+            },
+            onError: (errors) => {
+                setServerErrors(Object.values(errors));
+                message.error('تعذر حفظ المخطط، يرجى مراجعة الأخطاء');
+            },
+            onFinish: () => {
+                setIsSaving(false);
+                isSavingRef.current = false;
+            },
         });
-        setSelected(document.tables.length);
-        setNewTableCell(null);
-    };
+    }, [code, isSavingRef, layout, markSaved, problems.length]);
 
-    const addSection = () => {
-        patch({
-            sections: [...document.sections, {
-                name: 'قسم',
-                zone: '',
-                color: '#e8f5e9',
-                col: 0,
-                row: 0,
-                colSpan: 1,
-                rowSpan: 1,
-            }],
-        });
-        setSelectedSection(document.sections.length);
-    };
+    const handleBackClick = useCallback(() => {
+        if (!confirmLeaveIfDirty()) {
+            return;
+        }
+        window.location.href = backUrl || '/admin/order-type-rows';
+    }, [backUrl, confirmLeaveIfDirty]);
 
-    const table = selected === null ? null : document.tables[selected];
-    const section = selectedSection === null ? null : document.sections[selectedSection];
+    const displayTitle = label || code;
 
     return (
         <CashierLayout>
-            <Head title="تصميم الشبكة" />
-            <main dir="rtl" className="p-6 space-y-4">
-                <a href="/admin/order-type-rows">العودة إلى أنواع الطلبات</a>
-                <h1>تصميم الشبكة - {code}</h1>
-                {Object.keys(errors).length > 0 && (
-                    <Alert
-                        type="error"
-                        showIcon
-                        message="تعذر حفظ المخطط"
-                        description={Object.values(errors).join('، ')}
-                    />
-                )}
-                <Space wrap>
-                    تفعيل
-                    <Switch
-                        checked={document.enabled}
-                        onChange={(enabled) => patch({ enabled })}
-                    />
-                    الأعمدة
-                    <InputNumber
-                        min={1}
-                        max={100}
-                        value={document.columns}
-                        onChange={(value) => value && patch({ columns: value })}
-                    />
-                    الصفوف
-                    <InputNumber
-                        min={1}
-                        max={100}
-                        value={document.rows}
-                        onChange={(value) => value && patch({ rows: value })}
-                    />
-                    <Button onClick={() => setSelected(null)}>إضافة طاولة</Button>
-                    <Button onClick={addSection}>إضافة قسم</Button>
-                    <Button
-                        type="primary"
-                        onClick={() => router.put(route('floor.save', code), document)}
-                    >
-                        حفظ
-                    </Button>
-                </Space>
-                <FloorGrid
-                    layout={document}
-                    selected={selected}
-                    onPlace={placeTable}
-                    onSelect={setSelected}
+            <Head title={`تصميم الشبكة — ${displayTitle}`} />
+            <div
+                dir="rtl"
+                className="h-screen flex flex-col overflow-hidden bg-slate-100 select-none"
+            >
+                <DesignerToolbar
+                    displayTitle={displayTitle}
+                    tool={tool}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    zoom={zoom}
+                    columns={layout.columns}
+                    rows={layout.rows}
+                    enabled={layout.enabled}
+                    isDirty={isDirty}
+                    isSaving={isSaving}
+                    hasProblems={problems.length > 0}
+                    onBackClick={handleBackClick}
+                    onToolChange={(nextTool) => {
+                        setTool(nextTool);
+                        cancelDrag();
+                    }}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    onZoomChange={setZoom}
+                    onColumnsChange={handleGridColumnsChange}
+                    onRowsChange={handleGridRowsChange}
+                    onEnabledChange={(enabled) =>
+                        commitChange({ ...layout, enabled })
+                    }
+                    onSave={handleSave}
                 />
-                {table && (
-                    <TableEditor
-                        table={table}
-                        onChange={updateTable}
-                        onDelete={() => {
-                            patch({ tables: document.tables.filter((_, index) => index !== selected) });
-                            setSelected(null);
+
+                <div className="flex-1 flex min-h-0 overflow-hidden">
+                    <PropertiesPanel
+                        layout={layout}
+                        tool={tool}
+                        selection={selection}
+                        savedTableFlags={savedTableFlags}
+                        numberPrefix={numberPrefix}
+                        problems={problems}
+                        serverErrorMessages={allServerErrorMessages}
+                        onNumberPrefixChange={setNumberPrefix}
+                        onUpdateTable={updateSelectedTable}
+                        onUpdateSection={updateSelectedSection}
+                        onDeleteSelection={deleteSelection}
+                        onSelectTarget={(target) => {
+                            setTool('select');
+                            setSelection(target);
                         }}
                     />
-                )}
-                <div>
-                    الأقسام
-                    {document.sections.map((item, index) => (
-                        <Button key={index} onClick={() => setSelectedSection(index)}>
-                            {item.name}
-                        </Button>
-                    ))}
+
+                    <FloorCanvas
+                        gridRef={gridRef}
+                        layout={layout}
+                        tool={tool}
+                        zoom={zoom}
+                        selection={selection}
+                        ghostPreview={ghostPreview}
+                        onSwitchTool={setTool}
+                        onClearSelection={() => setSelection(null)}
+                        onPointerMoveOnGrid={handlePointerMoveOnGrid}
+                        onPointerLeaveGrid={clearHoverCell}
+                        onCellPointerDown={handleCellPointerDown}
+                        onSectionPointerDown={handleSectionPointerDown}
+                        onSectionResizePointerDown={
+                            handleSectionResizePointerDown
+                        }
+                        onTablePointerDown={handleTablePointerDown}
+                        onTableResizePointerDown={handleTableResizePointerDown}
+                    />
                 </div>
-                {section && (
-                    <SectionEditor
-                        section={section}
-                        onChange={updateSection}
-                        onDelete={() => {
-                            patch({ sections: document.sections.filter((_, index) => index !== selectedSection) });
-                            setSelectedSection(null);
-                        }}
-                    />
-                )}
-                <Modal
-                    title="إضافة طاولة"
-                    open={newTableCell !== null}
-                    onCancel={() => setNewTableCell(null)}
-                    onOk={() => form.submit()}
-                    okText="إضافة"
-                    cancelText="إلغاء"
-                >
-                    <Form form={form} layout="vertical" onFinish={addTable}>
-                        <Form.Item
-                            name="number"
-                            label="رقم الطاولة"
-                            rules={[
-                                { required: true, whitespace: true, message: 'رقم الطاولة مطلوب' },
-                                { max: 50, message: 'رقم الطاولة لا يتجاوز 50 حرفاً' },
-                                {
-                                    validator: (_, value: string) => document.tables.some((item) => item.number === value)
-                                        ? Promise.reject(new Error('رقم الطاولة مستخدم'))
-                                        : Promise.resolve(),
-                                },
-                            ]}
-                        >
-                            <Input maxLength={50} />
-                        </Form.Item>
-                    </Form>
-                </Modal>
-            </main>
+            </div>
         </CashierLayout>
     );
 }

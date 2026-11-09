@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
+use App\Models\OrderTypeRow;
 use App\Services\Orders\FloorLayoutService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,7 +14,14 @@ class FloorLayoutController extends Controller
     {
         abort_unless($floor->isDineInType($code), 404);
 
-        return Inertia::render('Floor/Designer', ['code' => $code, 'layout' => $floor->read($code)]);
+        $label = (string) OrderTypeRow::query()->where('code', $code)->value('label');
+
+        return Inertia::render('Floor/Designer', [
+            'code' => $code,
+            'label' => $label,
+            'backUrl' => OrderTypeRowResource::getUrl('index'),
+            'layout' => $floor->read($code),
+        ]);
     }
 
     public function save(Request $request, string $code, FloorLayoutService $floor)
