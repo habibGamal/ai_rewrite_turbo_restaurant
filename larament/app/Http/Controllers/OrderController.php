@@ -8,6 +8,7 @@ use App\Http\Requests\CompleteOrderRequest;
 use App\Http\Requests\SaveOrderRequest;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\DineTable;
 use App\Models\Driver;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -23,6 +24,7 @@ use App\Orders\OrderTypeCatalog;
 use App\Orders\ReceiptPayment;
 use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
+use App\Services\Orders\FloorLayoutService;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\ShiftLoggingService;
@@ -110,7 +112,11 @@ class OrderController extends Controller
             }
 
             if ($tab['kind'] === 'type' && $tab['code'] !== null) {
-                $tab['presentation'] = $this->catalog->behaviorFor($tab['code'])->presentation()->toArray();
+                $tab['presentation'] = $this->catalog->behaviorFor($tab['code'])->presentation($this->catalog->find($tab['code']))->toArray();
+                if ($tab['presentation']['body'] === 'floor') {
+                    $tab['layout'] = app(FloorLayoutService::class)->read($tab['code']);
+                    $tab['occupancy'] = DineTable::query()->where('order_type_code', $tab['code'])->whereNotNull('order_id')->with('order')->get()->filter(fn (DineTable $table) => $table->order !== null)->mapWithKeys(fn (DineTable $table) => [$table->table_number => ['id' => $table->order->id, 'order_number' => $table->order->order_number, 'created_at' => $table->order->created_at]])->all();
+                }
                 $tab['display'] = $this->catalog->display($tab['code'])->toArray();
             }
 

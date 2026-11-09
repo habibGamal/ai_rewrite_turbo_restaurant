@@ -1,6 +1,6 @@
 import React from "react";
 import { router } from "@inertiajs/react";
-import { Button, Col, Empty, Row, Typography } from "antd";
+import { Button, Col, Empty, Row, Typography, message } from "antd";
 import {
     PlusOutlined,
     PhoneOutlined,
@@ -10,6 +10,7 @@ import { orderStatus } from "@/helpers/orderState";
 import useModal from "@/hooks/useModal";
 import ChooseTableForm from "@/Components/Orders/ChooseTableForm";
 import { OrderCard } from "./OrderCard";
+import { OrderTimer } from "./OrderTimer";
 import type { CashierTab, Order, OrderDisplay } from "@/types";
 
 const webOrderStatus = (status: string) => {
@@ -55,6 +56,13 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
     const makeNewOrder = (values: any) => {
         const tableNumber = `${values.tableType} - ${values.tableNumber}`;
+        if (
+            presentation.body === "floor" &&
+            tab.layout?.tables.some((table) => table.number === tableNumber)
+        ) {
+            message.error("الطاولة موجودة في المخطط");
+            return;
+        }
         router.post(route("orders.store"), {
             type: tab.code!,
             table_number: tableNumber,
@@ -110,6 +118,75 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
             </div>
         );
     };
+
+    if (presentation.body === "floor" && tab.layout) {
+        const layout = tab.layout;
+        return (
+            <div className="space-y-4">
+                <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
+                <Button onClick={() => tableModal.showModal()}>
+                    طاولة خارج المخطط
+                </Button>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${layout.columns}, minmax(90px, 1fr))`,
+                        gridTemplateRows: `repeat(${layout.rows}, 90px)`,
+                        gap: 4,
+                        overflowX: "auto",
+                    }}
+                >
+                    {layout.sections.map((section, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                gridColumn: `${section.col + 1} / span ${section.colSpan}`,
+                                gridRow: `${section.row + 1} / span ${section.rowSpan}`,
+                                background: section.color,
+                                padding: 4,
+                            }}
+                        >
+                            {section.name}
+                        </div>
+                    ))}
+                    {layout.tables.map((table) => {
+                        const occupied = tab.occupancy?.[table.number];
+                        return (
+                            <Button
+                                key={table.number}
+                                disabled={!table.active && !occupied}
+                                onClick={() => occupied
+                                    ? router.visit(`/orders/manage/${occupied.id}`)
+                                    : router.post(route("orders.store"), {
+                                          type: tab.code,
+                                          table_number: table.number,
+                                      })
+                                }
+                                style={{
+                                    height: "100%",
+                                    zIndex: 1,
+                                    gridColumn: `${table.col + 1} / span ${table.colSpan}`,
+                                    gridRow: `${table.row + 1} / span ${table.rowSpan}`,
+                                }}
+                            >
+                                <span>
+                                    طاولة {table.number}
+                                    <br />
+                                    {occupied ? (
+                                        <>
+                                            طلب #{occupied.order_number}
+                                            <br />
+                                            <OrderTimer createdAt={occupied.created_at} />
+                                        </>
+                                    ) : "متاحة"}
+                                </span>
+                            </Button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
 
     if (creation === "none" && sortedOrders.length === 0) {
         return (

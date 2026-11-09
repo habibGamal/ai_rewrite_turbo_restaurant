@@ -9,12 +9,14 @@ use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 use App\Orders\TabPresentation;
+use App\Services\Orders\FloorLayoutService;
 use App\Services\Orders\TableManagementService;
 
 final class DineInBehavior implements OrderTypeBehavior
 {
     public function __construct(
         private readonly TableManagementService $tables,
+        private readonly FloorLayoutService $floor,
     ) {}
 
     public function cashierCanCreate(): bool
@@ -40,13 +42,13 @@ final class DineInBehavior implements OrderTypeBehavior
             throw new OrderException('رقم الطاولة مطلوب');
         }
 
-        $this->tables->reserveTable($tableNumber, $order->id);
+        $this->tables->reserveTable($tableNumber, $order->id, $order->type);
     }
 
     public function onClosed(Order $order): void
     {
-        if ($order->dine_table_number) {
-            $this->tables->freeTable($order->dine_table_number);
+        if ($order->dine_table_number !== null && $order->dine_table_number !== '') {
+            $this->tables->freeTable($order->dine_table_number, $order->type);
         }
     }
 
@@ -70,8 +72,8 @@ final class DineInBehavior implements OrderTypeBehavior
         return OrderDisplay::forRow($type, showTable: true, chargesService: true);
     }
 
-    public function presentation(): TabPresentation
+    public function presentation(OrderTypeRow $type): TabPresentation
     {
-        return new TabPresentation('cards', 'choose_table', ['processing'], 'table');
+        return new TabPresentation($this->floor->isEnabledWithTables($type->code) ? 'floor' : 'cards', 'choose_table', ['processing'], 'table');
     }
 }

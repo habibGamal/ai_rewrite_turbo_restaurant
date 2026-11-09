@@ -7,6 +7,7 @@ use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
 use App\Models\OrderTypeRow;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -128,6 +129,7 @@ class OrderTypeRowResource extends Resource
             ])
             ->defaultSort('id')
             ->recordActions([
+                Action::make('floor')->label('تصميم الشبكة')->url(fn (OrderTypeRow $record): string => route('floor.designer', $record->code))->visible(fn (OrderTypeRow $record): bool => $record->behavior === OrderBehavior::DINE_IN),
                 EditAction::make(),
                 DeleteAction::make()
                     ->visible(fn (OrderTypeRow $record): bool => ! $record->is_system),

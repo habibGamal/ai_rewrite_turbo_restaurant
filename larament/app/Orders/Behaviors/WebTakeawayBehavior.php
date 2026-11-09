@@ -49,7 +49,7 @@ final class WebTakeawayBehavior implements OrderTypeBehavior
         return OrderDisplay::forRow($type, showCustomer: true);
     }
 
-    public function presentation(): TabPresentation
+    public function presentation(OrderTypeRow $type): TabPresentation
     {
         return new TabPresentation('inbox', 'none', ['pending', 'processing'], 'order_number');
     }

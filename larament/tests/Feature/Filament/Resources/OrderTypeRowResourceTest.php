@@ -167,3 +167,11 @@ it('allows a behavior change when the type has no open orders', function () {
 
     expect($row->fresh()->behavior)->toBe(OrderBehavior::DINE_IN);
 });
+
+it('only exposes the floor designer action for dine-in behavior', function () {
+    $dineIn = OrderTypeRow::query()->where('code', 'dine_in')->firstOrFail();
+    $counter = OrderTypeRow::query()->where('code', 'takeaway')->firstOrFail();
+    livewire(ListOrderTypeRows::class)
+        ->assertTableActionVisible('floor', $dineIn)
+        ->assertTableActionHidden('floor', $counter);
+});

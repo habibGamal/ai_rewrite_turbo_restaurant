@@ -97,12 +97,16 @@ export interface OrderDisplay {
 }
 
 export interface TabPresentation {
-  body: 'cards' | 'inbox';
+  body: 'cards' | 'inbox' | 'floor';
   creation: 'immediate' | 'choose_table' | 'none';
   statuses: string[];
   cardTitle: 'table' | 'order_number';
 }
 
+export interface FloorRect { col: number; row: number; colSpan: number; rowSpan: number; [key: string]: any }
+export interface FloorTable extends FloorRect { number: string; capacity: number; zone: string; active: boolean }
+export interface FloorSection extends FloorRect { name: string; zone: string; color: string }
+export interface FloorLayout { version: number; enabled: boolean; columns: number; rows: number; tables: FloorTable[]; sections: FloorSection[]; [key: string]: any }
 export interface CashierTab {
   key: string;
   kind: 'type' | 'system';
@@ -112,6 +116,8 @@ export interface CashierTab {
   icon: string;
   visible: boolean;
   forcedVisible: boolean;
+  layout?: FloorLayout;
+  occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
   presentation?: TabPresentation;
   display?: OrderDisplay;
 }

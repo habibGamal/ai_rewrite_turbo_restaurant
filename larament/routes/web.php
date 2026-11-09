@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FloorLayoutController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
 use App\Http\Controllers\KitchenController;
@@ -20,6 +21,8 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/floor/designer/{code}', [FloorLayoutController::class, 'show'])->middleware('permission:update_order_types')->name('floor.designer');
+    Route::put('/floor/save/{code}', [FloorLayoutController::class, 'save'])->middleware('permission:update_order_types')->name('floor.save');
     // Kitchen Display Screen
     Route::prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/', [KitchenController::class, 'index'])
