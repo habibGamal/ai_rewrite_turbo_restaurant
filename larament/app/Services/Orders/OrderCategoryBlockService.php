@@ -6,7 +6,7 @@ use App\Exceptions\OrderException;
 use App\Models\Category;
 use App\Models\Product;
 
-class OrderCategoryBlock
+class OrderCategoryBlockService
 {
     /**
      * @param  list<int>  $productIds

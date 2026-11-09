@@ -44,7 +44,7 @@ class OrderService
         private readonly OrderItemChangeService $orderItemChangeService,
         private readonly OrderTypeCatalog $catalog,
         private readonly ExternalSellerSettlementService $sellerSettlements,
-        private readonly OrderCategoryBlock $categoryBlock,
+        private readonly OrderCategoryBlockService $categoryBlock,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order

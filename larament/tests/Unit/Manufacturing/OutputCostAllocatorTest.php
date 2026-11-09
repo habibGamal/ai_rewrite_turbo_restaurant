@@ -1,10 +1,10 @@
 <?php
 
 use App\Exceptions\ManufacturingException;
-use App\Services\Manufacturing\OutputCostAllocator;
+use App\Services\Manufacturing\OutputCostAllocationService;
 
 it('splits pot 780: bones 10, thighs 270, skin 20, breast 480 → unit 10 / 60 / 40 / 120', function () {
-    $result = OutputCostAllocator::allocate(780.0, [
+    $result = OutputCostAllocationService::allocate(780.0, [
         [
             'key' => 'bones',
             'is_main' => false,
@@ -44,7 +44,7 @@ it('splits pot 780: bones 10, thighs 270, skin 20, breast 480 → unit 10 / 60 /
 });
 
 it('breast at 3.8 kg instead of 4 → still 480 → 126.32/kg', function () {
-    $result = OutputCostAllocator::allocate(780.0, [
+    $result = OutputCostAllocationService::allocate(780.0, [
         [
             'key' => 'bones',
             'is_main' => false,
@@ -82,7 +82,7 @@ it('breast at 3.8 kg instead of 4 → still 480 → 126.32/kg', function () {
 });
 
 it('gives a zero-quantity percent output share to main', function () {
-    $result = OutputCostAllocator::allocate(780.0, [
+    $result = OutputCostAllocationService::allocate(780.0, [
         [
             'key' => 'bones',
             'is_main' => false,
@@ -118,7 +118,7 @@ it('gives a zero-quantity percent output share to main', function () {
 });
 
 it('gives a zero-quantity fixed output 0 allocated cost and 0 unit cost', function () {
-    $result = OutputCostAllocator::allocate(500.0, [
+    $result = OutputCostAllocationService::allocate(500.0, [
         [
             'key' => 'bones',
             'is_main' => false,
@@ -140,7 +140,7 @@ it('gives a zero-quantity fixed output 0 allocated cost and 0 unit cost', functi
 });
 
 it('refuses when fixed outputs exceed the pot', function () {
-    expect(fn () => OutputCostAllocator::allocate(100.0, [
+    expect(fn () => OutputCostAllocationService::allocate(100.0, [
         [
             'key' => 'thighs',
             'is_main' => false,
@@ -159,7 +159,7 @@ it('refuses when fixed outputs exceed the pot', function () {
 });
 
 it('refuses when there is not exactly one main output', function () {
-    expect(fn () => OutputCostAllocator::allocate(100.0, [
+    expect(fn () => OutputCostAllocationService::allocate(100.0, [
         [
             'key' => 'a',
             'is_main' => false,
@@ -169,7 +169,7 @@ it('refuses when there is not exactly one main output', function () {
         ],
     ]))->toThrow(ManufacturingException::class);
 
-    expect(fn () => OutputCostAllocator::allocate(100.0, [
+    expect(fn () => OutputCostAllocationService::allocate(100.0, [
         [
             'key' => 'a',
             'is_main' => true,
@@ -188,7 +188,7 @@ it('refuses when there is not exactly one main output', function () {
 });
 
 it('refuses when main actual quantity is not positive', function () {
-    expect(fn () => OutputCostAllocator::allocate(100.0, [
+    expect(fn () => OutputCostAllocationService::allocate(100.0, [
         [
             'key' => 'breast',
             'is_main' => true,
@@ -200,7 +200,7 @@ it('refuses when main actual quantity is not positive', function () {
 });
 
 it('sum of shares equals the pot exactly: pot 100.00, 33.333% → 33.33 + 66.67', function () {
-    $result = OutputCostAllocator::allocate(100.00, [
+    $result = OutputCostAllocationService::allocate(100.00, [
         [
             'key' => 'byproduct',
             'is_main' => false,

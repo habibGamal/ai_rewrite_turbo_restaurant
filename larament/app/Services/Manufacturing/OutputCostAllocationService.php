@@ -5,7 +5,7 @@ namespace App\Services\Manufacturing;
 use App\Exceptions\ManufacturingException;
 use BackedEnum;
 
-class OutputCostAllocator
+class OutputCostAllocationService
 {
     /**
      * Allocate the input cost pot across manufacturing outputs.

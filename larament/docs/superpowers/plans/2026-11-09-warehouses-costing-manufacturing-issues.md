@@ -414,7 +414,7 @@ it('blocks closing the day while a draft manufacturing order exists');
 
 ### Task E3: Cost allocator (pure class)
 
-**Files:** Create `app/Services/Manufacturing/OutputCostAllocator.php`; Test `tests/Unit/Manufacturing/OutputCostAllocatorTest.php`
+**Files:** Create `app/Services/Manufacturing/OutputCostAllocationService.php`; Test `tests/Unit/Manufacturing/OutputCostAllocatorTest.php`
 
 **Interfaces:** `allocate(float $pot, array $outputs): array` — each output `['key', 'is_main', 'cost_method' => 'percent'|'fixed', 'cost_value', 'actual_quantity']` → returns `[key => ['allocated_cost', 'unit_cost']]`; throws `ManufacturingException` (Arabic message) when fixed total > pot.
 
@@ -435,7 +435,7 @@ it('sum of shares equals the pot exactly: pot 100.00, 33.333% → 33.33 + 66.67'
 
 **Files:** Modify `ManufacturingOrderService.php` (`complete(ManufacturingOrder $o, array $actualOutputQuantities): void`), Filament "إكمال التصنيع" action (form: actual qty per output); Test `tests/Feature/Manufacturing/ManufacturingOrderCompleteTest.php`
 
-Flow in one transaction: `removeStock` inputs from source (`manufacturing_out`) → pot = sum of returned movement costs → `OutputCostAllocator` → `addStock` outputs to destination (`manufacturing_in`, `unit_cost` = allocated unit) → strategy `receive` → store variance (`actual − expected`, × unit cost) on outputs and planned vs actual on inputs.
+Flow in one transaction: `removeStock` inputs from source (`manufacturing_out`) → pot = sum of returned movement costs → `OutputCostAllocationService` → `addStock` outputs to destination (`manufacturing_in`, `unit_cost` = allocated unit) → strategy `receive` → store variance (`actual − expected`, × unit cost) on outputs and planned vs actual on inputs.
 
 - [ ] **Step 1: Write failing tests**
 ```php
