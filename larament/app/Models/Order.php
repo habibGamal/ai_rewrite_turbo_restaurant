@@ -3,14 +3,13 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Enums\SettingKey;
 use App\Models\Concerns\HasSyncUuid;
 use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Orders\OrderDisplay;
 use App\Orders\OrderTypeCatalog;
-use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -51,7 +50,6 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'type' => OrderType::class,
         'status' => OrderStatus::class,
         'payment_status' => PaymentStatus::class,
         'return_status' => ReturnStatus::class,
@@ -67,18 +65,31 @@ class Order extends Model
 
     public function getServiceRateAttribute(): float
     {
-        if ($this->type === OrderType::DINE_IN) {
-            $settingsService = app(SettingsService::class);
-
+        if ($this->display()->chargesService) {
             return (float) setting(SettingKey::DINE_IN_SERVICE_CHARGE);
         }
 
         return 0.0;
     }
 
+    public function setTypeAttribute(mixed $value): void
+    {
+        $this->attributes['type'] = $value instanceof \BackedEnum ? $value->value : $value;
+    }
+
     public function behavior(): OrderTypeBehavior
     {
-        return app(OrderTypeCatalog::class)->behaviorFor($this->type->value);
+        return app(OrderTypeCatalog::class)->behaviorFor((string) $this->type);
+    }
+
+    public function display(): OrderDisplay
+    {
+        return app(OrderTypeCatalog::class)->display((string) $this->type);
+    }
+
+    public function getOrderTypeLabel(): string
+    {
+        return $this->display()->label;
     }
 
     public function customer(): BelongsTo
@@ -134,7 +145,7 @@ class Order extends Model
     // Computed attributes
     public function getTypeStringAttribute(): string
     {
-        return $this->type->label();
+        return $this->getOrderTypeLabel();
     }
 
     public function getStatusStringAttribute(): string

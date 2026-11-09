@@ -2,7 +2,6 @@
 
 namespace App\Services\Kitchen;
 
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Models\Category;
 use App\Models\Product;
@@ -34,7 +33,7 @@ class KitchenRoutingService
     /**
      * Product minutes, then category, then the order-type override, then the default.
      */
-    public function targetMinutes(Product $product, OrderType $orderType): int
+    public function targetMinutes(Product $product, string $typeCode): int
     {
         if ($product->prep_minutes !== null) {
             return $product->prep_minutes;
@@ -45,7 +44,7 @@ class KitchenRoutingService
             return $category->prep_minutes;
         }
 
-        $override = $this->orderTypeTarget($orderType);
+        $override = $this->orderTypeTarget($typeCode);
         if ($override !== null) {
             return $override;
         }
@@ -53,14 +52,14 @@ class KitchenRoutingService
         return (int) setting(SettingKey::KDS_DEFAULT_PREP_MINUTES);
     }
 
-    private function orderTypeTarget(OrderType $orderType): ?int
+    private function orderTypeTarget(string $typeCode): ?int
     {
         $decoded = json_decode(setting(SettingKey::KDS_ORDER_TYPE_TARGETS), true);
-        if (! is_array($decoded) || ! array_key_exists($orderType->value, $decoded)) {
+        if (! is_array($decoded) || ! array_key_exists($typeCode, $decoded)) {
             return null;
         }
 
-        $value = $decoded[$orderType->value];
+        $value = $decoded[$typeCode];
         if (! is_numeric($value)) {
             return null;
         }

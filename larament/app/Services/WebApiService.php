@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
 use App\Events\Orders\WebOrderReceived;
@@ -197,7 +196,7 @@ class WebApiService
             $created = $customer->orders()->create([
                 'shift_id' => $data['order']['shiftId'],
                 'status' => OrderStatus::PENDING,
-                'type' => OrderType::from($data['order']['type']),
+                'type' => $data['order']['type'],
                 'order_number' => $data['order']['orderNumber'],
                 'order_notes' => $data['order']['note'] ?? '',
                 'sub_total' => $data['order']['subTotal'],

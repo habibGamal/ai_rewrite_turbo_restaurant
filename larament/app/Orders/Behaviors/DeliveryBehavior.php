@@ -4,6 +4,8 @@ namespace App\Orders\Behaviors;
 
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderTypeRow;
+use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 
 final class DeliveryBehavior implements OrderTypeBehavior
@@ -42,5 +44,16 @@ final class DeliveryBehavior implements OrderTypeBehavior
     public function usesPosOrderNumber(): bool
     {
         return true;
+    }
+
+    public function display(OrderTypeRow $type): OrderDisplay
+    {
+        return OrderDisplay::forRow(
+            $type,
+            showCustomer: true,
+            showAddress: true,
+            showDriver: true,
+            chargesDeliveryFee: true,
+        );
     }
 }

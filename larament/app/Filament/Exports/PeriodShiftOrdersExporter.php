@@ -3,9 +3,9 @@
 namespace App\Filament\Exports;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -34,7 +34,7 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('type')
                 ->label('النوع')
-                ->formatStateUsing(fn ($state) => $state instanceof OrderType ? $state->label() : $state),
+                ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label),
 
             ExportColumn::make('customer_name')
                 ->label('العميل')

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Orders;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Filament\Resources\Orders\Pages\ListOrders;
@@ -12,6 +11,7 @@ use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\OrderReturnsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
 use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\IconEntry;
@@ -76,6 +76,9 @@ class OrderResource extends Resource
                 TextColumn::make('type')
                     ->label('نوع الطلب')
                     ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon)
                     ->sortable(),
 
                 TextColumn::make('status')
@@ -129,7 +132,7 @@ class OrderResource extends Resource
             ->filters([
                 SelectFilter::make('type')
                     ->label('نوع الطلب')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
                 SelectFilter::make('status')
                     ->label('حالة الطلب')
@@ -183,7 +186,10 @@ class OrderResource extends Resource
 
                         TextEntry::make('type')
                             ->label('نوع الطلب')
-                            ->badge(),
+                            ->badge()
+                            ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                            ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                            ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                         TextEntry::make('status')
                             ->label('حالة الطلب')

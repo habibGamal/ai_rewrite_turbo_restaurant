@@ -52,7 +52,7 @@ class ChannelPerformanceReportService
             ->orderByDesc('total_sales')
             ->get()
             ->map(function ($item) {
-                $item->type_label = $item->type->label();
+                $item->type_label = $this->labelForOrderType($item->type);
                 $item->market_share = 0; // Will be calculated later
 
                 return $item;
@@ -87,7 +87,7 @@ class ChannelPerformanceReportService
             ->orderBy('orders.type')
             ->get()
             ->map(function ($item) use ($period) {
-                $item->type_label = $item->type->label();
+                $item->type_label = $this->labelForOrderType($item->type);
                 $item->period_label = $this->formatPeriodLabel($item->period, $period);
 
                 return $item;
@@ -226,7 +226,7 @@ class ChannelPerformanceReportService
             ->orderByDesc('gross_profit')
             ->get()
             ->map(function ($item) {
-                $item->type_label = $item->type->label();
+                $item->type_label = $this->labelForOrderType($item->type);
                 $item->net_profit = $item->gross_profit - $item->estimated_operational_cost;
                 $item->gross_margin = $item->total_revenue > 0 ?
                     ($item->gross_profit / $item->total_revenue) * 100 : 0;
@@ -259,7 +259,7 @@ class ChannelPerformanceReportService
             ->get()
             ->map(function ($item) {
                 $item->hour_label = sprintf('%02d:00', $item->hour);
-                $item->type_label = $item->type->label();
+                $item->type_label = $this->labelForOrderType($item->type);
 
                 return $item;
             });
@@ -317,6 +317,13 @@ class ChannelPerformanceReportService
             'monthly' => Carbon::createFromFormat('Y-m', $period)->format('M Y'),
             default => $period
         };
+    }
+
+    private function labelForOrderType(mixed $type): string
+    {
+        $code = $type instanceof OrderType ? $type->value : (string) $type;
+
+        return OrderType::tryFrom($code)?->label() ?? $code;
     }
 
     /**

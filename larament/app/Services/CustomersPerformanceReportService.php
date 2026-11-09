@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Models\Customer;
 use App\Models\Order;
 use Carbon\Carbon;
@@ -208,9 +209,11 @@ class CustomersPerformanceReportService
             ->get();
 
         return $performanceData->mapWithKeys(function ($item) {
+            $code = (string) $item->type;
+
             return [
-                $item->type->value => [
-                    'label' => $item->type->label(),
+                $code => [
+                    'label' => OrderType::tryFrom($code)?->label() ?? $code,
                     'unique_customers' => $item->unique_customers,
                     'total_orders' => $item->total_orders,
                     'total_quantity' => $item->total_quantity,

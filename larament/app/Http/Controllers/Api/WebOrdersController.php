@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\OrderType;
+use App\Enums\OrderBehavior;
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
 use App\Services\WebApiService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class WebOrdersController extends Controller
@@ -53,7 +54,10 @@ class WebOrdersController extends Controller
             'user.area' => 'required|string',
             'user.address' => 'required|string',
             'order' => 'required|array',
-            'order.type' => 'required|in:'.OrderType::WEB_DELIVERY->value.','.OrderType::WEB_TAKEAWAY->value,
+            'order.type' => ['required', Rule::in(app(OrderTypeCatalog::class)->codesWithBehavior([
+                OrderBehavior::WEB_DELIVERY,
+                OrderBehavior::WEB_TAKEAWAY,
+            ]))],
             'order.shiftId' => 'required|integer',
             'order.orderNumber' => 'required|string',
             'order.subTotal' => 'required|numeric',

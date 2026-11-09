@@ -3,6 +3,8 @@
 namespace App\Orders\Behaviors;
 
 use App\Models\Order;
+use App\Models\OrderTypeRow;
+use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 
 final class CompaniesBehavior implements OrderTypeBehavior
@@ -34,5 +36,10 @@ final class CompaniesBehavior implements OrderTypeBehavior
     public function usesPosOrderNumber(): bool
     {
         return true;
+    }
+
+    public function display(OrderTypeRow $type): OrderDisplay
+    {
+        return OrderDisplay::forRow($type);
     }
 }

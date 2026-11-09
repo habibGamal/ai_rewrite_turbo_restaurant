@@ -39,7 +39,7 @@ describe('CreateOrderAction', function () {
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::DINE_IN)
+            ->and($order->type)->toBe('dine_in')
             ->and($order->shift_id)->toBe($this->shift->id)
             ->and($order->user_id)->toBe($this->user->id)
             ->and($order->dine_table_number)->toBe('T001');
@@ -55,7 +55,7 @@ describe('CreateOrderAction', function () {
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::TAKEAWAY)
+            ->and($order->type)->toBe('takeaway')
             ->and($order->dine_table_number)->toBeNull();
     });
 
@@ -70,7 +70,7 @@ describe('CreateOrderAction', function () {
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::DELIVERY)
+            ->and($order->type)->toBe('delivery')
             ->and($order->driver_id)->toBe($this->driver->id);
     });
 });

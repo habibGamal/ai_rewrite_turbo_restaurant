@@ -2,11 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\WebOrdersExporter;
 use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
 use App\Services\PrintService;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
@@ -52,7 +53,10 @@ class WebOrdersTable extends BaseWidget
         ];
 
         $query = Order::query()
-            ->whereIn('type', [OrderType::WEB_TAKEAWAY, OrderType::WEB_DELIVERY])
+            ->whereIn('type', app(OrderTypeCatalog::class)->codesWithBehavior([
+                OrderBehavior::WEB_TAKEAWAY,
+                OrderBehavior::WEB_DELIVERY,
+            ]))
             ->whereIn('status', $statuses)
             ->with(['customer', 'user', 'payments', 'driver']);
 
@@ -68,7 +72,7 @@ class WebOrdersTable extends BaseWidget
                         'id' => 'web_orders_table',
                     ])
                     ->modifyQueryUsing(function (Builder $query) use ($statuses) {
-                        return $query->where('type', OrderType::DELIVERY)
+                        return $query->where('type', 'delivery')
                             ->whereIn('status', $statuses)
                             ->with(['customer', 'user', 'payments', 'driver']);
                     })
