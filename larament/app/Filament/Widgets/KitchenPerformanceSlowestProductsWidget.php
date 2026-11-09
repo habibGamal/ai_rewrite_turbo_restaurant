@@ -17,7 +17,7 @@ class KitchenPerformanceSlowestProductsWidget extends BaseWidget
 
     protected static ?string $heading = 'أبطأ المنتجات في التحضير';
 
-    protected static ?string $description = 'مرتبة من الأبطأ إلى الأسرع حسب متوسط وقت التحضير، دون البنود المنتهية تلقائياً';
+    protected static ?string $description = 'مرتبة من الأبطأ إلى الأسرع حسب متوسط وقت التحضير من وصول الصنف للمطبخ حتى الانتهاء، دون البنود المنتهية تلقائياً';
 
     protected int|string|array $columnSpan = 'full';
 

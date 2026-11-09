@@ -535,8 +535,7 @@ it('rejects item bumps when item tracking is off and still allows finishing the 
     $ticket = $this->service->syncOrder($order);
     $item = $ticket->items()->first();
 
-    expect(fn () => $this->service->startItem($item))->toThrow(KitchenException::class)
-        ->and(fn () => $this->service->finishItem($item, $this->user))->toThrow(KitchenException::class);
+    expect(fn () => $this->service->finishItem($item, $this->user))->toThrow(KitchenException::class);
 
     $done = $this->service->finishTicket($ticket, null, $this->user);
 

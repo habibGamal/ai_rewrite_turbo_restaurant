@@ -34,7 +34,7 @@ it('migrates the kitchen foundation tables', function () {
         ->and(Schema::hasColumns('kitchen_ticket_items', [
             'kitchen_ticket_id', 'kitchen_ticket_round_id', 'product_id', 'product_name',
             'kitchen_station_id', 'quantity', 'original_quantity', 'notes', 'kind', 'status',
-            'target_minutes', 'sent_at', 'started_at', 'done_at', 'voided_at', 'done_by',
+            'target_minutes', 'sent_at', 'done_at', 'voided_at', 'done_by',
             'voided_after_done', 'needs_ack', 'auto_finished',
         ]))->toBeTrue();
 });
@@ -139,7 +139,6 @@ it('orders active stations and applies item factory states', function () {
         ->and($voided->status)->toBe(KitchenItemStatus::VOIDED)
         ->and($voided->voided_at)->not->toBeNull()
         ->and(KitchenItemStatus::PENDING->isOpen())->toBeTrue()
-        ->and(KitchenItemStatus::STARTED->isOpen())->toBeTrue()
         ->and(KitchenItemStatus::DONE->isOpen())->toBeFalse()
         ->and(KitchenItemStatus::VOIDED->isOpen())->toBeFalse();
 });
@@ -154,7 +153,6 @@ it('keeps kitchen models out of the sync outbox trait', function () {
 it('accepts every new kds setting default under its validation rules', function () {
     $keys = [
         SettingKey::KDS_ITEM_TRACKING,
-        SettingKey::KDS_REQUIRE_START,
         SettingKey::KDS_DEFAULT_PREP_MINUTES,
         SettingKey::KDS_ORDER_TYPE_TARGETS,
         SettingKey::KDS_WARNING_PERCENT,

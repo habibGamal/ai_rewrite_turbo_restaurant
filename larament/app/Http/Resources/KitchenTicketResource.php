@@ -75,7 +75,6 @@ class KitchenTicketResource extends JsonResource
                     'status' => $item->status->value,
                     'target_minutes' => $item->target_minutes,
                     'sent_at' => $item->sent_at->toIso8601String(),
-                    'started_at' => $item->started_at?->toIso8601String(),
                     'done_at' => $item->done_at?->toIso8601String(),
                     'voided_at' => $item->voided_at?->toIso8601String(),
                     'voided_after_done' => $item->voided_after_done,

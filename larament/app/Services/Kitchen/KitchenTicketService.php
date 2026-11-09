@@ -78,27 +78,6 @@ class KitchenTicketService
         });
     }
 
-    public function startItem(KitchenTicketItem $item): KitchenTicketItem
-    {
-        return DB::transaction(function () use ($item): KitchenTicketItem {
-            $this->assertItemTracking();
-            [$ticket, $item] = $this->lockItem($item);
-            $this->assertTicketActive($ticket);
-
-            if ($item->status !== KitchenItemStatus::PENDING) {
-                throw new KitchenException('لا يمكن بدء هذا الصنف.');
-            }
-
-            $item->status = KitchenItemStatus::STARTED;
-            $item->started_at = now();
-            $item->save();
-
-            $this->broadcast($ticket, KitchenTicketUpdated::REASON_CHANGED);
-
-            return $item->refresh();
-        });
-    }
-
     public function finishItem(KitchenTicketItem $item, User $user): KitchenTicketItem
     {
         return DB::transaction(function () use ($item, $user): KitchenTicketItem {
@@ -143,9 +122,7 @@ class KitchenTicketService
                 throw new KitchenException('انتهت مهلة التراجع عن هذا الصنف.');
             }
 
-            $item->status = $item->started_at !== null
-                ? KitchenItemStatus::STARTED
-                : KitchenItemStatus::PENDING;
+            $item->status = KitchenItemStatus::PENDING;
             $item->done_at = null;
             $item->done_by = null;
             $item->auto_finished = false;
@@ -184,7 +161,6 @@ class KitchenTicketService
                 ->where('kitchen_ticket_id', $ticket->id)
                 ->whereIn('status', [
                     KitchenItemStatus::PENDING->value,
-                    KitchenItemStatus::STARTED->value,
                 ])
                 ->lockForUpdate();
 
@@ -327,7 +303,6 @@ class KitchenTicketService
                 ->where('kitchen_ticket_id', $ticket->id)
                 ->whereIn('status', [
                     KitchenItemStatus::PENDING->value,
-                    KitchenItemStatus::STARTED->value,
                 ])
                 ->lockForUpdate()
                 ->get();
@@ -679,7 +654,6 @@ class KitchenTicketService
             ->where('kitchen_ticket_id', $ticket->id)
             ->whereIn('status', [
                 KitchenItemStatus::PENDING->value,
-                KitchenItemStatus::STARTED->value,
             ])
             ->exists();
 

@@ -29,7 +29,6 @@ export function postKitchen(
 }
 
 export const kitchenUrls = {
-    start: (itemId: number): string => `/kitchen/items/${itemId}/start`,
     done: (itemId: number): string => `/kitchen/items/${itemId}/done`,
     undo: (itemId: number): string => `/kitchen/items/${itemId}/undo`,
     ticketDone: (ticketId: number): string => `/kitchen/tickets/${ticketId}/done`,

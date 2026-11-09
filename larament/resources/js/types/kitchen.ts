@@ -2,7 +2,7 @@
 // Timestamps are ISO-8601 strings in server time; durations are whole seconds.
 
 export type KdsTicketStatus = 'active' | 'done' | 'cancelled';
-export type KdsItemStatus = 'pending' | 'started' | 'done' | 'voided';
+export type KdsItemStatus = 'pending' | 'done' | 'voided';
 export type KdsItemKind = 'original' | 'added' | 'increased';
 export type KdsSound = 'none' | 'chime' | 'bell' | 'beep' | 'alert';
 export type KdsBroadcastReason = 'new' | 'changed' | 'cancelled' | 'done';
@@ -32,7 +32,6 @@ export interface KdsItem {
     status: KdsItemStatus;
     target_minutes: number;
     sent_at: string;
-    started_at: string | null;
     done_at: string | null;
     voided_at: string | null;
     voided_after_done: boolean;
@@ -67,7 +66,6 @@ export interface KdsTicket {
 
 export interface KdsSettings {
     item_tracking: boolean;
-    require_start: boolean;
     warning_percent: number;
     recall_minutes: number;
     new_order_sound: KdsSound;

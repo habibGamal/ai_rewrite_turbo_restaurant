@@ -72,7 +72,6 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                     SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                     SettingKey::KDS_ITEM_TRACKING->value,
-                    SettingKey::KDS_REQUIRE_START->value,
                     SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
                     $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
@@ -304,11 +303,6 @@ class Settings extends Page implements HasForms
                                     ->helperText(SettingKey::KDS_ITEM_TRACKING->helperText())
                                     ->inline(false),
 
-                                Toggle::make(SettingKey::KDS_REQUIRE_START->value)
-                                    ->label(SettingKey::KDS_REQUIRE_START->label())
-                                    ->helperText(SettingKey::KDS_REQUIRE_START->helperText())
-                                    ->inline(false),
-
                                 Toggle::make(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
                                     ->label(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->label())
                                     ->helperText(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->helperText())
@@ -428,7 +422,6 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
                     SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                     SettingKey::KDS_ITEM_TRACKING->value,
-                    SettingKey::KDS_REQUIRE_START->value,
                     SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
                     $cleanData[$key] = $value ? 'true' : 'false';

@@ -371,7 +371,6 @@ it('settings service can retrieve saved settings', function () {
 it('has all KDS settings fields', function () {
     livewire(Settings::class)
         ->assertSchemaComponentExists(SettingKey::KDS_ITEM_TRACKING->value)
-        ->assertSchemaComponentExists(SettingKey::KDS_REQUIRE_START->value)
         ->assertSchemaComponentExists(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
         ->assertSchemaComponentExists(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
         ->assertSchemaComponentExists(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in')
@@ -389,7 +388,6 @@ it('loads KDS settings defaults', function () {
     livewire(Settings::class)
         ->assertSchemaStateSet([
             SettingKey::KDS_ITEM_TRACKING->value => true,
-            SettingKey::KDS_REQUIRE_START->value => false,
             SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => true,
             SettingKey::KDS_DEFAULT_PREP_MINUTES->value => '10',
             SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
@@ -420,7 +418,6 @@ it('can save KDS toggles persisted as true/false strings', function () {
     livewire(Settings::class)
         ->fillForm([
             SettingKey::KDS_ITEM_TRACKING->value => false,
-            SettingKey::KDS_REQUIRE_START->value => true,
             SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => false,
         ])
         ->call('save')
@@ -428,8 +425,6 @@ it('can save KDS toggles persisted as true/false strings', function () {
 
     expect(Setting::where('key', SettingKey::KDS_ITEM_TRACKING->value)->first()->value)
         ->toBe('false');
-    expect(Setting::where('key', SettingKey::KDS_REQUIRE_START->value)->first()->value)
-        ->toBe('true');
     expect(Setting::where('key', SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)->first()->value)
         ->toBe('false');
 });

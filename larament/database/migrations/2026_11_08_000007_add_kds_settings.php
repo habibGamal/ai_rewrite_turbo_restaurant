@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Database\Migrations\Migration;
 
@@ -11,11 +10,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        foreach ($this->keys() as $key) {
-            Setting::firstOrCreate(
-                ['key' => $key->value],
-                ['value' => $key->defaultValue()],
-            );
+        foreach ($this->defaults() as $key => $value) {
+            Setting::firstOrCreate(['key' => $key], ['value' => $value]);
         }
     }
 
@@ -24,29 +20,30 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Setting::query()
-            ->whereIn('key', array_map(fn (SettingKey $key): string => $key->value, $this->keys()))
-            ->delete();
+        Setting::query()->whereIn('key', array_keys($this->defaults()))->delete();
     }
 
     /**
-     * @return list<SettingKey>
+     * Literal keys and defaults as they were when this migration was written, so
+     * later changes to the SettingKey enum cannot break fresh installs.
+     *
+     * @return array<string, string>
      */
-    private function keys(): array
+    private function defaults(): array
     {
         return [
-            SettingKey::KDS_ITEM_TRACKING,
-            SettingKey::KDS_REQUIRE_START,
-            SettingKey::KDS_DEFAULT_PREP_MINUTES,
-            SettingKey::KDS_ORDER_TYPE_TARGETS,
-            SettingKey::KDS_WARNING_PERCENT,
-            SettingKey::KDS_AUTO_FINISH_ON_COMPLETE,
-            SettingKey::KDS_RECALL_MINUTES,
-            SettingKey::KDS_NEW_ORDER_SOUND,
-            SettingKey::KDS_CHANGE_SOUND,
-            SettingKey::KDS_CANCEL_SOUND,
-            SettingKey::KDS_SOUND_VOLUME,
-            SettingKey::KDS_REMINDER_SECONDS,
+            'kds_item_tracking' => 'true',
+            'kds_require_start' => 'false',
+            'kds_default_prep_minutes' => '10',
+            'kds_order_type_targets' => '{}',
+            'kds_warning_percent' => '75',
+            'kds_auto_finish_on_complete' => 'true',
+            'kds_recall_minutes' => '15',
+            'kds_new_order_sound' => 'chime',
+            'kds_change_sound' => 'bell',
+            'kds_cancel_sound' => 'alert',
+            'kds_sound_volume' => '80',
+            'kds_reminder_seconds' => '30',
         ];
     }
 };

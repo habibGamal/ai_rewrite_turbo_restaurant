@@ -70,13 +70,6 @@ class KitchenController extends Controller
         ]);
     }
 
-    public function startItem(Request $request, KitchenTicketItem $item): RedirectResponse
-    {
-        abort_unless($request->user()?->can('kitchen.access'), 403);
-
-        return $this->mutate(fn () => $this->kitchenTicketService->startItem($item));
-    }
-
     public function finishItem(Request $request, KitchenTicketItem $item): RedirectResponse
     {
         abort_unless($request->user()?->can('kitchen.access'), 403);
@@ -132,7 +125,6 @@ class KitchenController extends Controller
     /**
      * @return array{
      *     item_tracking: bool,
-     *     require_start: bool,
      *     warning_percent: int,
      *     recall_minutes: int,
      *     new_order_sound: string,
@@ -146,7 +138,6 @@ class KitchenController extends Controller
     {
         return [
             'item_tracking' => setting(SettingKey::KDS_ITEM_TRACKING) === 'true',
-            'require_start' => setting(SettingKey::KDS_REQUIRE_START) === 'true',
             'warning_percent' => (int) setting(SettingKey::KDS_WARNING_PERCENT),
             'recall_minutes' => (int) setting(SettingKey::KDS_RECALL_MINUTES),
             'new_order_sound' => $this->sound(SettingKey::KDS_NEW_ORDER_SOUND),

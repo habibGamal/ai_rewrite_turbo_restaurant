@@ -52,8 +52,8 @@ Goal: a KDS that
   - `quantity` decimal(10,3); `original_quantity` (the quantity as first sent)
   - `notes`
   - `kind`: `original` (in the first send), `added` (a product new to the order), `increased` (+N of a product already sent)
-  - `status`: `pending|started|done|voided`
-  - Times: `sent_at`, `started_at`, `done_at`, `voided_at`
+  - `status`: `pending|done|voided`
+  - Times: `sent_at`, `done_at`, `voided_at`
   - `done_by` (user id)
   - Flags: `voided_after_done` (made but not needed, a waste candidate), `needs_ack`, `auto_finished`
 - New enums in `app/Enums/`: `KitchenTicketStatus`, `KitchenItemStatus`, `KitchenItemKind`.
@@ -74,12 +74,12 @@ Holds all kitchen state changes. Each runs in a transaction and broadcasts after
 
 - **`syncOrder(Order)`** reconciles the ticket with the order's items. Items are matched by `product_id`, the same key used by `ShiftLoggingService::calculateItemDifferences`. For each product, compare the order quantity with the quantity on non-voided kitchen lines:
   - **More in the order:** create a new line in the open round (open a round if none is open). Its `kind` is `original`, `added` or `increased`, and it gets its own `sent_at`. A line already done is never touched, so "2 done + 1 new" shows as two lines.
-  - **Less in the order:** reduce pending and started lines first, newest first. Keep `original_quantity` so the card can show 3→2, and set `needs_ack`. Any remaining difference voids done lines, newest first, with `voided_after_done = true` and `needs_ack`. Fractional quantities split a line.
+  - **Less in the order:** reduce pending lines first, newest first. Keep `original_quantity` so the card can show 3→2, and set `needs_ack`. Any remaining difference voids done lines, newest first, with `voided_after_done = true` and `needs_ack`. Fractional quantities split a line.
   - **Product removed:** the same as "less", down to 0.
   - **Notes changed:** update the notes on pending lines and set `needs_ack`. On done lines, only set `needs_ack` as information.
   - Products where `show_on_kds = false` are ignored.
   - Then call `closeRoundIfIdle`.
-- **`startItem`, `finishItem`, `undoItem`:**
+- **`finishItem`, `undoItem`:**
   - `finishItem` sets `done_at` and `done_by`.
   - `undoItem` works only within `kds_recall_minutes`. If the round had already closed, it reopens that round (`ended_at = null`) and sets the ticket back to `active`.
 - **`finishTicket(ticket, ?stationId)`:** marks all pending lines done, limited to one station when a station is given.
@@ -87,7 +87,7 @@ Holds all kitchen state changes. Each runs in a transaction and broadcasts after
 - **`setRush(ticket, bool)`.**
 - **`cancelForOrder(order)`:** sets the ticket to `cancelled` and voids all lines (done lines become `voided_after_done`). The ticket stays on screen until `cancel_acknowledged_at` is set.
 - **`autoFinishForOrder(order)`:** runs only when `kds_auto_finish_on_complete` is on. Marks the remaining lines done with `auto_finished = true`.
-- **`closeRoundIfIdle`:** when no pending or started lines remain, close the round and set the ticket to `done` with `done_at`.
+- **`closeRoundIfIdle`:** when no pending lines remain, close the round and set the ticket to `done` with `done_at`.
 - **Timing helpers:**
   - kitchen seconds = Σ round durations, plus the time elapsed in the open round
   - round target = the largest `target_minutes` among unfinished lines in the open round
@@ -122,7 +122,6 @@ Rework `KitchenController` and keep `GET /kitchen` with `permission:kitchen.acce
 - The query is **no longer tied to the current shift**, because web orders can carry over to the next shift. The "no active shift" message is only shown when there are no tickets.
 - Shape the data with a `KitchenTicketResource` (or an array builder).
 - **New routes** under `/kitchen`, all `kitchen.access`, each returning a redirect back for an Inertia partial reload:
-  - `POST items/{item}/start`
   - `POST items/{item}/done`
   - `POST items/{item}/undo`
   - `POST tickets/{ticket}/done` (optional `station_id`)
@@ -142,7 +141,6 @@ Add these to the `SettingKey` enum. Every new case needs `defaultValue`, `valida
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `kds_item_tracking` | bool | true | Cooks can mark individual items done. When off, only the whole ticket can be marked done, and its items take the ticket's time. |
-| `kds_require_start` | bool | false | Adds a "بدء" step. Item prep time is then measured from start instead of arrival. |
 | `kds_default_prep_minutes` | int | 10 | Fallback target. |
 | `kds_order_type_targets` | JSON map type→min | `{}` | Optional target per order type. Use a KeyValue input over `OrderType` cases. |
 | `kds_warning_percent` | int 1–100 | 75 | The card turns yellow at this % of the target and red past it. |
@@ -194,7 +192,6 @@ Rewrite `Kitchen/Index.tsx`. Add new components in `resources/js/Components/Kitc
 - **Body** is grouped by round. Round 1 lines come first. Each later round is its own section, "إضافة ٢ — 10:42", with its own timer.
 - **Line styles:**
   - pending: normal
-  - started: blue
   - done: dimmed with a check
   - `increased`: "+1 جديد" highlight
   - reduced: "~~3~~ → 2" with a red −1 badge
@@ -226,6 +223,8 @@ Rewrite `Kitchen/Index.tsx`. Add new components in `resources/js/Components/Kitc
 - **`useKdsClock`:** one 1-second ticker, corrected with `serverNow`.
 
 ## Reports (last phase)
+
+The item start step was removed; item prep time is `done_at − sent_at`. Round start timing remains unchanged.
 
 New `app/Filament/Pages/Reports/KitchenPerformanceReport.php`, following the existing `BaseDashboard` report pattern. Filter by date range. It shows:
 - average kitchen time per order type
@@ -330,7 +329,6 @@ No two tracks touch the same file.
 
 - `resources/js/types/kitchen.ts`: Inertia props of `GET /kitchen` and the broadcast payload. Track A must output exactly this shape. Track C must consume it.
 - Item and ticket actions are plain `POST` routes that return `back()`:
-  - `kitchen.items.start` → `/kitchen/items/{item}/start`
   - `kitchen.items.done` → `/kitchen/items/{item}/done`
   - `kitchen.items.undo` → `/kitchen/items/{item}/undo`
   - `kitchen.tickets.done` → `/kitchen/tickets/{ticket}/done`, with an optional `station_id` in the body
