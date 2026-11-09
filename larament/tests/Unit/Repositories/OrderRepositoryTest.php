@@ -159,7 +159,7 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id));
+            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id));
 
             Order::factory()->create([
                 'shift_id' => $shift->id,

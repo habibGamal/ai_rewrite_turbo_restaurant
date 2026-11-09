@@ -2,11 +2,10 @@
 
 namespace App\Services\Orders;
 
-use App\DTOs\Orders\PaymentDTO;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethod;
 use App\Events\Orders\OrderCompleted;
 use App\Models\Order;
+use App\Orders\Tenders;
 
 class OrderCompletionService
 {
@@ -25,30 +24,7 @@ class OrderCompletionService
             $this->orderCalculationService->calculateOrderTotals($order);
         }
 
-        // Process payments - use single or multiple payment based on array content
-        $validPayments = array_filter($paymentsData, fn ($amount) => $amount > 0);
-
-        if (count($validPayments) === 1) {
-            // Single payment - use processPayment method
-            $method = array_key_first($validPayments);
-            $amount = $validPayments[$method];
-
-            $paymentDTO = new PaymentDTO(
-                amount: $amount,
-                method: PaymentMethod::from($method),
-                orderId: $order->id,
-                shiftId: $order->shift_id
-            );
-
-            $this->orderPaymentService->processPayment($order, $paymentDTO);
-        } else {
-            // Multiple payments - use processMultiplePayments method
-            $this->orderPaymentService->processMultiplePayments(
-                $order,
-                $paymentsData,
-                $order->shift_id
-            );
-        }
+        $this->orderPaymentService->pay($order, Tenders::fromArray($paymentsData), $order->shift_id);
 
         // Free table if dine-in
         if ($order->type->requiresTable() && $order->dine_table_number) {
