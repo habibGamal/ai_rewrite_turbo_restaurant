@@ -670,6 +670,7 @@ class MigrateOldDataCommand extends Command
                 InventoryItem::insert([
                     'id' => $oldInventoryItem->id,
                     'product_id' => $oldInventoryItem->product_id,
+                    'warehouse_id' => \App\Models\Warehouse::default()->id,
                     'quantity' => $oldInventoryItem->quantity ?? 0,
                     'created_at' => $oldInventoryItem->created_at ?? now(),
                     'updated_at' => $oldInventoryItem->updated_at ?? now(),

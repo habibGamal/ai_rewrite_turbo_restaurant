@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
+use App\Models\Warehouse;
 
 class ProductObserver
 {
@@ -28,6 +29,7 @@ class ProductObserver
         if ($product->type !== ProductType::Manufactured) {
             InventoryItem::create([
                 'product_id' => $product->id,
+                'warehouse_id' => Warehouse::default()->id,
                 'quantity' => 0,
             ]);
         }
@@ -66,6 +68,7 @@ class ProductObserver
             if (! InventoryItem::where('product_id', $product->id)->exists()) {
                 InventoryItem::create([
                     'product_id' => $product->id,
+                    'warehouse_id' => Warehouse::default()->id,
                     'quantity' => 0,
                 ]);
             }

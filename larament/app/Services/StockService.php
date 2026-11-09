@@ -9,8 +9,10 @@ use App\Exceptions\StockOperationException;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
 use App\Models\Product;
+use App\Models\Warehouse;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -35,16 +37,20 @@ class StockService
 
     /**
      * Add stock for multiple items
+     *
+     * @return Collection<int, InventoryItemMovement>
      */
-    public function addStock(array $items, MovementReason $reason = MovementReason::MANUAL, $referenceable = null): bool
+    public function addStock(array $items, MovementReason $reason = MovementReason::MANUAL, ?Model $referenceable = null): Collection
     {
         return $this->processStock($items, InventoryMovementOperation::IN, $reason, $referenceable);
     }
 
     /**
      * Remove stock for multiple items
+     *
+     * @return Collection<int, InventoryItemMovement>
      */
-    public function removeStock(array $items, MovementReason $reason = MovementReason::MANUAL, $referenceable = null): bool
+    public function removeStock(array $items, MovementReason $reason = MovementReason::MANUAL, ?Model $referenceable = null): Collection
     {
         return $this->processStock($items, InventoryMovementOperation::OUT, $reason, $referenceable);
     }
@@ -61,13 +67,13 @@ class StockService
             ? $reason
             : (MovementReason::tryFrom($reason) ?? MovementReason::MANUAL);
 
-        return $this->processStock($items, $movementOperation, $movementReason, $referenceable);
+        return $this->processStock($items, $movementOperation, $movementReason, $referenceable)->isNotEmpty();
     }
 
     /**
      * Internal method that processes stock movements
      */
-    private function processStock(array $items, InventoryMovementOperation $operation, MovementReason $reason, $referenceable): bool
+    private function processStock(array $items, InventoryMovementOperation $operation, MovementReason $reason, ?Model $referenceable): Collection
     {
         $transactionStarted = false;
 
@@ -88,13 +94,13 @@ class StockService
             $stockMovements = $this->prepareStockMovements($items, $operation, $reason, $referenceable, $existingInventory);
 
             $this->executeStockMovements($stockMovements);
-            $this->recordMovements($stockMovements);
+            $movements = $this->recordMovements($stockMovements);
             $this->updateDailyAggregations($stockMovements);
             // $this->logOperation($items, operation: $operation, $reason);
 
             DB::commit();
 
-            return true;
+            return $movements;
 
         } catch (Throwable $e) {
             // Only roll back our own transaction, never the caller's
@@ -113,32 +119,39 @@ class StockService
     }
 
     /**
-     * Normalize items: validate, group by product_id summing quantity, and round to 3 decimals
-     *
-     * @param  array<int, array{product_id: int, quantity: float|int}>  $items
-     * @return array<int, array{product_id: int, quantity: float}>
+     * @param  array<int, array{product_id: int, quantity: float|int, warehouse_id?: ?int, unit_cost?: ?float}>  $items
+     * @return array<int, array{product_id: int, warehouse_id: int, quantity: float, unit_cost: float}>
      */
     private function normalizeItems(array $items): array
     {
         $this->validateItems($items);
-
+        $costs = Product::whereIn('id', array_column($items, 'product_id'))->pluck('cost', 'id');
+        $defaultWarehouseId = Warehouse::default()->id;
         $grouped = [];
+
         foreach ($items as $item) {
             $productId = (int) $item['product_id'];
+            $warehouseId = (int) ($item['warehouse_id'] ?? $defaultWarehouseId);
             $quantity = (float) $item['quantity'];
+            $unitCost = (float) ($item['unit_cost'] ?? $costs->get($productId, 0));
+            $key = $productId.':'.$warehouseId;
 
-            if (isset($grouped[$productId])) {
-                $grouped[$productId]['quantity'] += $quantity;
-            } else {
-                $grouped[$productId] = [
+            if (! isset($grouped[$key])) {
+                $grouped[$key] = [
                     'product_id' => $productId,
-                    'quantity' => $quantity,
+                    'warehouse_id' => $warehouseId,
+                    'quantity' => 0.0,
+                    'value' => 0.0,
                 ];
             }
+            $grouped[$key]['quantity'] += $quantity;
+            $grouped[$key]['value'] += $quantity * $unitCost;
         }
 
-        foreach ($grouped as $productId => $item) {
-            $grouped[$productId]['quantity'] = round($item['quantity'], 3);
+        foreach ($grouped as $key => $item) {
+            $grouped[$key]['unit_cost'] = round($item['value'] / $item['quantity'], 4);
+            $grouped[$key]['quantity'] = round($item['quantity'], 3);
+            unset($grouped[$key]['value']);
         }
 
         return array_values($grouped);
@@ -206,12 +219,17 @@ class StockService
      */
     private function getExistingInventory(array $items): Collection
     {
-        $productIds = array_column($items, 'product_id');
-
-        return InventoryItem::whereIn('product_id', $productIds)
+        return InventoryItem::where(function ($query) use ($items) {
+            foreach ($items as $item) {
+                $query->orWhere(fn ($pair) => $pair->where('product_id', $item['product_id'])
+                    ->where('warehouse_id', $item['warehouse_id']));
+            }
+        })
+            ->orderBy('product_id')
+            ->orderBy('warehouse_id')
             ->lockForUpdate()
             ->get()
-            ->keyBy('product_id');
+            ->keyBy(fn (InventoryItem $item) => $item->product_id.':'.$item->warehouse_id);
     }
 
     /**
@@ -229,7 +247,7 @@ class StockService
         foreach ($items as $item) {
             $productId = $item['product_id'];
             $quantity = $item['quantity'];
-            $existingItem = $existingInventory->get($productId);
+            $existingItem = $existingInventory->get($productId.':'.$item['warehouse_id']);
 
             $movements[] = new StockMovementDTO(
                 productId: $productId,
@@ -237,7 +255,10 @@ class StockService
                 operation: $operation,
                 reason: $reason,
                 referenceable: $referenceable,
-                existingInventoryItem: $existingItem
+                existingInventoryItem: $existingItem,
+                warehouseId: $item['warehouse_id'],
+                unitCost: $item['unit_cost'],
+                userId: auth()->id(),
             );
         }
 
@@ -304,6 +325,7 @@ class StockService
 
             $items[] = [
                 'product_id' => $movement->productId,
+                'warehouse_id' => $movement->warehouseId,
                 'quantity' => $quantity,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -316,28 +338,29 @@ class StockService
     /**
      * Record inventory movements
      */
-    private function recordMovements(array $stockMovements): void
+    private function recordMovements(array $stockMovements): Collection
     {
-        if (empty($stockMovements)) {
-            return;
-        }
-
-        $movements = [];
+        $movements = collect();
         /** @var StockMovementDTO $movement */
         foreach ($stockMovements as $movement) {
-            $movements[] = [
+            $record = new InventoryItemMovement([
                 'product_id' => $movement->productId,
-                'operation' => $movement->operation->value,
+                'warehouse_id' => $movement->warehouseId,
+                'operation' => $movement->operation,
                 'quantity' => $movement->quantity,
-                'reason' => $movement->reason->value,
-                'referenceable_type' => $movement->referenceable ? get_class($movement->referenceable) : null,
-                'referenceable_id' => $movement->referenceable?->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+                'reason' => $movement->reason,
+                'unit_cost' => $movement->unitCost,
+                'total_cost' => round($movement->quantity * $movement->unitCost, 2),
+                'user_id' => $movement->userId,
+            ]);
+            if ($movement->referenceable) {
+                $record->referenceable()->associate($movement->referenceable);
+            }
+            $record->save();
+            $movements->push($record);
         }
 
-        InventoryItemMovement::insert($movements);
+        return $movements;
     }
 
     /**
@@ -378,11 +401,11 @@ class StockService
     /**
      * Get current stock for a product
      */
-    public function getCurrentStock(int $productId): float
+    public function getCurrentStock(int $productId, ?int $warehouseId = null): float
     {
-        $inventoryItem = InventoryItem::where('product_id', $productId)->first();
-
-        return $inventoryItem ? $inventoryItem->quantity : 0;
+        return (float) InventoryItem::where('product_id', $productId)
+            ->when($warehouseId !== null, fn ($query) => $query->where('warehouse_id', $warehouseId))
+            ->sum('quantity');
     }
 
     /**
@@ -402,6 +425,8 @@ class StockService
 
         // Get all inventory items for the products in a single query
         $inventoryItems = InventoryItem::whereIn('product_id', $productIds)
+            ->selectRaw('product_id, SUM(quantity) as quantity')
+            ->groupBy('product_id')
             ->get()
             ->keyBy('product_id');
 

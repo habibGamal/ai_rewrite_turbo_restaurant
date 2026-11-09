@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/** @property int $warehouse_id */
 #[ObservedBy([InventoryItemMovementObserver::class])]
 class InventoryItemMovement extends Model
 {
@@ -18,6 +19,10 @@ class InventoryItemMovement extends Model
 
     protected $fillable = [
         'product_id',
+        'warehouse_id',
+        'unit_cost',
+        'total_cost',
+        'user_id',
         'operation',
         'quantity',
         'reason',
@@ -30,7 +35,26 @@ class InventoryItemMovement extends Model
         'operation' => InventoryMovementOperation::class,
         'reason' => MovementReason::class,
         'quantity' => 'decimal:3',
+        'unit_cost' => 'decimal:4',
+        'total_cost' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (InventoryItemMovement $movement) {
+            $movement->warehouse_id ??= Warehouse::default()->id;
+        });
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function product(): BelongsTo
     {

@@ -93,8 +93,10 @@ it('can sort column', function (string $column) {
 
 // Search Tests
 it('can search by product name', function () {
-    $category = Category::factory()->create();
-    $products = Product::factory(5)->create(['category_id' => $category->id]);
+    $category = Category::factory()->create(['name' => 'Inventory search category']);
+    $products = Product::factory(5)
+        ->sequence(fn (\Illuminate\Database\Eloquent\Factories\Sequence $sequence) => ['name' => 'Inventory search product '.$sequence->index])
+        ->create(['category_id' => $category->id]);
     $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     $searchProduct = $products->first();

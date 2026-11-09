@@ -4,15 +4,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/** @property int $warehouse_id */
 class InventoryItem extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'product_id',
+        'warehouse_id',
         'quantity',
     ];
+
+    protected $casts = ['quantity' => 'decimal:3'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (InventoryItem $item) {
+            $item->warehouse_id ??= Warehouse::default()->id;
+        });
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
     public function product()
     {

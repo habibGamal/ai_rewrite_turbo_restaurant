@@ -69,7 +69,7 @@ class PurchaseService
                 $invoice
             );
 
-            if (! $success) {
+            if ($success->isEmpty()) {
                 throw new Exception('فشل في إضافة الأصناف إلى المخزون');
             }
 
@@ -142,7 +142,7 @@ class PurchaseService
                 $invoice
             );
 
-            if (! $success) {
+            if ($success->isEmpty()) {
                 throw new Exception('فشل في خصم الأصناف من المخزون');
             }
 

@@ -474,6 +474,7 @@ describe('InventoryDailyAggregationService', function () {
             // Create movements before opening the day
             InventoryItemMovement::insert([
                 'product_id' => $product->id,
+                'warehouse_id' => \App\Models\Warehouse::default()->id,
                 'operation' => InventoryMovementOperation::IN,
                 'quantity' => 999.0, // Large amount to detect if included
                 'reason' => MovementReason::PURCHASE,

@@ -53,6 +53,7 @@ function openInventoryDay(?\App\Models\Product $product = null, ?\Carbon\Carbon 
 
     $daily = \App\Models\InventoryItemMovementDaily::firstOrNew([
         'product_id' => $product->id,
+        'warehouse_id' => \App\Models\Warehouse::default()->id,
         'date' => $date->toDateString(),
     ]);
 

@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Stocktaking;
+use App\Models\Warehouse;
 use App\Models\Waste;
 use App\Sync\DateDocument;
 use App\Sync\DocumentType;
@@ -101,6 +102,7 @@ class InventoryDailyAggregationService
 
                     InventoryItemMovementDaily::create([
                         'product_id' => $product->id,
+                        'warehouse_id' => Warehouse::default()->id,
                         'date' => $today,
                         'start_quantity' => $startQuantity,
                         'incoming_quantity' => 0,
@@ -306,6 +308,7 @@ class InventoryDailyAggregationService
 
                         InventoryItemMovementDaily::create([
                             'product_id' => $productId,
+                            'warehouse_id' => Warehouse::default()->id,
                             'date' => $openDayDate,
                             'start_quantity' => 0, // New products start with 0
                             'incoming_quantity' => $data ? $data->incoming_quantity : 0,
