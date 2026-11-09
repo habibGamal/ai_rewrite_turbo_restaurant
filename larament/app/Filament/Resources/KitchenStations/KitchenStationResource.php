@@ -5,11 +5,14 @@ namespace App\Filament\Resources\KitchenStations;
 use App\Filament\Resources\KitchenStations\Pages\CreateKitchenStation;
 use App\Filament\Resources\KitchenStations\Pages\EditKitchenStation;
 use App\Filament\Resources\KitchenStations\Pages\ListKitchenStations;
+use App\Filament\Resources\KitchenStations\RelationManagers\CategoriesRelationManager;
+use App\Filament\Resources\KitchenStations\RelationManagers\ProductsRelationManager;
 use App\Models\KitchenStation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
@@ -18,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class KitchenStationResource extends Resource
 {
@@ -61,12 +65,23 @@ class KitchenStationResource extends Resource
                             ->minValue(0)
                             ->default(0),
                     ]),
+
+                Placeholder::make('resolved_products_count')
+                    ->label('عدد المنتجات المرتبطة')
+                    ->content(fn (?KitchenStation $record): int => $record?->resolvedProductsCount() ?? 0)
+                    ->hidden(fn (?KitchenStation $record): bool => $record === null),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query): Builder {
+                /** @var KitchenStation $station */
+                $station = $query->getModel();
+
+                return $station->scopeWithResolvedProductsCount($query);
+            })
             ->columns([
                 TextColumn::make('name')
                     ->label('اسم المحطة')
@@ -81,6 +96,9 @@ class KitchenStationResource extends Resource
                 TextColumn::make('categories_count')
                     ->label('عدد الفئات')
                     ->counts('categories')
+                    ->sortable(),
+                TextColumn::make('resolved_products_count')
+                    ->label('عدد المنتجات المرتبطة')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -106,6 +124,14 @@ class KitchenStationResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            CategoriesRelationManager::class,
+            ProductsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
