@@ -21,6 +21,7 @@ enum SettingKey: string
     case ALLOW_CASHIER_CANCEL_ORDERS = 'allow_cashier_cancel_orders';
     case ALLOW_CASHIER_ITEM_CHANGES = 'allow_cashier_item_changes';
     case ALLOW_WEB_ORDERS_SHIFT_TRANSFER = 'allow_web_orders_shift_transfer';
+    case CASHIER_TABS = 'cashier_tabs';
     case UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
     case KDS_ITEM_TRACKING = 'kds_item_tracking';
     case KDS_REQUIRE_START = 'kds_require_start';
@@ -56,6 +57,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'false',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'false',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'false',
+            self::CASHIER_TABS => self::cashierTabsDefault(),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'true',
             self::KDS_ITEM_TRACKING => 'true',
             self::KDS_REQUIRE_START => 'false',
@@ -93,6 +95,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => ['required', 'boolean'],
             self::ALLOW_CASHIER_ITEM_CHANGES => ['required', 'boolean'],
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => ['required', 'boolean'],
+            self::CASHIER_TABS => ['nullable', 'json'],
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => ['required', 'boolean'],
             // Settings are stored as strings. Laravel's `boolean` rule rejects
             // "true"/"false", so these accept the stored form and real booleans.
@@ -132,6 +135,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'السماح للكاشير بإلغاء الطلبات',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'السماح للكاشير بتعديل الطلبات المحفوظة',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'نقل طلبات الويب المفتوحة إلى الوردية التالية',
+            self::CASHIER_TABS => 'تبويبات الكاشير',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة المنتجات من فواتير الشراء',
             self::KDS_ITEM_TRACKING => 'تتبع الأصناف بشكل منفصل',
             self::KDS_REQUIRE_START => 'تفعيل خطوة بدء التحضير',
@@ -169,6 +173,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'يسمح للكاشير بإلغاء الطلبات المكتملة',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'يسمح للكاشير بتعديل عناصر الطلبات المحفوظة مسبقاً',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'عند تفعيل هذا الخيار، طلبات الويب (دليفري وتيك أواي) المفتوحة سيتم نقلها تلقائياً للوردية الجديدة عند إغلاق الوردية الحالية',
+            self::CASHIER_TABS => 'اسحب التبويبات لإعادة ترتيبها، واستخدم مفتاح «مرئي» لإظهار التبويب أو إخفائه في شاشة الكاشير.',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.',
             self::KDS_ITEM_TRACKING => 'عند التفعيل يستطيع الطاهي تعليم كل صنف كمنتهٍ بمفرده. عند الإيقاف يُنهى الطلب كاملاً فقط، وتأخذ الأصناف وقت التذكرة.',
             self::KDS_REQUIRE_START => 'يضيف خطوة «بدء» قبل إنهاء الصنف، ويُحسب وقت التحضير من لحظة البدء بدل وقت وصول الصنف للمطبخ.',
@@ -206,6 +211,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => 'تفعيل',
             self::ALLOW_CASHIER_ITEM_CHANGES => 'تفعيل',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'تفعيل',
+            self::CASHIER_TABS => self::cashierTabsDefault(),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تفعيل',
             self::KDS_ITEM_TRACKING => 'تفعيل',
             self::KDS_REQUIRE_START => 'تفعيل',
@@ -243,6 +249,7 @@ enum SettingKey: string
             self::ALLOW_CASHIER_CANCEL_ORDERS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_CASHIER_ITEM_CHANGES => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
+            self::CASHIER_TABS => self::isJsonValue($value),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::KDS_ITEM_TRACKING, self::KDS_REQUIRE_START, self::KDS_AUTO_FINISH_ON_COMPLETE => self::isStoredBoolean($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
@@ -252,6 +259,23 @@ enum SettingKey: string
             self::KDS_ORDER_TYPE_TARGETS => self::isJsonValue($value),
             self::KDS_NEW_ORDER_SOUND, self::KDS_CHANGE_SOUND, self::KDS_CANCEL_SOUND => is_string($value) && KdsSound::tryFrom($value) !== null,
         };
+    }
+
+    private static function cashierTabsDefault(): string
+    {
+        return json_encode([
+            ['key' => 'type:dine_in', 'visible' => true],
+            ['key' => 'type:takeaway', 'visible' => true],
+            ['key' => 'type:delivery', 'visible' => true],
+            ['key' => 'type:talabat', 'visible' => true],
+            ['key' => 'type:companies', 'visible' => false],
+            ['key' => 'type:web_delivery', 'visible' => true],
+            ['key' => 'type:web_takeaway', 'visible' => true],
+            ['key' => 'system:receivables', 'visible' => false],
+            ['key' => 'system:expenses', 'visible' => true],
+            ['key' => 'system:cancelled', 'visible' => true],
+            ['key' => 'system:completed', 'visible' => true],
+        ], JSON_UNESCAPED_UNICODE) ?: '[]';
     }
 
     /**
