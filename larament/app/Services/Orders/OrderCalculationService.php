@@ -3,14 +3,14 @@
 namespace App\Services\Orders;
 
 use App\Models\Order;
-use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\OrderRepository;
 
 class OrderCalculationService
 {
     private const TAX_RATE = 0.0; // 0% tax rate as per original system
 
     public function __construct(
-        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderRepository $orderRepository,
     ) {}
 
     public function calculateOrderTotals(Order $order): Order

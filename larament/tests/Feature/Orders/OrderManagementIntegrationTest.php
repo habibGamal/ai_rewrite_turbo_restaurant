@@ -25,9 +25,6 @@ describe('Order Management Integration', function () {
     beforeEach(function () {
         Event::fake();
 
-        // Register the OrderServiceProvider for dependency injection
-        app()->register(\App\Providers\OrderServiceProvider::class);
-
         $this->orderService = app(OrderService::class);
         $this->user = User::factory()->create();
         $this->shift = Shift::factory()->create();

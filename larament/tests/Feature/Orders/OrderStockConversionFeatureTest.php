@@ -24,8 +24,6 @@ uses(RefreshDatabase::class);
 
 describe('Order Stock Conversion Feature Integration', function () {
     beforeEach(function () {
-        // Register the OrderServiceProvider for dependency injection
-        app()->register(\App\Providers\OrderServiceProvider::class);
 
         $this->orderService = app(OrderService::class);
         $this->stockService = app(StockService::class);

@@ -8,10 +8,9 @@ use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Shift;
-use App\Repositories\Contracts\OrderRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-class OrderRepository implements OrderRepositoryInterface
+class OrderRepository
 {
     public function create(CreateOrderDTO $orderDTO): Order
     {

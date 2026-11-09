@@ -9,12 +9,12 @@ use App\Events\Orders\PaymentProcessed;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Orders\Tenders;
-use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\PaymentRepository;
 
 class OrderPaymentService
 {
     public function __construct(
-        private readonly PaymentRepositoryInterface $paymentRepository,
+        private readonly PaymentRepository $paymentRepository,
     ) {}
 
     public function pay(Order $order, Tenders $tenders, int $shiftId): Order

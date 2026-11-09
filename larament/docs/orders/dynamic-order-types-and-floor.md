@@ -114,7 +114,7 @@ private function locked(int $orderId, string $notModifiableMessage, Closure $fn)
 
 `updateOrderItems`, `applyDiscount`, `linkCustomer`, `linkDriver`, `updateNotes`, and `changeOrderType` use it. `completeOrder` and `cancelOrder` lock the same way, but each has its own status check. This is a private helper in one service, not a framework.
 
-- **Pricing moves out.** `OrderItemPricer::price(array $lines): OrderItemDTO[]` loads products in one query, sets price and cost, and caps the item discount. It is the only place an item discount is computed. `OrderCalculationService::calculateDiscount()` sums the stored `item_discount` and stops re-deriving it from the percent. A test locks the totals for percent and fixed item discounts before and after this change.
+- **Pricing moves out.** `OrderItemPricingService::price(array $lines): OrderItemDTO[]` loads products in one query, sets price and cost, and caps the item discount. It is the only place an item discount is computed. `OrderCalculationService::calculateDiscount()` sums the stored `item_discount` and stops re-deriving it from the percent. A test locks the totals for percent and fixed item discounts before and after this change.
 - **The discount policy moves into `OrderCalculationService`.** Both directions of the item-vs-order discount rule live there. Clearing item discounts is one `update()` query, not one query per item.
 - **Item change tracking moves into the transaction.** `updateOrderItems()` reads the old lines under the lock, applies the new ones, computes the differences, and calls `OrderItemChangeService::recordChanges()` and the shift log. It returns the order. `saveOrder()` becomes validate → call → flash.
 - **Customer changes always recalculate.** `OrderController::updateCustomer()` calls `OrderService::linkCustomer()` in both branches (new customer and edited customer). `linkCustomer()` runs under the lock.
@@ -214,7 +214,7 @@ Do not extract an action class per method. The try/catch + Arabic flash pattern 
 
 - Saving items while another request holds the completion lock waits for it. The replaced items never land on a completed order.
 - Editing an existing customer's `delivery_cost` on an open delivery order changes `orders.service` and `orders.total`.
-- Percent and fixed item discounts give the same totals before and after `OrderItemPricer`.
+- Percent and fixed item discounts give the same totals before and after `OrderItemPricingService`.
 - One cash tender over the due amount completes with the payment capped. Several tenders over the due amount throw.
 - Two orders created in the same shift get consecutive numbers. Web orders keep their website number.
 - Item changes are recorded once per save, inside the same transaction as the save.
@@ -240,7 +240,7 @@ app/Enums/OrderBehavior.php               the six behavior keys
 app/Filament/Pages/CompaniesAccounts.php  outstanding balance per company customer
 resources/js/Components/Orders/Index/ReceivablesTab.tsx
 app/Services/Orders/OrderOpeningService.php   (was OrderCreationService)
-app/Services/Orders/OrderItemPricer.php
+app/Services/Orders/OrderItemPricingService.php
 app/Services/Orders/GuestBill.php         guest due + tender split; does not write orders.total
 app/Services/Orders/ExternalOrderService.php
 app/Services/Orders/FloorLayoutService.php    read/write the JSON file

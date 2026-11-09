@@ -12,8 +12,5 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Register the OrderServiceProvider for dependency injection
-        $this->app->register(\App\Providers\OrderServiceProvider::class);
     }
 }

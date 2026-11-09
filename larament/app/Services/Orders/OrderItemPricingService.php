@@ -6,7 +6,7 @@ use App\DTOs\Orders\OrderItemDTO;
 use App\Exceptions\OrderException;
 use App\Models\Product;
 
-class OrderItemPricer
+class OrderItemPricingService
 {
     /**
      * @param  array<int, array<string, mixed>>  $lines

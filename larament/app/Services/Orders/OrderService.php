@@ -9,8 +9,8 @@ use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\Product;
-use App\Repositories\Contracts\OrderItemRepositoryInterface;
-use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\OrderItemRepository;
+use App\Repositories\OrderRepository;
 use App\Services\Kitchen\KitchenTicketService;
 use App\Services\OrderItemChangeService;
 use App\Services\ShiftLoggingService;
@@ -23,15 +23,15 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
-        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderRepository $orderRepository,
         private readonly OrderOpeningService $orderOpeningService,
         private readonly OrderCalculationService $orderCalculationService,
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
         private readonly OrderStockConversionService $orderStockConversionService,
         private readonly KitchenTicketService $kitchenTicketService,
-        private readonly OrderItemRepositoryInterface $orderItemRepository,
-        private readonly OrderItemPricer $itemPricer,
+        private readonly OrderItemRepository $orderItemRepository,
+        private readonly OrderItemPricingService $itemPricer,
         private readonly ShiftLoggingService $shiftLoggingService,
         private readonly OrderItemChangeService $orderItemChangeService,
     ) {}

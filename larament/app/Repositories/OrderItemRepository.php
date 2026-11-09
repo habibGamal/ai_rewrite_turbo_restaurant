@@ -3,10 +3,9 @@
 namespace App\Repositories;
 
 use App\Models\Order;
-use App\Repositories\Contracts\OrderItemRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-class OrderItemRepository implements OrderItemRepositoryInterface
+class OrderItemRepository
 {
     public function createManyForOrder(Order $order, array $itemDTOs): Collection
     {
