@@ -2,9 +2,10 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -28,7 +29,10 @@ class WebOrdersStats extends BaseWidget
         ];
 
         $ordersQuery = Order::query()
-            ->whereIn('type', [OrderType::WEB_TAKEAWAY, OrderType::WEB_DELIVERY])
+            ->whereIn('type', app(OrderTypeCatalog::class)->codesWithBehavior([
+                OrderBehavior::WEB_TAKEAWAY,
+                OrderBehavior::WEB_DELIVERY,
+            ]))
             ->whereIn('status', $statuses);
         $pendingOrders = (clone $ordersQuery)
             ->where('status', OrderStatus::PENDING)

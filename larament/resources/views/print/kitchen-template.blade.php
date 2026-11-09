@@ -1,17 +1,5 @@
 @php
-    // Order type mapping
-    $getOrderTypeString = function ($type) {
-        $typeMap = [
-            'dine_in' => 'في المطعم',
-            'takeaway' => 'خارجي',
-            'delivery' => 'توصيل',
-            'companies' => 'شركات',
-            'talabat' => 'طلبات',
-            'web_delivery' => 'اونلاين دليفري',
-            'web_takeaway' => 'اونلاين تيك أواي',
-        ];
-        return $typeMap[$type->value] ?? $type->value;
-    };
+    $display = $order->display();
 
     // Format dates
     $printDate = now()->setTimezone('Africa/Cairo')->format('d/m/Y H:i:s');
@@ -116,9 +104,9 @@
         <p class="order-number">Order #{{ $order->order_number }}</p>
 
         <div class="order-info">
-            <p>نوع الطلب : {{ $getOrderTypeString($order->type) }}</p>
+            <p>نوع الطلب : {{ $display->label }}</p>
             <p>التاريخ : {{ $printDate }}</p>
-            @if ($order->type->isDineIn() && $order->dine_table_number)
+            @if ($display->showTable && $order->dine_table_number)
                 <p>طاولة رقم {{ $order->dine_table_number }}</p>
             @endif
         </div>

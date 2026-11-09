@@ -19,6 +19,7 @@ use App\Models\Product;
 use App\Models\Region;
 use App\Models\TableType;
 use App\Orders\OrderOpening;
+use App\Orders\OrderTypeCatalog;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\ShiftLoggingService;
@@ -27,8 +28,8 @@ use Exception;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
-use InvalidArgumentException;
 
 class OrderController extends Controller
 {
@@ -39,6 +40,7 @@ class OrderController extends Controller
         private PrintService $printService,
         private ShiftService $shiftService,
         private ShiftLoggingService $loggingService,
+        private OrderTypeCatalog $catalog,
     ) {}
 
     /**
@@ -143,7 +145,7 @@ class OrderController extends Controller
             // Log order completion
             $this->loggingService->logOrderCompletion($order->id, $paymentsData, $completedOrder->total);
 
-            return redirect()->to(route('orders.index').'#'.$order->type->value)
+            return redirect()->to(route('orders.index').'#'.$order->type)
                 ->with('success', 'تم إنهاء الطلب بنجاح');
         } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إتمام الطلب', [
@@ -486,7 +488,7 @@ class OrderController extends Controller
     public function updateOrderType(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'type' => 'required|in:dine_in,takeaway,delivery,companies,talabat',
+            'type' => ['required', 'string', Rule::in($this->catalog->cashierCreatableCodes())],
             'table_number' => 'nullable|string|max:50',
         ]);
 
@@ -660,7 +662,7 @@ class OrderController extends Controller
     public function createOrder(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|in:'.implode(',', array_column(OrderType::cases(), 'value')),
+            'type' => ['required', 'string', Rule::in($this->catalog->cashierCreatableCodes())],
             'table_number' => 'nullable|string|max:50',
         ]);
 
@@ -671,18 +673,8 @@ class OrderController extends Controller
                 return back()->withErrors(['error' => 'لا يوجد شيفت نشط']);
             }
 
-            // Map order type to enum
-            $orderType = match ($validated['type']) {
-                'dine_in' => OrderType::DINE_IN,
-                'takeaway' => OrderType::TAKEAWAY,
-                'delivery' => OrderType::DELIVERY,
-                'companies' => OrderType::COMPANIES,
-                'talabat' => OrderType::TALABAT,
-                default => throw new InvalidArgumentException('Invalid order type'),
-            };
-
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: $orderType->value,
+                typeCode: $validated['type'],
                 shiftId: $currentShift->id,
                 userId: auth()->id(),
                 opening: new OrderOpening($validated['table_number'] ?? null),

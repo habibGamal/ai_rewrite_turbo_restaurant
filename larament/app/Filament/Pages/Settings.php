@@ -3,8 +3,9 @@
 namespace App\Filament\Pages;
 
 use App\Enums\KdsSound;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
+use App\Models\OrderTypeRow;
+use App\Orders\OrderTypeCatalog;
 use App\Services\PrintService;
 use App\Services\SettingsService;
 use Exception;
@@ -91,9 +92,9 @@ class Settings extends Page implements HasForms
         }
 
         $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = [];
-        foreach (OrderType::cases() as $type) {
-            $minutes = $targets[$type->value] ?? null;
-            $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value][$type->value] = ($minutes === null || $minutes === '')
+        foreach (app(OrderTypeCatalog::class)->active() as $type) {
+            $minutes = $targets[$type->code] ?? null;
+            $this->data[SettingKey::KDS_ORDER_TYPE_TARGETS->value][$type->code] = ($minutes === null || $minutes === '')
                 ? ''
                 : (string) $minutes;
         }
@@ -380,9 +381,9 @@ class Settings extends Page implements HasForms
 
                         Fieldset::make('الوقت المستهدف حسب نوع الطلب (اختياري)')
                             ->columns(3)
-                            ->schema(collect(OrderType::cases())
-                                ->map(fn (OrderType $type): TextInput => TextInput::make(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.'.$type->value)
-                                    ->label($type->getLabel())
+                            ->schema(app(OrderTypeCatalog::class)->active()
+                                ->map(fn (OrderTypeRow $type): TextInput => TextInput::make(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.'.$type->code)
+                                    ->label($type->label)
                                     ->helperText('يُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً')
                                     ->numeric()
                                     ->minValue(1)
@@ -406,13 +407,13 @@ class Settings extends Page implements HasForms
             $targets = [];
             $targetsState = $data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] ?? [];
             if (is_array($targetsState)) {
-                foreach (OrderType::cases() as $type) {
-                    $minutes = $targetsState[$type->value] ?? null;
+                foreach (app(OrderTypeCatalog::class)->active() as $type) {
+                    $minutes = $targetsState[$type->code] ?? null;
                     if ($minutes === null || (is_string($minutes) && trim($minutes) === '')) {
                         continue;
                     }
 
-                    $targets[$type->value] = (int) $minutes;
+                    $targets[$type->code] = (int) $minutes;
                 }
             }
             unset($data[SettingKey::KDS_ORDER_TYPE_TARGETS->value]);

@@ -3,11 +3,11 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\CurrentShiftOrdersExporter;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Orders\OrderTypeCatalog;
 use App\Services\PrintService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
@@ -104,7 +104,10 @@ class CurrentShiftOrdersTable extends BaseWidget
 
                 TextColumn::make('type')
                     ->label('النوع')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                 TextColumn::make('customer.name')
                     ->label('العميل')
@@ -229,7 +232,7 @@ class CurrentShiftOrdersTable extends BaseWidget
 
                 SelectFilter::make('type')
                     ->label('النوع')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
                 SelectFilter::make('payment_method')
                     ->label('طريقة الدفع')

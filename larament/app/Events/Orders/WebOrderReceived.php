@@ -30,8 +30,8 @@ class WebOrderReceived implements ShouldBroadcastNow
             'order' => [
                 'id' => $this->order->id,
                 'order_number' => $this->order->order_number,
-                'type' => $this->order->type->label(),
-                'typeString' => $this->order->type->label(), // For compatibility with frontend
+                'type' => $this->order->getOrderTypeLabel(),
+                'typeString' => $this->order->getOrderTypeLabel(), // For compatibility with frontend
                 'customer_name' => $this->order->customer->name,
                 'customer_phone' => $this->order->customer->phone,
                 'customer_address' => $this->order->customer->address,

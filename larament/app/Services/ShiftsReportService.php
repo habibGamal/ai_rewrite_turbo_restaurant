@@ -263,7 +263,8 @@ class ShiftsReportService
         ];
 
         foreach ($completedOrders as $order) {
-            $key = $this->getStatsKey($order->type);
+            $type = OrderType::tryFrom((string) $order->type);
+            $key = $type instanceof OrderType ? $this->getStatsKey($type) : null;
             if ($key) {
                 $stats[$key]['count']++;
                 $stats[$key]['value'] += $order->total;

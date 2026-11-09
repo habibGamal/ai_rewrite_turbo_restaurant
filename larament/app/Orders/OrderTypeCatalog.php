@@ -2,6 +2,7 @@
 
 namespace App\Orders;
 
+use App\Enums\OrderBehavior;
 use App\Models\OrderTypeRow;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use Illuminate\Database\Eloquent\Collection;
@@ -38,6 +39,72 @@ final class OrderTypeCatalog
     public function behaviorFor(string $code): OrderTypeBehavior
     {
         return $this->resolver->resolve($this->find($code)->behavior);
+    }
+
+    public function display(string $code): OrderDisplay
+    {
+        $row = $this->find($code);
+
+        return $this->resolver->resolve($row->behavior)->display($row);
+    }
+
+    /**
+     * @return Collection<int, OrderTypeRow>
+     */
+    public function active(): Collection
+    {
+        return $this->all()->where('is_active', true)->values();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function options(): array
+    {
+        $options = [];
+
+        foreach ($this->all() as $row) {
+            $options[$row->code] = $row->label;
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function cashierCreatableCodes(): array
+    {
+        $codes = [];
+
+        foreach ($this->all() as $row) {
+            if (! $row->is_active) {
+                continue;
+            }
+
+            if ($this->resolver->resolve($row->behavior)->cashierCanCreate()) {
+                $codes[] = $row->code;
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * @param  list<OrderBehavior>  $behaviors
+     * @return list<string>
+     */
+    public function codesWithBehavior(array $behaviors): array
+    {
+        $codes = [];
+
+        foreach ($this->all() as $row) {
+            if (in_array($row->behavior, $behaviors, true)) {
+                $codes[] = $row->code;
+            }
+        }
+
+        return $codes;
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
 use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
@@ -199,7 +198,7 @@ class OrderService
         return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
             $newTypeRow = $this->catalog->find($newType);
             $newBehavior = $this->catalog->behaviorFor($newType);
-            $assignsTable = $newTypeRow->behavior === OrderBehavior::DINE_IN;
+            $assignsTable = $newBehavior->display($newTypeRow)->showTable;
 
             if ($assignsTable && ! $tableNumber) {
                 throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');

@@ -237,7 +237,7 @@ describe('order type catalog', function () {
 
         $orders->changeOrderType($dineIn->id, OrderType::TAKEAWAY->value);
 
-        expect($dineIn->fresh()->type)->toBe(OrderType::TAKEAWAY)
+        expect($dineIn->fresh()->type)->toBe('takeaway')
             ->and($dineIn->fresh()->dine_table_number)->toBeNull()
             ->and(DineTable::query()->where('table_number', '9')->value('order_id'))->toBeNull();
 
@@ -250,7 +250,7 @@ describe('order type catalog', function () {
         expect(fn () => $orders->changeOrderType($takeaway->id, OrderType::DINE_IN->value))
             ->toThrow(OrderException::class, 'رقم الطاولة مطلوب للطلبات الداخلية');
 
-        expect($takeaway->fresh()->type)->toBe(OrderType::TAKEAWAY)
+        expect($takeaway->fresh()->type)->toBe('takeaway')
             ->and(DineTable::query()->where('order_id', $takeaway->id)->exists())->toBeFalse();
     });
 });

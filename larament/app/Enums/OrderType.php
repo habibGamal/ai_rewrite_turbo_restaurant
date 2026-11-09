@@ -59,9 +59,4 @@ enum OrderType: string implements HasColor, HasIcon, HasLabel
     {
         return $this->getLabel();
     }
-
-    public function isDineIn(): bool
-    {
-        return $this === self::DINE_IN;
-    }
 }

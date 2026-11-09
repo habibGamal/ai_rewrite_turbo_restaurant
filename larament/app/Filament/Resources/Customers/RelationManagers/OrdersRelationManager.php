@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Customers\RelationManagers;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
+use App\Orders\OrderTypeCatalog;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -46,6 +46,9 @@ class OrdersRelationManager extends RelationManager
                 TextColumn::make('type')
                     ->label('نوع الطلب')
                     ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon)
                     ->sortable(),
 
                 TextColumn::make('status')
@@ -82,7 +85,7 @@ class OrdersRelationManager extends RelationManager
             ->filters([
                 SelectFilter::make('type')
                     ->label('نوع الطلب')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
                 SelectFilter::make('status')
                     ->label('حالة الطلب')

@@ -5,6 +5,8 @@ namespace App\Orders\Behaviors;
 use App\Enums\SettingKey;
 use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Models\OrderTypeRow;
+use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 use App\Services\Orders\TableManagementService;
 
@@ -55,5 +57,10 @@ final class DineInBehavior implements OrderTypeBehavior
     public function usesPosOrderNumber(): bool
     {
         return true;
+    }
+
+    public function display(OrderTypeRow $type): OrderDisplay
+    {
+        return OrderDisplay::forRow($type, showTable: true, chargesService: true);
     }
 }

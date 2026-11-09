@@ -51,7 +51,7 @@ describe('Order Management Integration', function () {
             expect($order)->toBeInstanceOf(Order::class)
                 ->and($order->status)->toBe(OrderStatus::PROCESSING)
                 ->and($order->payment_status)->toBe(PaymentStatus::PENDING)
-                ->and($order->type)->toBe(OrderType::DINE_IN)
+                ->and($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T001');
 
             Event::assertDispatched(OrderCreated::class);
@@ -104,7 +104,7 @@ describe('Order Management Integration', function () {
 
             $order = $this->orderService->createOrder($createOrderDTO);
 
-            expect($order->type)->toBe(OrderType::TAKEAWAY)
+            expect($order->type)->toBe('takeaway')
                 ->and($order->dine_table_number)->toBeNull();
 
             // Add items and complete

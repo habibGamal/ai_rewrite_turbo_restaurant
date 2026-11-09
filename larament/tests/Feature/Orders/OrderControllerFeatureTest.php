@@ -195,7 +195,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::DINE_IN)
+            expect($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T001')
                 ->and($order->shift_id)->toBe($this->shift->id)
                 ->and($order->user_id)->toBe($this->user->id)
@@ -211,7 +211,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::TAKEAWAY)
+            expect($order->type)->toBe('takeaway')
                 ->and($order->dine_table_number)->toBeNull();
         });
 
@@ -224,7 +224,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::DELIVERY);
+            expect($order->type)->toBe('delivery');
         });
 
         it('validates order type', function () {
@@ -350,7 +350,7 @@ describe('OrderController Feature Tests', function () {
                 'print' => false,
             ]);
 
-            $response->assertRedirect(route('orders.index', ['type' => $order->type->value]))
+            $response->assertRedirect(route('orders.index', ['type' => $order->type]))
                 ->assertSessionHas('success', 'تم إنهاء الطلب بنجاح');
 
             $order->refresh();
@@ -592,7 +592,7 @@ describe('OrderController Feature Tests', function () {
                 ->assertSessionHas('success', 'تم تغيير نوع الطلب بنجاح');
 
             $order->refresh();
-            expect($order->type)->toBe(OrderType::DINE_IN)
+            expect($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T005');
         });
 

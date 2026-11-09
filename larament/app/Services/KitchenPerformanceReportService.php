@@ -102,7 +102,7 @@ class KitchenPerformanceReportService
             ->groupBy(function (KitchenTicket $ticket): string {
                 $order = $ticket->order;
 
-                return $order instanceof Order ? $order->type->value : 'unknown';
+                return $order instanceof Order ? (string) $order->type : 'unknown';
             });
 
         $rows = [];

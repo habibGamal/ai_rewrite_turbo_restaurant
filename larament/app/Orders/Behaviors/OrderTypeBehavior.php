@@ -3,6 +3,8 @@
 namespace App\Orders\Behaviors;
 
 use App\Models\Order;
+use App\Models\OrderTypeRow;
+use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 
 interface OrderTypeBehavior
@@ -20,4 +22,6 @@ interface OrderTypeBehavior
     public function carriesAcrossShifts(): bool;
 
     public function usesPosOrderNumber(): bool;
+
+    public function display(OrderTypeRow $type): OrderDisplay;
 }

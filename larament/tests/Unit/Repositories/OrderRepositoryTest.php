@@ -30,7 +30,7 @@ describe('OrderRepository', function () {
             $order = $this->repository->create($createOrderDTO, 1);
 
             expect($order)->toBeInstanceOf(Order::class)
-                ->and($order->type)->toBe(OrderType::DINE_IN)
+                ->and($order->type)->toBe('dine_in')
                 ->and($order->shift_id)->toBe($shift->id)
                 ->and($order->user_id)->toBe($user->id)
                 ->and($order->dine_table_number)->toBe('T001')

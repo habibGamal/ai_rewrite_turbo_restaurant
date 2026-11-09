@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Drivers\RelationManagers;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Shift;
+use App\Orders\OrderTypeCatalog;
 use Carbon\Carbon;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -44,16 +44,7 @@ class OrdersRelationManager extends RelationManager
 
                 Select::make('type')
                     ->label('نوع الطلب')
-                    ->options([
-                        OrderType::DELIVERY->value => 'توصيل',
-                        OrderType::TAKEAWAY->value => 'استلام',
-                        OrderType::DINE_IN->value => 'تناول في المطعم',
-                        OrderType::TALABAT->value => 'طلبات',
-                        OrderType::WEB_DELIVERY->value => 'توصيل ويب',
-                        OrderType::WEB_TAKEAWAY->value => 'استلام ويب',
-                        OrderType::COMPANIES->value => 'شركات',
-                    ])
-                    ->enum(OrderType::class)
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options())
                     ->required(),
 
                 Select::make('status')
@@ -93,7 +84,10 @@ class OrdersRelationManager extends RelationManager
 
                 TextColumn::make('type')
                     ->label('نوع الطلب')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                 TextColumn::make('status')
                     ->label('الحالة')
@@ -126,15 +120,7 @@ class OrdersRelationManager extends RelationManager
 
                 SelectFilter::make('type')
                     ->label('نوع الطلب')
-                    ->options([
-                        OrderType::DELIVERY->value => 'توصيل',
-                        OrderType::TAKEAWAY->value => 'استلام',
-                        OrderType::DINE_IN->value => 'تناول في المطعم',
-                        OrderType::TALABAT->value => 'طلبات',
-                        OrderType::WEB_DELIVERY->value => 'توصيل ويب',
-                        OrderType::WEB_TAKEAWAY->value => 'استلام ويب',
-                        OrderType::COMPANIES->value => 'شركات',
-                    ]),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
                 SelectFilter::make('shift_ids')->label('الشفتات')
                     ->options(function () {
                         return Shift::with('user')

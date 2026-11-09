@@ -31,7 +31,7 @@ class OrderCreated implements ShouldBroadcast
             'order' => [
                 'id' => $this->order->id,
                 'order_number' => $this->order->order_number,
-                'type' => $this->order->type->label(),
+                'type' => $this->order->getOrderTypeLabel(),
                 'table_number' => $this->order->dine_table_number,
                 'created_at' => $this->order->created_at->format('H:i:s'),
             ],

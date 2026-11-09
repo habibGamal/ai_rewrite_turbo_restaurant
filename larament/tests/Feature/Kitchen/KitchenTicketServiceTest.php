@@ -348,9 +348,9 @@ it('falls back from product to category to order type to the default target', fu
     ]));
     app(SettingsService::class)->set(SettingKey::KDS_DEFAULT_PREP_MINUTES->value, '10');
 
-    expect($routing->targetMinutes($product, OrderType::DINE_IN))->toBe(8)
-        ->and($routing->targetMinutes($bare, OrderType::DELIVERY))->toBe(25)
-        ->and($routing->targetMinutes($bare, OrderType::TAKEAWAY))->toBe(10);
+    expect($routing->targetMinutes($product, 'dine_in'))->toBe(8)
+        ->and($routing->targetMinutes($bare, 'delivery'))->toBe(25)
+        ->and($routing->targetMinutes($bare, 'takeaway'))->toBe(10);
 
     $order = Order::factory()->create([
         'status' => OrderStatus::PROCESSING,
