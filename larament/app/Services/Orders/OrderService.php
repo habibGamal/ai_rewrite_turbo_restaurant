@@ -218,6 +218,7 @@ class OrderService
             // Recalculate totals as service charges might change
             $this->orderCalculationService->calculateOrderTotals($order);
             $this->kitchenTicketService->rebroadcastForOrder($order);
+            \App\Events\Orders\OrderTypeChanged::dispatch($order);
 
             return $order;
         });

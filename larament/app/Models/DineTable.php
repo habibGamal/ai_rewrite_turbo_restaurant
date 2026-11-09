@@ -11,6 +11,7 @@ class DineTable extends Model
     use HasFactory;
 
     protected $fillable = [
+        'order_type_code',
         'table_number',
         'order_id',
     ];
@@ -19,6 +20,7 @@ class DineTable extends Model
         'order_id' => 'integer',
     ];
 
+    /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

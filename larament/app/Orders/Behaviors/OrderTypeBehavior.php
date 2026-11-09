@@ -26,5 +26,5 @@ interface OrderTypeBehavior
 
     public function display(OrderTypeRow $type): OrderDisplay;
 
-    public function presentation(): TabPresentation;
+    public function presentation(OrderTypeRow $type): TabPresentation;
 }

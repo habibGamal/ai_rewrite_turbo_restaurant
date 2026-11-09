@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs, Tag } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
@@ -11,6 +11,7 @@ import type { CashierTab, Order, User } from '@/types';
 interface IndexProps {
     orders: Order[];
     tabs: CashierTab[];
+    currentShift: { id: number };
     previousPartialPaidOrders: Order[];
     auth: {
         user: User;
@@ -20,9 +21,30 @@ interface IndexProps {
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
     tabs,
+    currentShift,
     auth
 }) => {
     const { user } = auth;
+    const hasFloor = tabs.some((item) => item.presentation?.body === 'floor');
+    useEffect(() => {
+        if (!window.Echo || !hasFloor) {
+            return;
+        }
+
+        const channel = window.Echo.private(`shift.${currentShift.id}`);
+        const refresh = () => router.reload({ only: ['orders', 'tabs'] });
+        const events = [
+            'order.created',
+            'order.completed',
+            'order.cancelled',
+            'order.type_changed',
+        ];
+        events.forEach((event) => channel.listen(`.${event}`, refresh));
+
+        return () => {
+            events.forEach((event) => channel.stopListening(`.${event}`, refresh));
+        };
+    }, [currentShift.id, hasFloor]);
     const renderedTabs = useMemo(
         () => tabs.filter((tab) => tab.key !== 'system:receivables'),
         [tabs]

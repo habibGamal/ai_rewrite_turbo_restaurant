@@ -58,7 +58,7 @@ final class WebDeliveryBehavior implements OrderTypeBehavior
         );
     }
 
-    public function presentation(): TabPresentation
+    public function presentation(OrderTypeRow $type): TabPresentation
     {
         return new TabPresentation('inbox', 'none', ['pending', 'processing', 'out_for_delivery'], 'order_number');
     }

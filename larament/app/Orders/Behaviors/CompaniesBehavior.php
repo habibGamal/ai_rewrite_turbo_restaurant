@@ -44,7 +44,7 @@ final class CompaniesBehavior implements OrderTypeBehavior
         return OrderDisplay::forRow($type);
     }
 
-    public function presentation(): TabPresentation
+    public function presentation(OrderTypeRow $type): TabPresentation
     {
         return new TabPresentation('cards', 'immediate', ['processing'], 'order_number');
     }

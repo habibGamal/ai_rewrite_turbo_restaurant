@@ -47,7 +47,7 @@ final class CounterBehavior implements OrderTypeBehavior
         );
     }
 
-    public function presentation(): TabPresentation
+    public function presentation(OrderTypeRow $type): TabPresentation
     {
         return new TabPresentation('cards', 'immediate', ['processing'], 'order_number');
     }
