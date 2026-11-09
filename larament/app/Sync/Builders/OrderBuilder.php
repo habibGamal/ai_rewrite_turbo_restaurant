@@ -25,7 +25,7 @@ class OrderBuilder implements DocumentBuilder
     {
         /** @var Order|null $order */
         $order = Order::query()
-            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift'])
+            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift', 'externalOrders.items', 'externalOrders.collections'])
             ->where('uuid', $uuid)
             ->first();
 
@@ -97,6 +97,24 @@ class OrderBuilder implements DocumentBuilder
             'web_pos_diff' => Payload::money($order->web_pos_diff),
             'items' => $items,
             'payments' => $payments,
+            'external_orders' => $order->externalOrders->map(fn ($external) => [
+                'seller_name' => $external->getAttribute('seller_name'),
+                'status' => $external->getAttribute('status'),
+                'total' => Payload::money($external->getAttribute('total')),
+                'items' => $external->items->map(fn ($item) => [
+                    'name' => $item->getAttribute('name'),
+                    'quantity' => Payload::qty($item->getAttribute('quantity')),
+                    'price' => Payload::money($item->getAttribute('price')),
+                    'total' => Payload::money($item->getAttribute('total')),
+                ])->all(),
+                'collections' => $external->collections->map(fn ($collection) => [
+                    'method' => $collection->getAttribute('method'),
+                    'amount' => Payload::money($collection->getAttribute('amount')),
+                    'shift_id' => $collection->getAttribute('shift_id'),
+                    'user_id' => $collection->getAttribute('user_id'),
+                    'collected_at' => Payload::ts($collection->getAttribute('created_at')),
+                ])->all(),
+            ])->all(),
         ];
     }
 }

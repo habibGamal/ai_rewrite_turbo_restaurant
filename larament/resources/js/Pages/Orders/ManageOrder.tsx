@@ -44,6 +44,7 @@ import OrderNotesModal from "@/Components/Orders/OrderNotesModal";
 import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
 import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
+import ExternalOrders from "@/Components/Orders/ExternalOrders";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
 import CanAccess from "@/Components/CanAccess";
@@ -63,6 +64,9 @@ export default function ManageOrder({
     categories,
     drivers,
     regions,
+    externalOrders,
+    sellers,
+    guestDue,
 }: ManageOrderProps) {
     const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
     const user = auth.user as User;
@@ -332,6 +336,8 @@ export default function ManageOrder({
             <Head title={`إدارة الطلب ${order.order_number}`} />
 
             <div className="p-4">
+                <ExternalOrders orderId={order.id} orders={externalOrders} sellers={sellers} disabled={disableAllControls}
+                    beforeAction={(action) => save(action, () => {})} />
                 <Badge.Ribbon
                     color={orderStatusConfig.color}
                     text={orderStatusConfig.text}
@@ -544,6 +550,7 @@ export default function ManageOrder({
                     onCancel={() => setIsPaymentModalOpen(false)}
                     order={orderWithDisplay}
                     orderItems={orderItems}
+                    guestDue={externalOrders.length > 0 ? guestDue : undefined}
                 />
                 <PrintInKitchenModal
                     open={isPrintInKitchenModalOpen}

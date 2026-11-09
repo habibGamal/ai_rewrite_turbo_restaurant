@@ -120,7 +120,9 @@ it('builds a completed order snapshot with items and payments', function () {
             'web_pos_diff',
             'items',
             'payments',
+            'external_orders',
         ])
+        ->and($data['external_orders'])->toBe([])
         ->and($data['items'][0])->toEqual([
             'uuid' => $orderItem->uuid,
             'product_uuid' => $product->uuid,

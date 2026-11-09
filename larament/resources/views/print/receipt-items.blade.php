@@ -89,9 +89,9 @@
             <tbody>
                 @foreach ($items as $item)
                     @php
-                        $itemSubtotal = $item->quantity * $item->price;
-                        $itemDiscount = $item->item_discount ?? 0;
-                        $itemTotal = $itemSubtotal - $itemDiscount;
+                        $itemSubtotal = $receiptView['restaurant_lines'][$item->id]['subtotal'];
+                        $itemDiscount = $receiptView['restaurant_lines'][$item->id]['discount'];
+                        $itemTotal = $receiptView['restaurant_lines'][$item->id]['total'];
                     @endphp
                     <tr>
                         <td class="product-cell">{{ $item->product->name }}</td>

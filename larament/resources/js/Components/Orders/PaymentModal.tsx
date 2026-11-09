@@ -25,6 +25,7 @@ interface PaymentModalProps {
     mode?: "complete" | "collect";
     paidAmount?: number;
     remainingAmount?: number;
+    guestDue?: number;
 }
 
 export default function PaymentModal({
@@ -35,6 +36,7 @@ export default function PaymentModal({
     mode = "complete",
     paidAmount = 0,
     remainingAmount = 0,
+    guestDue,
 }: PaymentModalProps) {
     const [onePaymentForm] = Form.useForm();
     const [multiPaymentForm] = Form.useForm();
@@ -44,7 +46,7 @@ export default function PaymentModal({
     const [remaining, setRemaining] = useState<number>(0);
 
     const totals = calculateOrderTotals(order, orderItems);
-    const due = mode === "collect" ? remainingAmount : Math.ceil(totals.total);
+    const due = mode === "collect" ? remainingAmount : guestDue ?? Math.ceil(totals.total);
 
     const { loading, finish, start } = useLoading();
 
@@ -160,6 +162,7 @@ export default function PaymentModal({
                 label: "الاجمالي",
                 children: formatCurrency(totals.total),
             },
+            ...(guestDue === undefined ? [] : [{ key: "guestDue", label: "المطلوب من العميل", children: formatCurrency(guestDue) }]),
         ];
 
 

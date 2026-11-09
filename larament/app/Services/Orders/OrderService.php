@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
+use App\Models\ExternalSeller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
@@ -42,6 +43,7 @@ class OrderService
         private readonly ShiftLoggingService $shiftLoggingService,
         private readonly OrderItemChangeService $orderItemChangeService,
         private readonly OrderTypeCatalog $catalog,
+        private readonly ExternalSellerSettlementService $sellerSettlements,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
@@ -221,6 +223,24 @@ class OrderService
 
             // Delete any payments
             $order->payments()->delete();
+            foreach ($order->externalOrders()->orderBy('external_seller_id')->get() as $external) {
+                $seller = ExternalSeller::whereKey($external->external_seller_id)->lockForUpdate()->firstOrFail();
+                $external->collections()->delete();
+                $external->update(['status' => 'cancelled']);
+                $payable = $this->sellerSettlements->payable($seller);
+                if ($payable < 0) {
+                    $shift = Shift::whereNull('end_at')->where('closed', false)->lockForUpdate()->first();
+                    if ($shift === null) {
+                        throw new OrderException('يجب فتح شيفت لعكس مستحقات البائع');
+                    }
+                    $seller->settlements()->create([
+                        'shift_id' => $shift->id,
+                        'user_id' => auth()->id(),
+                        'amount' => $payable,
+                        'note' => 'عكس تسوية بعد إلغاء الطلب',
+                    ]);
+                }
+            }
             Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
             $order->refresh();
@@ -244,6 +264,9 @@ class OrderService
         return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
             $newTypeRow = $this->catalog->find($newType);
             $newBehavior = $this->catalog->behaviorFor($newType);
+            if ($newBehavior->allowsPartialPayment() && $order->externalOrders()->where('status', '!=', 'cancelled')->exists()) {
+                throw new OrderException('لا يمكن تغيير النوع مع وجود طلب خارجي');
+            }
             $assignsTable = $newBehavior->display($newTypeRow)->showTable;
 
             if ($assignsTable && ! $tableNumber) {

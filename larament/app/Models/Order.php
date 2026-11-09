@@ -122,6 +122,12 @@ class Order extends Model
         return $this->hasOne(KitchenTicket::class);
     }
 
+    /** @return HasMany<ExternalOrder, $this> */
+    public function externalOrders(): HasMany
+    {
+        return $this->hasMany(ExternalOrder::class, 'host_order_id');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

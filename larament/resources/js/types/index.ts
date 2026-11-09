@@ -162,6 +162,23 @@ export interface Order {
   user?: User;
   display?: OrderDisplay;
   receiptPayment?: ReceiptPayment;
+  receiptView?: ReceiptView;
+}
+
+export interface ReceiptView {
+  restaurant_total: number;
+  external_total: number;
+  guest_total: number;
+  external_orders: { seller_name: string; total: number; items: { name: string; quantity: number; price: number; total: number }[] }[];
+}
+
+export interface ExternalOrder {
+  id: number;
+  external_seller_id: number;
+  seller_name: string;
+  status: string;
+  total: number;
+  items: { id: number; name: string; quantity: number; price: number; total: number }[];
 }
 
 export interface ReceiptPayment {
@@ -240,6 +257,9 @@ export interface ManageOrderProps extends PageProps {
   categories: Category[];
   drivers: Driver[];
   regions: Region[];
+  externalOrders: ExternalOrder[];
+  sellers: { id: number; name: string }[];
+  guestDue: number;
 }
 
 export interface ExpenseType {

@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Services\Orders;
+
+use App\Exceptions\OrderException;
+use App\Models\ExternalOrder;
+use App\Models\ExternalSeller;
+use App\Models\Order;
+use App\Sync\DocumentType;
+use App\Sync\Outbox;
+use Closure;
+use Illuminate\Support\Facades\DB;
+
+class ExternalOrderService
+{
+    public function save(int $orderId, int $sellerId, array $lines): ExternalOrder
+    {
+        $totalAmount = 0.0;
+        foreach ($lines as $line) {
+            if (trim((string) ($line['name'] ?? '')) === '' || (float) ($line['quantity'] ?? 0) <= 0 || (float) ($line['price'] ?? -1) < 0) {
+                throw new OrderException('بيانات الصنف الخارجي غير صالحة');
+            }
+            $totalAmount += round((float) $line['quantity'] * (float) $line['price'], 2);
+        }
+        if ($lines === [] || $totalAmount > 9999999999.99) {
+            throw new OrderException('إجمالي الطلب الخارجي غير صالح');
+        }
+
+        return DB::transaction(function () use ($orderId, $sellerId, $lines) {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
+            if (! $order->status->canBeModified() || $order->behavior()->allowsPartialPayment()) {
+                throw new OrderException('لا يمكن إضافة طلب خارجي لهذا الطلب');
+            }
+
+            $seller = ExternalSeller::whereKey($sellerId)->where('is_active', true)->firstOrFail();
+            $external = ExternalOrder::firstOrNew(['host_order_id' => $order->id, 'external_seller_id' => $seller->id]);
+            $external->seller_name = $external->exists ? $external->seller_name : $seller->name;
+            $external->status = 'pending';
+            $external->total = 0;
+            $external->save();
+            $external->items()->delete();
+            foreach ($lines as $line) {
+                $total = round((float) $line['quantity'] * (float) $line['price'], 2);
+                $external->items()->create(['name' => $line['name'], 'quantity' => $line['quantity'], 'price' => $line['price'], 'total' => $total]);
+                $external->total += $total;
+            }
+            $external->save();
+            Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
+
+            return $external->fresh(['items']);
+        });
+    }
+
+    public function removeLine(int $orderId, int $externalId, int $itemId): void
+    {
+        $this->withLockedOrder($orderId, function (Order $order) use ($externalId, $itemId): void {
+            $external = $order->externalOrders()->whereKey($externalId)->firstOrFail();
+            $external->items()->whereKey($itemId)->firstOrFail()->delete();
+            $external->update(['total' => $external->items()->sum('total')]);
+        });
+    }
+
+    public function fulfill(int $orderId, int $externalId): void
+    {
+        $this->withLockedOrder($orderId, function (Order $order) use ($externalId): void {
+            $order->externalOrders()->whereKey($externalId)->firstOrFail()->update(['status' => 'fulfilled']);
+        });
+    }
+
+    private function withLockedOrder(int $orderId, Closure $callback): void
+    {
+        DB::transaction(function () use ($orderId, $callback): void {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
+            if (! $order->status->canBeModified() || $order->behavior()->allowsPartialPayment()) {
+                throw new OrderException('لا يمكن تعديل طلب خارجي لهذا الطلب');
+            }
+            $callback($order);
+            Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
+        });
+    }
+}

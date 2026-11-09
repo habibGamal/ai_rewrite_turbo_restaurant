@@ -67,6 +67,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
+        Route::post('/{order}/external', [\App\Http\Controllers\ExternalOrderController::class, 'save'])->name('external.save');
+        Route::delete('/{order}/external/{external}/items/{item}', [\App\Http\Controllers\ExternalOrderController::class, 'removeLine'])->name('external.removeLine');
+        Route::post('/{order}/external/{external}/fulfill', [\App\Http\Controllers\ExternalOrderController::class, 'fulfill'])->name('external.fulfill');
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
         Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
         Route::post('/complete-order/{order}', [OrderController::class, 'completeOrder'])->name('complete');

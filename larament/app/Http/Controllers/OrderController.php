@@ -129,12 +129,18 @@ class OrderController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function orderPayload(Order $order): array
+    private function orderPayload(Order $order, bool $withReceiptView = false): array
     {
-        return array_merge($order->toArray(), [
+        $payload = array_merge($order->toArray(), [
             'display' => $order->display()->toArray(),
             'receiptPayment' => ReceiptPayment::forOrder($order)->toArray(),
         ]);
+
+        if ($withReceiptView) {
+            $payload['receiptView'] = \App\Orders\ReceiptView::forOrder($order);
+        }
+
+        return $payload;
     }
 
     /**
@@ -185,12 +191,15 @@ class OrderController extends Controller
         $regions = Region::orderBy('name')->get();
 
         return Inertia::render('Orders/ManageOrder', [
-            'order' => $this->orderPayload($order),
+            'order' => $this->orderPayload($order, true),
             'orderDisplay' => $order->display()->toArray(),
             'changeTypeOptions' => $this->changeTypeOptions(),
             'categories' => $categories,
             'drivers' => $drivers,
             'regions' => $regions,
+            'externalOrders' => $order->externalOrders()->with('items')->where('status', '!=', 'cancelled')->orderBy('id')->get(),
+            'sellers' => \App\Models\ExternalSeller::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);
     }
 

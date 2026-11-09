@@ -111,6 +111,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
 
+            Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه'),
+            Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه'),
             $this->getAvailableCashStat($currentShift, $stats),
         ];
     }
@@ -122,7 +124,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
 
     private function getAvailableCashStat(Shift $shift, array $stats): Stat
     {
-        $availableCash = (float) $shift->start_cash + $stats['cashPayments'] - $stats['expenses'];
+        $availableCash = $stats['availableCash'];
 
         return Stat::make('النقدية المتاحة', number_format($availableCash, 2).' جنيه')
             ->description('النقدية المتاحة في الدرج')

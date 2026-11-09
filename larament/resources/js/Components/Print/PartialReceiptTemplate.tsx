@@ -1,5 +1,6 @@
 import { Order, OrderItemData } from "@/types";
 import { usePage } from "@inertiajs/react";
+import ExternalReceipt from "./ExternalReceipt";
 
 export enum PartType {
     Header,
@@ -166,6 +167,7 @@ export default function PartialReceiptTemplate({
                             )}
                         </tbody>
                     </table>
+                    <ExternalReceipt receipt={order.receiptView} />
                     <p className="whitespace-pre-line mt-4 text-center">
                         {receiptFooter}
                     </p>
