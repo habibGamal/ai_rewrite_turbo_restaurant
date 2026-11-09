@@ -242,6 +242,7 @@ it('saves, fulfills and removes seller lines through the till and includes them 
         ->component('Orders/ManageOrder')
         ->has('externalOrders', 1)
         ->has('sellers', 1)
+        ->where('canAddExternalOrder', true)
         ->where('guestDue', round((float) $order->total + 40, 2)));
     $this->post(route('orders.external.fulfill', [$order, $external->id]))->assertRedirect();
     expect($external->fresh()->status)->toBe('fulfilled');
@@ -284,4 +285,15 @@ it('pays a seller from the accounts page', function () {
     Livewire::test(ExternalSellerAccounts::class)->callTableAction('pay', $seller, ['amount' => 40]);
 
     expect(app(ExternalSellerSettlementService::class)->payable($seller))->toBe(0.0);
+});
+
+it('does not offer external orders on a partial-payment type', function () {
+    $user = User::factory()->admin()->create();
+    $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
+    $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'companies', 'status' => OrderStatus::PROCESSING]);
+    $this->actingAs($user);
+
+    $this->get(route('orders.manage', $order))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Orders/ManageOrder')
+        ->where('canAddExternalOrder', false));
 });

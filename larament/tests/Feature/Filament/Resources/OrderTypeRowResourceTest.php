@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\OrderBehavior;
+use App\Enums\OrderTypeIcon;
 use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
@@ -174,4 +175,63 @@ it('only exposes the floor designer action for dine-in behavior', function () {
     livewire(ListOrderTypeRows::class)
         ->assertTableActionVisible('floor', $dineIn)
         ->assertTableActionHidden('floor', $counter);
+});
+
+it('accepts an icon inside the curated set and rejects one outside it', function () {
+    livewire(CreateOrderTypeRow::class)
+        ->fillForm([
+            'code' => 'vip_room',
+            'label' => 'غرفة VIP',
+            'color' => 'primary',
+            'icon' => OrderTypeIcon::Sparkles->value,
+            'is_active' => true,
+            'behavior' => OrderBehavior::DINE_IN->value,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseHas('order_types', [
+        'code' => 'vip_room',
+        'icon' => OrderTypeIcon::Sparkles->value,
+    ]);
+
+    livewire(CreateOrderTypeRow::class)
+        ->fillForm([
+            'code' => 'invalid_icon_type',
+            'label' => 'نوع غير صالح',
+            'color' => 'primary',
+            'icon' => 'heroicon-o-rocket-launch',
+            'is_active' => true,
+            'behavior' => OrderBehavior::COUNTER->value,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['icon']);
+
+    $this->assertDatabaseMissing('order_types', ['code' => 'invalid_icon_type']);
+});
+
+it('saves an existing row with an unknown icon when the icon is not changed', function () {
+    $row = OrderTypeRow::query()->create([
+        'code' => 'legacy_type',
+        'label' => 'نوع قديم',
+        'color' => 'primary',
+        'icon' => 'heroicon-o-musical-note',
+        'is_active' => true,
+        'is_system' => false,
+        'behavior' => OrderBehavior::COUNTER,
+    ]);
+
+    livewire(EditOrderTypeRow::class, ['record' => $row->getRouteKey()])
+        ->assertSchemaStateSet(['icon' => 'heroicon-o-musical-note'])
+        ->fillForm(['label' => 'نوع قديم محدث'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($row->fresh()->label)->toBe('نوع قديم محدث')
+        ->and($row->fresh()->icon)->toBe('heroicon-o-musical-note');
+
+    livewire(EditOrderTypeRow::class, ['record' => $row->getRouteKey()])
+        ->fillForm(['icon' => 'heroicon-o-rocket-launch'])
+        ->call('save')
+        ->assertHasFormErrors(['icon']);
 });

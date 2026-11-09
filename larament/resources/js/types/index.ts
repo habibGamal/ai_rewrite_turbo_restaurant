@@ -289,6 +289,7 @@ export interface ManageOrderProps extends PageProps {
   externalOrders: ExternalOrder[];
   sellers: { id: number; name: string }[];
   guestDue: number;
+  canAddExternalOrder: boolean;
 }
 
 export interface ExpenseType {

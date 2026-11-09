@@ -199,6 +199,7 @@ class OrderController extends Controller
             'regions' => $regions,
             'externalOrders' => $order->externalOrders()->with('items')->where('status', '!=', 'cancelled')->orderBy('id')->get(),
             'sellers' => \App\Models\ExternalSeller::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'canAddExternalOrder' => ! $order->behavior()->allowsPartialPayment(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);
     }
