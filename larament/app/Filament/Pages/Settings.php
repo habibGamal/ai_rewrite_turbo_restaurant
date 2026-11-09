@@ -25,6 +25,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -110,314 +111,378 @@ class Settings extends Page implements HasForms
     {
         return $schema
             ->components([
-                Section::make('الإعدادات العامة')
-                    ->description('إعدادات النظام الأساسية')
-                    ->icon('heroicon-m-cog-6-tooth')
-                    ->schema([
-                        Grid::make(2)
+                Tabs::make('settings')
+                    ->persistTabInQueryString()
+                    ->tabs([
+                        Tabs\Tab::make('الإعدادات العامة')
+                            ->icon('heroicon-m-cog-6-tooth')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
                             ->schema([
-                                TextInput::make(SettingKey::WEBSITE_URL->value)
-                                    ->label(SettingKey::WEBSITE_URL->label())
-                                    ->helperText(SettingKey::WEBSITE_URL->helperText())
-                                    ->url()
-                                    ->required()
-                                    ->placeholder(SettingKey::WEBSITE_URL->placeholder()),
+                                Section::make()
+                                    ->description('إعدادات النظام الأساسية')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                TextInput::make(SettingKey::WEBSITE_URL->value)
+                                                    ->label(SettingKey::WEBSITE_URL->label())
+                                                    ->helperText(SettingKey::WEBSITE_URL->helperText())
+                                                    ->url()
+                                                    ->required()
+                                                    ->placeholder(SettingKey::WEBSITE_URL->placeholder()),
 
-                                TextInput::make(SettingKey::CASHIER_PRINTER_IP->value)
-                                    ->label(SettingKey::CASHIER_PRINTER_IP->label())
-                                    ->helperText(SettingKey::CASHIER_PRINTER_IP->helperText())
-                                    ->required()
-                                    ->placeholder(SettingKey::CASHIER_PRINTER_IP->placeholder()),
+                                                TextInput::make(SettingKey::CASHIER_PRINTER_IP->value)
+                                                    ->label(SettingKey::CASHIER_PRINTER_IP->label())
+                                                    ->helperText(SettingKey::CASHIER_PRINTER_IP->helperText())
+                                                    ->required()
+                                                    ->placeholder(SettingKey::CASHIER_PRINTER_IP->placeholder()),
 
-                                TextInput::make(SettingKey::DINE_IN_SERVICE_CHARGE->value)
-                                    ->label(SettingKey::DINE_IN_SERVICE_CHARGE->label())
-                                    ->helperText(SettingKey::DINE_IN_SERVICE_CHARGE->helperText())
-                                    ->numeric()
-                                    ->step(0.01)
-                                    ->minValue(0)
-                                    ->maxValue(1)
-                                    ->required()
-                                    ->placeholder(SettingKey::DINE_IN_SERVICE_CHARGE->placeholder()),
+                                                TextInput::make(SettingKey::DINE_IN_SERVICE_CHARGE->value)
+                                                    ->label(SettingKey::DINE_IN_SERVICE_CHARGE->label())
+                                                    ->helperText(SettingKey::DINE_IN_SERVICE_CHARGE->helperText())
+                                                    ->numeric()
+                                                    ->step(0.01)
+                                                    ->minValue(0)
+                                                    ->maxValue(1)
+                                                    ->required()
+                                                    ->placeholder(SettingKey::DINE_IN_SERVICE_CHARGE->placeholder()),
 
-                                TextInput::make(SettingKey::SCALE_BARCODE_PREFIX->value)
-                                    ->label(SettingKey::SCALE_BARCODE_PREFIX->label())
-                                    ->helperText(SettingKey::SCALE_BARCODE_PREFIX->helperText())
-                                    ->required()
-                                    ->maxLength(4)
-                                    ->placeholder(SettingKey::SCALE_BARCODE_PREFIX->placeholder()),
+                                                TextInput::make(SettingKey::SCALE_BARCODE_PREFIX->value)
+                                                    ->label(SettingKey::SCALE_BARCODE_PREFIX->label())
+                                                    ->helperText(SettingKey::SCALE_BARCODE_PREFIX->helperText())
+                                                    ->required()
+                                                    ->maxLength(4)
+                                                    ->placeholder(SettingKey::SCALE_BARCODE_PREFIX->placeholder()),
+                                            ]),
+
+                                        Textarea::make(SettingKey::RECEIPT_FOOTER->value)
+                                            ->label(SettingKey::RECEIPT_FOOTER->label())
+                                            ->helperText(SettingKey::RECEIPT_FOOTER->helperText())
+                                            ->placeholder(SettingKey::RECEIPT_FOOTER->placeholder())
+                                            ->rows(3)
+                                            ->maxLength(500),
+                                    ]),
                             ]),
 
-                        Textarea::make(SettingKey::RECEIPT_FOOTER->value)
-                            ->label(SettingKey::RECEIPT_FOOTER->label())
-                            ->helperText(SettingKey::RECEIPT_FOOTER->helperText())
-                            ->placeholder(SettingKey::RECEIPT_FOOTER->placeholder())
-                            ->rows(3)
-                            ->maxLength(500),
-                    ]),
-
-                Section::make('إعدادات المطعم')
-                    ->description('معلومات المطعم الأساسية')
-                    ->icon('heroicon-m-building-storefront')
-                    ->schema([
-                        TextInput::make(SettingKey::RESTAURANT_NAME->value)
-                            ->label(SettingKey::RESTAURANT_NAME->label())
-                            ->helperText(SettingKey::RESTAURANT_NAME->helperText())
-                            ->required()
-                            ->placeholder(SettingKey::RESTAURANT_NAME->placeholder())
-                            ->maxLength(255),
-
-                        Grid::make(2)
+                        Tabs\Tab::make('إعدادات المطعم')
+                            ->icon('heroicon-m-building-storefront')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
                             ->schema([
-                                FileUpload::make(SettingKey::RESTAURANT_PRINT_LOGO->value)
-                                    ->label(SettingKey::RESTAURANT_PRINT_LOGO->label())
-                                    ->helperText(SettingKey::RESTAURANT_PRINT_LOGO->helperText())
-                                    ->image()
-                                    ->imageEditor()
-                                    ->directory('logos')
-                                    ->visibility('public')
-                                    ->moveFiles()
-                                    ->acceptedFileTypes(['image/png'])
-                                    ->maxSize(2048) // 2MB limit
-                                    ->afterStateUpdated(function ($state) {
-                                        if ($state && is_string($state)) {
-                                            // Copy to public/images/logo.png
-                                            $sourcePath = Storage::disk('public')->path($state);
-                                            $destPath = public_path('images/logo.png');
+                                Section::make()
+                                    ->description('معلومات المطعم الأساسية')
+                                    ->schema([
+                                        TextInput::make(SettingKey::RESTAURANT_NAME->value)
+                                            ->label(SettingKey::RESTAURANT_NAME->label())
+                                            ->helperText(SettingKey::RESTAURANT_NAME->helperText())
+                                            ->required()
+                                            ->placeholder(SettingKey::RESTAURANT_NAME->placeholder())
+                                            ->maxLength(255),
 
-                                            if (file_exists($sourcePath)) {
-                                                @mkdir(dirname($destPath), 0755, true);
-                                                copy($sourcePath, $destPath);
-                                            }
-                                        }
-                                    }),
+                                        Grid::make(2)
+                                            ->schema([
+                                                FileUpload::make(SettingKey::RESTAURANT_PRINT_LOGO->value)
+                                                    ->label(SettingKey::RESTAURANT_PRINT_LOGO->label())
+                                                    ->helperText(SettingKey::RESTAURANT_PRINT_LOGO->helperText())
+                                                    ->image()
+                                                    ->imageEditor()
+                                                    ->directory('logos')
+                                                    ->visibility('public')
+                                                    ->moveFiles()
+                                                    ->acceptedFileTypes(['image/png'])
+                                                    ->maxSize(2048) // 2MB limit
+                                                    ->afterStateUpdated(function ($state) {
+                                                        if ($state && is_string($state)) {
+                                                            // Copy to public/images/logo.png
+                                                            $sourcePath = Storage::disk('public')->path($state);
+                                                            $destPath = public_path('images/logo.png');
 
-                                FileUpload::make(SettingKey::RESTAURANT_OFFICIAL_LOGO->value)
-                                    ->label(SettingKey::RESTAURANT_OFFICIAL_LOGO->label())
-                                    ->helperText(SettingKey::RESTAURANT_OFFICIAL_LOGO->helperText())
-                                    ->image()
-                                    ->imageEditor()
-                                    ->directory('logos')
-                                    ->visibility('public')
-                                    ->moveFiles()
-                                    ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
-                                    ->maxSize(2048) // 2MB limit
-                                    ->afterStateUpdated(function ($state) {
-                                        if ($state && is_string($state)) {
-                                            // Copy to public/images/logo.jpg
-                                            $sourcePath = Storage::disk('public')->path($state);
-                                            $destPath = public_path('images/logo.jpg');
+                                                            if (file_exists($sourcePath)) {
+                                                                @mkdir(dirname($destPath), 0755, true);
+                                                                copy($sourcePath, $destPath);
+                                                            }
+                                                        }
+                                                    }),
 
-                                            if (file_exists($sourcePath)) {
-                                                @mkdir(dirname($destPath), 0755, true);
-                                                copy($sourcePath, $destPath);
-                                            }
-                                        }
-                                    }),
+                                                FileUpload::make(SettingKey::RESTAURANT_OFFICIAL_LOGO->value)
+                                                    ->label(SettingKey::RESTAURANT_OFFICIAL_LOGO->label())
+                                                    ->helperText(SettingKey::RESTAURANT_OFFICIAL_LOGO->helperText())
+                                                    ->image()
+                                                    ->imageEditor()
+                                                    ->directory('logos')
+                                                    ->visibility('public')
+                                                    ->moveFiles()
+                                                    ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
+                                                    ->maxSize(2048) // 2MB limit
+                                                    ->afterStateUpdated(function ($state) {
+                                                        if ($state && is_string($state)) {
+                                                            // Copy to public/images/logo.jpg
+                                                            $sourcePath = Storage::disk('public')->path($state);
+                                                            $destPath = public_path('images/logo.jpg');
 
-                                FileUpload::make(SettingKey::RESTAURANT_QR_LOGO->value)
-                                    ->label(SettingKey::RESTAURANT_QR_LOGO->label())
-                                    ->helperText(SettingKey::RESTAURANT_QR_LOGO->helperText())
-                                    ->image()
-                                    ->imageEditor()
-                                    ->directory('logos')
-                                    ->visibility('public')
-                                    ->moveFiles()
-                                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg'])
-                                    ->maxSize(2048) // 2MB limit
-                                    ->columnSpanFull(),
-                            ]),
-                    ]),
+                                                            if (file_exists($sourcePath)) {
+                                                                @mkdir(dirname($destPath), 0755, true);
+                                                                copy($sourcePath, $destPath);
+                                                            }
+                                                        }
+                                                    }),
 
-                Section::make('إدارة الفروع')
-                    ->description('إعدادات شبكة الفروع والاتصال')
-                    ->icon('heroicon-m-building-office')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Select::make(SettingKey::NODE_TYPE->value)
-                                    ->label(SettingKey::NODE_TYPE->label())
-                                    ->helperText(SettingKey::NODE_TYPE->helperText())
-                                    ->options([
-                                        'master' => 'رئيسية',
-                                        'slave' => 'فرع',
-                                        'independent' => 'مستقلة',
-                                    ])
-                                    ->required()
-                                    ->live(),
-
-                                TextInput::make(SettingKey::MASTER_NODE_LINK->value)
-                                    ->label(SettingKey::MASTER_NODE_LINK->label())
-                                    ->helperText(SettingKey::MASTER_NODE_LINK->helperText())
-                                    ->url()
-                                    ->placeholder(SettingKey::MASTER_NODE_LINK->placeholder())
-                                    ->visible(fn (Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave')
-                                    ->required(fn (Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave'),
-                            ]),
-                    ]),
-
-                Section::make('صلاحيات الكاشير')
-                    ->description('تحديد الصلاحيات الإضافية للكاشير في إدارة الطلبات')
-                    ->icon('heroicon-m-user-group')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Toggle::make(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
-                                    ->label(SettingKey::ALLOW_CASHIER_DISCOUNTS->label())
-                                    ->helperText(SettingKey::ALLOW_CASHIER_DISCOUNTS->helperText())
-                                    ->inline(false),
-
-                                Toggle::make(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
-                                    ->label(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->label())
-                                    ->helperText(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->helperText())
-                                    ->inline(false),
+                                                FileUpload::make(SettingKey::RESTAURANT_QR_LOGO->value)
+                                                    ->label(SettingKey::RESTAURANT_QR_LOGO->label())
+                                                    ->helperText(SettingKey::RESTAURANT_QR_LOGO->helperText())
+                                                    ->image()
+                                                    ->imageEditor()
+                                                    ->directory('logos')
+                                                    ->visibility('public')
+                                                    ->moveFiles()
+                                                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg'])
+                                                    ->maxSize(2048) // 2MB limit
+                                                    ->columnSpanFull(),
+                                            ]),
+                                    ]),
                             ]),
 
-                        Toggle::make(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)
-                            ->label(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->label())
-                            ->helperText(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->helperText())
-                            ->inline(false),
-                    ]),
-
-                Section::make('إدارة الورديات')
-                    ->description('إعدادات خاصة بإدارة الورديات والطلبات')
-                    ->icon('heroicon-m-clock')
-                    ->schema([
-                        Toggle::make(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)
-                            ->label(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->label())
-                            ->helperText(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->helperText())
-                            ->inline(false),
-                    ]),
-
-                Section::make('تبويبات الكاشير')
-                    ->description(SettingKey::CASHIER_TABS->helperText())
-                    ->icon('heroicon-m-view-columns')
-                    ->schema([
-                        Repeater::make(SettingKey::CASHIER_TABS->value)
-                            ->hiddenLabel()
+                        Tabs\Tab::make('إدارة الفروع')
+                            ->icon('heroicon-m-building-office')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
                             ->schema([
-                                Hidden::make('key'),
+                                Section::make()
+                                    ->description('إعدادات شبكة الفروع والاتصال')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Select::make(SettingKey::NODE_TYPE->value)
+                                                    ->label(SettingKey::NODE_TYPE->label())
+                                                    ->helperText(SettingKey::NODE_TYPE->helperText())
+                                                    ->options([
+                                                        'master' => 'رئيسية',
+                                                        'slave' => 'فرع',
+                                                        'independent' => 'مستقلة',
+                                                    ])
+                                                    ->required()
+                                                    ->live(),
 
-                                TextInput::make('label')
-                                    ->label('التبويب')
-                                    ->disabled()
-                                    ->dehydrated(false),
-
-                                Toggle::make('visible')
-                                    ->label('مرئي')
-                                    ->inline(false),
-                            ])
-                            ->columns(3)
-                            ->addable(false)
-                            ->deletable(false)
-                            ->reorderable()
-                            ->columnSpanFull(),
-                    ]),
-
-                Section::make('إدارة المشتريات')
-                    ->description('إعدادات خاصة بفواتير الشراء وتكاليف المنتجات')
-                    ->icon('heroicon-m-shopping-cart')
-                    ->schema([
-                        Toggle::make(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)
-                            ->label(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->label())
-                            ->helperText(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->helperText())
-                            ->inline(false),
-                    ]),
-
-                Section::make('شاشة المطبخ (KDS)')
-                    ->description('إعدادات نظام عرض المطبخ')
-                    ->icon('heroicon-m-tv')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Toggle::make(SettingKey::KDS_ITEM_TRACKING->value)
-                                    ->label(SettingKey::KDS_ITEM_TRACKING->label())
-                                    ->helperText(SettingKey::KDS_ITEM_TRACKING->helperText())
-                                    ->inline(false),
-
-                                Toggle::make(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
-                                    ->label(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->label())
-                                    ->helperText(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->helperText())
-                                    ->inline(false),
+                                                TextInput::make(SettingKey::MASTER_NODE_LINK->value)
+                                                    ->label(SettingKey::MASTER_NODE_LINK->label())
+                                                    ->helperText(SettingKey::MASTER_NODE_LINK->helperText())
+                                                    ->url()
+                                                    ->placeholder(SettingKey::MASTER_NODE_LINK->placeholder())
+                                                    ->visible(fn (Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave')
+                                                    ->required(fn (Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave'),
+                                            ]),
+                                    ]),
                             ]),
 
-                        Grid::make(2)
+                        Tabs\Tab::make('صلاحيات الكاشير')
+                            ->icon('heroicon-m-user-group')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
                             ->schema([
-                                TextInput::make(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
-                                    ->label(SettingKey::KDS_DEFAULT_PREP_MINUTES->label())
-                                    ->helperText(SettingKey::KDS_DEFAULT_PREP_MINUTES->helperText())
-                                    ->numeric()
-                                    ->rules(SettingKey::KDS_DEFAULT_PREP_MINUTES->validationRules())
-                                    ->placeholder(SettingKey::KDS_DEFAULT_PREP_MINUTES->placeholder()),
+                                Section::make()
+                                    ->description('تحديد الصلاحيات الإضافية للكاشير في إدارة الطلبات')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Toggle::make(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
+                                                    ->label(SettingKey::ALLOW_CASHIER_DISCOUNTS->label())
+                                                    ->helperText(SettingKey::ALLOW_CASHIER_DISCOUNTS->helperText())
+                                                    ->inline(false),
 
-                                TextInput::make(SettingKey::KDS_WARNING_PERCENT->value)
-                                    ->label(SettingKey::KDS_WARNING_PERCENT->label())
-                                    ->helperText(SettingKey::KDS_WARNING_PERCENT->helperText())
-                                    ->numeric()
-                                    ->suffix('%')
-                                    ->rules(SettingKey::KDS_WARNING_PERCENT->validationRules())
-                                    ->placeholder(SettingKey::KDS_WARNING_PERCENT->placeholder()),
+                                                Toggle::make(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
+                                                    ->label(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->label())
+                                                    ->helperText(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->helperText())
+                                                    ->inline(false),
+                                            ]),
 
-                                TextInput::make(SettingKey::KDS_RECALL_MINUTES->value)
-                                    ->label(SettingKey::KDS_RECALL_MINUTES->label())
-                                    ->helperText(SettingKey::KDS_RECALL_MINUTES->helperText())
-                                    ->numeric()
-                                    ->rules(SettingKey::KDS_RECALL_MINUTES->validationRules())
-                                    ->placeholder(SettingKey::KDS_RECALL_MINUTES->placeholder()),
-
-                                TextInput::make(SettingKey::KDS_SOUND_VOLUME->value)
-                                    ->label(SettingKey::KDS_SOUND_VOLUME->label())
-                                    ->helperText(SettingKey::KDS_SOUND_VOLUME->helperText())
-                                    ->numeric()
-                                    ->rules(SettingKey::KDS_SOUND_VOLUME->validationRules())
-                                    ->placeholder(SettingKey::KDS_SOUND_VOLUME->placeholder()),
-
-                                TextInput::make(SettingKey::KDS_REMINDER_SECONDS->value)
-                                    ->label(SettingKey::KDS_REMINDER_SECONDS->label())
-                                    ->helperText(SettingKey::KDS_REMINDER_SECONDS->helperText())
-                                    ->numeric()
-                                    ->rules(SettingKey::KDS_REMINDER_SECONDS->validationRules())
-                                    ->placeholder(SettingKey::KDS_REMINDER_SECONDS->placeholder()),
+                                        Toggle::make(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)
+                                            ->label(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->label())
+                                            ->helperText(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->helperText())
+                                            ->inline(false),
+                                    ]),
                             ]),
 
-                        Grid::make(2)
+                        Tabs\Tab::make('إدارة الورديات')
+                            ->icon('heroicon-m-clock')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
                             ->schema([
-                                Select::make(SettingKey::KDS_NEW_ORDER_SOUND->value)
-                                    ->label(SettingKey::KDS_NEW_ORDER_SOUND->label())
-                                    ->helperText(SettingKey::KDS_NEW_ORDER_SOUND->helperText())
-                                    ->options($this->kdsSoundOptions())
-                                    ->rules(SettingKey::KDS_NEW_ORDER_SOUND->validationRules())
-                                    ->placeholder(SettingKey::KDS_NEW_ORDER_SOUND->placeholder()),
-
-                                Select::make(SettingKey::KDS_CHANGE_SOUND->value)
-                                    ->label(SettingKey::KDS_CHANGE_SOUND->label())
-                                    ->helperText(SettingKey::KDS_CHANGE_SOUND->helperText())
-                                    ->options($this->kdsSoundOptions())
-                                    ->rules(SettingKey::KDS_CHANGE_SOUND->validationRules())
-                                    ->placeholder(SettingKey::KDS_CHANGE_SOUND->placeholder()),
-
-                                Select::make(SettingKey::KDS_CANCEL_SOUND->value)
-                                    ->label(SettingKey::KDS_CANCEL_SOUND->label())
-                                    ->helperText(SettingKey::KDS_CANCEL_SOUND->helperText())
-                                    ->options($this->kdsSoundOptions())
-                                    ->rules(SettingKey::KDS_CANCEL_SOUND->validationRules())
-                                    ->placeholder(SettingKey::KDS_CANCEL_SOUND->placeholder()),
+                                Section::make()
+                                    ->description('إعدادات خاصة بإدارة الورديات والطلبات')
+                                    ->schema([
+                                        Toggle::make(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)
+                                            ->label(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->label())
+                                            ->helperText(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->helperText())
+                                            ->inline(false),
+                                    ]),
                             ]),
 
-                        Fieldset::make('الوقت المستهدف حسب نوع الطلب (اختياري)')
-                            ->columns(3)
-                            ->schema(app(OrderTypeCatalog::class)->active()
-                                ->map(fn (OrderTypeRow $type): TextInput => TextInput::make(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.'.$type->code)
-                                    ->label($type->label)
-                                    ->helperText('يُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً')
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->maxValue(240)
-                                    ->placeholder('-')
-                                    ->nullable())
-                                ->all()),
-                    ]),
+                        Tabs\Tab::make('تبويبات الكاشير')
+                            ->icon('heroicon-m-view-columns')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
+                            ->schema([
+                                Section::make()
+                                    ->description(SettingKey::CASHIER_TABS->helperText())
+                                    ->schema([
+                                        Repeater::make(SettingKey::CASHIER_TABS->value)
+                                            ->hiddenLabel()
+                                            ->schema([
+                                                Hidden::make('key'),
+
+                                                TextInput::make('label')
+                                                    ->label('التبويب')
+                                                    ->disabled()
+                                                    ->dehydrated(false),
+
+                                                Toggle::make('visible')
+                                                    ->label('مرئي')
+                                                    ->inline(false),
+                                            ])
+                                            ->columns(3)
+                                            ->addable(false)
+                                            ->deletable(false)
+                                            ->reorderable()
+                                            ->columnSpanFull(),
+                                    ]),
+                            ]),
+
+                        Tabs\Tab::make('إدارة المشتريات')
+                            ->icon('heroicon-m-shopping-cart')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
+                            ->schema([
+                                Section::make()
+                                    ->description('إعدادات خاصة بفواتير الشراء وتكاليف المنتجات')
+                                    ->schema([
+                                        Toggle::make(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)
+                                            ->label(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->label())
+                                            ->helperText(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->helperText())
+                                            ->inline(false),
+                                    ]),
+                            ]),
+
+                        Tabs\Tab::make('شاشة المطبخ (KDS)')
+                            ->icon('heroicon-m-tv')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
+                            ->schema([
+                                Section::make()
+                                    ->description('إعدادات نظام عرض المطبخ')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Toggle::make(SettingKey::KDS_ITEM_TRACKING->value)
+                                                    ->label(SettingKey::KDS_ITEM_TRACKING->label())
+                                                    ->helperText(SettingKey::KDS_ITEM_TRACKING->helperText())
+                                                    ->inline(false),
+
+                                                Toggle::make(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
+                                                    ->label(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->label())
+                                                    ->helperText(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->helperText())
+                                                    ->inline(false),
+                                            ]),
+
+                                        Grid::make(2)
+                                            ->schema([
+                                                TextInput::make(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
+                                                    ->label(SettingKey::KDS_DEFAULT_PREP_MINUTES->label())
+                                                    ->helperText(SettingKey::KDS_DEFAULT_PREP_MINUTES->helperText())
+                                                    ->numeric()
+                                                    ->rules(SettingKey::KDS_DEFAULT_PREP_MINUTES->validationRules())
+                                                    ->placeholder(SettingKey::KDS_DEFAULT_PREP_MINUTES->placeholder()),
+
+                                                TextInput::make(SettingKey::KDS_WARNING_PERCENT->value)
+                                                    ->label(SettingKey::KDS_WARNING_PERCENT->label())
+                                                    ->helperText(SettingKey::KDS_WARNING_PERCENT->helperText())
+                                                    ->numeric()
+                                                    ->suffix('%')
+                                                    ->rules(SettingKey::KDS_WARNING_PERCENT->validationRules())
+                                                    ->placeholder(SettingKey::KDS_WARNING_PERCENT->placeholder()),
+
+                                                TextInput::make(SettingKey::KDS_RECALL_MINUTES->value)
+                                                    ->label(SettingKey::KDS_RECALL_MINUTES->label())
+                                                    ->helperText(SettingKey::KDS_RECALL_MINUTES->helperText())
+                                                    ->numeric()
+                                                    ->rules(SettingKey::KDS_RECALL_MINUTES->validationRules())
+                                                    ->placeholder(SettingKey::KDS_RECALL_MINUTES->placeholder()),
+
+                                                TextInput::make(SettingKey::KDS_SOUND_VOLUME->value)
+                                                    ->label(SettingKey::KDS_SOUND_VOLUME->label())
+                                                    ->helperText(SettingKey::KDS_SOUND_VOLUME->helperText())
+                                                    ->numeric()
+                                                    ->rules(SettingKey::KDS_SOUND_VOLUME->validationRules())
+                                                    ->placeholder(SettingKey::KDS_SOUND_VOLUME->placeholder()),
+
+                                                TextInput::make(SettingKey::KDS_REMINDER_SECONDS->value)
+                                                    ->label(SettingKey::KDS_REMINDER_SECONDS->label())
+                                                    ->helperText(SettingKey::KDS_REMINDER_SECONDS->helperText())
+                                                    ->numeric()
+                                                    ->rules(SettingKey::KDS_REMINDER_SECONDS->validationRules())
+                                                    ->placeholder(SettingKey::KDS_REMINDER_SECONDS->placeholder()),
+                                            ]),
+
+                                        Grid::make(2)
+                                            ->schema([
+                                                Select::make(SettingKey::KDS_NEW_ORDER_SOUND->value)
+                                                    ->label(SettingKey::KDS_NEW_ORDER_SOUND->label())
+                                                    ->helperText(SettingKey::KDS_NEW_ORDER_SOUND->helperText())
+                                                    ->options($this->kdsSoundOptions())
+                                                    ->rules(SettingKey::KDS_NEW_ORDER_SOUND->validationRules())
+                                                    ->placeholder(SettingKey::KDS_NEW_ORDER_SOUND->placeholder()),
+
+                                                Select::make(SettingKey::KDS_CHANGE_SOUND->value)
+                                                    ->label(SettingKey::KDS_CHANGE_SOUND->label())
+                                                    ->helperText(SettingKey::KDS_CHANGE_SOUND->helperText())
+                                                    ->options($this->kdsSoundOptions())
+                                                    ->rules(SettingKey::KDS_CHANGE_SOUND->validationRules())
+                                                    ->placeholder(SettingKey::KDS_CHANGE_SOUND->placeholder()),
+
+                                                Select::make(SettingKey::KDS_CANCEL_SOUND->value)
+                                                    ->label(SettingKey::KDS_CANCEL_SOUND->label())
+                                                    ->helperText(SettingKey::KDS_CANCEL_SOUND->helperText())
+                                                    ->options($this->kdsSoundOptions())
+                                                    ->rules(SettingKey::KDS_CANCEL_SOUND->validationRules())
+                                                    ->placeholder(SettingKey::KDS_CANCEL_SOUND->placeholder()),
+                                            ]),
+
+                                        Fieldset::make('الوقت المستهدف حسب نوع الطلب (اختياري)')
+                                            ->columns(3)
+                                            ->schema(app(OrderTypeCatalog::class)->active()
+                                                ->map(fn (OrderTypeRow $type): TextInput => TextInput::make(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.'.$type->code)
+                                                    ->label($type->label)
+                                                    ->helperText('يُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً')
+                                                    ->numeric()
+                                                    ->minValue(1)
+                                                    ->maxValue(240)
+                                                    ->placeholder('-')
+                                                    ->nullable())
+                                                ->all()),
+                                    ]),
+                            ]),
+                    ])
+                    ->columnSpanFull(),
             ])
             ->statePath('data');
+    }
+
+    private function tabErrorCount(Tabs\Tab $tab): ?int
+    {
+        $errors = $this->getErrorBag()->getMessages();
+        $fields = $tab->getChildSchema()->getFlatFields(withHidden: true);
+        $count = 0;
+
+        foreach (array_keys($errors) as $errorPath) {
+            foreach ($fields as $field) {
+                $path = $field->getStatePath();
+                if ($errorPath === $path || str_starts_with($errorPath, $path.'.')) {
+                    $count++;
+                    break;
+                }
+            }
+        }
+
+        return $count ?: null;
     }
 
     public function save(): void
