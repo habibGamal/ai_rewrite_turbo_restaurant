@@ -84,3 +84,20 @@ On the final `feature/order-types` tree (all merges + enum removal), with `BROAD
 - `storage/app/floor-layouts` holds the floor files; add it to the server backup.
 - Cost: about $70 on grok-4.7 across the OpenCode `complex` runs; the free lanes and Codex added no per-token cost.
 - Your uncommitted `README.md` and `docs/` changes in the main checkout were left out of every commit.
+
+## Follow-up: floor designer UX and cashier polish (Antigravity, gemini-4-argon-high)
+
+| Task | Commit / merge |
+|---|---|
+| Floor designer redesign (tools, drag/resize, auto numbers, checks, panel, undo, zoom), split into components, cashier floor states + legend bar | `7b587b4` / `c24690f` |
+| Order-type icon picker (26 curated heroicons), icon top bar without colors, إضافة طلب خارجي in the action grid | `491facd` / `74b5488` |
+
+- Review fixes: a single 1,850-line designer component split into nine files; the layout state no longer shadows
+  the browser's `document`; a hardcoded `order.type !== "companies"` replaced by a `canAddExternalOrder` flag
+  from the type's behavior (with a test).
+- Gates: both branches 103 failed (baseline 109), no new PHPStan error, build green.
+- Checked in the browser at 1366×768: designer toolbar/canvas/panel, add-table tool (auto numbers 3 and 4, also on
+  top of a section), undo; cashier icon tabs, orange occupied table with timer, legend bar; the external-order button
+  in the action grid.
+- Open: a section's name is hidden when a table sits on the section's top-right corner (seen on "area 2", in the
+  designer and the cashier floor).
