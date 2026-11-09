@@ -22,6 +22,7 @@ import {
     PrinterOutlined,
     RightOutlined,
     SaveOutlined,
+    ShopOutlined,
     UserAddOutlined,
 } from "@ant-design/icons";
 
@@ -67,6 +68,7 @@ export default function ManageOrder({
     externalOrders,
     sellers,
     guestDue,
+    canAddExternalOrder: typeAllowsExternalOrder,
 }: ManageOrderProps) {
     const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
     const user = auth.user as User;
@@ -123,6 +125,8 @@ export default function ManageOrder({
         useState(false);
     const [isChangeOrderTypeModalOpen, setIsChangeOrderTypeModalOpen] =
         useState(false);
+    const [isExternalOrderModalOpen, setIsExternalOrderModalOpen] =
+        useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isPrintInKitchenModalOpen, setIsPrintInKitchenModalOpen] =
         useState(false);
@@ -140,6 +144,7 @@ export default function ManageOrder({
     const orderCancelled = order.status === "cancelled";
     const orderInProcess = order.status === "processing";
     const orderCompleted = order.status === "completed";
+    const canAddExternalOrder = !disableAllControls && typeAllowsExternalOrder;
     const showDriver = orderDisplay?.showDriver ?? false;
     const orderWithDisplay = {
         ...order,
@@ -336,8 +341,6 @@ export default function ManageOrder({
             <Head title={`إدارة الطلب ${order.order_number}`} />
 
             <div className="p-4">
-                <ExternalOrders orderId={order.id} orders={externalOrders} sellers={sellers} disabled={disableAllControls}
-                    beforeAction={(action) => save(action, () => {})} />
                 <Badge.Ribbon
                     color={orderStatusConfig.color}
                     text={orderStatusConfig.text}
@@ -412,6 +415,19 @@ export default function ManageOrder({
                             >
                                 تغيير الطلب الى
                             </Button>
+                            {canAddExternalOrder && (
+                                <Button
+                                    disabled={disableAllControls}
+                                    onClick={() =>
+                                        setIsExternalOrderModalOpen(true)
+                                    }
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<ShopOutlined />}
+                                >
+                                    إضافة طلب خارجي
+                                </Button>
+                            )}
                             <CanAccess permission="order.apply_discount">
                                 <LoadingButton
                                     disabled={disableAllControls || hasItemDiscounts}
@@ -500,6 +516,15 @@ export default function ManageOrder({
                                 />
                             ))}
                             <Divider />
+                            <ExternalOrders
+                                orderId={order.id}
+                                orders={externalOrders}
+                                sellers={sellers}
+                                disabled={disableAllControls}
+                                open={isExternalOrderModalOpen}
+                                onClose={() => setIsExternalOrderModalOpen(false)}
+                                beforeAction={(action) => save(action, () => {})}
+                            />
                             <Descriptions
                                 bordered
                                 title="الحساب"

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\OrderTypeRows;
 
 use App\Enums\OrderBehavior;
+use App\Enums\OrderTypeIcon;
 use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
@@ -74,11 +75,14 @@ class OrderTypeRowResource extends Resource
                             ->required()
                             ->default('primary'),
 
-                        TextInput::make('icon')
+                        Select::make('icon')
                             ->label('الأيقونة')
+                            ->options(fn (?OrderTypeRow $record): array => OrderTypeIcon::options($record?->icon))
+                            ->in(fn (?OrderTypeRow $record): array => OrderTypeIcon::allowedValues($record?->icon))
+                            ->searchable()
+                            ->allowHtml()
                             ->required()
-                            ->default('heroicon-o-tag')
-                            ->maxLength(255),
+                            ->default(OrderTypeIcon::Tag->value),
                     ]),
 
                 Grid::make(2)
@@ -110,7 +114,7 @@ class OrderTypeRowResource extends Resource
                     ->label('الاسم')
                     ->badge()
                     ->color(fn (OrderTypeRow $record): string => $record->color)
-                    ->icon(fn (OrderTypeRow $record): string => $record->icon)
+                    ->icon(fn (OrderTypeRow $record): string => OrderTypeIcon::safeIcon($record->icon))
                     ->searchable()
                     ->sortable(),
 

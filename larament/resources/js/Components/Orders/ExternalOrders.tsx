@@ -5,16 +5,35 @@ import { useState } from "react";
 
 type Line = { name: string; quantity: number; price: number };
 
-export default function ExternalOrders({ orderId, orders, sellers, disabled, beforeAction }: {
+export default function ExternalOrders({
+    orderId,
+    orders,
+    sellers,
+    disabled,
+    beforeAction,
+    open,
+    onClose,
+}: {
     orderId: number;
     orders: ExternalOrder[];
     sellers: { id: number; name: string }[];
     disabled: boolean;
     beforeAction: (action: () => void) => void;
+    open?: boolean;
+    onClose?: () => void;
 }) {
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [sellerId, setSellerId] = useState<number>();
     const [lines, setLines] = useState<Line[]>([{ name: "", quantity: 1, price: 0 }]);
+
+    const isModalOpen = open ?? internalOpen;
+    const closeModal = () => {
+        if (onClose) {
+            onClose();
+        } else {
+            setInternalOpen(false);
+        }
+    };
 
     const selectSeller = (id: number) => {
         setSellerId(id);
@@ -32,37 +51,38 @@ export default function ExternalOrders({ orderId, orders, sellers, disabled, bef
     };
 
     return (
-        <div className="my-4 space-y-2">
-            <Button disabled={disabled} onClick={() => setOpen(true)}>
-                إضافة طلب خارجي
-            </Button>
-            {orders.map((external) => (
-                <div key={external.id} className="rounded border p-3">
-                    <Typography.Text strong>
-                        طلب خارجي — {external.seller_name}: {Number(external.total).toFixed(2)}
-                    </Typography.Text>
-                    {external.items.map((item) => (
-                        <div key={item.id} className="flex justify-between">
-                            <span>{item.name} × {item.quantity} — {Number(item.total).toFixed(2)}</span>
-                            <Button disabled={disabled} size="small" danger onClick={() => beforeAction(() => {
-                                router.delete(route("orders.external.removeLine", [orderId, external.id, item.id]));
+        <>
+            {orders.length > 0 && (
+                <div className="my-4 space-y-2">
+                    {orders.map((external) => (
+                        <div key={external.id} className="rounded border p-3">
+                            <Typography.Text strong>
+                                طلب خارجي — {external.seller_name}: {Number(external.total).toFixed(2)}
+                            </Typography.Text>
+                            {external.items.map((item) => (
+                                <div key={item.id} className="flex justify-between">
+                                    <span>{item.name} × {item.quantity} — {Number(item.total).toFixed(2)}</span>
+                                    <Button disabled={disabled} size="small" danger onClick={() => beforeAction(() => {
+                                        router.delete(route("orders.external.removeLine", [orderId, external.id, item.id]));
+                                    })}>
+                                        حذف
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button disabled={disabled || external.status === "fulfilled"} size="small" onClick={() => beforeAction(() => {
+                                router.post(route("orders.external.fulfill", [orderId, external.id]));
                             })}>
-                                حذف
+                                تم التنفيذ
                             </Button>
                         </div>
                     ))}
-                    <Button disabled={disabled || external.status === "fulfilled"} size="small" onClick={() => beforeAction(() => {
-                        router.post(route("orders.external.fulfill", [orderId, external.id]));
-                    })}>
-                        تم التنفيذ
-                    </Button>
                 </div>
-            ))}
+            )}
             <Modal
                 title="إضافة طلب خارجي"
-                open={open}
+                open={isModalOpen}
                 onCancel={() => {
-                    setOpen(false);
+                    closeModal();
                     setSellerId(undefined);
                 }}
                 onOk={() => {
@@ -75,7 +95,7 @@ export default function ExternalOrders({ orderId, orders, sellers, disabled, bef
                         items: lines,
                     }, {
                         onSuccess: () => {
-                            setOpen(false);
+                            closeModal();
                             setSellerId(undefined);
                         },
                         onError: (errors) => message.error(Object.values(errors)[0] || "تعذر حفظ الطلب الخارجي"),
@@ -107,6 +127,6 @@ export default function ExternalOrders({ orderId, orders, sellers, disabled, bef
                     إضافة صنف
                 </Button>
             </Modal>
-        </div>
+        </>
     );
 }

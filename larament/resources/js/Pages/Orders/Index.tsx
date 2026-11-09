@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs, Tag } from 'antd';
+import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
 import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
 import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
 import { ReceivablesTab } from '@/Components/Orders/Index/ReceivablesTab';
-import { orderTypeColor } from '@/helpers/orderTypeColor';
+import { orderTypeIcon } from '@/helpers/orderTypeIcon';
 import type { CashierTab, Order, Receivable, User } from '@/types';
 
 interface IndexProps {
@@ -75,11 +75,12 @@ const OrdersIndex: React.FC<IndexProps> = ({
     };
 
     const tabLabel = (tab: CashierTab) => (
-        <span>
-            <Tag color={orderTypeColor(tab.color)} className="mr-2">
-                {tab.label}
-            </Tag>
-            {tab.forcedVisible && <Tag>مخفي</Tag>}
+        <span className="inline-flex items-center gap-2">
+            {orderTypeIcon(tab.icon)}
+            <span>{tab.label}</span>
+            {tab.forcedVisible && (
+                <span className="text-xs text-gray-400">مخفي</span>
+            )}
         </span>
     );
 
