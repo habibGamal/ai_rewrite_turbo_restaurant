@@ -57,6 +57,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_kitchen_stations' => 'إضافة محطة مطبخ',
                 'update_kitchen_stations' => 'تعديل محطة مطبخ',
                 'delete_kitchen_stations' => 'حذف محطة مطبخ',
+
+                'view_order_types' => 'عرض أنواع الطلبات',
+                'create_order_types' => 'إضافة نوع طلب',
+                'update_order_types' => 'تعديل نوع طلب',
+                'delete_order_types' => 'حذف نوع طلب',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',

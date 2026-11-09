@@ -5,11 +5,14 @@ namespace App\Filament\Pages;
 use App\Enums\KdsSound;
 use App\Enums\OrderType;
 use App\Enums\SettingKey;
+use App\Orders\CashierTabLayout;
 use App\Services\PrintService;
 use App\Services\SettingsService;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -97,6 +100,8 @@ class Settings extends Page implements HasForms
                 ? ''
                 : (string) $minutes;
         }
+
+        $this->data[SettingKey::CASHIER_TABS->value] = app(CashierTabLayout::class)->entriesForEditor();
 
         $this->form->fill($this->data);
     }
@@ -283,6 +288,31 @@ class Settings extends Page implements HasForms
                             ->inline(false),
                     ]),
 
+                Section::make('تبويبات الكاشير')
+                    ->description(SettingKey::CASHIER_TABS->helperText())
+                    ->icon('heroicon-m-view-columns')
+                    ->schema([
+                        Repeater::make(SettingKey::CASHIER_TABS->value)
+                            ->hiddenLabel()
+                            ->schema([
+                                Hidden::make('key'),
+
+                                TextInput::make('label')
+                                    ->label('التبويب')
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                Toggle::make('visible')
+                                    ->label('مرئي')
+                                    ->inline(false),
+                            ])
+                            ->columns(3)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable()
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('إدارة المشتريات')
                     ->description('إعدادات خاصة بفواتير الشراء وتكاليف المنتجات')
                     ->icon('heroicon-m-shopping-cart')
@@ -417,6 +447,10 @@ class Settings extends Page implements HasForms
             }
             unset($data[SettingKey::KDS_ORDER_TYPE_TARGETS->value]);
 
+            $cashierTabs = $data[SettingKey::CASHIER_TABS->value] ?? [];
+            unset($data[SettingKey::CASHIER_TABS->value]);
+            $cashierTabs = is_array($cashierTabs) ? $cashierTabs : [];
+
             // Ensure all values are strings before saving
             $cleanData = [];
             foreach ($data as $key => $value) {
@@ -440,6 +474,14 @@ class Settings extends Page implements HasForms
             $cleanData[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = count($targets) > 0
                 ? json_encode($targets)
                 : '{}';
+
+            try {
+                app(CashierTabLayout::class)->save($cashierTabs);
+            } catch (ValidationException $e) {
+                throw ValidationException::withMessages([
+                    'data.'.SettingKey::CASHIER_TABS->value => $e->validator->errors()->first(SettingKey::CASHIER_TABS->value),
+                ]);
+            }
 
             $settingsService = app(SettingsService::class);
             $settingsService->setMultiple($cleanData);
@@ -473,6 +515,7 @@ class Settings extends Page implements HasForms
 
             $settingsService->setMultiple($defaults);
             $this->data = $defaults;
+            $this->data[SettingKey::CASHIER_TABS->value] = app(CashierTabLayout::class)->entriesForEditor();
             $this->form->fill($this->data);
 
             Notification::make()
