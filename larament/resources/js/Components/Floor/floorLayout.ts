@@ -4,6 +4,7 @@ import type {
     FloorRect,
     FloorSection,
     FloorTable,
+    TableLabelConfig,
     TableShape,
 } from '@/types';
 
@@ -40,15 +41,59 @@ export const EMPTY_FLOOR_LAYOUT: FloorLayout = {
     sections: [],
 };
 
+export const DEFAULT_TABLE_LABEL: TableLabelConfig = {
+    prefix: 'طاولة',
+    showCapacity: true,
+    showOrderNumber: true,
+    showTimer: true,
+};
+
+export function resolveTableLabel(
+    tableLabel?: Partial<TableLabelConfig> | null,
+): TableLabelConfig {
+    if (!tableLabel) {
+        return { ...DEFAULT_TABLE_LABEL };
+    }
+    return {
+        prefix:
+            tableLabel.prefix === undefined
+                ? DEFAULT_TABLE_LABEL.prefix
+                : (tableLabel.prefix ?? ''),
+        showCapacity: tableLabel.showCapacity ?? DEFAULT_TABLE_LABEL.showCapacity,
+        showOrderNumber:
+            tableLabel.showOrderNumber ?? DEFAULT_TABLE_LABEL.showOrderNumber,
+        showTimer: tableLabel.showTimer ?? DEFAULT_TABLE_LABEL.showTimer,
+    };
+}
+
+export function formatTableLabel(
+    table: { number: string; capacity?: number },
+    tableLabel?: Partial<TableLabelConfig> | null,
+): string {
+    const config = resolveTableLabel(tableLabel);
+    const trimmedPrefix = config.prefix.trim();
+    const baseName =
+        trimmedPrefix === ''
+            ? table.number
+            : /[-_/#]$/.test(trimmedPrefix)
+              ? `${trimmedPrefix}${table.number}`
+              : `${trimmedPrefix} ${table.number}`;
+
+    if (
+        config.showCapacity &&
+        typeof table.capacity === 'number' &&
+        Number.isFinite(table.capacity) &&
+        table.capacity > 0
+    ) {
+        return `${baseName} · ${table.capacity} أفراد`;
+    }
+
+    return baseName;
+}
+
 export const SECTION_COLOR_PALETTE: string[] = [
-    '#e8f5e9',
-    '#e3f2fd',
-    '#fff3e0',
-    '#f3e5f5',
-    '#fce4ec',
-    '#e0f7fa',
-    '#fffde7',
-    '#efebe9',
+    '#e8f5e9', '#e3f2fd', '#fff3e0', '#f3e5f5',
+    '#fce4ec', '#e0f7fa', '#fffde7', '#efebe9',
 ];
 
 export function normalizeLayout(layout: FloorLayout | null): FloorLayout {
@@ -65,6 +110,7 @@ export function normalizeLayout(layout: FloorLayout | null): FloorLayout {
             ? layout.tables.map((t) => ({ ...t, shape: t.shape === 'round' ? 'round' : 'square' }))
             : [],
         sections: Array.isArray(layout.sections) ? layout.sections.map((s) => ({ ...s })) : [],
+        ...(layout.tableLabel ? { tableLabel: resolveTableLabel(layout.tableLabel) } : {}),
     };
 }
 

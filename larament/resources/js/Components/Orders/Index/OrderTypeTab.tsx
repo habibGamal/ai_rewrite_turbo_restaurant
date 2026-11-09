@@ -9,6 +9,10 @@ import {
 import { orderStatus } from "@/helpers/orderState";
 import useModal from "@/hooks/useModal";
 import ChooseTableForm from "@/Components/Orders/ChooseTableForm";
+import {
+    formatTableLabel,
+    resolveTableLabel,
+} from "@/Components/Floor/floorLayout";
 import { OrderCard } from "./OrderCard";
 import { OrderTimer } from "./OrderTimer";
 import type { CashierTab, Order, OrderDisplay } from "@/types";
@@ -121,12 +125,20 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
     if (presentation.body === "floor" && tab.layout) {
         const layout = tab.layout;
+        const labelConfig = resolveTableLabel(layout.tableLabel);
+        const layoutTableNumbers = new Set(
+            layout.tables.map((table) => String(table.number))
+        );
+        const outsideOccupied = Object.entries(tab.occupancy ?? {}).filter(
+            ([tableNumber]) => !layoutTableNumbers.has(String(tableNumber))
+        );
+
         return (
             <div className="space-y-3" dir="rtl">
                 <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
 
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                    <div className="flex items-center gap-4 text-xs text-slate-700 h-7">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-5 bg-white border border-slate-200 rounded-lg px-4 h-10 text-sm font-medium text-slate-700">
                         <span className="inline-flex items-center gap-1.5">
                             <span
                                 className="w-3.5 h-3.5 rounded-xs inline-block"
@@ -160,9 +172,9 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                     </div>
 
                     <Button
-                        size="small"
                         icon={<PlusOutlined />}
                         onClick={() => tableModal.showModal()}
+                        className="h-10 px-4 font-medium"
                     >
                         طاولة خارج المخطط
                     </Button>
@@ -175,26 +187,22 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                         gridTemplateColumns: `repeat(${layout.columns}, minmax(96px, 1fr))`,
                         gridTemplateRows: `repeat(${layout.rows}, 96px)`,
                         gap: 6,
+                        paddingTop: 10,
                         overflowX: "auto",
                     }}
                 >
                     {layout.sections.map((section, index) => (
                         <div
-                            key={index}
+                            key={`section-bg-${index}`}
                             style={{
                                 gridColumn: `${section.col + 1} / span ${section.colSpan}`,
                                 gridRow: `${section.row + 1} / span ${section.rowSpan}`,
                                 background: section.color,
-                                padding: 8,
                                 borderRadius: 10,
                                 border: "1px solid rgba(0, 0, 0, 0.08)",
-                                fontWeight: 600,
-                                fontSize: 13,
-                                color: "#334155",
+                                zIndex: 0,
                             }}
-                        >
-                            {section.name}
-                        </div>
+                        />
                     ))}
                     {layout.tables.map((table) => {
                         const occupied = tab.occupancy?.[table.number];
@@ -248,16 +256,27 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                                     style={{ color: textColor }}
                                 >
                                     <span className="font-bold">
-                                        طاولة {table.number} · {table.capacity} أفراد
+                                        {formatTableLabel(table, layout.tableLabel)}
                                     </span>
                                     {occupied ? (
-                                        <span
-                                            className="text-xs mt-1 font-medium flex flex-col items-center"
-                                            style={{ color: "#ffffff" }}
-                                        >
-                                            <span>طلب #{occupied.order_number}</span>
-                                            <OrderTimer createdAt={occupied.created_at} />
-                                        </span>
+                                        (labelConfig.showOrderNumber ||
+                                            labelConfig.showTimer) && (
+                                            <span
+                                                className="text-xs mt-1 font-medium flex flex-col items-center"
+                                                style={{ color: "#ffffff" }}
+                                            >
+                                                {labelConfig.showOrderNumber && (
+                                                    <span>
+                                                        طلب #{occupied.order_number}
+                                                    </span>
+                                                )}
+                                                {labelConfig.showTimer && (
+                                                    <OrderTimer
+                                                        createdAt={occupied.created_at}
+                                                    />
+                                                )}
+                                            </span>
+                                        )
                                     ) : (
                                         <span
                                             className="text-xs mt-1"
@@ -274,7 +293,97 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                             </Button>
                         );
                     })}
+                    {layout.sections.map((section, index) => (
+                        <div
+                            key={`section-label-${index}`}
+                            style={{
+                                gridColumn: `${section.col + 1} / span ${section.colSpan}`,
+                                gridRow: `${section.row + 1} / span ${section.rowSpan}`,
+                                zIndex: 2,
+                                pointerEvents: "none",
+                                alignSelf: "start",
+                                justifySelf: "start",
+                                marginTop: -9,
+                                marginRight: 8,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    display: "inline-block",
+                                    backgroundColor: "rgba(255, 255, 255, 0.94)",
+                                    border: "1px solid rgba(15, 23, 42, 0.16)",
+                                    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.06)",
+                                    borderRadius: 9999,
+                                    padding: "1px 8px",
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: "#1e293b",
+                                    lineHeight: 1.4,
+                                }}
+                            >
+                                {section.name}
+                            </span>
+                        </div>
+                    ))}
                 </div>
+
+                {outsideOccupied.length > 0 && (
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5">
+                        <div className="text-sm font-bold text-slate-700">
+                            طاولات خارج المخطط
+                        </div>
+                        <div className="flex flex-wrap gap-2.5">
+                            {outsideOccupied.map(([tableNumber, occupied]) => (
+                                <Button
+                                    key={tableNumber}
+                                    onClick={() =>
+                                        router.visit(`/orders/manage/${occupied.id}`)
+                                    }
+                                    style={{
+                                        minWidth: 140,
+                                        height: "auto",
+                                        padding: "10px 16px",
+                                        borderRadius: 12,
+                                        backgroundColor: "#ea580c",
+                                        borderColor: "#c2410c",
+                                        borderStyle: "solid",
+                                        color: "#ffffff",
+                                    }}
+                                >
+                                    <span
+                                        className="flex flex-col items-center justify-center leading-tight"
+                                        style={{ color: "#ffffff" }}
+                                    >
+                                        <span className="font-bold">
+                                            {formatTableLabel(
+                                                { number: tableNumber },
+                                                layout.tableLabel
+                                            )}
+                                        </span>
+                                        {(labelConfig.showOrderNumber ||
+                                            labelConfig.showTimer) && (
+                                            <span
+                                                className="text-xs mt-1 font-medium flex flex-col items-center"
+                                                style={{ color: "#ffffff" }}
+                                            >
+                                                {labelConfig.showOrderNumber && (
+                                                    <span>
+                                                        طلب #{occupied.order_number}
+                                                    </span>
+                                                )}
+                                                {labelConfig.showTimer && (
+                                                    <OrderTimer
+                                                        createdAt={occupied.created_at}
+                                                    />
+                                                )}
+                                            </span>
+                                        )}
+                                    </span>
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
