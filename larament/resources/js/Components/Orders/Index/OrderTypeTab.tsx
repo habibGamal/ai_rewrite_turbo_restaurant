@@ -122,17 +122,59 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
     if (presentation.body === "floor" && tab.layout) {
         const layout = tab.layout;
         return (
-            <div className="space-y-4">
+            <div className="space-y-3" dir="rtl">
                 <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
-                <Button onClick={() => tableModal.showModal()}>
-                    طاولة خارج المخطط
-                </Button>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-4 text-xs text-slate-700 h-7">
+                        <span className="inline-flex items-center gap-1.5">
+                            <span
+                                className="w-3.5 h-3.5 rounded-xs inline-block"
+                                style={{
+                                    backgroundColor: "#ffffff",
+                                    border: "1px solid #cbd5e1",
+                                }}
+                            />
+                            <span>متاحة</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span
+                                className="w-3.5 h-3.5 rounded-xs inline-block"
+                                style={{
+                                    backgroundColor: "#ea580c",
+                                    border: "1px solid #c2410c",
+                                }}
+                            />
+                            <span>مشغولة</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span
+                                className="w-3.5 h-3.5 rounded-xs inline-block"
+                                style={{
+                                    backgroundColor: "#e2e8f0",
+                                    border: "1px dashed #94a3b8",
+                                }}
+                            />
+                            <span>غير نشطة</span>
+                        </span>
+                    </div>
+
+                    <Button
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => tableModal.showModal()}
+                    >
+                        طاولة خارج المخطط
+                    </Button>
+                </div>
+
                 <div
+                    dir="rtl"
                     style={{
                         display: "grid",
-                        gridTemplateColumns: `repeat(${layout.columns}, minmax(90px, 1fr))`,
-                        gridTemplateRows: `repeat(${layout.rows}, 90px)`,
-                        gap: 4,
+                        gridTemplateColumns: `repeat(${layout.columns}, minmax(96px, 1fr))`,
+                        gridTemplateRows: `repeat(${layout.rows}, 96px)`,
+                        gap: 6,
                         overflowX: "auto",
                     }}
                 >
@@ -143,7 +185,12 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                                 gridColumn: `${section.col + 1} / span ${section.colSpan}`,
                                 gridRow: `${section.row + 1} / span ${section.rowSpan}`,
                                 background: section.color,
-                                padding: 4,
+                                padding: 8,
+                                borderRadius: 10,
+                                border: "1px solid rgba(0, 0, 0, 0.08)",
+                                fontWeight: 600,
+                                fontSize: 13,
+                                color: "#334155",
                             }}
                         >
                             {section.name}
@@ -151,34 +198,78 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                     ))}
                     {layout.tables.map((table) => {
                         const occupied = tab.occupancy?.[table.number];
+                        const isRound = table.shape === "round";
+                        const isInactive = !table.active && !occupied;
+
+                        const bgColor = occupied
+                            ? "#ea580c"
+                            : table.active
+                              ? "#ffffff"
+                              : "#e2e8f0";
+                        const borderColor = occupied
+                            ? "#c2410c"
+                            : table.active
+                              ? "#cbd5e1"
+                              : "#94a3b8";
+                        const textColor = occupied
+                            ? "#ffffff"
+                            : table.active
+                              ? "#1e293b"
+                              : "#64748b";
+
                         return (
                             <Button
                                 key={table.number}
-                                disabled={!table.active && !occupied}
-                                onClick={() => occupied
-                                    ? router.visit(`/orders/manage/${occupied.id}`)
-                                    : router.post(route("orders.store"), {
-                                          type: tab.code,
-                                          table_number: table.number,
-                                      })
+                                disabled={isInactive}
+                                onClick={() =>
+                                    occupied
+                                        ? router.visit(`/orders/manage/${occupied.id}`)
+                                        : router.post(route("orders.store"), {
+                                              type: tab.code,
+                                              table_number: table.number,
+                                          })
                                 }
                                 style={{
                                     height: "100%",
+                                    width: "100%",
                                     zIndex: 1,
                                     gridColumn: `${table.col + 1} / span ${table.colSpan}`,
                                     gridRow: `${table.row + 1} / span ${table.rowSpan}`,
+                                    borderRadius: isRound ? "9999px" : 12,
+                                    backgroundColor: bgColor,
+                                    borderColor,
+                                    borderStyle: isInactive ? "dashed" : "solid",
+                                    color: textColor,
+                                    opacity: isInactive ? 0.65 : 1,
                                 }}
                             >
-                                <span>
-                                    طاولة {table.number}
-                                    <br />
+                                <span
+                                    className="flex flex-col items-center justify-center leading-tight"
+                                    style={{ color: textColor }}
+                                >
+                                    <span className="font-bold">
+                                        طاولة {table.number} · {table.capacity} أفراد
+                                    </span>
                                     {occupied ? (
-                                        <>
-                                            طلب #{occupied.order_number}
-                                            <br />
+                                        <span
+                                            className="text-xs mt-1 font-medium flex flex-col items-center"
+                                            style={{ color: "#ffffff" }}
+                                        >
+                                            <span>طلب #{occupied.order_number}</span>
                                             <OrderTimer createdAt={occupied.created_at} />
-                                        </>
-                                    ) : "متاحة"}
+                                        </span>
+                                    ) : (
+                                        <span
+                                            className="text-xs mt-1"
+                                            style={{
+                                                color: table.active
+                                                    ? "#047857"
+                                                    : "#64748b",
+                                            }}
+                                        >
+                                            {table.active ? "متاحة" : "غير نشطة"}
+                                        </span>
+                                    )}
                                 </span>
                             </Button>
                         );

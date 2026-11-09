@@ -13,7 +13,10 @@ class FloorLayoutService
     public function isDineInType(string $code): bool
     {
         return (bool) preg_match('/^[a-z][a-z0-9_]*$/', $code)
-            && OrderTypeRow::query()->where('code', $code)->where('behavior', OrderBehavior::DINE_IN->value)->exists();
+            && OrderTypeRow::query()
+                ->where('code', $code)
+                ->where('behavior', OrderBehavior::DINE_IN->value)
+                ->exists();
     }
 
     private function path(string $code): string
@@ -27,7 +30,9 @@ class FloorLayoutService
         $path = $this->path($code);
         $disk = Storage::disk('local');
 
-        return $disk->exists($path) ? json_decode($disk->get($path), true, 512, JSON_THROW_ON_ERROR) : null;
+        return $disk->exists($path)
+            ? json_decode($disk->get($path), true, 512, JSON_THROW_ON_ERROR)
+            : null;
     }
 
     public function write(string $code, array $document): void
@@ -37,7 +42,9 @@ class FloorLayoutService
         Validator::make($document, $this->rules())->validate();
         foreach (['tables', 'sections'] as $kind) {
             foreach ($document[$kind] as $item) {
-                if ($document['columns'] < $item['col'] + $item['colSpan'] || $document['rows'] < $item['row'] + $item['rowSpan']) {
+                $outOfColumns = $document['columns'] < $item['col'] + $item['colSpan'];
+                $outOfRows = $document['rows'] < $item['row'] + $item['rowSpan'];
+                if ($outOfColumns || $outOfRows) {
                     throw ValidationException::withMessages([$kind => 'العنصر خارج حدود الشبكة']);
                 }
             }
@@ -45,7 +52,11 @@ class FloorLayoutService
         $disk = Storage::disk('local');
         $disk->makeDirectory('floor-layouts');
         $temp = $path.'.'.bin2hex(random_bytes(8)).'.tmp';
-        if (! $disk->put($temp, json_encode($document, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)) || ! $disk->move($temp, $path)) {
+        $encoded = json_encode(
+            $document,
+            JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
+        );
+        if (! $disk->put($temp, $encoded) || ! $disk->move($temp, $path)) {
             $disk->delete($temp);
             throw new \RuntimeException('تعذر حفظ المخطط');
         }
@@ -77,6 +88,7 @@ class FloorLayoutService
             'sections' => 'present|array',
             'tables.*.number' => 'required|string|max:50|distinct',
             'tables.*.capacity' => 'required|integer|min:1',
+            'tables.*.shape' => 'nullable|in:square,round',
             'tables.*.zone' => 'present|nullable|string',
             'tables.*.active' => 'required|boolean',
             'sections.*.name' => 'required|string',
