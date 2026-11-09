@@ -37,6 +37,50 @@ it('can render the settings page', function () {
         ->assertSuccessful();
 });
 
+it('renders all settings tabs', function () {
+    livewire(Settings::class)
+        ->assertSeeHtml('fi-tabs')
+        ->assertSeeHtml('isTabPersistedInQueryString: true')
+        ->assertSeeInOrder([
+            'الإعدادات العامة',
+            'إعدادات المطعم',
+            'إدارة الفروع',
+            'صلاحيات الكاشير',
+            'إدارة الورديات',
+            'تبويبات الكاشير',
+            'إدارة المشتريات',
+            'شاشة المطبخ (KDS)',
+        ]);
+});
+
+it('saves settings from the first and last tabs together', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::WEBSITE_URL->value => 'https://tabs.example.com',
+            SettingKey::KDS_WARNING_PERCENT->value => '65',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::WEBSITE_URL->value)->first()->value)->toBe('https://tabs.example.com');
+    expect(Setting::where('key', SettingKey::KDS_WARNING_PERCENT->value)->first()->value)->toBe('65');
+});
+
+it('indicates validation errors on the affected tab', function () {
+    $component = livewire(Settings::class)
+        ->fillForm([SettingKey::KDS_WARNING_PERCENT->value => '150'])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_WARNING_PERCENT->value]);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$component->html());
+    $xpath = new DOMXPath($document);
+    $badges = $xpath->query("//button[contains(., 'شاشة المطبخ (KDS)')]//*[contains(concat(' ', normalize-space(@class), ' '), ' fi-badge ')]");
+
+    expect($badges->length)->toBeGreaterThan(0);
+});
+
 it('only allows admins to access settings page', function () {
     $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
