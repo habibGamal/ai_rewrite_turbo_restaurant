@@ -5,6 +5,7 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Orders\OrderOpening;
 use App\Repositories\OrderRepository;
 
 uses(Tests\Unit\TestCase::class);
@@ -20,10 +21,10 @@ describe('OrderRepository', function () {
             $shift = \App\Models\Shift::factory()->create();
 
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $shift->id,
                 userId: $user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
             $order = $this->repository->create($createOrderDTO);
@@ -41,8 +42,8 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id);
+            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
+            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
 
             $order1 = $this->repository->create($dto1);
             $order2 = $this->repository->create($dto2);
@@ -56,8 +57,8 @@ describe('OrderRepository', function () {
             $shift1 = \App\Models\Shift::factory()->create();
             $shift2 = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift1->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift2->id, $user->id);
+            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift1->id, $user->id);
+            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift2->id, $user->id);
 
             $order1 = $this->repository->create($dto1);
             $order2 = $this->repository->create($dto2);

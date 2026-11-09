@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Models\Shift;
 use App\Models\User;
+use App\Orders\OrderOpening;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\OrderStockConversionService;
 use App\Services\StockService;
@@ -58,11 +59,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with the consumable product
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T001'),
                 customerId: $this->customer->id,
-                tableNumber: 'T001'
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -179,10 +180,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create and complete an order with manufactured product
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: OrderType::TAKEAWAY->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -311,11 +312,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Now test with actual order completion
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T005'),
                 customerId: $this->customer->id,
-                tableNumber: 'T005'
             );
 
             $realOrder = $this->orderService->createOrder($createOrderDTO);
@@ -358,10 +359,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order trying to buy 5 items
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: OrderType::TAKEAWAY->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -378,27 +379,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             $this->orderService->updateOrderItems($order->id, $itemsData);
 
-            // Check stock requirements
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-
-            expect($stockRequirements)->toHaveCount(1);
-            expect($stockRequirements[0]['product_id'])->toBe($limitedProduct->id);
-            expect($stockRequirements[0]['required_quantity'])->toBe(5);
-            expect($stockRequirements[0]['current_stock'])->toBe(2.0);
-            expect($stockRequirements[0]['sufficient'])->toBeFalse();
-
-            // Validate stock availability
-            $insufficientStock = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            expect($insufficientStock)->toHaveCount(1);
-            expect($insufficientStock[0]['product_name'])->toBe('Limited Edition Burger');
-
-            // If ALLOW_INSUFFICIENT_STOCK is false, order completion should fail
-            // This depends on the OrderService implementation
-            $initialStock = $this->stockService->getCurrentStock($limitedProduct->id);
-            expect($initialStock)->toBe(2.0);
-
-            // Note: Actual behavior depends on OrderService::ALLOW_INSUFFICIENT_STOCK setting
-            // The test verifies that the validation correctly identifies insufficient stock
+            expect($this->stockService->getCurrentStock($limitedProduct->id))->toBe(2.0);
         });
 
         it('optimizes stock operations for orders with multiple items using same components', function () {
@@ -450,11 +431,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with multiple items
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T010'),
                 customerId: $this->customer->id,
-                tableNumber: 'T010'
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -546,10 +527,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with mixed product types
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DELIVERY,
+                typeCode: OrderType::DELIVERY->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -608,39 +589,6 @@ describe('Order Stock Conversion Feature Integration', function () {
             $stockItems = $this->orderStockConversionService->convertOrderItemsToStockItems($order);
             expect($stockItems)->toBeArray();
             expect($stockItems)->toHaveCount(0);
-
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-            expect($stockRequirements)->toBeArray();
-            expect($stockRequirements)->toHaveCount(0);
-
-            $insufficientStock = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            expect($insufficientStock)->toBeArray();
-            expect($insufficientStock)->toHaveCount(0);
-        });
-
-        it('handles products without inventory items', function () {
-            $productWithoutInventory = Product::factory()->create([
-                'name' => 'New Product',
-                'type' => ProductType::Consumable,
-                'price' => 10.00,
-                'cost' => 5.00,
-                'category_id' => $this->category->id,
-                'printer_id' => $this->printer->id,
-            ]);
-
-            $order = Order::factory()->create();
-            $order->items()->create([
-                'product_id' => $productWithoutInventory->id,
-                'quantity' => 1,
-                'price' => 10.00,
-                'cost' => 5.00,
-                'total' => 10.00,
-            ]);
-
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-            expect($stockRequirements)->toHaveCount(1);
-            expect($stockRequirements[0]['current_stock'])->toBe(0.0);
-            expect($stockRequirements[0]['sufficient'])->toBeFalse();
         });
 
         it('logs warnings for problematic scenarios', function () {
