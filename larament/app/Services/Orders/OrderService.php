@@ -4,7 +4,6 @@ namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\DTOs\Orders\OrderItemDTO;
-use App\DTOs\Orders\PaymentDTO;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Events\Orders\OrderCancelled;
@@ -29,7 +28,6 @@ class OrderService
     public function __construct(
         private readonly OrderRepositoryInterface $orderRepository,
         private readonly OrderCreationService $orderCreationService,
-        private readonly OrderPaymentService $orderPaymentService,
         private readonly OrderCalculationService $orderCalculationService,
         private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
@@ -256,15 +254,6 @@ class OrderService
             OrderCancelled::dispatch($order, $reason);
 
             return $order;
-        });
-    }
-
-    public function processOldOrderPayment(int $orderId, PaymentDTO $paymentDTO): Order
-    {
-        return DB::transaction(function () use ($orderId, $paymentDTO) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
-
-            return $this->orderPaymentService->processPayment($order, $paymentDTO);
         });
     }
 
