@@ -4,6 +4,7 @@
 
     $display = $order->display();
     $receiptPayment = $receiptPayment ?? \App\Orders\ReceiptPayment::forOrder($order);
+    $receiptView = $receiptView ?? \App\Orders\ReceiptView::forOrder($order);
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
     $logoPath =
@@ -215,9 +216,9 @@
             <tbody>
                 @foreach ($order->items as $item)
                     @php
-                        $itemSubtotal = $item->quantity * $item->price;
-                        $itemDiscount = $item->item_discount ?? 0;
-                        $itemTotal = $itemSubtotal - $itemDiscount;
+                        $itemSubtotal = $receiptView['restaurant_lines'][$item->id]['subtotal'];
+                        $itemDiscount = $receiptView['restaurant_lines'][$item->id]['discount'];
+                        $itemTotal = $receiptView['restaurant_lines'][$item->id]['total'];
                     @endphp
                     <tr>
                         <td class="product-cell">{{ $item->product->name }}</td>
@@ -259,7 +260,7 @@
                 </tr>
                 <tr>
                     <td>الاجمالي النهائي</td>
-                    <td class="number-cell">{{ ceil($order->total) }}</td>
+                    <td class="number-cell">{{ number_format($receiptView['restaurant_total'], 2) }}</td>
                 </tr>
                 @if ($receiptPayment->partial)
                     <tr>
@@ -275,6 +276,7 @@
         </table>
 
         <p class="reference">الرقم المرجعي - {{ $order->id }}</p>
+        @include('print.receipt-external')
         @if ($order->order_notes)
             <p>{{ $order->order_notes }}</p>
         @endif

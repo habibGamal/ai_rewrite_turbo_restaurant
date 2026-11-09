@@ -399,6 +399,7 @@ class PrintService
 
             // Load order with relationships
             $order->load(['user', 'customer', 'driver', 'items.product', 'table', 'payments']);
+            $receiptView = \App\Orders\ReceiptView::forOrder($order);
 
             $itemCount = $order->items->count();
 
@@ -407,7 +408,7 @@ class PrintService
                 Log::info("Order {$order->id} has {$itemCount} items, using single receipt printing");
 
                 // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
-                $html = $this->generateReceiptHtml($order);
+                $html = $this->generateReceiptHtml($order, $receiptView);
 
                 // ---------- 2. Convert HTML to image using current strategy ----------
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
@@ -432,7 +433,7 @@ class PrintService
 
                 // ---------- 1. Print header with first 5 items ----------
                 $headerItems = $order->items->take(5);
-                $html = $this->generateReceiptHeaderHtml($order, $headerItems);
+                $html = $this->generateReceiptHeaderHtml($order, $headerItems, $receiptView);
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                 $escposImage = EscposImage::load($tempImagePath);
                 $printer->bitImage($escposImage);
@@ -444,7 +445,7 @@ class PrintService
                 $chunks = $remainingItems->chunk(5);
 
                 foreach ($chunks as $index => $chunk) {
-                    $html = $this->generateReceiptItemsHtml($chunk);
+                    $html = $this->generateReceiptItemsHtml($chunk, $receiptView);
                     $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                     $escposImage = EscposImage::load($tempImagePath);
                     $printer->bitImage($escposImage);
@@ -453,7 +454,7 @@ class PrintService
                 }
 
                 // ---------- 3. Print footer with totals ----------
-                $html = $this->generateReceiptFooterHtml($order);
+                $html = $this->generateReceiptFooterHtml($order, $receiptView);
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                 $escposImage = EscposImage::load($tempImagePath);
                 $printer->bitImage($escposImage);
@@ -478,11 +479,12 @@ class PrintService
     /**
      * Generate HTML content for receipt printing
      */
-    private function generateReceiptHtml(Order $order): string
+    private function generateReceiptHtml(Order $order, array $receiptView): string
     {
         // Use Blade view to render the receipt with minimal data
         return view('print.receipt-template', [
             'order' => $order,
+            'receiptView' => $receiptView,
             'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }
@@ -546,10 +548,11 @@ class PrintService
     /**
      * Generate HTML content for receipt header with specified items
      */
-    private function generateReceiptHeaderHtml(Order $order, $items): string
+    private function generateReceiptHeaderHtml(Order $order, $items, array $receiptView): string
     {
         return view('print.receipt-header', [
             'order' => $order,
+            'receiptView' => $receiptView,
             'items' => $items,
         ])->render();
     }
@@ -557,9 +560,10 @@ class PrintService
     /**
      * Generate HTML content for receipt items continuation
      */
-    private function generateReceiptItemsHtml($items): string
+    private function generateReceiptItemsHtml($items, array $receiptView): string
     {
         return view('print.receipt-items', [
+            'receiptView' => $receiptView,
             'items' => $items,
         ])->render();
     }
@@ -567,10 +571,11 @@ class PrintService
     /**
      * Generate HTML content for receipt footer
      */
-    private function generateReceiptFooterHtml(Order $order): string
+    private function generateReceiptFooterHtml(Order $order, array $receiptView): string
     {
         return view('print.receipt-footer', [
             'order' => $order,
+            'receiptView' => $receiptView,
             'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }

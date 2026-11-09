@@ -4,6 +4,7 @@
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
     $receiptPayment = $receiptPayment ?? \App\Orders\ReceiptPayment::forOrder($order);
+    $receiptView = $receiptView ?? \App\Orders\ReceiptView::forOrder($order);
 
     $qrLogoPath =
         setting(SettingKey::RESTAURANT_QR_LOGO) !== '' ? Storage::disk('public')->path(setting(SettingKey::RESTAURANT_QR_LOGO)) : null;
@@ -146,7 +147,7 @@
                 </tr>
                 <tr>
                     <td>الاجمالي النهائي</td>
-                    <td class="number-cell">{{ ceil($order->total) }}</td>
+                    <td class="number-cell">{{ number_format($receiptView['restaurant_total'], 2) }}</td>
                 </tr>
                 @if ($receiptPayment->partial)
                     <tr>
@@ -162,6 +163,7 @@
         </table>
 
         <p class="reference">الرقم المرجعي - {{ $order->id }}</p>
+        @include('print.receipt-external')
         @if ($order->order_notes)
             <p>{{ $order->order_notes }}</p>
         @endif

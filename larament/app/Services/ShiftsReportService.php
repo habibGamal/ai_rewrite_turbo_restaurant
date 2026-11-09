@@ -130,6 +130,8 @@ class ShiftsReportService
 
         // Calculate expenses
         $expenses = $shift->expenses()->sum('amount');
+        $externalCash = (float) DB::table('external_order_collections')->where('shift_id', $shift->id)->where('method', 'cash')->sum('amount');
+        $settlements = (float) DB::table('external_seller_settlements')->where('shift_id', $shift->id)->sum('amount');
 
         // Calculate average receipt value
         $avgReceiptValue = $completedOrders->count() > 0 ? $sales / $completedOrders->count() : 0;
@@ -143,6 +145,9 @@ class ShiftsReportService
             'expenses' => $expenses,
             'discounts' => $discounts,
             'cashPayments' => $cashPayments,
+            'externalCash' => $externalCash,
+            'settlements' => $settlements,
+            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash - $settlements - $expenses,
             'cardPayments' => $cardPayments,
             'talabatCardPayments' => $talabatCardPayments,
             'avgReceiptValue' => $avgReceiptValue,
@@ -203,6 +208,10 @@ class ShiftsReportService
                 'expenses.shift_id'
             )->first();
 
+        $selectedShiftIds = (clone $shiftsQuery)->select('shifts.id');
+        $externalCash = (float) DB::table('external_order_collections')->whereIn('shift_id', $selectedShiftIds)->where('method', 'cash')->sum('amount');
+        $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', $selectedShiftIds)->sum('amount');
+        $startCash = (float) (clone $shiftsQuery)->sum('shifts.start_cash');
         $totalStats = [
             'sales' => $ordersData->sales ?? 0,
             'profit' => $ordersData->profit ?? 0,
@@ -210,6 +219,9 @@ class ShiftsReportService
             'discounts' => $ordersData->discounts ?? 0,
 
             'cashPayments' => $paymentsData->cash_payments ?? 0,
+            'externalCash' => $externalCash,
+            'settlements' => $settlements,
+            'availableCash' => $startCash + (float) ($paymentsData->cash_payments ?? 0) + $externalCash - $settlements - (float) ($expensesData->expenses ?? 0),
             'cardPayments' => $paymentsData->card_payments ?? 0,
             'talabatCardPayments' => $paymentsData->talabat_card_payments ?? 0,
 

@@ -1,5 +1,6 @@
 import { Order, OrderItemData } from "@/types";
 import { usePage } from "@inertiajs/react";
+import ExternalReceipt from "./ExternalReceipt";
 
 export default function ReceiptTemplate({
     order,
@@ -144,6 +145,7 @@ export default function ReceiptTemplate({
                     )}
                 </tbody>
             </table>
+            <ExternalReceipt receipt={order.receiptView} />
             <p className="text-center mt-4">الرقم المرجعي - {order.id}</p>
             <p className="whitespace-pre-line  text-center">{receiptFooter}</p>
             <img
