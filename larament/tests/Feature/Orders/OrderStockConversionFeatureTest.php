@@ -84,8 +84,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             expect($initialStock)->toBe(100.0);
 
             // Complete the order - this should reduce stock
-            $paymentsData = ['cash' => 75.00]; // 3 * 25.00
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             // Verify stock was reduced
             $stockAfterCompletion = $this->stockService->getCurrentStock($burger->id);
@@ -329,9 +329,8 @@ describe('Order Stock Conversion Feature Integration', function () {
                 ],
             ];
 
-            $this->orderService->updateOrderItems($realOrder->id, $itemsData);
-            $paymentsData = ['cash' => 15.00];
-            $this->orderService->completeOrder($realOrder->id, $paymentsData);
+            $realOrder = $this->orderService->updateOrderItems($realOrder->id, $itemsData);
+            $this->orderService->completeOrder($realOrder->id, ['cash' => (float) $realOrder->total]);
 
             // Verify nested breakdown affected raw materials correctly
             expect($this->stockService->getCurrentStock($flour->id))->toBe(94.0); // 100 - 6
@@ -472,8 +471,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             expect($sugarItem['quantity'])->toBe(4.0);
 
             // Complete order and verify stock reduction
-            $paymentsData = ['cash' => 55.00]; // 25 + 30
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             expect($this->stockService->getCurrentStock($flour->id))->toBe(93.0); // 100 - 7
             expect($this->stockService->getCurrentStock($sugar->id))->toBe(76.0); // 80 - 4
@@ -565,8 +564,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             $initialBreadStock = $this->stockService->getCurrentStock($bread->id);
 
             // Complete order
-            $paymentsData = ['cash' => 32.00]; // 10 + 3 + 20 - 1 (discount estimate)
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             // Verify stock changes:
             // - Consumable (drink): should decrease by quantity ordered

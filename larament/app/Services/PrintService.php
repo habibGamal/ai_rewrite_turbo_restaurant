@@ -7,6 +7,7 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
+use App\Orders\ReceiptPayment;
 use App\Services\PrintStrategies\PrintStrategyFactory;
 use App\Services\PrintStrategies\PrintStrategyInterface;
 use Exception;
@@ -397,7 +398,7 @@ class PrintService
             Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
 
             // Load order with relationships
-            $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
+            $order->load(['user', 'customer', 'driver', 'items.product', 'table', 'payments']);
 
             $itemCount = $order->items->count();
 
@@ -482,6 +483,7 @@ class PrintService
         // Use Blade view to render the receipt with minimal data
         return view('print.receipt-template', [
             'order' => $order,
+            'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }
 
@@ -569,6 +571,7 @@ class PrintService
     {
         return view('print.receipt-footer', [
             'order' => $order,
+            'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }
 

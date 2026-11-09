@@ -3,6 +3,7 @@
     use Illuminate\Support\Facades\Storage;
 
     $display = $order->display();
+    $receiptPayment = $receiptPayment ?? \App\Orders\ReceiptPayment::forOrder($order);
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
     $logoPath =
@@ -260,6 +261,16 @@
                     <td>الاجمالي النهائي</td>
                     <td class="number-cell">{{ ceil($order->total) }}</td>
                 </tr>
+                @if ($receiptPayment->partial)
+                    <tr>
+                        <td>المدفوع</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->paid, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>المتبقي</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->remaining, 2) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 

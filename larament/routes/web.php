@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
         Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
         Route::post('/complete-order/{order}', [OrderController::class, 'completeOrder'])->name('complete');
+        Route::post('/collect-remaining/{order}', [OrderController::class, 'collectRemaining'])->name('collectRemaining');
         Route::post('/cancel-order/{order}', [OrderController::class, 'cancelOrder'])->name('cancel');
         Route::post('/update-customer/{order}', [OrderController::class, 'updateCustomer'])->name('updateCustomer');
         Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver');

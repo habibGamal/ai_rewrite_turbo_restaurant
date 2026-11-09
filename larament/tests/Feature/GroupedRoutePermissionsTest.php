@@ -9,6 +9,7 @@ it('applies permission middleware to grouped routes', function (string $name, st
 })->with([
     ['orders.store', 'pos.access'],
     ['orders.complete', 'pos.access'],
+    ['orders.collectRemaining', 'pos.access'],
     ['web-orders.accept', 'web_order.manage'],
     ['web-orders.reject', 'web_order.manage'],
     ['admin.printers.scan', 'view_printers'],

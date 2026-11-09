@@ -4,6 +4,7 @@ namespace App\Services\Orders;
 
 use App\Enums\OrderStatus;
 use App\Events\Orders\OrderCompleted;
+use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Orders\Tenders;
 
@@ -22,7 +23,19 @@ class OrderCompletionService
             $this->orderCalculationService->calculateOrderTotals($order);
         }
 
-        $this->orderPaymentService->pay($order, Tenders::fromArray($paymentsData), $order->shift_id);
+        $order = $this->orderPaymentService->pay($order, Tenders::fromArray($paymentsData), $order->shift_id);
+
+        $remaining = round((float) $order->total - (float) $order->payments()->sum('amount'), 2);
+
+        if ($remaining > 0) {
+            if (! $order->behavior()->allowsPartialPayment()) {
+                throw new OrderException('المبلغ المدفوع أقل من إجمالي الطلب');
+            }
+
+            if ($order->customer_id === null) {
+                throw new OrderException('يجب ربط الطلب بعميل قبل الدفع الجزئي');
+            }
+        }
 
         $order->behavior()->onClosed($order);
 

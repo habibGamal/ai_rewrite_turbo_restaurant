@@ -22,6 +22,9 @@ interface PaymentModalProps {
     onCancel: () => void;
     order: Order;
     orderItems: OrderItemData[];
+    mode?: "complete" | "collect";
+    paidAmount?: number;
+    remainingAmount?: number;
 }
 
 export default function PaymentModal({
@@ -29,6 +32,9 @@ export default function PaymentModal({
     onCancel,
     order,
     orderItems,
+    mode = "complete",
+    paidAmount = 0,
+    remainingAmount = 0,
 }: PaymentModalProps) {
     const [onePaymentForm] = Form.useForm();
     const [multiPaymentForm] = Form.useForm();
@@ -38,20 +44,28 @@ export default function PaymentModal({
     const [remaining, setRemaining] = useState<number>(0);
 
     const totals = calculateOrderTotals(order, orderItems);
+    const due = mode === "collect" ? remainingAmount : Math.ceil(totals.total);
 
     const { loading, finish, start } = useLoading();
 
     const onFinish = (values: any) => {
-        // Validation: paid amount(s) must equal total
-        if (paymentMethod === "one_payment") {
-            if (Number(values.paid) < Math.ceil(totals.total)) {
-                message.error("يجب أن يكون المبلغ المدفوع مساويًا للإجمالي");
-                return;
+        if (mode === "complete") {
+            if (paymentMethod === "one_payment") {
+                if (Number(values.paid) < due) {
+                    message.error("يجب أن يكون المبلغ المدفوع مساويًا للإجمالي");
+                    return;
+                }
+            } else {
+                const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
+                if (sum !== due) {
+                    message.error("يجب أن يكون مجموع المبالغ المدفوعة مساويًا للإجمالي");
+                    return;
+                }
             }
-        } else {
+        } else if (paymentMethod === "multi_payment") {
             const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
-            if (sum !== Math.ceil(totals.total)) {
-                message.error("يجب أن يكون مجموع المبالغ المدفوعة مساويًا للإجمالي");
+            if (sum > due) {
+                message.error("مجموع المبالغ المدفوعة يتجاوز المتبقي");
                 return;
             }
         }
@@ -68,11 +82,17 @@ export default function PaymentModal({
             finalValues[values.payment_method] = values.paid;
         }
 
-        router.post(`/orders/complete-order/${order.id}`, finalValues, {
+        const url = mode === "collect"
+            ? route("orders.collectRemaining", order.id)
+            : `/orders/complete-order/${order.id}`;
+
+        router.post(url, finalValues, {
             onSuccess: () => {
-                message.success("تم إنهاء الطلب بنجاح");
+                message.success(mode === "collect" ? "تم تحصيل المتبقي بنجاح" : "تم إنهاء الطلب بنجاح");
                 onCancel();
-                router.get(route("orders.index") + `#${order.type}`);
+                if (mode === "complete") {
+                    router.get(route("orders.index") + `#${order.type}`);
+                }
             },
             onFinish: () => {
                 finish();
@@ -85,7 +105,7 @@ export default function PaymentModal({
 
     const fullPay = () => {
         onePaymentForm.setFieldsValue({
-            paid: Math.ceil(totals.total),
+            paid: due,
         });
         setRemaining(0);
     };
@@ -96,33 +116,51 @@ export default function PaymentModal({
         onCancel();
     };
 
-    const paymentItems = [
-        {
-            key: "1",
-            label: "المجموع",
-            children: formatCurrency(totals.subTotal),
-        },
-        {
-            key: "2",
-            label: "الضريبة",
-            children: formatCurrency(totals.tax),
-        },
-        {
-            key: "3",
-            label: "الخدمة",
-            children: formatCurrency(totals.service),
-        },
-        {
-            key: "4",
-            label: "الخصم",
-            children: formatCurrency(Number(totals.discount)),
-        },
-        {
-            key: "5",
-            label: "الاجمالي",
-            children: formatCurrency(totals.total),
-        },
-    ];
+    const paymentItems = mode === "collect"
+        ? [
+            {
+                key: "total",
+                label: "الإجمالي",
+                children: formatCurrency(Number(order.total)),
+            },
+            {
+                key: "paid",
+                label: "المدفوع",
+                children: formatCurrency(paidAmount),
+            },
+            {
+                key: "remaining",
+                label: "المتبقي",
+                children: formatCurrency(remainingAmount),
+            },
+        ]
+        : [
+            {
+                key: "1",
+                label: "المجموع",
+                children: formatCurrency(totals.subTotal),
+            },
+            {
+                key: "2",
+                label: "الضريبة",
+                children: formatCurrency(totals.tax),
+            },
+            {
+                key: "3",
+                label: "الخدمة",
+                children: formatCurrency(totals.service),
+            },
+            {
+                key: "4",
+                label: "الخصم",
+                children: formatCurrency(Number(totals.discount)),
+            },
+            {
+                key: "5",
+                label: "الاجمالي",
+                children: formatCurrency(totals.total),
+            },
+        ];
 
 
     return (
@@ -173,7 +211,7 @@ export default function PaymentModal({
                                     min={0}
                                     onChange={(value) =>
                                         setRemaining(
-                                            totals.total - (value || 0)
+                                            due - (value || 0)
                                         )
                                     }
                                 />

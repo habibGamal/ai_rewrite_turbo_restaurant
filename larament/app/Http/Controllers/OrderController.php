@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderType;
-use App\Enums\PaymentStatus;
 use App\Enums\ProductType;
 use App\Http\Requests\CompleteOrderRequest;
 use App\Http\Requests\SaveOrderRequest;
@@ -22,6 +20,9 @@ use App\Models\TableType;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
+use App\Orders\ReceiptPayment;
+use App\Orders\Tenders;
+use App\Repositories\OrderRepository;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\ShiftLoggingService;
@@ -44,6 +45,7 @@ class OrderController extends Controller
         private ShiftLoggingService $loggingService,
         private OrderTypeCatalog $catalog,
         private CashierTabLayout $cashierTabs,
+        private OrderRepository $orderRepository,
     ) {}
 
     /**
@@ -66,11 +68,15 @@ class OrderController extends Controller
             $orders[] = $this->orderPayload($order);
         }
 
-        // Get previous partial paid orders for companies
-        $previousPartialPaidOrders = Order::with(['customer', 'driver', 'items.product', 'payments'])
-            ->where('payment_status', PaymentStatus::PARTIAL_PAID)
-            ->where('type', OrderType::COMPANIES)
-            ->get();
+        $receivableCodes = $this->catalog->codesWhere(fn ($behavior) => $behavior->allowsPartialPayment());
+        $receivables = [];
+        foreach ($this->orderRepository->partialPaidForTypes($receivableCodes) as $order) {
+            if (! $order instanceof Order) {
+                continue;
+            }
+
+            $receivables[] = $this->receivablePayload($order);
+        }
 
         // Get current shift expenses
         $expenses = Expense::with('expenceType')
@@ -84,7 +90,7 @@ class OrderController extends Controller
         return Inertia::render('Orders/Index', [
             'orders' => $orders,
             'tabs' => $this->tabsPayload($currentShift),
-            'previousPartialPaidOrders' => $previousPartialPaidOrders,
+            'receivables' => $receivables,
             'currentShift' => $currentShift,
             'expenses' => $expenses,
             'expenseTypes' => $expenseTypes,
@@ -121,7 +127,34 @@ class OrderController extends Controller
     {
         return array_merge($order->toArray(), [
             'display' => $order->display()->toArray(),
+            'receiptPayment' => ReceiptPayment::forOrder($order)->toArray(),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function receivablePayload(Order $order): array
+    {
+        $payment = ReceiptPayment::forOrder($order);
+        $customer = $order->customer;
+
+        return [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'created_at' => $order->created_at,
+            'type' => $order->type,
+            'payment_status' => $order->payment_status->value,
+            'customer' => $customer instanceof Customer ? [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+            ] : null,
+            'display' => $order->display()->toArray(),
+            'total' => round((float) $order->total, 2),
+            'paid' => $payment->paid,
+            'remaining' => $payment->remaining,
+        ];
     }
 
     /**
@@ -226,6 +259,28 @@ class OrderController extends Controller
             ], 'error');
 
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الطلب: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * Collect the remaining balance of a partly paid order into the current shift.
+     */
+    public function collectRemaining(CompleteOrderRequest $request, Order $order)
+    {
+        try {
+            $paymentsData = collect($request->validated())->except('print')->toArray();
+
+            $this->orderService->collectRemaining($order->id, Tenders::fromArray($paymentsData));
+
+            return redirect()->to(route('orders.index').'#receivables')
+                ->with('success', 'تم تحصيل المتبقي بنجاح');
+        } catch (Exception $e) {
+            $this->loggingService->logAction('فشل في تحصيل المتبقي', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
+            return back()->withErrors(['error' => 'حدث خطأ أثناء تحصيل المتبقي: '.$e->getMessage()]);
         }
     }
 
