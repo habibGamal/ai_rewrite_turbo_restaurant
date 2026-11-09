@@ -7,6 +7,7 @@ use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\WebOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,13 +52,13 @@ Route::middleware('auth')->group(function () {
 
     // Shift Management Routes
     Route::prefix('shifts')->name('shifts.')->group(function () {
-        Route::get('/start', [OrderController::class, 'showStartShift'])
+        Route::get('/start', [ShiftController::class, 'showStartShift'])
             ->name('start')
             ->middleware('permission:shift.start');
-        Route::post('/start', [OrderController::class, 'startShift'])
+        Route::post('/start', [ShiftController::class, 'startShift'])
             ->name('store')
             ->middleware('permission:shift.start');
-        Route::post('/end', [OrderController::class, 'endShift'])
+        Route::post('/end', [ShiftController::class, 'endShift'])
             ->name('end')
             ->middleware('permission:shift.end');
     });

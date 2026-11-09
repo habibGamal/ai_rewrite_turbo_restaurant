@@ -256,6 +256,7 @@ class ShiftLoggingService
             'end_cash' => $shiftData['end_cash'] ?? null,
             'real_end_cash' => $shiftData['real_end_cash'] ?? null,
             'shift_date' => $shiftData['date'] ?? null,
+            'transferred_web_orders' => $shiftData['transferred_web_orders'] ?? null,
         ];
 
         $this->logAction($action, $details);

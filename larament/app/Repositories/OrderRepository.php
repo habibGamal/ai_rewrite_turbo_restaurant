@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Models\Shift;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -56,16 +57,10 @@ class OrderRepository implements OrderRepositoryInterface
             ->get();
     }
 
-    public function getProcessingOrders(int $shiftId): Collection
-    {
-        return Order::where('shift_id', $shiftId)
-            ->where('status', OrderStatus::PROCESSING)
-            ->with(['customer', 'driver', 'table', 'items.product'])
-            ->get();
-    }
-
     public function getNextOrderNumber(int $shiftId): int
     {
+        Shift::whereKey($shiftId)->lockForUpdate()->first();
+
         $lastOrder = Order::where('shift_id', $shiftId)
             ->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
             ->orderBy('order_number', 'desc')
@@ -86,13 +81,5 @@ class OrderRepository implements OrderRepositoryInterface
     public function delete(Order $order): bool
     {
         return $order->delete();
-    }
-
-    public function getOrdersWithPaymentStatus(string $paymentStatus): Collection
-    {
-        return Order::where('payment_status', $paymentStatus)
-            ->with(['customer', 'payments'])
-            ->orderBy('created_at', 'desc')
-            ->get();
     }
 }

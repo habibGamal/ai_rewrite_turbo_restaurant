@@ -59,6 +59,25 @@ class ShiftService
     }
 
     /**
+     * Count open web orders in the last closed shift
+     */
+    public function countOpenWebOrdersInLastClosedShift(): int
+    {
+        $lastShift = Shift::where('closed', true)
+            ->orderBy('end_at', 'desc')
+            ->first();
+
+        if (! $lastShift) {
+            return 0;
+        }
+
+        return Order::where('shift_id', $lastShift->id)
+            ->whereIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
+            ->count();
+    }
+
+    /**
      * Transfer open web orders from the last closed shift to the new shift
      */
     private function transferOpenWebOrders(int $newShiftId): void
