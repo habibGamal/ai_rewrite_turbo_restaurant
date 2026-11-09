@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property KitchenItemStatus $status
  * @property int $target_minutes
  * @property \Illuminate\Support\Carbon $sent_at
- * @property \Illuminate\Support\Carbon|null $started_at
  * @property \Illuminate\Support\Carbon|null $done_at
  * @property \Illuminate\Support\Carbon|null $voided_at
  * @property int|null $done_by
@@ -51,7 +50,6 @@ class KitchenTicketItem extends Model
         'status',
         'target_minutes',
         'sent_at',
-        'started_at',
         'done_at',
         'voided_at',
         'done_by',
@@ -67,7 +65,6 @@ class KitchenTicketItem extends Model
         'status' => KitchenItemStatus::class,
         'target_minutes' => 'integer',
         'sent_at' => 'datetime',
-        'started_at' => 'datetime',
         'done_at' => 'datetime',
         'voided_at' => 'datetime',
         'voided_after_done' => 'boolean',

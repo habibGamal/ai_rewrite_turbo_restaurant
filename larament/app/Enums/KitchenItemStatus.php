@@ -9,7 +9,6 @@ use Filament\Support\Contracts\HasLabel;
 enum KitchenItemStatus: string implements HasColor, HasIcon, HasLabel
 {
     case PENDING = 'pending';
-    case STARTED = 'started';
     case DONE = 'done';
     case VOIDED = 'voided';
 
@@ -17,7 +16,6 @@ enum KitchenItemStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::PENDING => 'في الانتظار',
-            self::STARTED => 'قيد التحضير',
             self::DONE => 'تم',
             self::VOIDED => 'ملغي',
         };
@@ -27,7 +25,6 @@ enum KitchenItemStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::PENDING => 'gray',
-            self::STARTED => 'info',
             self::DONE => 'success',
             self::VOIDED => 'danger',
         };
@@ -37,7 +34,6 @@ enum KitchenItemStatus: string implements HasColor, HasIcon, HasLabel
     {
         return match ($this) {
             self::PENDING => 'heroicon-o-clock',
-            self::STARTED => 'heroicon-o-play',
             self::DONE => 'heroicon-o-check-circle',
             self::VOIDED => 'heroicon-o-x-circle',
         };
@@ -50,6 +46,6 @@ enum KitchenItemStatus: string implements HasColor, HasIcon, HasLabel
 
     public function isOpen(): bool
     {
-        return in_array($this, [self::PENDING, self::STARTED], true);
+        return $this === self::PENDING;
     }
 }

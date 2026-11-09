@@ -115,7 +115,6 @@ it('excludes auto-finished items from item prep time', function () {
         'product_name' => 'شاورما',
         'status' => KitchenItemStatus::DONE,
         'sent_at' => $base,
-        'started_at' => $base->copy()->addMinute(),
         'done_at' => $base->copy()->addMinutes(6),
         'auto_finished' => false,
     ]);
@@ -134,10 +133,10 @@ it('excludes auto-finished items from item prep time', function () {
     $summary = $service->getSummary($base->toDateString(), $base->toDateString());
     $products = $service->getProductPerformance($base->toDateString(), $base->toDateString());
 
-    expect($summary['avg_item_prep_seconds'])->toBe(300.0)
+    expect($summary['avg_item_prep_seconds'])->toBe(360.0)
         ->and($products)->toHaveCount(1)
         ->and($products[0]['product_name'])->toBe('شاورما')
-        ->and($products[0]['avg_prep_seconds'])->toBe(300.0);
+        ->and($products[0]['avg_prep_seconds'])->toBe(360.0);
 });
 
 it('counts items voided after done as waste candidates', function () {

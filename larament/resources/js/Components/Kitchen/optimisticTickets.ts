@@ -12,8 +12,7 @@ export type OptimisticPatch =
           kind: 'item';
           ticketId: number;
           itemId: number;
-          status: 'pending' | 'started' | 'done';
-          started_at: string | null;
+          status: 'pending' | 'done';
           done_at: string | null;
           /** Undo: reopen the item's round and put the ticket back on the board. */
           reopen: boolean;
@@ -41,7 +40,7 @@ export function patchTicketId(patch: OptimisticPatch): number {
 }
 
 function isOpenStatus(status: KdsItem['status']): boolean {
-    return status === 'pending' || status === 'started';
+    return status === 'pending';
 }
 
 function findTicket(tickets: KdsTicket[], ticketId: number): KdsTicket | undefined {
@@ -69,9 +68,6 @@ export function patchIsReflected(tickets: KdsTicket[], patch: OptimisticPatch): 
         }
         if (patch.status === 'done') {
             return item.status === 'done';
-        }
-        if (patch.status === 'started') {
-            return item.status === 'started' || item.status === 'done';
         }
         return item.status === patch.status && item.done_at == null;
     }
@@ -161,7 +157,6 @@ function applyItem(ticket: KdsTicket, patch: Extract<OptimisticPatch, { kind: 'i
             ? {
                   ...item,
                   status: patch.status,
-                  started_at: patch.started_at,
                   done_at: patch.done_at,
               }
             : item,

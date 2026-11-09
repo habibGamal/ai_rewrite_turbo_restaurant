@@ -17,7 +17,7 @@ class KitchenPerformanceStationsWidget extends BaseWidget
 
     protected static ?string $heading = 'أداء محطات المطبخ';
 
-    protected static ?string $description = 'عدد البنود ومتوسط وقت التحضير لكل محطة، والبنود بلا محطة تظهر باسم «عام»';
+    protected static ?string $description = 'عدد البنود ومتوسط وقت التحضير لكل محطة من وصول الصنف للمطبخ حتى الانتهاء، والبنود بلا محطة تظهر باسم «عام»';
 
     protected int|string|array $columnSpan = 'full';
 

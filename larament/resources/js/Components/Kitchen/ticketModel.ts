@@ -7,7 +7,7 @@ import type {
 } from '@/types/kitchen';
 
 export type TicketUrgency = 'normal' | 'warning' | 'late';
-export type LineAction = 'start' | 'done' | 'undo';
+export type LineAction = 'done' | 'undo';
 
 export interface RoundGroup {
     round: KdsRound;
@@ -132,7 +132,7 @@ export function applyStationFilter(tickets: KdsTicket[], stationId: number | nul
         if (items.length === 0) {
             continue;
         }
-        const openItems = items.filter((item) => item.status === 'pending' || item.status === 'started');
+        const openItems = items.filter((item) => item.status === 'pending');
         const round = openRound(ticket);
         const roundTargets = openItems
             .filter((item) => round != null && item.round_id === round.id)
@@ -318,7 +318,7 @@ export function allDayCounts(tickets: KdsTicket[]): AllDayRow[] {
             continue;
         }
         for (const item of ticket.items) {
-            if (item.status !== 'pending' && item.status !== 'started') {
+            if (item.status !== 'pending') {
                 continue;
             }
             const name = item.product_name || 'بدون اسم';
@@ -356,10 +356,7 @@ export function lineAction(
     if (ticket.status !== 'active' || !settings.item_tracking) {
         return null;
     }
-    if (item.status === 'pending' && settings.require_start) {
-        return 'start';
-    }
-    if (item.status === 'pending' || item.status === 'started') {
+    if (item.status === 'pending') {
         return 'done';
     }
     return null;

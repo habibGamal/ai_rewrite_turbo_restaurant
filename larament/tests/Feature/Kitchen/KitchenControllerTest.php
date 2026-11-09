@@ -36,7 +36,7 @@ it('forbids the kitchen screen without kitchen.access', function () {
         ->assertForbidden();
 
     $this->actingAs($cashier)
-        ->post(route('kitchen.items.start', $order['item']))
+        ->post(route('kitchen.items.done', $order['item']))
         ->assertForbidden();
 });
 
@@ -88,7 +88,6 @@ it('renders index props that match the kds contract and are not shift bound', fu
             ->where('stations.1', ['id' => $later->id, 'name' => 'مشاوي'])
             ->has('kdsSettings', fn (Assert $settings) => $settings
                 ->where('item_tracking', true)
-                ->where('require_start', false)
                 ->where('warning_percent', 75)
                 ->where('recall_minutes', 15)
                 ->where('new_order_sound', 'chime')
@@ -138,7 +137,6 @@ it('renders index props that match the kds contract and are not shift bound', fu
                     ->where('status', 'pending')
                     ->where('target_minutes', 12)
                     ->where('sent_at', fn (string $value): bool => str_contains($value, 'T'))
-                    ->where('started_at', null)
                     ->where('done_at', null)
                     ->where('voided_at', null)
                     ->where('voided_after_done', false)
@@ -213,13 +211,6 @@ it('bumps, undoes, finishes, acknowledges and rushes through the kitchen routes'
 
     $this->actingAs($kitchen)
         ->from(route('kitchen.index'))
-        ->post(route('kitchen.items.start', $item))
-        ->assertRedirect(route('kitchen.index'));
-    expect($item->fresh()->status)->toBe(KitchenItemStatus::STARTED)
-        ->and($item->fresh()->started_at)->not->toBeNull();
-
-    $this->actingAs($kitchen)
-        ->from(route('kitchen.index'))
         ->post(route('kitchen.items.done', $item))
         ->assertRedirect(route('kitchen.index'));
     expect($item->fresh()->status)->toBe(KitchenItemStatus::DONE)
@@ -230,7 +221,7 @@ it('bumps, undoes, finishes, acknowledges and rushes through the kitchen routes'
         ->from(route('kitchen.index'))
         ->post(route('kitchen.items.undo', $item))
         ->assertRedirect(route('kitchen.index'));
-    expect($item->fresh()->status)->toBe(KitchenItemStatus::STARTED)
+    expect($item->fresh()->status)->toBe(KitchenItemStatus::PENDING)
         ->and($ticket->fresh()->status)->toBe(KitchenTicketStatus::ACTIVE);
 
     $grill = KitchenStation::factory()->create();
@@ -246,7 +237,7 @@ it('bumps, undoes, finishes, acknowledges and rushes through the kitchen routes'
         ->post(route('kitchen.tickets.done', $ticket), ['station_id' => $grill->id])
         ->assertRedirect(route('kitchen.index'));
     expect($other->fresh()->status)->toBe(KitchenItemStatus::DONE)
-        ->and($item->fresh()->status)->toBe(KitchenItemStatus::STARTED)
+        ->and($item->fresh()->status)->toBe(KitchenItemStatus::PENDING)
         ->and($ticket->fresh()->status)->toBe(KitchenTicketStatus::ACTIVE);
 
     $this->actingAs($kitchen)
@@ -301,12 +292,6 @@ it('translates item-tracking and recall errors back to the screen', function () 
     $kitchen = User::factory()->kitchen()->create();
     $built = kitchenOrder();
     app(SettingsService::class)->set(SettingKey::KDS_ITEM_TRACKING->value, 'false');
-
-    $this->actingAs($kitchen)
-        ->from(route('kitchen.index'))
-        ->post(route('kitchen.items.start', $built['item']))
-        ->assertRedirect(route('kitchen.index'))
-        ->assertSessionHasErrors('kitchen');
 
     $this->actingAs($kitchen)
         ->from(route('kitchen.index'))
@@ -408,3 +393,10 @@ function kitchenOrder(bool $sync = true): array
         'item' => $item,
     ];
 }
+
+it('does not expose the removed item start route', function () {
+    $kitchen = User::factory()->kitchen()->create();
+    $item = kitchenOrder()['item'];
+
+    $this->actingAs($kitchen)->post("/kitchen/items/{$item->id}/start")->assertNotFound();
+});

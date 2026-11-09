@@ -26,9 +26,6 @@ Route::middleware('auth')->group(function () {
             ->name('index')
             ->middleware('permission:kitchen.access');
 
-        Route::post('/items/{item}/start', [KitchenController::class, 'startItem'])
-            ->name('items.start')
-            ->middleware('permission:kitchen.access');
         Route::post('/items/{item}/done', [KitchenController::class, 'finishItem'])
             ->name('items.done')
             ->middleware('permission:kitchen.access');

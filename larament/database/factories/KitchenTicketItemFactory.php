@@ -38,7 +38,6 @@ class KitchenTicketItemFactory extends Factory
             'status' => KitchenItemStatus::PENDING,
             'target_minutes' => 10,
             'sent_at' => now(),
-            'started_at' => null,
             'done_at' => null,
             'voided_at' => null,
             'done_by' => null,
@@ -52,7 +51,6 @@ class KitchenTicketItemFactory extends Factory
     {
         return $this->state(fn (): array => [
             'status' => KitchenItemStatus::DONE,
-            'started_at' => now()->subMinutes(5),
             'done_at' => now(),
             'done_by' => User::factory(),
         ]);

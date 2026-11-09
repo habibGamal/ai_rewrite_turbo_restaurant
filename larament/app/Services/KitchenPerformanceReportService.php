@@ -27,7 +27,7 @@ use Illuminate\Support\Collection as SupportCollection;
  *   (ended_at - started_at). Idle gaps between rounds never count.
  * - A closed round is late when its duration exceeds the largest target_minutes
  *   among its non-voided items (optionally limited to one station).
- * - Item prep time is done_at - (started_at ?? sent_at) for done items that
+ * - Item prep time is done_at - sent_at for done items that
  *   were not auto-finished.
  * - Waste candidates are items flagged voided_after_done, including items on
  *   tickets that were cancelled after they had been prepared.
@@ -411,9 +411,7 @@ class KitchenPerformanceReportService
             return 0.0;
         }
 
-        $startedAt = $item->started_at ?? $item->sent_at;
-
-        return (float) max(0, $item->done_at->getTimestamp() - $startedAt->getTimestamp());
+        return (float) max(0, $item->done_at->getTimestamp() - $item->sent_at->getTimestamp());
     }
 
     /**

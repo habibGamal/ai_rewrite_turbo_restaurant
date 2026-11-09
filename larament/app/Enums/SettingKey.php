@@ -24,7 +24,6 @@ enum SettingKey: string
     case CASHIER_TABS = 'cashier_tabs';
     case UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
     case KDS_ITEM_TRACKING = 'kds_item_tracking';
-    case KDS_REQUIRE_START = 'kds_require_start';
     case KDS_DEFAULT_PREP_MINUTES = 'kds_default_prep_minutes';
     case KDS_ORDER_TYPE_TARGETS = 'kds_order_type_targets';
     case KDS_WARNING_PERCENT = 'kds_warning_percent';
@@ -60,7 +59,6 @@ enum SettingKey: string
             self::CASHIER_TABS => self::cashierTabsDefault(),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'true',
             self::KDS_ITEM_TRACKING => 'true',
-            self::KDS_REQUIRE_START => 'false',
             self::KDS_DEFAULT_PREP_MINUTES => '10',
             self::KDS_ORDER_TYPE_TARGETS => '{}',
             self::KDS_WARNING_PERCENT => '75',
@@ -100,7 +98,6 @@ enum SettingKey: string
             // Settings are stored as strings. Laravel's `boolean` rule rejects
             // "true"/"false", so these accept the stored form and real booleans.
             self::KDS_ITEM_TRACKING => self::storedBooleanRules(),
-            self::KDS_REQUIRE_START => self::storedBooleanRules(),
             self::KDS_DEFAULT_PREP_MINUTES => ['required', 'integer', 'min:1', 'max:240'],
             self::KDS_ORDER_TYPE_TARGETS => ['nullable', 'json'],
             self::KDS_WARNING_PERCENT => ['required', 'integer', 'min:1', 'max:100'],
@@ -138,7 +135,6 @@ enum SettingKey: string
             self::CASHIER_TABS => 'تبويبات الكاشير',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة المنتجات من فواتير الشراء',
             self::KDS_ITEM_TRACKING => 'تتبع الأصناف بشكل منفصل',
-            self::KDS_REQUIRE_START => 'تفعيل خطوة بدء التحضير',
             self::KDS_DEFAULT_PREP_MINUTES => 'وقت التحضير الافتراضي (دقائق)',
             self::KDS_ORDER_TYPE_TARGETS => 'الوقت المستهدف لكل نوع طلب',
             self::KDS_WARNING_PERCENT => 'نسبة التحذير من الوقت المستهدف',
@@ -176,7 +172,6 @@ enum SettingKey: string
             self::CASHIER_TABS => 'اسحب التبويبات لإعادة ترتيبها، واستخدم مفتاح «مرئي» لإظهار التبويب أو إخفائه في شاشة الكاشير.',
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تحديث تكلفة الصنف في جدول المنتجات تلقائياً عند إغلاق فاتورة الشراء. قم بإلغاء التفعيل لمنع تحديث تكلفة المنتجات.',
             self::KDS_ITEM_TRACKING => 'عند التفعيل يستطيع الطاهي تعليم كل صنف كمنتهٍ بمفرده. عند الإيقاف يُنهى الطلب كاملاً فقط، وتأخذ الأصناف وقت التذكرة.',
-            self::KDS_REQUIRE_START => 'يضيف خطوة «بدء» قبل إنهاء الصنف، ويُحسب وقت التحضير من لحظة البدء بدل وقت وصول الصنف للمطبخ.',
             self::KDS_DEFAULT_PREP_MINUTES => 'الوقت المستهدف المستخدم إذا لم يُحدد وقت للصنف أو للتصنيف أو لنوع الطلب.',
             self::KDS_ORDER_TYPE_TARGETS => 'كائن JSON يربط نوع الطلب بالدقائق المستهدفة، ويُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً. اتركه {} إذا لم ترد تخصيصاً.',
             self::KDS_WARNING_PERCENT => 'تتحول بطاقة الطلب إلى حالة تحذير عند بلوغ هذه النسبة من الوقت المستهدف، وإلى متأخر بعد تجاوز الوقت.',
@@ -214,7 +209,6 @@ enum SettingKey: string
             self::CASHIER_TABS => self::cashierTabsDefault(),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => 'تفعيل',
             self::KDS_ITEM_TRACKING => 'تفعيل',
-            self::KDS_REQUIRE_START => 'تفعيل',
             self::KDS_DEFAULT_PREP_MINUTES => '10',
             self::KDS_ORDER_TYPE_TARGETS => '{}',
             self::KDS_WARNING_PERCENT => '75',
@@ -251,7 +245,7 @@ enum SettingKey: string
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::CASHIER_TABS => self::isJsonValue($value),
             self::UPDATE_PRODUCT_COST_ON_PURCHASE => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
-            self::KDS_ITEM_TRACKING, self::KDS_REQUIRE_START, self::KDS_AUTO_FINISH_ON_COMPLETE => self::isStoredBoolean($value),
+            self::KDS_ITEM_TRACKING, self::KDS_AUTO_FINISH_ON_COMPLETE => self::isStoredBoolean($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
             self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),

@@ -312,8 +312,7 @@ function LineBlock({
     const delta = item.original_quantity - item.quantity;
     const done = item.status === 'done';
     const voided = item.status === 'voided';
-    const started = item.status === 'started';
-    const stripe = item.needs_ack ? kdsTokens.ack : started ? kdsTokens.started : 'transparent';
+    const stripe = item.needs_ack ? kdsTokens.ack : 'transparent';
     const nameColor = voided ? kdsTokens.textDim : done ? kdsTokens.textDim : kdsTokens.text;
 
     const body = (
@@ -348,7 +347,6 @@ function LineBlock({
                     item={item}
                     reduced={reduced}
                     delta={delta}
-                    started={started}
                     voided={voided}
                     stationName={showStation ? stationName : null}
                     scale={kds.scale}
@@ -375,7 +373,7 @@ function LineBlock({
     }
 
     const label =
-        action === 'undo' ? `تراجع ${item.product_name}` : action === 'start' ? `بدء ${item.product_name}` : `تم ${item.product_name}`;
+        action === 'undo' ? `تراجع ${item.product_name}` : `تم ${item.product_name}`;
 
     return (
         <button
@@ -424,7 +422,6 @@ function LineTags({
     item,
     reduced,
     delta,
-    started,
     voided,
     stationName,
     scale,
@@ -432,7 +429,6 @@ function LineTags({
     item: KdsItem;
     reduced: boolean;
     delta: number;
-    started: boolean;
     voided: boolean;
     stationName: string | null;
     scale: number;
@@ -468,13 +464,6 @@ function LineTags({
         tags.push(
             <Tag key="void" style={{ ...size, color: kdsTokens.voidTag }}>
                 ملغي
-            </Tag>,
-        );
-    }
-    if (started) {
-        tags.push(
-            <Tag key="started" style={{ ...size, color: kdsTokens.started }}>
-                بدأ
             </Tag>,
         );
     }

@@ -61,7 +61,7 @@ class KitchenPerformanceStatsWidget extends BaseWidget
                 'متوسط وقت تحضير البند',
                 KitchenPerformanceReportService::formatDuration($summary['avg_item_prep_seconds'])
             )
-                ->description('من بدء التحضير أو الإرسال حتى الإنجاز، دون البنود المنتهية تلقائياً')
+                ->description('من وصول الصنف للمطبخ حتى الانتهاء، دون البنود المنتهية تلقائياً')
                 ->descriptionIcon('heroicon-m-fire', IconPosition::Before)
                 ->color('warning'),
 

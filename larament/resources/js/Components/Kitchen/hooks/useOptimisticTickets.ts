@@ -23,7 +23,7 @@ interface TrackedPatch {
 
 export interface OptimisticActions {
     tickets: KdsTicket[];
-    applyItem: (ticket: KdsTicket, item: KdsItem, action: 'start' | 'done' | 'undo') => void;
+    applyItem: (ticket: KdsTicket, item: KdsItem, action: 'done' | 'undo') => void;
     finishTicket: (ticket: KdsTicket) => void;
     acknowledge: (ticket: KdsTicket) => void;
     toggleRush: (ticket: KdsTicket) => void;
@@ -171,10 +171,7 @@ export function useOptimisticTickets(options: {
         if (patch.kind === 'item') {
             const url =
                 patch.reopen
-                    ? kitchenUrls.undo(patch.itemId)
-                    : patch.status === 'started'
-                      ? kitchenUrls.start(patch.itemId)
-                      : kitchenUrls.done(patch.itemId);
+                    ? kitchenUrls.undo(patch.itemId) : kitchenUrls.done(patch.itemId);
             postKitchen(url, {}, handlers);
             return;
         }
@@ -193,26 +190,11 @@ export function useOptimisticTickets(options: {
         postKitchen(kitchenUrls.rush(patch.ticketId), { is_rush: patch.isRush }, handlers);
     };
 
-    const applyItem = (ticket: KdsTicket, item: KdsItem, action: 'start' | 'done' | 'undo'): void => {
+    const applyItem = (ticket: KdsTicket, item: KdsItem, action: 'done' | 'undo'): void => {
         if (itemBusy(item.id)) {
             return;
         }
         const at = isoFromMs(nowRef.current());
-        if (action === 'start') {
-            commit(
-                {
-                    kind: 'item',
-                    ticketId: ticket.id,
-                    itemId: item.id,
-                    status: 'started',
-                    started_at: at,
-                    done_at: null,
-                    reopen: false,
-                },
-                ticket.id,
-            );
-            return;
-        }
         if (action === 'done') {
             commit(
                 {
@@ -220,7 +202,6 @@ export function useOptimisticTickets(options: {
                     ticketId: ticket.id,
                     itemId: item.id,
                     status: 'done',
-                    started_at: item.started_at,
                     done_at: at,
                     reopen: false,
                 },
@@ -233,8 +214,7 @@ export function useOptimisticTickets(options: {
                 kind: 'item',
                 ticketId: ticket.id,
                 itemId: item.id,
-                status: item.started_at ? 'started' : 'pending',
-                started_at: item.started_at,
+                status: 'pending',
                 done_at: null,
                 reopen: true,
             },
@@ -250,7 +230,7 @@ export function useOptimisticTickets(options: {
         const itemIds = ticket.items
             .filter(
                 (item) =>
-                    (item.status === 'pending' || item.status === 'started') &&
+                    item.status === 'pending' &&
                     (station == null || item.station_id === station),
             )
             .map((item) => item.id);
