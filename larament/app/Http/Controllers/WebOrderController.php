@@ -50,6 +50,7 @@ class WebOrderController extends Controller
 
         return Inertia::render('Orders/ManageWebOrder', [
             'order' => $order,
+            'orderDisplay' => $order->display()->toArray(),
             'categories' => $categories,
             'drivers' => $drivers,
             'regions' => $regions,

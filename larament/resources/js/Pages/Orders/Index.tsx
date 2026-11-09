@@ -1,21 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd';
+import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs, Tag } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
-import { DineInTab } from '@/Components/Orders/Index/DineInTab';
-import { DeliveryTab } from '@/Components/Orders/Index/DeliveryTab';
-import { TakeawayTab } from '@/Components/Orders/Index/TakeawayTab';
-import { TalabatTab } from '@/Components/Orders/Index/TalabatTab';
-import { CompaniesTab } from '@/Components/Orders/Index/CompaniesTab';
+import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
-import { ReceiveOrdersPaymentsTab } from '@/Components/Orders/Index/ReceiveOrdersPaymentsTab';
 import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
-import WebDeliveryTab from '@/Components/Orders/Index/WebDeliveryTab';
-import WebTakeawayTab from '@/Components/Orders/Index/WebTakeawayTab';
-import type { Order, User } from '@/types';
+import { orderTypeColor } from '@/helpers/orderTypeColor';
+import type { CashierTab, Order, User } from '@/types';
 
 interface IndexProps {
     orders: Order[];
+    tabs: CashierTab[];
     previousPartialPaidOrders: Order[];
     auth: {
         user: User;
@@ -24,31 +19,28 @@ interface IndexProps {
 
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
+    tabs,
     auth
 }) => {
     const { user } = auth;
-    const dineInOrders = orders.filter(
-        (order) => order.type === 'dine_in' && order.status === 'processing'
+    const renderedTabs = useMemo(
+        () => tabs.filter((tab) => tab.key !== 'system:receivables'),
+        [tabs]
     );
-    const takeawayOrders = orders.filter(
-        (order) => order.type === 'takeaway' && order.status === 'processing'
-    );
-    const deliveryOrders = orders.filter(
-        (order) => order.type === 'delivery' && order.status === 'processing'
-    );
-    const talabatOrders = orders.filter(
-        (order) => order.type === 'talabat' && order.status === 'processing'
-    );
-    const webDeliveryOrders = orders.filter(
-        (order) => order.type === 'web_delivery' && ['pending', 'processing', 'out_for_delivery'].includes(order.status)
-    );
-    const webTakeawayOrders = orders.filter(
-        (order) => order.type === 'web_takeaway' && ['pending', 'processing'].includes(order.status)
-    );
-    const cancelledOrders = orders.filter((order) => order.status === 'cancelled');
-    const completedOrders = orders.filter((order) => order.status === 'completed');
 
-    const [tab, setTab] = useState(window.location.hash.replace('#', '') || 'dine_in');
+    const initialTab = () => {
+        const hash = window.location.hash.replace('#', '');
+        const found = renderedTabs.find(
+            (candidate) =>
+                candidate.key === hash ||
+                candidate.code === hash ||
+                candidate.key === `type:${hash}` ||
+                candidate.key === `system:${hash}`
+        );
+        return found?.key ?? renderedTabs[0]?.key ?? '';
+    };
+
+    const [tab, setTab] = useState(initialTab);
     const [endShiftModalVisible, setEndShiftModalVisible] = useState(false);
     const [form] = Form.useForm();
 
@@ -61,53 +53,43 @@ const OrdersIndex: React.FC<IndexProps> = ({
         router.post(route('shifts.end'), { real_end_cash: 0 });
     };
 
-    const tabItems = [
-        {
-            label: 'الصالة',
-            children: <DineInTab orders={dineInOrders} />,
-            key: 'dine_in',
-        },
-        {
-            label: 'الديلفري',
-            children: <DeliveryTab orders={deliveryOrders} />,
-            key: 'delivery',
-        },
-        {
-            label: 'التيك اواي',
-            children: <TakeawayTab orders={takeawayOrders} />,
-            key: 'takeaway',
-        },
-        {
-            label: 'طلبات',
-            children: <TalabatTab orders={talabatOrders} />,
-            key: 'talabat',
-        },
-        {
-            label: 'ويب ديلفري',
-            children: <WebDeliveryTab orders={webDeliveryOrders} />,
-            key: 'web_delivery',
-        },
-        {
-            label: 'ويب تيك اواي',
-            children: <WebTakeawayTab orders={webTakeawayOrders} />,
-            key: 'web_takeaway',
-        },
-        {
-            label: 'مصاريف',
-            children: <ShiftExpensesTab />,
-            key: 'expenses',
-        },
-        {
-            label: 'ملغي',
-            children: <DisplayTab orders={cancelledOrders} />,
-            key: 'cancelled',
-        },
-        {
-            label: 'منتهي',
-            children: <DisplayTab orders={completedOrders} />,
-            key: 'completed',
-        },
-    ];
+    const tabLabel = (tab: CashierTab) => (
+        <span>
+            <Tag color={orderTypeColor(tab.color)} className="mr-2">
+                {tab.label}
+            </Tag>
+            {tab.forcedVisible && <Tag>مخفي</Tag>}
+        </span>
+    );
+
+    const tabItems = renderedTabs.map((tab) => {
+        if (tab.kind === 'type') {
+            return {
+                label: tabLabel(tab),
+                children: <OrderTypeTab tab={tab} orders={orders} />,
+                key: tab.key,
+            };
+        }
+
+        const children =
+            tab.key === 'system:expenses' ? (
+                <ShiftExpensesTab />
+            ) : tab.key === 'system:cancelled' ? (
+                <DisplayTab
+                    orders={orders.filter((order) => order.status === 'cancelled')}
+                />
+            ) : (
+                <DisplayTab
+                    orders={orders.filter((order) => order.status === 'completed')}
+                />
+            );
+
+        return {
+            label: tabLabel(tab),
+            children,
+            key: tab.key,
+        };
+    });
 
     return (
         <CashierLayout>

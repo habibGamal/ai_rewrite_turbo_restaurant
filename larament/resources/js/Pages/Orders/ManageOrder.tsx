@@ -31,7 +31,6 @@ import {
     calculateOrderTotals,
     getOrderStatusConfig,
     formatCurrency,
-    getOrderTypeLabel,
 } from "@/utils/orderCalculations";
 import CashierLayout from "@/Layouts/CashierLayout";
 import { printOrder } from "../../helpers/printTemplate";
@@ -59,6 +58,8 @@ import {
 
 export default function ManageOrder({
     order,
+    orderDisplay,
+    changeTypeOptions,
     categories,
     drivers,
     regions,
@@ -135,12 +136,14 @@ export default function ManageOrder({
     const orderCancelled = order.status === "cancelled";
     const orderInProcess = order.status === "processing";
     const orderCompleted = order.status === "completed";
-    const isDineIn = order.type === "dine_in";
-    const isTakeAway = order.type === "takeaway";
-    const isDelivery = order.type === "delivery";
+    const showDriver = orderDisplay?.showDriver ?? false;
+    const orderWithDisplay = {
+        ...order,
+        display: order.display ?? orderDisplay,
+    };
 
     // Calculate totals
-    const totals = calculateOrderTotals(order, orderItems);
+    const totals = calculateOrderTotals(orderWithDisplay, orderItems);
 
     // Check if using item-level discounts
     const hasItemDiscounts = orderItems.some(item => (item.item_discount ?? 0) > 0);
@@ -285,8 +288,10 @@ export default function ManageOrder({
         //     title: "الطلبات",
         // },
         {
-            title: `${getOrderTypeLabel(order.type)} ${
-                order.dine_table_number ?? ""
+            title: `${orderDisplay?.label ?? order.type}${
+                orderDisplay?.showTable && order.dine_table_number
+                    ? ` ${order.dine_table_number}`
+                    : ""
             }`,
         },
         {
@@ -368,12 +373,12 @@ export default function ManageOrder({
                                 onClick={() => setIsCustomerModalOpen(true)}
                                 disabled={orderCancelled}
                                 size="large"
-                                className={isDelivery ? "" : "col-span-2"}
+                                className={showDriver ? "" : "col-span-2"}
                                 icon={<UserAddOutlined />}
                             >
                                 بيانات العميل
                             </Button>
-                            {isDelivery && (
+                            {showDriver && (
                                 <Button
                                     onClick={() => setIsDriverModalOpen(true)}
                                     disabled={orderCancelled}
@@ -527,6 +532,7 @@ export default function ManageOrder({
                     open={isChangeOrderTypeModalOpen}
                     onCancel={() => setIsChangeOrderTypeModalOpen(false)}
                     order={order}
+                    options={changeTypeOptions}
                 />
                 <OrderDiscountModal
                     open={isOrderDiscountModalOpen}
@@ -536,7 +542,7 @@ export default function ManageOrder({
                 <PaymentModal
                     open={isPaymentModalOpen}
                     onCancel={() => setIsPaymentModalOpen(false)}
-                    order={order}
+                    order={orderWithDisplay}
                     orderItems={orderItems}
                 />
                 <PrintInKitchenModal

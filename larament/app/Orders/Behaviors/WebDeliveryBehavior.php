@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
+use App\Orders\TabPresentation;
 
 final class WebDeliveryBehavior implements OrderTypeBehavior
 {
@@ -55,5 +56,10 @@ final class WebDeliveryBehavior implements OrderTypeBehavior
             showDriver: true,
             chargesDeliveryFee: true,
         );
+    }
+
+    public function presentation(): TabPresentation
+    {
+        return new TabPresentation('inbox', 'none', ['pending', 'processing', 'out_for_delivery'], 'order_number');
     }
 }

@@ -10,20 +10,6 @@ export default function ReceiptTemplate({
     orderItems: OrderItemData[];
     receiptFooter: string;
 }) {
-    const getOrderTypeString = (type: string) => {
-        const typeMap = {
-            dine_in: "صالة",
-            takeaway: "تيك أواي",
-            delivery: "دليفري",
-            companies: "شركات",
-            talabat: "طلبات",
-            web_delivery: "اونلاين دليفري",
-            web_takeaway: "اونلاين تيك أواي",
-        };
-        return typeMap[type as keyof typeof typeMap] || type;
-    };
-
-
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
             <img
@@ -42,19 +28,21 @@ export default function ReceiptTemplate({
                 تاريخ الطباعة :{" "}
                 {new Date().toLocaleString("ar-EG", { hour12: true })}
             </p>
-            <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
-            {order.type === "dine_in" && (
+            <p>نوع الطلب : {order.display?.label ?? order.type}</p>
+            {order.display?.showTable && (
                 <p>طاولة رقم {order.dine_table_number}</p>
             )}
-            {["delivery", "web_delivery", "web_takeaway"].includes(
-                order.type
-            ) && (
+            {order.display?.showCustomer && (
                 <>
                     <p>رقم الهاتف : {order.customer?.phone || "-"}</p>
                     <p>اسم العميل : {order.customer?.name || "-"}</p>
-                    <p>العنوان : {order.customer?.address || "-"}</p>
-                    <p>السائق : {order.driver?.name || "-"}</p>
                 </>
+            )}
+            {order.display?.showAddress && (
+                <p>العنوان : {order.customer?.address || "-"}</p>
+            )}
+            {order.display?.showDriver && (
+                <p>السائق : {order.driver?.name || "-"}</p>
             )}
             <table className="w-full mt-4 table-fixed border-collapse border-solid border border-black">
                 <thead>

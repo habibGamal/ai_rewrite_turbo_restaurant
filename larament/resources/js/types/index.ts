@@ -83,6 +83,45 @@ export interface OrderItemChange {
   updated_at: string;
 }
 
+export interface OrderDisplay {
+  code: string;
+  label: string;
+  color: string;
+  icon: string;
+  showTable: boolean;
+  showCustomer: boolean;
+  showAddress: boolean;
+  showDriver: boolean;
+  chargesService: boolean;
+  chargesDeliveryFee: boolean;
+}
+
+export interface TabPresentation {
+  body: 'cards' | 'inbox';
+  creation: 'immediate' | 'choose_table' | 'none';
+  statuses: string[];
+  cardTitle: 'table' | 'order_number';
+}
+
+export interface CashierTab {
+  key: string;
+  kind: 'type' | 'system';
+  code: string | null;
+  label: string;
+  color: string;
+  icon: string;
+  visible: boolean;
+  forcedVisible: boolean;
+  presentation?: TabPresentation;
+  display?: OrderDisplay;
+}
+
+export interface ChangeTypeOption {
+  code: string;
+  label: string;
+  showTable: boolean;
+}
+
 export interface Order {
   id: number;
   customer_id?: number;
@@ -90,7 +129,7 @@ export interface Order {
   driver_id?: number;
   user_id: number;
   shift_id: number;
-  type: 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat' | 'web_delivery' | 'web_takeaway';
+  type: string;
   status: 'pending' | 'processing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
   sub_total: number;
   tax: number;
@@ -115,6 +154,7 @@ export interface Order {
   item_changes?: OrderItemChange[];
   payments: Payment[];
   user?: User;
+  display?: OrderDisplay;
 }
 
 export interface OrderItemData {
@@ -165,6 +205,8 @@ export type PageProps<T = {}> = T & {
 
 export interface ManageOrderProps extends PageProps {
   order: Order;
+  orderDisplay: OrderDisplay;
+  changeTypeOptions: ChangeTypeOption[];
   categories: Category[];
   drivers: Driver[];
   regions: Region[];

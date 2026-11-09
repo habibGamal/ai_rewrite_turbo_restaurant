@@ -20,10 +20,10 @@ export const calculateOrderTotals = (
   const tax = subTotal * 0; // Currently no tax
 
   let service = 0;
-  if (order.type === 'delivery') {
-    service = Number(order.customer?.delivery_cost ?? 0);
-  } else if (order.type === 'dine_in') {
+  if (order.display?.chargesService) {
     service = subTotal * order.service_rate!;
+  } else if (order.display?.chargesDeliveryFee) {
+    service = Number(order.customer?.delivery_cost ?? 0);
   }
 
   let discount = 0;
@@ -100,17 +100,6 @@ export const getOrderStatusConfig = (status: string) => {
         text: status,
       };
   }
-};
-
-export const getOrderTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    dine_in: 'صالة',
-    takeaway: 'تيك أواي',
-    delivery: 'دليفري',
-    companies: 'شركات',
-    talabat: 'طلبات',
-  };
-  return labels[type] || type;
 };
 
 export const getPaymentMethodLabel = (method: string): string => {

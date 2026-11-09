@@ -17,7 +17,9 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Region;
+use App\Models\Shift;
 use App\Models\TableType;
+use App\Orders\CashierTabLayout;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
 use App\Services\Orders\OrderService;
@@ -41,6 +43,7 @@ class OrderController extends Controller
         private ShiftService $shiftService,
         private ShiftLoggingService $loggingService,
         private OrderTypeCatalog $catalog,
+        private CashierTabLayout $cashierTabs,
     ) {}
 
     /**
@@ -54,7 +57,14 @@ class OrderController extends Controller
             return redirect()->route('shifts.start');
         }
 
-        $orders = $this->orderService->getShiftOrders($currentShift->id);
+        $orders = [];
+        foreach ($this->orderService->getShiftOrders($currentShift->id) as $order) {
+            if (! $order instanceof Order) {
+                continue;
+            }
+
+            $orders[] = $this->orderPayload($order);
+        }
 
         // Get previous partial paid orders for companies
         $previousPartialPaidOrders = Order::with(['customer', 'driver', 'items.product', 'payments'])
@@ -73,10 +83,44 @@ class OrderController extends Controller
 
         return Inertia::render('Orders/Index', [
             'orders' => $orders,
+            'tabs' => $this->tabsPayload($currentShift),
             'previousPartialPaidOrders' => $previousPartialPaidOrders,
             'currentShift' => $currentShift,
             'expenses' => $expenses,
             'expenseTypes' => $expenseTypes,
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function tabsPayload(Shift $shift): array
+    {
+        $tabs = [];
+
+        foreach ($this->cashierTabs->resolve($shift) as $tab) {
+            if (! $tab['visible'] && ! $tab['forcedVisible']) {
+                continue;
+            }
+
+            if ($tab['kind'] === 'type' && $tab['code'] !== null) {
+                $tab['presentation'] = $this->catalog->behaviorFor($tab['code'])->presentation()->toArray();
+                $tab['display'] = $this->catalog->display($tab['code'])->toArray();
+            }
+
+            $tabs[] = $tab;
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function orderPayload(Order $order): array
+    {
+        return array_merge($order->toArray(), [
+            'display' => $order->display()->toArray(),
         ]);
     }
 
@@ -102,11 +146,38 @@ class OrderController extends Controller
         $regions = Region::orderBy('name')->get();
 
         return Inertia::render('Orders/ManageOrder', [
-            'order' => $order,
+            'order' => $this->orderPayload($order),
+            'orderDisplay' => $order->display()->toArray(),
+            'changeTypeOptions' => $this->changeTypeOptions(),
             'categories' => $categories,
             'drivers' => $drivers,
             'regions' => $regions,
         ]);
+    }
+
+    /**
+     * @return list<array{code: string, label: string, showTable: bool}>
+     */
+    private function changeTypeOptions(): array
+    {
+        $creatable = $this->catalog->cashierCreatableCodes();
+        $options = [];
+
+        foreach ($this->cashierTabs->visibleTypeCodes() as $code) {
+            if (! in_array($code, $creatable, true)) {
+                continue;
+            }
+
+            $row = $this->catalog->find($code);
+
+            $options[] = [
+                'code' => $row->code,
+                'label' => $row->label,
+                'showTable' => $this->catalog->display($code)->showTable,
+            ];
+        }
+
+        return $options;
     }
 
     /**
@@ -491,6 +562,10 @@ class OrderController extends Controller
             'type' => ['required', 'string', Rule::in($this->catalog->cashierCreatableCodes())],
             'table_number' => 'nullable|string|max:50',
         ]);
+
+        if (! in_array($validated['type'], $this->cashierTabs->visibleTypeCodes(), true)) {
+            return back()->withErrors(['error' => 'نوع الطلب غير ظاهر في تبويبات الكاشير']);
+        }
 
         try {
             $this->orderService->changeOrderType(

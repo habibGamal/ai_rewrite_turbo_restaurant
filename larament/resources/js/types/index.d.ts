@@ -9,7 +9,7 @@ export interface User {
 }
 
 export type OrderStatus = 'processing' | 'completed' | 'cancelled';
-export type OrderType = 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat';
+export type OrderType = string;
 export type PaymentMethod = 'cash' | 'card' | 'talabat_card';
 export type PaymentStatus = 'pending' | 'partial_paid' | 'full_paid';
 
@@ -89,7 +89,7 @@ export interface Order {
     customer_name?: string;
     phone?: string;
     status: OrderStatus;
-    type: OrderType;
+    type: string;
     total: number;
     subtotal: number;
     tax: number;
@@ -101,6 +101,46 @@ export interface Order {
     item_changes?: ItemChange[];
     table?: Table;
     payments?: Payment[];
+    display?: OrderDisplay;
+}
+
+export interface OrderDisplay {
+    code: string;
+    label: string;
+    color: string;
+    icon: string;
+    showTable: boolean;
+    showCustomer: boolean;
+    showAddress: boolean;
+    showDriver: boolean;
+    chargesService: boolean;
+    chargesDeliveryFee: boolean;
+}
+
+export interface TabPresentation {
+    body: 'cards' | 'inbox';
+    creation: 'immediate' | 'choose_table' | 'none';
+    statuses: string[];
+    cardTitle: 'table' | 'order_number';
+}
+
+export interface CashierTab {
+    key: string;
+    kind: 'type' | 'system';
+    code: string | null;
+    label: string;
+    color: string;
+    icon: string;
+    visible: boolean;
+    forcedVisible: boolean;
+    presentation?: TabPresentation;
+    display?: OrderDisplay;
+}
+
+export interface ChangeTypeOption {
+    code: string;
+    label: string;
+    showTable: boolean;
 }
 
 export interface OrderItemData {
