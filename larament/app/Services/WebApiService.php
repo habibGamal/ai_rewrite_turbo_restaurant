@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Services\Kitchen\KitchenTicketService;
+use App\Services\Orders\OrderCategoryBlock;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Exception;
@@ -27,6 +28,7 @@ class WebApiService
     public function __construct(
         SettingsService $settingsService,
         protected KitchenTicketService $kitchenTicketService,
+        protected OrderCategoryBlock $categoryBlock,
     ) {
         $this->settingsService = $settingsService;
     }
@@ -137,6 +139,11 @@ class WebApiService
                 }
             }
         }
+
+        $this->categoryBlock->assertCanAdd(
+            (string) $order->type,
+            collect($orderItemsData)->pluck('product_id')->map(fn (mixed $id): int => (int) $id)->unique()->values()->all(),
+        );
 
         $order->items()->createMany($orderItemsData); // @phpstan-ignore argument.type
     }

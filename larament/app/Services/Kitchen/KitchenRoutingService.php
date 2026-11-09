@@ -9,11 +9,11 @@ use App\Models\Product;
 class KitchenRoutingService
 {
     /**
-     * Product station wins, then the category station, otherwise none.
+     * Product station wins, then the category station (or its parent's), otherwise none.
      */
     public function stationId(Product $product): ?int
     {
-        return $product->kitchen_station_id ?? $this->category($product)?->kitchen_station_id;
+        return $product->kitchen_station_id ?? $this->category($product)?->effectiveKitchenStationId();
     }
 
     /**
@@ -69,7 +69,7 @@ class KitchenRoutingService
 
     private function category(Product $product): ?Category
     {
-        $product->loadMissing('category');
+        $product->loadMissing('category.parent');
         $category = $product->category;
 
         return $category instanceof Category ? $category : null;
