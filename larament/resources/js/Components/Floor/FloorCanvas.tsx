@@ -3,6 +3,7 @@ import { Button } from 'antd';
 import { AppstoreAddOutlined } from '@ant-design/icons';
 import type { FloorLayout } from '@/types';
 import {
+    formatTableLabel,
     gridPositionStyle,
     type Cell,
     type GhostPreview,
@@ -151,15 +152,6 @@ export function FloorCanvas({
                                 cursor: tool === 'select' ? 'grab' : 'crosshair',
                             }}
                         >
-                            <span
-                                className={[
-                                    'inline-block bg-white/85 backdrop-blur-xs text-slate-800',
-                                    'text-xs font-semibold px-2 py-0.5 rounded shadow-2xs',
-                                ].join(' ')}
-                            >
-                                {section.name}
-                            </span>
-
                             {tool === 'select' && (
                                 <div
                                     title="تغيير حجم القسم"
@@ -225,7 +217,7 @@ export function FloorCanvas({
                             }}
                         >
                             <div className="font-bold text-sm text-slate-800 leading-tight text-center">
-                                {table.number} · {table.capacity} أفراد
+                                {formatTableLabel(table, layout.tableLabel)}
                             </div>
                             {!table.active && (
                                 <div className="text-[10px] text-slate-500 mt-0.5">
@@ -258,11 +250,36 @@ export function FloorCanvas({
                     );
                 })}
 
+                {layout.sections.map((section, index) => (
+                    <div
+                        key={`section-label-${index}`}
+                        style={{
+                            ...gridPositionStyle(section),
+                            zIndex: 4,
+                            pointerEvents: 'none',
+                            alignSelf: 'start',
+                            justifySelf: 'start',
+                            marginTop: -9,
+                            marginRight: 8,
+                        }}
+                    >
+                        <span
+                            className={[
+                                'inline-block bg-white/95 text-slate-800',
+                                'border border-slate-300/80 text-[11px] font-bold',
+                                'px-2 py-0.5 rounded-full shadow-2xs',
+                            ].join(' ')}
+                        >
+                            {section.name}
+                        </span>
+                    </div>
+                ))}
+
                 {ghostPreview && (
                     <div
                         style={{
                             ...gridPositionStyle(ghostPreview),
-                            zIndex: 4,
+                            zIndex: 5,
                             pointerEvents: 'none',
                             borderRadius:
                                 ghostPreview.kind === 'table' &&

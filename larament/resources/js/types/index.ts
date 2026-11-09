@@ -127,6 +127,13 @@ export interface FloorSection extends FloorRect {
   color: string;
 }
 
+export interface TableLabelConfig {
+  prefix: string;
+  showCapacity: boolean;
+  showOrderNumber: boolean;
+  showTimer: boolean;
+}
+
 export interface FloorLayout {
   version: number;
   enabled: boolean;
@@ -134,6 +141,7 @@ export interface FloorLayout {
   rows: number;
   tables: FloorTable[];
   sections: FloorSection[];
+  tableLabel?: TableLabelConfig;
   [key: string]: any;
 }
 export interface CashierTab {

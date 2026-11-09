@@ -3,6 +3,7 @@
 namespace App\Services\Orders;
 
 use App\Enums\OrderBehavior;
+use App\Models\DineTable;
 use App\Models\OrderTypeRow;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -40,6 +41,14 @@ class FloorLayoutService
         $this->ensureDineInType($code);
         $path = $this->path($code);
         Validator::make($document, $this->rules())->validate();
+        if (
+            isset($document['tableLabel'])
+            && is_array($document['tableLabel'])
+            && array_key_exists('prefix', $document['tableLabel'])
+            && $document['tableLabel']['prefix'] === null
+        ) {
+            $document['tableLabel']['prefix'] = '';
+        }
         foreach (['tables', 'sections'] as $kind) {
             foreach ($document[$kind] as $item) {
                 $outOfColumns = $document['columns'] < $item['col'] + $item['colSpan'];
@@ -67,6 +76,27 @@ class FloorLayoutService
         $layout = $this->read($code);
 
         return ($layout['enabled'] ?? false) === true && ! empty($layout['tables']);
+    }
+
+    /** @return list<string> */
+    public function outsideTables(string $code, ?array $layout = null): array
+    {
+        $this->ensureDineInType($code);
+        $layout ??= $this->read($code);
+        $inLayout = array_values(array_filter(array_map(
+            static fn (array $table): string => (string) ($table['number'] ?? ''),
+            $layout['tables'] ?? [],
+        ), static fn (string $number): bool => $number !== ''));
+
+        return DineTable::query()
+            ->where('order_type_code', $code)
+            ->when($inLayout !== [], static fn ($query) => $query->whereNotIn('table_number', $inLayout))
+            ->orderBy('id')
+            ->pluck('table_number')
+            ->map(static fn ($number): string => (string) $number)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function ensureDineInType(string $code): void
@@ -102,6 +132,11 @@ class FloorLayoutService
             'sections.*.row' => 'required|integer|min:0',
             'sections.*.colSpan' => 'required|integer|min:1',
             'sections.*.rowSpan' => 'required|integer|min:1',
+            'tableLabel' => 'nullable|array',
+            'tableLabel.prefix' => 'nullable|string|max:20',
+            'tableLabel.showCapacity' => 'boolean',
+            'tableLabel.showOrderNumber' => 'boolean',
+            'tableLabel.showTimer' => 'boolean',
         ];
     }
 }

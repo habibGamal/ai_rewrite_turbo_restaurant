@@ -5,6 +5,7 @@ import type { FloorLayout, FloorRect, FloorSection } from '@/types';
 import {
     clampRectToGrid,
     findSectionAtCell,
+    formatTableLabel,
     isSectionPlacementValid,
     isTablePlacementValid,
     nextSectionColor,
@@ -28,6 +29,7 @@ export interface UseFloorDragOptions {
     layout: FloorLayout;
     tool: ToolMode;
     numberPrefix: string;
+    armedTableNumber?: string | null;
     onAddTableAtCell: (cell: Cell) => void;
     onCommitLayout: (nextLayout: FloorLayout) => void;
     onSelect: (target: SelectionTarget | null) => void;
@@ -51,6 +53,7 @@ export function useFloorDrag({
     layout,
     tool,
     numberPrefix,
+    armedTableNumber,
     onAddTableAtCell,
     onCommitLayout,
     onSelect,
@@ -93,12 +96,15 @@ export function useFloorDrag({
             }
             const candidate: FloorRect = { col: hoverCell.col, row: hoverCell.row, colSpan: 1, rowSpan: 1 };
             const valid = isTablePlacementValid(layout, candidate);
+            const targetNumber = armedTableNumber || nextTableNumber(layout.tables, numberPrefix);
             return {
                 ...candidate,
                 valid,
                 kind: 'table',
                 shape: 'square',
-                label: valid ? `طاولة ${nextTableNumber(layout.tables, numberPrefix)}` : 'خلية مشغولة',
+                label: valid
+                    ? formatTableLabel({ number: targetNumber, capacity: 4 }, layout.tableLabel)
+                    : 'خلية مشغولة',
             };
         }
 
@@ -110,7 +116,13 @@ export function useFloorDrag({
             const valid = isTablePlacementValid(layout, dragState.targetRect, dragState.index);
             const clamped = clampRectToGrid(dragState.targetRect, layout.columns, layout.rows);
             const shape = table.shape ?? 'square';
-            return { ...clamped, valid, kind: 'table', shape, label: `طاولة ${table.number}` };
+            return {
+                ...clamped,
+                valid,
+                kind: 'table',
+                shape,
+                label: formatTableLabel(table, layout.tableLabel),
+            };
         }
 
         if (dragState.type === 'move_section' || dragState.type === 'resize_section') {
@@ -128,7 +140,7 @@ export function useFloorDrag({
         const clamped = clampRectToGrid(rect, layout.columns, layout.rows);
         const label = `${nextSectionName(layout.sections)} (${clamped.colSpan}×${clamped.rowSpan})`;
         return { ...clamped, valid, kind: 'section', label };
-    }, [dragState, hoverCell, layout, numberPrefix, tool]);
+    }, [armedTableNumber, dragState, hoverCell, layout, numberPrefix, tool]);
 
     const updateDragFromClientCoords = useCallback(
         (clientX: number, clientY: number) => {

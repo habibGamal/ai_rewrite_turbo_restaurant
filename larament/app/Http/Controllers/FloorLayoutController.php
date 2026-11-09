@@ -15,12 +15,14 @@ class FloorLayoutController extends Controller
         abort_unless($floor->isDineInType($code), 404);
 
         $label = (string) OrderTypeRow::query()->where('code', $code)->value('label');
+        $layout = $floor->read($code);
 
         return Inertia::render('Floor/Designer', [
             'code' => $code,
             'label' => $label,
             'backUrl' => OrderTypeRowResource::getUrl('index'),
-            'layout' => $floor->read($code),
+            'layout' => $layout,
+            'outsideTables' => $floor->outsideTables($code, $layout),
         ]);
     }
 

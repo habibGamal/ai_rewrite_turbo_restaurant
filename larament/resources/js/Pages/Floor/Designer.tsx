@@ -2,7 +2,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { message } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
-import type { FloorLayout, FloorSection, FloorTable } from '@/types';
+import type {
+    FloorLayout,
+    FloorSection,
+    FloorTable,
+    TableLabelConfig,
+} from '@/types';
 import {
     assignTableZones,
     checkGridResize,
@@ -11,6 +16,7 @@ import {
     isSectionPlacementValid,
     isTablePlacementValid,
     nextTableNumber,
+    resolveTableLabel,
     validateFloorLayout,
     type Cell,
     type SelectionTarget,
@@ -29,6 +35,7 @@ interface DesignerProps {
     label?: string;
     backUrl?: string;
     layout: FloorLayout | null;
+    outsideTables?: string[];
 }
 
 export default function Designer({
@@ -36,6 +43,7 @@ export default function Designer({
     label,
     backUrl,
     layout: initialLayout,
+    outsideTables = [],
 }: DesignerProps) {
     const pageErrors = usePage().props.errors as
         | Record<string, string>
@@ -45,6 +53,9 @@ export default function Designer({
     const [selection, setSelection] = useState<SelectionTarget | null>(null);
     const [zoom, setZoom] = useState<number>(100);
     const [numberPrefix, setNumberPrefix] = useState<string>('');
+    const [armedTableNumber, setArmedTableNumber] = useState<string | null>(
+        null,
+    );
     const [serverErrors, setServerErrors] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -66,6 +77,15 @@ export default function Designer({
 
     const problems = useMemo(() => validateFloorLayout(layout), [layout]);
 
+    const remainingOutsideTables = useMemo(() => {
+        const placedNumbers = new Set(
+            layout.tables.map((table) => table.number.trim()),
+        );
+        return outsideTables.filter(
+            (tableNum) => !placedNumbers.has(tableNum.trim()),
+        );
+    }, [layout.tables, outsideTables]);
+
     const allServerErrorMessages = useMemo(() => {
         const fromPage = pageErrors ? Object.values(pageErrors) : [];
         return Array.from(new Set([...serverErrors, ...fromPage]));
@@ -79,7 +99,8 @@ export default function Designer({
                 return;
             }
 
-            const newNumber = nextTableNumber(layout.tables, numberPrefix);
+            const newNumber =
+                armedTableNumber || nextTableNumber(layout.tables, numberPrefix);
             const zone = findZoneForCell(layout.sections, cell);
             const newTable: FloorTable = {
                 number: newNumber,
@@ -96,9 +117,10 @@ export default function Designer({
             const nextTables = [...layout.tables, newTable];
             const nextFlags = [...savedTableFlags, false];
             commitChange({ ...layout, tables: nextTables }, nextFlags);
+            setArmedTableNumber(null);
             setSelection({ kind: 'table', index: nextTables.length - 1 });
         },
-        [commitChange, layout, numberPrefix, savedTableFlags],
+        [armedTableNumber, commitChange, layout, numberPrefix, savedTableFlags],
     );
 
     const {
@@ -116,6 +138,7 @@ export default function Designer({
         layout,
         tool,
         numberPrefix,
+        armedTableNumber,
         onAddTableAtCell: handleAddTableAtCell,
         onCommitLayout: commitChange,
         onSelect: setSelection,
@@ -131,6 +154,30 @@ export default function Designer({
         cancelDrag();
         redo();
     }, [cancelDrag, redo]);
+
+    const handleArmOutsideTable = useCallback(
+        (tableNumber: string) => {
+            if (tool === 'add_table' && armedTableNumber === tableNumber) {
+                setArmedTableNumber(null);
+                return;
+            }
+            setSelection(null);
+            setArmedTableNumber(tableNumber);
+            setTool('add_table');
+        },
+        [armedTableNumber, tool],
+    );
+
+    const updateTableLabel = useCallback(
+        (changes: Partial<TableLabelConfig>) => {
+            const nextTableLabel: TableLabelConfig = {
+                ...resolveTableLabel(layout.tableLabel),
+                ...changes,
+            };
+            commitChange({ ...layout, tableLabel: nextTableLabel });
+        },
+        [commitChange, layout],
+    );
 
     const updateSelectedTable = useCallback(
         (changes: Partial<FloorTable>) => {
@@ -239,6 +286,7 @@ export default function Designer({
         onRedo: handleRedo,
         onEscape: () => {
             cancelDrag();
+            setArmedTableNumber(null);
             setSelection(null);
         },
         onDeleteSelection: deleteSelection,
@@ -334,6 +382,9 @@ export default function Designer({
                     onBackClick={handleBackClick}
                     onToolChange={(nextTool) => {
                         setTool(nextTool);
+                        if (nextTool !== 'add_table') {
+                            setArmedTableNumber(null);
+                        }
                         cancelDrag();
                     }}
                     onUndo={handleUndo}
@@ -354,14 +405,19 @@ export default function Designer({
                         selection={selection}
                         savedTableFlags={savedTableFlags}
                         numberPrefix={numberPrefix}
+                        outsideTables={remainingOutsideTables}
+                        armedTableNumber={armedTableNumber}
                         problems={problems}
                         serverErrorMessages={allServerErrorMessages}
                         onNumberPrefixChange={setNumberPrefix}
+                        onArmOutsideTable={handleArmOutsideTable}
+                        onUpdateTableLabel={updateTableLabel}
                         onUpdateTable={updateSelectedTable}
                         onUpdateSection={updateSelectedSection}
                         onDeleteSelection={deleteSelection}
                         onSelectTarget={(target) => {
                             setTool('select');
+                            setArmedTableNumber(null);
                             setSelection(target);
                         }}
                     />

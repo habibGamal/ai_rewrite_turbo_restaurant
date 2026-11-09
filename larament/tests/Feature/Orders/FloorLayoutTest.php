@@ -4,6 +4,7 @@ use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderBehavior;
 use App\Events\Orders\OrderTypeChanged;
 use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
+use App\Models\DineTable;
 use App\Models\OrderTypeRow;
 use App\Models\Shift;
 use App\Models\User;
@@ -255,4 +256,87 @@ it('round-trips a saved table shape and rejects an invalid shape', function () {
     $layout['tables'][0]['shape'] = 'hex';
     expect(fn () => app(FloorLayoutService::class)->write('dine_in', $layout))
         ->toThrow(ValidationException::class);
+});
+
+it('round-trips tableLabel when saved and rejects invalid tableLabel values', function () {
+    Storage::fake('local');
+    $user = User::factory()->admin()->create();
+    $layout = [
+        'version' => 1,
+        'enabled' => true,
+        'columns' => 4,
+        'rows' => 4,
+        'sections' => [],
+        'tables' => [],
+        'tableLabel' => [
+            'prefix' => 'T-',
+            'showCapacity' => false,
+            'showOrderNumber' => true,
+            'showTimer' => false,
+        ],
+    ];
+
+    $this->actingAs($user)
+        ->put(route('floor.save', 'dine_in'), $layout)
+        ->assertRedirect();
+
+    expect(app(FloorLayoutService::class)->read('dine_in')['tableLabel'])->toBe([
+        'prefix' => 'T-',
+        'showCapacity' => false,
+        'showOrderNumber' => true,
+        'showTimer' => false,
+    ]);
+
+    $layout['tableLabel']['prefix'] = str_repeat('x', 21);
+    expect(fn () => app(FloorLayoutService::class)->write('dine_in', $layout))
+        ->toThrow(ValidationException::class);
+
+    $layout['tableLabel']['prefix'] = 'طاولة';
+    $layout['tableLabel']['showCapacity'] = 'not-a-boolean';
+    expect(fn () => app(FloorLayoutService::class)->write('dine_in', $layout))
+        ->toThrow(ValidationException::class);
+});
+
+it('sends outsideTables in the designer show endpoint excluding tables already in the layout', function () {
+    Storage::fake('local');
+    $user = User::factory()->admin()->create();
+
+    app(FloorLayoutService::class)->write('dine_in', [
+        'version' => 1,
+        'enabled' => true,
+        'columns' => 4,
+        'rows' => 4,
+        'sections' => [],
+        'tables' => [
+            [
+                'number' => '1',
+                'capacity' => 4,
+                'zone' => '',
+                'active' => true,
+                'col' => 0,
+                'row' => 0,
+                'colSpan' => 1,
+                'rowSpan' => 1,
+            ],
+        ],
+    ]);
+
+    DineTable::query()->create([
+        'order_type_code' => 'dine_in',
+        'table_number' => '1',
+        'order_id' => null,
+    ]);
+    DineTable::query()->create([
+        'order_type_code' => 'dine_in',
+        'table_number' => 'تراس - 3',
+        'order_id' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('floor.designer', 'dine_in'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Floor/Designer')
+            ->where('outsideTables', ['تراس - 3'])
+        );
 });

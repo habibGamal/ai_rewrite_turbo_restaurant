@@ -10,22 +10,23 @@ import {
     Tooltip,
     Typography,
 } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type {
     FloorLayout,
     FloorSection,
     FloorTable,
+    TableLabelConfig,
     TableShape,
 } from '@/types';
 import {
     findZoneForCell,
     nextTableNumber,
     SECTION_COLOR_PALETTE,
-    totalSeats,
     type LayoutProblem,
     type SelectionTarget,
     type ToolMode,
 } from '@/Components/Floor/floorLayout';
+import { EmptySelectionPanel } from '@/Components/Floor/EmptySelectionPanel';
 import { ProblemsList } from '@/Components/Floor/ProblemsList';
 
 const SAVED_TABLE_NUMBER_TOOLTIP =
@@ -53,14 +54,18 @@ function TableProperties({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <Typography.Text strong>خصائص الطاولة ({table.number})</Typography.Text>
+                <Typography.Text strong>
+                    خصائص الطاولة ({table.number})
+                </Typography.Text>
                 <Tag color={table.active ? 'green' : 'default'}>
                     {table.active ? 'نشطة' : 'غير نشطة'}
                 </Tag>
             </div>
 
             <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-600">رقم الطاولة</label>
+                <label className="block text-xs font-medium text-slate-600">
+                    رقم الطاولة
+                </label>
                 {isSaved ? (
                     <Tooltip title={SAVED_TABLE_NUMBER_TOOLTIP}>
                         <div>
@@ -77,18 +82,24 @@ function TableProperties({
             </div>
 
             <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-600">السعة (عدد الأفراد)</label>
+                <label className="block text-xs font-medium text-slate-600">
+                    السعة (عدد الأفراد)
+                </label>
                 <InputNumber
                     min={1}
                     max={100}
                     className="w-full"
                     value={table.capacity}
-                    onChange={(val) => val !== null && onUpdate({ capacity: val })}
+                    onChange={(val) =>
+                        val !== null && onUpdate({ capacity: val })
+                    }
                 />
             </div>
 
             <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-600">شكل الطاولة</label>
+                <label className="block text-xs font-medium text-slate-600">
+                    شكل الطاولة
+                </label>
                 <Segmented
                     block
                     value={table.shape ?? 'square'}
@@ -102,30 +113,43 @@ function TableProperties({
 
             <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-600">العرض (خلايا)</label>
+                    <label className="block text-xs font-medium text-slate-600">
+                        العرض (خلايا)
+                    </label>
                     <InputNumber
                         min={1}
                         max={columns}
                         className="w-full"
                         value={table.colSpan}
-                        onChange={(val) => val !== null && onUpdate({ colSpan: val })}
+                        onChange={(val) =>
+                            val !== null && onUpdate({ colSpan: val })
+                        }
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-600">الارتفاع (خلايا)</label>
+                    <label className="block text-xs font-medium text-slate-600">
+                        الارتفاع (خلايا)
+                    </label>
                     <InputNumber
                         min={1}
                         max={rows}
                         className="w-full"
                         value={table.rowSpan}
-                        onChange={(val) => val !== null && onUpdate({ rowSpan: val })}
+                        onChange={(val) =>
+                            val !== null && onUpdate({ rowSpan: val })
+                        }
                     />
                 </div>
             </div>
 
             <div className="flex items-center justify-between py-1">
-                <span className="text-xs font-medium text-slate-600">الطاولة نشطة</span>
-                <Switch checked={table.active} onChange={(active) => onUpdate({ active })} />
+                <span className="text-xs font-medium text-slate-600">
+                    الطاولة نشطة
+                </span>
+                <Switch
+                    checked={table.active}
+                    onChange={(active) => onUpdate({ active })}
+                />
             </div>
 
             <div
@@ -135,7 +159,9 @@ function TableProperties({
                 ].join(' ')}
             >
                 <span>القسم الحالي:</span>
-                <strong className="text-slate-800">{currentSectionName || 'بدون قسم'}</strong>
+                <strong className="text-slate-800">
+                    {currentSectionName || 'بدون قسم'}
+                </strong>
             </div>
 
             <Popconfirm
@@ -160,18 +186,26 @@ interface SectionPropertiesProps {
     onDelete: () => void;
 }
 
-function SectionProperties({ section, onUpdate, onDelete }: SectionPropertiesProps) {
+function SectionProperties({
+    section,
+    onUpdate,
+    onDelete,
+}: SectionPropertiesProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <Typography.Text strong>خصائص القسم ({section.name})</Typography.Text>
+                <Typography.Text strong>
+                    خصائص القسم ({section.name})
+                </Typography.Text>
                 <Tag>
                     {section.colSpan}×{section.rowSpan}
                 </Tag>
             </div>
 
             <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-600">اسم القسم</label>
+                <label className="block text-xs font-medium text-slate-600">
+                    اسم القسم
+                </label>
                 <Input
                     value={section.name}
                     onChange={(e) => onUpdate({ name: e.target.value })}
@@ -179,7 +213,9 @@ function SectionProperties({ section, onUpdate, onDelete }: SectionPropertiesPro
             </div>
 
             <div className="space-y-2">
-                <label className="block text-xs font-medium text-slate-600">لون القسم</label>
+                <label className="block text-xs font-medium text-slate-600">
+                    لون القسم
+                </label>
                 <div className="flex flex-wrap gap-2">
                     {SECTION_COLOR_PALETTE.map((swatch) => (
                         <button
@@ -189,8 +225,14 @@ function SectionProperties({ section, onUpdate, onDelete }: SectionPropertiesPro
                             className="w-7 h-7 rounded-full border transition-transform"
                             style={{
                                 backgroundColor: swatch,
-                                borderColor: section.color === swatch ? '#1677ff' : '#cbd5e1',
-                                transform: section.color === swatch ? 'scale(1.12)' : 'scale(1)',
+                                borderColor:
+                                    section.color === swatch
+                                        ? '#1677ff'
+                                        : '#cbd5e1',
+                                transform:
+                                    section.color === swatch
+                                        ? 'scale(1.12)'
+                                        : 'scale(1)',
                             }}
                             aria-label={`لون ${swatch}`}
                         />
@@ -219,91 +261,19 @@ function SectionProperties({ section, onUpdate, onDelete }: SectionPropertiesPro
     );
 }
 
-interface EmptySelectionProps {
-    layout: FloorLayout;
-    onSelectSection: (index: number) => void;
-}
-
-function EmptySelection({ layout, onSelectSection }: EmptySelectionProps) {
-    const stats = [
-        { label: 'الطاولات', value: layout.tables.length },
-        { label: 'المقاعد', value: totalSeats(layout.tables) },
-        { label: 'الأقسام', value: layout.sections.length },
-    ];
-
-    return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2 text-center">
-                {stats.map((stat) => (
-                    <div
-                        key={stat.label}
-                        className="bg-slate-50 p-2.5 rounded-lg border border-slate-200"
-                    >
-                        <div className="text-lg font-bold text-slate-800">
-                            {stat.value}
-                        </div>
-                        <div className="text-[11px] text-slate-500">{stat.label}</div>
-                    </div>
-                ))}
-            </div>
-
-            <div
-                className={[
-                    'bg-blue-50/70 p-3 rounded-lg border border-blue-100',
-                    'space-y-2 text-xs text-slate-700 leading-relaxed',
-                ].join(' ')}
-            >
-                <div className="font-semibold text-blue-900">طريقة الاستخدام:</div>
-                <ul className="list-disc pr-4 space-y-1">
-                    <li>
-                        <strong>إضافة طاولة:</strong> اختر الأداة ثم اضغط على أي خلية
-                        فارغة لإضافة طاولة بالرقم التالي تلقائياً.
-                    </li>
-                    <li>
-                        <strong>رسم قسم:</strong> اختر الأداة ثم اضغط واسحب عبر الخلايا
-                        لرسم مساحة القسم.
-                    </li>
-                    <li>
-                        <strong>تحديد:</strong> اضغط على طاولة أو قسم لتعديله، واسحبه
-                        للنقل، أو اسحب مقبض الزاوية لتغيير الحجم.
-                    </li>
-                    <li>
-                        <strong>لوحة المفاتيح:</strong> الأسهم للتحريك، Delete للحذف،
-                        Esc لإلغاء التحديد.
-                    </li>
-                </ul>
-            </div>
-
-            {layout.sections.length > 0 && (
-                <div className="space-y-1.5">
-                    <div className="text-xs font-semibold text-slate-600">الأقسام المرسومة</div>
-                    <div className="flex flex-wrap gap-1.5">
-                        {layout.sections.map((sec, index) => (
-                            <Button
-                                key={index}
-                                size="small"
-                                onClick={() => onSelectSection(index)}
-                                style={{ backgroundColor: sec.color }}
-                            >
-                                {sec.name}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
 export interface PropertiesPanelProps {
     layout: FloorLayout;
     tool: ToolMode;
     selection: SelectionTarget | null;
     savedTableFlags: boolean[];
     numberPrefix: string;
+    outsideTables: string[];
+    armedTableNumber: string | null;
     problems: LayoutProblem[];
     serverErrorMessages: string[];
     onNumberPrefixChange: (prefix: string) => void;
+    onArmOutsideTable: (tableNumber: string) => void;
+    onUpdateTableLabel: (changes: Partial<TableLabelConfig>) => void;
     onUpdateTable: (changes: Partial<FloorTable>) => void;
     onUpdateSection: (changes: Partial<FloorSection>) => void;
     onDeleteSelection: () => void;
@@ -316,18 +286,26 @@ export function PropertiesPanel({
     selection,
     savedTableFlags,
     numberPrefix,
+    outsideTables,
+    armedTableNumber,
     problems,
     serverErrorMessages,
     onNumberPrefixChange,
+    onArmOutsideTable,
+    onUpdateTableLabel,
     onUpdateTable,
     onUpdateSection,
     onDeleteSelection,
     onSelectTarget,
 }: PropertiesPanelProps) {
     const selectedTable =
-        selection?.kind === 'table' ? (layout.tables[selection.index] ?? null) : null;
+        selection?.kind === 'table'
+            ? (layout.tables[selection.index] ?? null)
+            : null;
     const isSelectedTableSaved =
-        selection?.kind === 'table' ? Boolean(savedTableFlags[selection.index]) : false;
+        selection?.kind === 'table'
+            ? Boolean(savedTableFlags[selection.index])
+            : false;
     const selectedSection =
         selection?.kind === 'section'
             ? (layout.sections[selection.index] ?? null)
@@ -355,11 +333,45 @@ export function PropertiesPanel({
                     <div className="text-[11px] text-slate-500">
                         الرقم التالي المقترح:{' '}
                         <strong className="text-slate-800">
-                            {nextTableNumber(layout.tables, numberPrefix)}
+                            {armedTableNumber ||
+                                nextTableNumber(layout.tables, numberPrefix)}
                         </strong>
                     </div>
                 </div>
             )}
+
+            {outsideTables.length > 0 &&
+                (selection === null || tool === 'add_table') && (
+                    <div className="bg-amber-50/70 p-3 rounded-lg border border-amber-200 space-y-2">
+                        <div className="text-xs font-semibold text-amber-900">
+                            طاولات مستخدمة خارج المخطط
+                        </div>
+                        <div className="text-[11px] text-amber-800 leading-relaxed">
+                            اختر رقم طاولة لتفعيل أداة الإضافة به، ثم اضغط على
+                            خلية فارغة لوضعه في المخطط:
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {outsideTables.map((tableNumber) => {
+                                const isArmed =
+                                    tool === 'add_table' &&
+                                    armedTableNumber === tableNumber;
+                                return (
+                                    <Button
+                                        key={tableNumber}
+                                        size="small"
+                                        type={isArmed ? 'primary' : 'default'}
+                                        icon={<PlusOutlined />}
+                                        onClick={() =>
+                                            onArmOutsideTable(tableNumber)
+                                        }
+                                    >
+                                        {tableNumber}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
             {selectedTable && selection?.kind === 'table' && (
                 <TableProperties
@@ -367,7 +379,10 @@ export function PropertiesPanel({
                     isSaved={isSelectedTableSaved}
                     columns={layout.columns}
                     rows={layout.rows}
-                    currentSectionName={findZoneForCell(layout.sections, selectedTable)}
+                    currentSectionName={findZoneForCell(
+                        layout.sections,
+                        selectedTable,
+                    )}
                     onUpdate={onUpdateTable}
                     onDelete={onDeleteSelection}
                 />
@@ -382,9 +397,12 @@ export function PropertiesPanel({
             )}
 
             {selection === null && (
-                <EmptySelection
+                <EmptySelectionPanel
                     layout={layout}
-                    onSelectSection={(index) => onSelectTarget({ kind: 'section', index })}
+                    onUpdateTableLabel={onUpdateTableLabel}
+                    onSelectSection={(index) =>
+                        onSelectTarget({ kind: 'section', index })
+                    }
                 />
             )}
             <ProblemsList
