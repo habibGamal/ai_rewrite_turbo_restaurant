@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
+use App\Orders\TabPresentation;
 use App\Services\Orders\TableManagementService;
 
 final class DineInBehavior implements OrderTypeBehavior
@@ -62,5 +63,10 @@ final class DineInBehavior implements OrderTypeBehavior
     public function display(OrderTypeRow $type): OrderDisplay
     {
         return OrderDisplay::forRow($type, showTable: true, chargesService: true);
+    }
+
+    public function presentation(): TabPresentation
+    {
+        return new TabPresentation('cards', 'choose_table', ['processing'], 'table');
     }
 }

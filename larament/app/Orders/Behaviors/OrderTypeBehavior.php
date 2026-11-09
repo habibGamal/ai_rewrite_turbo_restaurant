@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
+use App\Orders\TabPresentation;
 
 interface OrderTypeBehavior
 {
@@ -24,4 +25,6 @@ interface OrderTypeBehavior
     public function usesPosOrderNumber(): bool;
 
     public function display(OrderTypeRow $type): OrderDisplay;
+
+    public function presentation(): TabPresentation;
 }

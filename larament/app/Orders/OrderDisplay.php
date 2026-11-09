@@ -41,4 +41,34 @@ final readonly class OrderDisplay
             chargesDeliveryFee: $chargesDeliveryFee,
         );
     }
+
+    /**
+     * @return array{
+     *     code: string,
+     *     label: string,
+     *     color: string,
+     *     icon: string,
+     *     showTable: bool,
+     *     showCustomer: bool,
+     *     showAddress: bool,
+     *     showDriver: bool,
+     *     chargesService: bool,
+     *     chargesDeliveryFee: bool
+     * }
+     */
+    public function toArray(): array
+    {
+        return [
+            'code' => $this->code,
+            'label' => $this->label,
+            'color' => $this->color,
+            'icon' => $this->icon,
+            'showTable' => $this->showTable,
+            'showCustomer' => $this->showCustomer,
+            'showAddress' => $this->showAddress,
+            'showDriver' => $this->showDriver,
+            'chargesService' => $this->chargesService,
+            'chargesDeliveryFee' => $this->chargesDeliveryFee,
+        ];
+    }
 }

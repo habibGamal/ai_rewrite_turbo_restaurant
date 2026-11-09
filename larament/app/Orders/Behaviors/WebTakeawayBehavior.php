@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
+use App\Orders\TabPresentation;
 
 final class WebTakeawayBehavior implements OrderTypeBehavior
 {
@@ -41,5 +42,10 @@ final class WebTakeawayBehavior implements OrderTypeBehavior
     public function display(OrderTypeRow $type): OrderDisplay
     {
         return OrderDisplay::forRow($type, showCustomer: true);
+    }
+
+    public function presentation(): TabPresentation
+    {
+        return new TabPresentation('inbox', 'none', ['pending', 'processing'], 'order_number');
     }
 }

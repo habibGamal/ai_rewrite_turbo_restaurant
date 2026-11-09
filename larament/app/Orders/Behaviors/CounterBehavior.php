@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
+use App\Orders\TabPresentation;
 
 final class CounterBehavior implements OrderTypeBehavior
 {
@@ -44,5 +45,10 @@ final class CounterBehavior implements OrderTypeBehavior
             $type,
             showCustomer: true,
         );
+    }
+
+    public function presentation(): TabPresentation
+    {
+        return new TabPresentation('cards', 'immediate', ['processing'], 'order_number');
     }
 }

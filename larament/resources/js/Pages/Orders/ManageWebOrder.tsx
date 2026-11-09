@@ -1,4 +1,4 @@
-import { Order, Category, User, OrderItemData } from "@/types";
+import { Order, Category, User, OrderItemData, OrderDisplay } from "@/types";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     Badge,
@@ -43,11 +43,13 @@ import LoadingButton from "@/Components/LoadingButton";
 
 interface ManageWebOrderProps {
     order: any;
+    orderDisplay: OrderDisplay;
     categories: any[];
 }
 
 export default function ManageWebOrder({
     order,
+    orderDisplay,
     categories,
 }: ManageWebOrderProps) {
     const { auth } = usePage().props;
@@ -191,7 +193,7 @@ export default function ManageWebOrder({
     const disableAllControls = !["pending", "processing"].includes(
         order.status
     );
-    const isDelivery = order.type === "web_delivery";
+    const isDelivery = orderDisplay?.showDriver ?? false;
 
     // For web orders, we should allow notes editing even when other controls are disabled
     const disableNotesEditing = !["pending", "processing"].includes(
@@ -233,8 +235,7 @@ export default function ManageWebOrder({
         {
             key: "1",
             label: "نوع الطلب",
-            children:
-                order.type === "web_delivery" ? "ويب دليفري" : "ويب تيك أواي",
+            children: orderDisplay?.label ?? order.type,
         },
         {
             key: "2",
@@ -318,12 +319,10 @@ export default function ManageWebOrder({
 
     const actionBtn = {
         accept: order.status === "pending",
-        outForDelivery:
-            order.status === "processing" && order.type === "web_delivery",
+        outForDelivery: order.status === "processing" && isDelivery,
         complete:
-            (order.status === "out_for_delivery" &&
-                order.type === "web_delivery") ||
-            (order.status === "processing" && order.type === "web_takeaway"),
+            (order.status === "out_for_delivery" && isDelivery) ||
+            (order.status === "processing" && !isDelivery),
     };
 
     return (
