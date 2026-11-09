@@ -4,11 +4,11 @@ namespace App\Services;
 
 use App\Enums\KitchenItemStatus;
 use App\Enums\KitchenTicketStatus;
-use App\Enums\OrderType;
 use App\Models\KitchenStation;
 use App\Models\KitchenTicket;
 use App\Models\KitchenTicketItem;
 use App\Models\Order;
+use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -481,6 +481,6 @@ class KitchenPerformanceReportService
 
     private function orderTypeLabel(string $type): string
     {
-        return OrderType::tryFrom($type)?->label() ?? 'غير محدد';
+        return app(ReportOrderTypesService::class)->label($type);
     }
 }

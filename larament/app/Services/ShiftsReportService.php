@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
+use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -246,48 +246,21 @@ class ShiftsReportService
      */
     public function calculateOrderTypeStats(Shift $shift): array
     {
-        $completedOrders = $shift->orders()
-            ->where('status', OrderStatus::COMPLETED)
-            ->get();
+        $query = Order::query()->where('orders.shift_id', $shift->id)->where('orders.status', OrderStatus::COMPLETED);
 
-        $stats = [
-            'dineIn' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'delivery' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'takeaway' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'talabat' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'webDelivery' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'webTakeaway' => ['count' => 0, 'value' => 0, 'profit' => 0],
-            'companies' => ['count' => 0, 'value' => 0, 'profit' => 0],
-        ];
-
-        foreach ($completedOrders as $order) {
-            $type = OrderType::tryFrom((string) $order->type);
-            $key = $type instanceof OrderType ? $this->getStatsKey($type) : null;
-            if ($key) {
-                $stats[$key]['count']++;
-                $stats[$key]['value'] += $order->total;
-                $stats[$key]['profit'] += $order->profit;
-            }
-        }
-
-        return $stats;
+        return $this->typeStats($query);
     }
 
-    /**
-     * Helper method to get stats key from order type
-     */
-    private function getStatsKey(OrderType $orderType): ?string
+    private function typeStats(\Illuminate\Database\Eloquent\Builder $query): array
     {
-        return match ($orderType) {
-            OrderType::DINE_IN => 'dineIn',
-            OrderType::DELIVERY => 'delivery',
-            OrderType::TAKEAWAY => 'takeaway',
-            OrderType::TALABAT => 'talabat',
-            OrderType::WEB_DELIVERY => 'webDelivery',
-            OrderType::WEB_TAKEAWAY => 'webTakeaway',
-            OrderType::COMPANIES => 'companies',
-            default => null,
-        };
+        $types = app(ReportOrderTypesService::class)->forQuery($query);
+        $data = (clone $query)->selectRaw('orders.type, COUNT(*) as count, SUM(orders.total) as value, SUM(orders.profit) as profit')->groupBy('orders.type')->get()->keyBy('type');
+
+        return array_map(function (array $type) use ($data): array {
+            $row = $data->get($type['code']);
+
+            return $type + ['count' => (int) ($row->count ?? 0), 'value' => (float) ($row->value ?? 0), 'profit' => (float) ($row->profit ?? 0)];
+        }, $types);
     }
 
     /**
@@ -339,53 +312,14 @@ class ShiftsReportService
      */
     public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $shiftsQuery = DB::table('shifts');
-
-        if ($shiftIds && ! empty($shiftIds)) {
-            $shiftsQuery->whereIn('shifts.id', $shiftIds);
+        $query = Order::query()->where('orders.status', OrderStatus::COMPLETED);
+        if ($shiftIds !== null) {
+            $query->whereIn('orders.shift_id', $shiftIds);
         } else {
-            $shiftsQuery->whereBetween('shifts.created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
-            ]);
+            $query->whereIn('orders.shift_id', Shift::query()->select('id')->whereBetween('created_at', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()]));
         }
 
-        $data = $shiftsQuery
-            ->select([
-                'orders.type',
-                DB::raw('COUNT(orders.id) as total_orders'),
-                DB::raw('SUM(orders.total) as sales'),
-                DB::raw('SUM(orders.profit) as profit'),
-            ])
-            ->leftJoin(
-                'orders',
-                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
-                    ->where('orders.status', OrderStatus::COMPLETED)
-            )
-            ->groupBy('orders.type')
-            ->get();
-
-        $totalStats = [];
-
-        // Initialize stats for all types using enum values
-        foreach (OrderType::cases() as $type) {
-            $totalStats[$type->value] = [
-                'count' => 0,
-                'value' => 0,
-                'profit' => 0,
-            ];
-        }
-
-        foreach ($data as $item) {
-            $type = $item->type;
-            if (isset($totalStats[$type])) {
-                $totalStats[$type]['count'] = $item->total_orders;
-                $totalStats[$type]['value'] = (float) $item->sales;
-                $totalStats[$type]['profit'] = (float) $item->profit;
-            }
-        }
-
-        return $totalStats;
+        return $this->typeStats($query);
     }
 
     /**

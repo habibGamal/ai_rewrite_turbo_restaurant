@@ -33,87 +33,18 @@ class CurrentShiftDoneOrdersStats extends BaseWidget
             return [];
         }
 
-        $orderTypeStats = $this->shiftsReportService->calculateOrderTypeStats($currentShift);
+        return array_map(function (array $type): Stat {
+            $average = $type['count'] > 0 ? $type['value'] / $type['count'] : 0;
+            $code = json_encode($type['code'], JSON_HEX_APOS | JSON_HEX_QUOT);
 
-        return [
-            Stat::make('الاوردرات الصالة', $orderTypeStats['dineIn']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['dineIn']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['dineIn']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['dineIn']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['dineIn']['value'] / $orderTypeStats['dineIn']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-home')
+            return Stat::make($type['label'], $type['count'].' طلب')
+                ->description('بقيمة '.number_format($type['value'], 2).' جنيه - ربح '.number_format($type['profit'], 2).' جنيه - متوسط '.number_format($average, 2).' جنيه')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'dine_in'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
+                    'wire:click' => "\$dispatch('filterUpdate', {filter: {type: {$code}}}); document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });",
                 ])
-                ->color('success'),
-
-            Stat::make('الاوردرات ديليفري', $orderTypeStats['delivery']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['delivery']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['delivery']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['delivery']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['delivery']['value'] / $orderTypeStats['delivery']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-truck')
-                ->extraAttributes([
-                    'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'delivery'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
-                ])
-                ->color('danger'),
-
-            Stat::make('الاوردرات تيك اواي', $orderTypeStats['takeaway']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['takeaway']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['takeaway']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['takeaway']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['takeaway']['value'] / $orderTypeStats['takeaway']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-shopping-bag')
-                ->extraAttributes([
-                    'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'takeaway'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
-                ])
-                ->color('info'),
-
-            Stat::make('الاوردرات طلبات', $orderTypeStats['talabat']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['talabat']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['talabat']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['talabat']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['talabat']['value'] / $orderTypeStats['talabat']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-device-phone-mobile')
-                ->extraAttributes([
-                    'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'talabat'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
-                ])
-                ->color('warning'),
-
-            Stat::make('الاوردرات اونلاين ديليفري', $orderTypeStats['webDelivery']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['webDelivery']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['webDelivery']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['webDelivery']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['webDelivery']['value'] / $orderTypeStats['webDelivery']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-globe-alt')
-                ->extraAttributes([
-                    'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'web_delivery'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
-                ])
-                ->color('danger'),
-
-            Stat::make('الاوردرات اونلاين تيك اواي', $orderTypeStats['webTakeaway']['count'].' اوردر')
-                ->description('بقيمة '.number_format($orderTypeStats['webTakeaway']['value'], 2).' جنيه - ربح '.number_format($orderTypeStats['webTakeaway']['profit'], 2).' جنيه'.
-                    ($orderTypeStats['webTakeaway']['count'] > 0 ? ' - متوسط '.number_format($orderTypeStats['webTakeaway']['value'] / $orderTypeStats['webTakeaway']['count'], 2).' جنيه' : ''))
-                ->descriptionIcon('heroicon-m-computer-desktop')
-                ->extraAttributes([
-                    'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch('filterUpdate',{filter:{type:'web_takeaway'}} )
-                        document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
-                ])
-                ->color('info'),
-        ];
+                ->color($type['color']);
+        }, $this->shiftsReportService->calculateOrderTypeStats($currentShift));
     }
 
     private function getCurrentShift(): ?Shift

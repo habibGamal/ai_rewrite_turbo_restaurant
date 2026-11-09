@@ -14,6 +14,12 @@ class CustomersPerformanceTableExporter extends Exporter
 
     public static function getColumns(): array
     {
+        $component = app('livewire')->current();
+        $filters = $component instanceof \App\Filament\Widgets\CustomersPerformanceTableWidget ? ($component->pageFilters ?? []) : null;
+        $types = $filters === null
+            ? app(\App\Services\Reports\ReportOrderTypesService::class)->forQuery(\App\Models\Order::query()->where('status', \App\Enums\OrderStatus::COMPLETED))
+            : app(\App\Services\CustomersPerformanceReportService::class)->getReportOrderTypes($filters['startDate'] ?? now()->subDays(30)->toDateString(), $filters['endDate'] ?? now()->toDateString());
+
         return [
             ExportColumn::make('name')
                 ->label('اسم العميل'),
@@ -96,48 +102,10 @@ class CustomersPerformanceTableExporter extends Exporter
                         'لا يوجد';
                 }),
 
-            // Order Type Performance
-            ExportColumn::make('dine_in_sales')
-                ->label('صالة (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->dine_in_sales ?? 0, 2);
-                }),
-
-            ExportColumn::make('takeaway_sales')
-                ->label('تيك أواي (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->takeaway_sales ?? 0, 2);
-                }),
-
-            ExportColumn::make('delivery_sales')
-                ->label('دليفري (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->delivery_sales ?? 0, 2);
-                }),
-
-            ExportColumn::make('web_delivery_sales')
-                ->label('اونلاين دليفري (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->web_delivery_sales ?? 0, 2);
-                }),
-
-            ExportColumn::make('web_takeaway_sales')
-                ->label('اونلاين تيك أواي (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->web_takeaway_sales ?? 0, 2);
-                }),
-
-            ExportColumn::make('talabat_sales')
-                ->label('طلبات (ج.م)')
-                ->state(function ($record) {
-                    return number_format($record->talabat_sales ?? 0, 2);
-                }),
-
-            // ExportColumn::make('companies_sales')
-            //     ->label('شركات (ج.م)')
-            //     ->state(function ($record) {
-            //         return number_format($record->companies_sales ?? 0, 2);
-            //     }),
+            ...array_map(fn (array $type) => ExportColumn::make('type_'.$type['code'].'_sales')
+                ->label($type['label'])
+                ->state(fn ($record) => number_format($record->{'type_'.$type['code'].'_sales'} ?? 0, 2)),
+                $types),
 
             // Customer loyalty metrics
             ExportColumn::make('customer_lifetime_days')

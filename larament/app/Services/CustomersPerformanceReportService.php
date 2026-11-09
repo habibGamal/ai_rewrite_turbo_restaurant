@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +28,7 @@ class CustomersPerformanceReportService
     public function getCustomersPerformanceQuery(?string $startDate = null, ?string $endDate = null)
     {
         // Get customers with sales data aggregated by order type
-        return Customer::query()
+        $query = Customer::query()
             ->select([
                 'customers.id',
                 'customers.name',
@@ -40,44 +40,9 @@ class CustomersPerformanceReportService
                 DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
                 DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
-                DB::raw('COALESCE(CASE WHEN COUNT(DISTINCT orders.id) > 0 THEN SUM(order_items.total) / COUNT(DISTINCT orders.id) ELSE 0 END) as avg_order_value'),
+                DB::raw('COALESCE(CASE WHEN COUNT(DISTINCT orders.id) > 0 THEN SUM(order_items.total) / COUNT(DISTINCT orders.id) ELSE 0 END, 0) as avg_order_value'),
                 DB::raw('MAX(orders.created_at) as last_order_date'),
                 DB::raw('MIN(orders.created_at) as first_order_date'),
-
-                // Dine In
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "dine_in" THEN orders.id END), 0) as dine_in_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "dine_in" THEN order_items.total ELSE 0 END), 0) as dine_in_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "dine_in" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as dine_in_profit'),
-
-                // Takeaway
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "takeaway" THEN orders.id END), 0) as takeaway_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "takeaway" THEN order_items.total ELSE 0 END), 0) as takeaway_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "takeaway" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as takeaway_profit'),
-
-                // Delivery
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "delivery" THEN orders.id END), 0) as delivery_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "delivery" THEN order_items.total ELSE 0 END), 0) as delivery_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "delivery" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as delivery_profit'),
-
-                // Web Delivery
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "web_delivery" THEN orders.id END), 0) as web_delivery_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "web_delivery" THEN order_items.total ELSE 0 END), 0) as web_delivery_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "web_delivery" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as web_delivery_profit'),
-
-                // Web Takeaway
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "web_takeaway" THEN orders.id END), 0) as web_takeaway_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "web_takeaway" THEN order_items.total ELSE 0 END), 0) as web_takeaway_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "web_takeaway" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as web_takeaway_profit'),
-
-                // Talabat
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "talabat" THEN orders.id END), 0) as talabat_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "talabat" THEN order_items.total ELSE 0 END), 0) as talabat_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "talabat" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as talabat_profit'),
-
-                // Companies
-                DB::raw('COALESCE(COUNT(DISTINCT CASE WHEN orders.type = "companies" THEN orders.id END), 0) as companies_orders'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "companies" THEN order_items.total ELSE 0 END), 0) as companies_sales'),
-                DB::raw('COALESCE(SUM(CASE WHEN orders.type = "companies" THEN order_items.total - (order_items.cost * order_items.quantity) ELSE 0 END), 0) as companies_profit'),
 
                 // Customer Segment
                 DB::raw('CASE
@@ -105,6 +70,21 @@ class CustomersPerformanceReportService
                 'customers.region',
                 'customers.delivery_cost'
             );
+
+        foreach ($this->getReportOrderTypes($startDate, $endDate) as $type) {
+            $code = $type['code'];
+            foreach (['quantity' => 'order_items.quantity', 'sales' => 'order_items.total', 'profit' => 'order_items.total - (order_items.cost * order_items.quantity)'] as $metric => $expression) {
+                $query->selectRaw("COALESCE(SUM(CASE WHEN orders.type = ? THEN {$expression} ELSE 0 END), 0) as type_{$code}_{$metric}", [$code]);
+            }
+            $query->selectRaw("COUNT(DISTINCT CASE WHEN orders.type = ? THEN orders.id END) as type_{$code}_orders", [$code]);
+        }
+
+        return $query;
+    }
+
+    public function getReportOrderTypes(?string $startDate = null, ?string $endDate = null): array
+    {
+        return app(ReportOrderTypesService::class)->forQuery($this->getOrdersQuery($startDate, $endDate));
     }
 
     /**
@@ -208,21 +188,22 @@ class CustomersPerformanceReportService
             ->groupBy('orders.type')
             ->get();
 
-        return $performanceData->mapWithKeys(function ($item) {
-            $code = (string) $item->type;
+        $data = $performanceData->keyBy('type');
 
-            return [
-                $code => [
-                    'label' => OrderType::tryFrom($code)?->label() ?? $code,
-                    'unique_customers' => $item->unique_customers,
-                    'total_orders' => $item->total_orders,
-                    'total_quantity' => $item->total_quantity,
-                    'total_sales' => $item->total_sales,
-                    'total_profit' => $item->total_profit,
-                    'avg_order_value' => $item->avg_order_value,
-                ],
+        return array_map(function (array $type) use ($data): array {
+            $item = $data->get($type['code']);
+
+            return $type + [
+                'quantity' => (float) ($item->total_quantity ?? 0),
+                'sales' => (float) ($item->total_sales ?? 0),
+                'profit' => (float) ($item->total_profit ?? 0),
+                'total_quantity' => (float) ($item->total_quantity ?? 0),
+                'total_sales' => (float) ($item->total_sales ?? 0),
+                'total_profit' => (float) ($item->total_profit ?? 0),
+                'total_orders' => (int) ($item->total_orders ?? 0),
+                'unique_customers' => (int) ($item->unique_customers ?? 0),
             ];
-        })->toArray();
+        }, $this->getReportOrderTypes($startDate, $endDate));
     }
 
     /**

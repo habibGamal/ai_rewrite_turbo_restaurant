@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\OrderType;
 use App\Models\KitchenTicket;
+use App\Orders\OrderTypeCatalog;
 use App\Services\KitchenPerformanceReportService;
 use Filament\Support\ArrayRecord;
 use Filament\Tables\Columns\TextColumn;
@@ -93,9 +93,9 @@ class KitchenPerformanceOrderTypesWidget extends BaseWidget
 
     private function typeColor(string $label): string
     {
-        foreach (OrderType::cases() as $type) {
-            if ($type->getLabel() === $label) {
-                return $type->getColor() ?? 'gray';
+        foreach (app(OrderTypeCatalog::class)->all() as $type) {
+            if ($type->label === $label) {
+                return $type->color;
             }
         }
 

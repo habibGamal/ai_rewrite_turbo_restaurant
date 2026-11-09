@@ -171,3 +171,22 @@ it('refuses to save when every tab is hidden', function () {
     expect(fn () => $layout->save($entries))
         ->toThrow(ValidationException::class, 'يجب إظهار تبويب واحد على الأقل');
 });
+
+it('lists stored active and inactive type codes in order followed by missing catalog types', function () {
+    foreach (['lounge' => false, 'catering' => true, 'missing_inactive' => false] as $code => $active) {
+        OrderTypeRow::create(['code' => $code, 'label' => $code, 'color' => 'primary', 'icon' => 'heroicon-o-tag', 'is_active' => $active, 'is_system' => false, 'behavior' => 'counter']);
+    }
+    app(SettingsService::class)->set(SettingKey::CASHIER_TABS->value, [
+        ['key' => 'type:lounge', 'visible' => false],
+        ['key' => 'system:expenses', 'visible' => true],
+        ['key' => 'type:catering', 'visible' => false],
+        ['key' => 'type:lounge', 'visible' => true],
+        ['key' => 'type:unknown', 'visible' => true],
+        ['key' => 'type:dine_in', 'visible' => true],
+    ]);
+    $codes = app(CashierTabLayout::class)->orderedTypeCodes();
+    expect(array_slice($codes, 0, 3))->toBe(['lounge', 'catering', 'dine_in'])
+        ->and($codes)->toContain('missing_inactive', 'takeaway')
+        ->and($codes)->not->toContain('unknown')
+        ->and(count($codes))->toBe(count(array_unique($codes)));
+});

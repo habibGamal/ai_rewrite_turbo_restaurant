@@ -88,6 +88,22 @@ final class CashierTabLayout
         return $tabs;
     }
 
+    /** @return list<string> */
+    public function orderedTypeCodes(): array
+    {
+        $codes = [];
+        foreach ($this->storedEntries() as $entry) {
+            if ($entry['kind'] === 'type') {
+                $codes[$entry['name']] = true;
+            }
+        }
+        foreach ($this->catalog->all() as $row) {
+            $codes[$row->code] = true;
+        }
+
+        return array_keys($codes);
+    }
+
     /**
      * @return list<string>
      */

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Order;
+use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -405,8 +405,7 @@ class PeakHoursPerformanceReportService
             ->map(function ($item) {
                 $hour = (int) data_get($item, 'hour', 0);
                 $typeRaw = data_get($item, 'type');
-                $type = $typeRaw instanceof OrderType ? $typeRaw : (is_string($typeRaw) ? OrderType::tryFrom($typeRaw) : null);
-                $typeLabel = $type ? $type->label() : (string) ($typeRaw ?? '');
+                $typeLabel = app(ReportOrderTypesService::class)->label((string) ($typeRaw ?? ''));
 
                 return (object) [
                     'hour' => $hour,

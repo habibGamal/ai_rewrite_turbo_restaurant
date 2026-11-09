@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -149,7 +149,7 @@ class ChannelPerformanceReportService
             ->orderByDesc('customers_acquired')
             ->get()
             ->map(function ($item) {
-                $item->channel_label = OrderType::from($item->acquisition_channel)->label();
+                $item->channel_label = app(ReportOrderTypesService::class)->label((string) $item->acquisition_channel);
 
                 return $item;
             });
@@ -321,9 +321,9 @@ class ChannelPerformanceReportService
 
     private function labelForOrderType(mixed $type): string
     {
-        $code = $type instanceof OrderType ? $type->value : (string) $type;
+        $code = (string) $type;
 
-        return OrderType::tryFrom($code)?->label() ?? $code;
+        return app(ReportOrderTypesService::class)->label($code);
     }
 
     /**
