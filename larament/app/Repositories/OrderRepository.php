@@ -18,10 +18,10 @@ class OrderRepository implements OrderRepositoryInterface
         $orderNumber = $this->getNextOrderNumber($orderDTO->shiftId);
 
         return Order::create([
-            'type' => $orderDTO->type,
+            'type' => $orderDTO->typeCode,
             'shift_id' => $orderDTO->shiftId,
             'user_id' => $orderDTO->userId,
-            'dine_table_number' => $orderDTO->tableNumber,
+            'dine_table_number' => $orderDTO->opening->tableNumber,
             'customer_id' => $orderDTO->customerId,
             'driver_id' => $orderDTO->driverId,
             'kitchen_notes' => $orderDTO->kitchenNotes,

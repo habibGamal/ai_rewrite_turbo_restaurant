@@ -4,6 +4,7 @@ use App\Actions\Orders\CreateOrderAction;
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderType;
 use App\Models\Order;
+use App\Orders\OrderOpening;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -17,9 +18,9 @@ describe('CreateOrderAction', function () {
 
     it('delegates to order service', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::TAKEAWAY,
+            typeCode: OrderType::TAKEAWAY->value,
             shiftId: $this->shift->id,
-            userId: $this->user->id
+            userId: $this->user->id,
         );
 
         $result = $this->action->execute($createOrderDTO);
@@ -29,10 +30,10 @@ describe('CreateOrderAction', function () {
 
     it('creates order with correct data', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::DINE_IN,
+            typeCode: OrderType::DINE_IN->value,
             shiftId: $this->shift->id,
             userId: $this->user->id,
-            tableNumber: 'T001'
+            opening: new OrderOpening('T001'),
         );
 
         $order = $this->action->execute($createOrderDTO);
@@ -46,9 +47,9 @@ describe('CreateOrderAction', function () {
 
     it('creates takeaway order without table', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::TAKEAWAY,
+            typeCode: OrderType::TAKEAWAY->value,
             shiftId: $this->shift->id,
-            userId: $this->user->id
+            userId: $this->user->id,
         );
 
         $order = $this->action->execute($createOrderDTO);
@@ -60,10 +61,10 @@ describe('CreateOrderAction', function () {
 
     it('creates delivery order with driver', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::DELIVERY,
+            typeCode: OrderType::DELIVERY->value,
             shiftId: $this->shift->id,
             userId: $this->user->id,
-            driverId: $this->driver->id
+            driverId: $this->driver->id,
         );
 
         $order = $this->action->execute($createOrderDTO);

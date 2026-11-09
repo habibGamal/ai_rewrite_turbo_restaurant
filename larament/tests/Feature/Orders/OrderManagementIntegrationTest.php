@@ -6,12 +6,15 @@ use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\OrderCompleted;
 use App\Events\Orders\OrderCreated;
+use App\Exceptions\OrderException;
 use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\User;
+use App\Orders\OrderOpening;
+use App\Services\Orders\OrderOpeningService;
 use App\Services\Orders\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -40,10 +43,10 @@ describe('Order Management Integration', function () {
         it('creates, updates, and completes a dine-in order', function () {
             // 1. Create order
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -97,9 +100,9 @@ describe('Order Management Integration', function () {
 
         it('creates and completes a takeaway order', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: OrderType::TAKEAWAY->value,
                 shiftId: $this->shift->id,
-                userId: $this->user->id
+                userId: $this->user->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -128,10 +131,10 @@ describe('Order Management Integration', function () {
 
         it('handles multiple payment methods', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DELIVERY,
+                typeCode: OrderType::DELIVERY->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                driverId: $this->driver->id
+                driverId: $this->driver->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -217,21 +220,21 @@ describe('Order Management Integration', function () {
         });
 
         it('validates table requirements for dine-in orders', function () {
-            expect(fn () => new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+            expect(fn () => app(OrderOpeningService::class)->open(new CreateOrderDTO(
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
-                userId: $this->user->id
-            ))->toThrow(InvalidArgumentException::class, 'Table number is required for dine-in orders');
+                userId: $this->user->id,
+            )))->toThrow(OrderException::class, 'رقم الطاولة مطلوب');
         });
     });
 
     describe('Order Calculations', function () {
         it('calculates order totals correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: OrderType::DINE_IN->value,
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -265,9 +268,9 @@ describe('Order Management Integration', function () {
 
         it('calculates profit correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: OrderType::TAKEAWAY->value,
                 shiftId: $this->shift->id,
-                userId: $this->user->id
+                userId: $this->user->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);

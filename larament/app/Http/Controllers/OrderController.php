@@ -18,7 +18,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Region;
 use App\Models\TableType;
-use App\Services\OrderItemChangeService;
+use App\Orders\OrderOpening;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\ShiftLoggingService;
@@ -39,7 +39,6 @@ class OrderController extends Controller
         private PrintService $printService,
         private ShiftService $shiftService,
         private ShiftLoggingService $loggingService,
-        private OrderItemChangeService $orderItemChangeService
     ) {}
 
     /**
@@ -114,33 +113,7 @@ class OrderController extends Controller
     public function saveOrder(SaveOrderRequest $request, Order $order)
     {
         try {
-            // Get current order items for comparison
-            $oldItems = $order->items()->with('product')->get()->map(function ($item) {
-                return [
-                    'product_id' => $item->product_id,
-                    'product_name' => $item->product->name,
-                    'quantity' => $item->quantity,
-                    'notes' => $item->notes,
-                ];
-            })->toArray();
-
-            $itemsData = $request->validated('items') ?: [];
-
-            // Add product names to new items for logging
-            $newItems = collect($itemsData)->map(function ($item) {
-                $product = Product::find($item['product_id']);
-
-                return array_merge($item, [
-                    'product_name' => $product?->name ?? "المنتج رقم {$item['product_id']}",
-                ]);
-            })->toArray();
-
-            $this->orderService->updateOrderItems($order->id, $itemsData);
-
-            // Calculate differences once and use for both logging and DB recording
-            $differences = $this->loggingService->calculateItemDifferences($oldItems, $newItems);
-            $this->loggingService->logOrderSave($order->id, $differences);
-            $this->orderItemChangeService->recordChanges($order->id, $differences);
+            $this->orderService->updateOrderItems($order->id, $request->validated('items') ?: []);
 
             return back()->with('success', 'تم حفظ الطلب بنجاح');
         } catch (Exception $e) {
@@ -226,7 +199,7 @@ class OrderController extends Controller
 
             if ($order->customer) {
                 $order->customer->update($validated);
-                $customer = $order->customer;
+                $this->orderService->linkCustomer($order->id, (int) $order->getAttribute('customer_id'));
                 $actionType = 'update';
             } else {
                 $customer = Customer::create($validated);
@@ -709,10 +682,10 @@ class OrderController extends Controller
             };
 
             $createOrderDTO = new CreateOrderDTO(
-                type: $orderType,
+                typeCode: $orderType->value,
                 shiftId: $currentShift->id,
                 userId: auth()->id(),
-                tableNumber: $validated['table_number'] ?? null,
+                opening: new OrderOpening($validated['table_number'] ?? null),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
