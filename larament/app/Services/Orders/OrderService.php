@@ -3,12 +3,14 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
+use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\Product;
+use App\Orders\OrderOpening;
+use App\Orders\OrderTypeCatalog;
 use App\Repositories\OrderItemRepository;
 use App\Repositories\OrderRepository;
 use App\Services\Kitchen\KitchenTicketService;
@@ -26,7 +28,6 @@ class OrderService
         private readonly OrderRepository $orderRepository,
         private readonly OrderOpeningService $orderOpeningService,
         private readonly OrderCalculationService $orderCalculationService,
-        private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
         private readonly OrderStockConversionService $orderStockConversionService,
         private readonly KitchenTicketService $kitchenTicketService,
@@ -34,6 +35,7 @@ class OrderService
         private readonly OrderItemPricingService $itemPricer,
         private readonly ShiftLoggingService $shiftLoggingService,
         private readonly OrderItemChangeService $orderItemChangeService,
+        private readonly OrderTypeCatalog $catalog,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
@@ -164,10 +166,7 @@ class OrderService
             // Store the original status to check if we need to restore stock
             $wasCompleted = $order->status === OrderStatus::COMPLETED;
 
-            // Free table if dine-in
-            if ($order->type->requiresTable() && $order->dine_table_number) {
-                $this->tableManagementService->freeTable($order->dine_table_number);
-            }
+            $order->behavior()->onClosed($order);
 
             // Update order status
             $this->orderRepository->update($order, [
@@ -198,30 +197,24 @@ class OrderService
     public function changeOrderType(int $orderId, string $newType, ?string $tableNumber = null): Order
     {
         return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
-            // Handle table management
-            $oldType = $order->type;
-            $newOrderType = OrderType::from($newType);
+            $newTypeRow = $this->catalog->find($newType);
+            $newBehavior = $this->catalog->behaviorFor($newType);
+            $assignsTable = $newTypeRow->behavior === OrderBehavior::DINE_IN;
 
-            // Free old table if switching from dine-in
-            if ($oldType->requiresTable() && $order->dine_table_number) {
-                $this->tableManagementService->freeTable($order->dine_table_number);
+            if ($assignsTable && ! $tableNumber) {
+                throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');
             }
 
-            // Reserve new table if switching to dine-in
-            if ($newOrderType->requiresTable()) {
-                if (! $tableNumber) {
-                    throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');
-                }
-                $this->tableManagementService->reserveTable($tableNumber, $order->id);
-            }
+            $order->behavior()->onClosed($order);
 
-            // Update order
             $this->orderRepository->update($order, [
-                'type' => $newOrderType,
-                'dine_table_number' => $newOrderType->requiresTable() ? $tableNumber : null,
+                'type' => $newType,
+                'dine_table_number' => $assignsTable ? $tableNumber : null,
             ]);
 
             $order->refresh();
+
+            $newBehavior->onOpened($order, new OrderOpening($tableNumber));
 
             // Recalculate totals as service charges might change
             $this->orderCalculationService->calculateOrderTotals($order);

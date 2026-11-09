@@ -22,6 +22,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Waste;
 use App\Observers\ProductObserver;
+use App\Orders\OrderTypeCatalog;
 use App\Sync\SyncOutboxObserver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
@@ -45,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(BaseImportCsv::class, ImportCsv::class);
         $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
+        $this->app->scoped(OrderTypeCatalog::class);
     }
 
     /**
