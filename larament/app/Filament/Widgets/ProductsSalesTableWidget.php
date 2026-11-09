@@ -109,41 +109,9 @@ class ProductsSalesTableWidget extends BaseWidget
                             : '0%'
                     ),
 
-                // Order Type Performance
-                TextColumn::make('dine_in_sales')
-                    ->label('صالة')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('takeaway_sales')
-                    ->label('تيك أواي')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('delivery_sales')
-                    ->label('دليفري')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('web_delivery_sales')
-                    ->label('اونلاين دليفري')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('web_takeaway_sales')
-                    ->label('اونلاين تيك أواي')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('talabat_sales')
-                    ->label('طلبات')
-                    ->money('EGP')
-                    ->sortable(),
-
-                // TextColumn::make('companies_sales')
-                //     ->label('شركات')
-                //     ->money('EGP')
-                //     ->sortable(),
+                ...array_map(fn (array $type) => TextColumn::make('type_'.$type['code'].'_sales')
+                    ->label($type['label'])->money('EGP')->sortable(),
+                    $this->productsReportService->getReportOrderTypes($startDate, $endDate, $shiftIds)),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])
