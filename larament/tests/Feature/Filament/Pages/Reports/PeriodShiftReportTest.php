@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Filament\Pages\Reports\PeriodShiftReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
@@ -208,7 +207,7 @@ describe('Widgets - With Data', function () {
             Order::factory()->count(5)->create([
                 'shift_id' => $shift->id,
                 'status' => OrderStatus::COMPLETED,
-                'type' => OrderType::DINE_IN,
+                'type' => 'dine_in',
             ]);
 
             $expenseType = ExpenceType::factory()->create();

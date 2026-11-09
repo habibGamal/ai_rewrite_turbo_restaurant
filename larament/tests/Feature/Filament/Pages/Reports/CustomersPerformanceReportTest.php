@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Filament\Pages\Reports\CustomersPerformanceReport;
 use App\Models\Customer;
 use App\Models\Order;
@@ -62,7 +61,7 @@ it('displays performance widgets when orders exist', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 100,
     ]);
 
@@ -102,7 +101,7 @@ it('can filter by last 7 days', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 100,
         'created_at' => now()->subDays(5),
     ]);
@@ -281,7 +280,7 @@ it('updates widgets when filters change', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 100,
         'created_at' => now()->subDays(5),
     ]);
@@ -316,7 +315,7 @@ it('shows multiple customers in report', function () {
         $order = Order::factory()->create([
             'customer_id' => $customer->id,
             'status' => OrderStatus::COMPLETED,
-            'type' => OrderType::DELIVERY,
+            'type' => 'delivery',
             'total' => 100,
         ]);
 
@@ -341,7 +340,7 @@ it('shows orders of different types', function () {
     $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
 
     // Create different order types
-    foreach ([OrderType::DELIVERY, OrderType::DINE_IN, OrderType::TAKEAWAY] as $orderType) {
+    foreach (['delivery', 'dine_in', 'takeaway'] as $orderType) {
         $order = Order::factory()->create([
             'customer_id' => $customer->id,
             'status' => OrderStatus::COMPLETED,
@@ -485,7 +484,7 @@ it('handles large number of customers efficiently', function () {
             $order = Order::factory()->create([
                 'customer_id' => $customer->id,
                 'status' => OrderStatus::COMPLETED,
-                'type' => OrderType::values()[array_rand(OrderType::values())],
+                'type' => fake()->randomElement(['dine_in', 'takeaway', 'delivery', 'companies', 'talabat']),
                 'total' => 100,
             ]);
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ProductType;
@@ -67,7 +66,7 @@ beforeEach(function () {
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'dine_table_number' => 'T10',
         'sub_total' => 50.00,
         'tax' => 0,
@@ -126,7 +125,7 @@ describe('Phase 2: Closed Day Order Cancellation and Return', function () {
             'user_id' => $this->user->id,
             'shift_id' => $this->shift->id,
             'status' => OrderStatus::PROCESSING,
-            'type' => OrderType::DINE_IN,
+            'type' => 'dine_in',
             'dine_table_number' => 'T20',
             'sub_total' => 25.00,
             'tax' => 0,

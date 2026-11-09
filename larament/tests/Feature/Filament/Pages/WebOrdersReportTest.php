@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Pages\Reports\WebOrdersReport;
 use App\Filament\Widgets\WebOrdersStats;
@@ -71,7 +70,7 @@ it('displays stats for pending web orders', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'sub_total' => 100,
         'tax' => 14,
@@ -92,7 +91,7 @@ it('displays stats for processing web orders', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_TAKEAWAY,
+        'type' => 'web_takeaway',
         'status' => OrderStatus::PROCESSING,
         'sub_total' => 200,
         'tax' => 28,
@@ -113,7 +112,7 @@ it('displays stats for out for delivery web orders', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::OUT_FOR_DELIVERY,
         'sub_total' => 150,
         'tax' => 21,
@@ -135,7 +134,7 @@ it('does not count completed web orders in stats', function () {
     Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::COMPLETED,
         'total' => 100,
         'profit' => 50,
@@ -145,7 +144,7 @@ it('does not count completed web orders in stats', function () {
     Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'total' => 200,
         'profit' => 100,
@@ -162,7 +161,7 @@ it('does not count cancelled web orders in stats', function () {
     Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::CANCELLED,
         'total' => 100,
         'profit' => 50,
@@ -180,7 +179,7 @@ it('does not count non-web orders in stats', function () {
     Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PENDING,
         'total' => 100,
         'profit' => 50,
@@ -190,7 +189,7 @@ it('does not count non-web orders in stats', function () {
     Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::PENDING,
         'total' => 200,
         'profit' => 100,
@@ -213,7 +212,7 @@ it('displays web delivery orders in table', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -228,7 +227,7 @@ it('displays web takeaway orders in table', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_TAKEAWAY,
+        'type' => 'web_takeaway',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -243,14 +242,14 @@ it('does not display completed orders in table', function () {
     $completedOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::COMPLETED,
     ]);
 
     $pendingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -266,14 +265,14 @@ it('does not display cancelled orders in table', function () {
     $cancelledOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::CANCELLED,
     ]);
 
     $pendingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -289,14 +288,14 @@ it('does not display non-web orders in table', function () {
     $regularOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $webOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -341,14 +340,14 @@ it('can search orders by id', function () {
     $order1 = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $order2 = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -365,7 +364,7 @@ it('can search orders by order number', function () {
     $order1 = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'order_number' => 'WEB-001',
     ]);
@@ -373,7 +372,7 @@ it('can search orders by order number', function () {
     $order2 = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
         'order_number' => 'WEB-002',
     ]);
@@ -392,14 +391,14 @@ it('can search orders by customer name', function () {
     $order1 = Order::factory()->create([
         'customer_id' => $customer1->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $order2 = Order::factory()->create([
         'customer_id' => $customer2->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -417,14 +416,14 @@ it('can search orders by customer phone', function () {
     $order1 = Order::factory()->create([
         'customer_id' => $customer1->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $order2 = Order::factory()->create([
         'customer_id' => $customer2->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -442,7 +441,7 @@ it('can sort orders by id', function () {
     $orders = Order::factory()->count(3)->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -460,7 +459,7 @@ it('can sort orders by order number', function () {
     $orders = Order::factory()->count(3)->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -479,21 +478,21 @@ it('can sort orders by created_at', function () {
         Order::factory()->create([
             'customer_id' => $customer->id,
             'user_id' => $user->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
             'created_at' => now()->subDays(3),
         ]),
         Order::factory()->create([
             'customer_id' => $customer->id,
             'user_id' => $user->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
             'created_at' => now()->subDays(1),
         ]),
         Order::factory()->create([
             'customer_id' => $customer->id,
             'user_id' => $user->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
             'created_at' => now()->subDays(2),
         ]),
@@ -514,14 +513,14 @@ it('can filter orders by status', function () {
     $pendingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $processingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -538,7 +537,7 @@ it('can filter orders by web payment method', function () {
     $cashOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'web_preferences' => ['payment_method' => 'cash'],
     ]);
@@ -546,7 +545,7 @@ it('can filter orders by web payment method', function () {
     $cardOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'web_preferences' => ['payment_method' => 'card'],
     ]);
@@ -564,7 +563,7 @@ it('can filter orders by payment method', function () {
     $cashOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -577,7 +576,7 @@ it('can filter orders by payment method', function () {
     $cardOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -600,7 +599,7 @@ it('can filter orders with discount', function () {
     $orderWithDiscount = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'discount' => 10,
     ]);
@@ -608,7 +607,7 @@ it('can filter orders with discount', function () {
     $orderWithoutDiscount = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'discount' => 0,
     ]);
@@ -626,7 +625,7 @@ it('can filter orders by date range', function () {
     $recentOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'created_at' => now()->subDays(5),
     ]);
@@ -634,7 +633,7 @@ it('can filter orders by date range', function () {
     $oldOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'created_at' => now()->subDays(60),
     ]);
@@ -656,7 +655,7 @@ it('can paginate orders', function () {
     Order::factory()->count(25)->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -674,7 +673,7 @@ it('displays cash web payment method correctly', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'web_preferences' => ['payment_method' => 'cash'],
     ]);
@@ -690,7 +689,7 @@ it('displays card web payment method correctly', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'web_preferences' => ['payment_method' => 'card'],
     ]);
@@ -706,7 +705,7 @@ it('displays transaction id when present', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'web_preferences' => [
             'payment_method' => 'card',
@@ -728,7 +727,7 @@ it('displays driver name when assigned', function () {
         'customer_id' => $customer->id,
         'user_id' => $user->id,
         'driver_id' => $driver->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::OUT_FOR_DELIVERY,
     ]);
 
@@ -744,7 +743,7 @@ it('handles orders without driver', function () {
         'customer_id' => $customer->id,
         'user_id' => $user->id,
         'driver_id' => null,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -760,7 +759,7 @@ it('displays multiple payment methods', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -787,7 +786,7 @@ it('displays cash payment amount', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -808,7 +807,7 @@ it('displays card payment amount', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -851,7 +850,7 @@ it('handles orders with missing customer', function () {
     $order = Order::factory()->create([
         'customer_id' => null,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -866,7 +865,7 @@ it('handles orders with zero values', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'sub_total' => 0,
         'tax' => 0,
@@ -887,7 +886,7 @@ it('handles large discount values', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'sub_total' => 1000,
         'discount' => 500,
@@ -906,7 +905,7 @@ it('stats widget updates when orders change status', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
         'total' => 100,
         'profit' => 50,
@@ -931,7 +930,7 @@ it('table updates when new orders are created', function () {
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -948,14 +947,14 @@ it('handles mixed order types correctly', function () {
     $webDeliveryOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $webTakeawayOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_TAKEAWAY,
+        'type' => 'web_takeaway',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -963,14 +962,14 @@ it('handles mixed order types correctly', function () {
     $regularDeliveryOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $dineInOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::PENDING,
     ]);
 
@@ -987,21 +986,21 @@ it('handles all three tracked statuses', function () {
     $pendingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PENDING,
     ]);
 
     $processingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
     $outForDeliveryOrder = Order::factory()->create([
         'customer_id' => $customer->id,
         'user_id' => $user->id,
-        'type' => OrderType::WEB_DELIVERY,
+        'type' => 'web_delivery',
         'status' => OrderStatus::OUT_FOR_DELIVERY,
     ]);
 

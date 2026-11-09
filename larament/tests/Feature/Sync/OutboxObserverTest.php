@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Models\Category;
 use App\Models\ExpenceType;
@@ -514,7 +513,7 @@ describe('Bulk write handling', function () {
 
         $openWebOrder = Order::factory()->create([
             'shift_id' => $shift1->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PROCESSING,
         ]);
 

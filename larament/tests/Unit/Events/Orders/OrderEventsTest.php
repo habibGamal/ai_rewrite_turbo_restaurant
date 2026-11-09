@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Events\Orders\OrderCancelled;
 use App\Events\Orders\OrderCompleted;
@@ -32,7 +31,7 @@ describe('Order Events', function () {
             $order = Order::factory()->create([
                 'order_number' => 123,
                 'dine_table_number' => 'T001',
-                'type' => OrderType::DINE_IN,
+                'type' => 'dine_in',
             ]);
 
             $event = new OrderCreated($order);

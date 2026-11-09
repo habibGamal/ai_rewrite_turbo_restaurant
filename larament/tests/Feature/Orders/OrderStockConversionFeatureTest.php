@@ -2,7 +2,6 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Customer;
@@ -57,7 +56,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with the consumable product
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 opening: new OrderOpening('T001'),
@@ -178,7 +177,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create and complete an order with manufactured product
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::TAKEAWAY->value,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 customerId: $this->customer->id,
@@ -310,7 +309,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Now test with actual order completion
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 opening: new OrderOpening('T005'),
@@ -356,7 +355,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order trying to buy 5 items
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::TAKEAWAY->value,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 customerId: $this->customer->id,
@@ -428,7 +427,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with multiple items
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 opening: new OrderOpening('T010'),
@@ -524,7 +523,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with mixed product types
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DELIVERY->value,
+                typeCode: 'delivery',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 customerId: $this->customer->id,

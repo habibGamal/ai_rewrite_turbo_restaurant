@@ -72,11 +72,6 @@ class Order extends Model
         return 0.0;
     }
 
-    public function setTypeAttribute(mixed $value): void
-    {
-        $this->attributes['type'] = $value instanceof \BackedEnum ? $value->value : $value;
-    }
-
     public function behavior(): OrderTypeBehavior
     {
         return app(OrderTypeCatalog::class)->behaviorFor((string) $this->type);

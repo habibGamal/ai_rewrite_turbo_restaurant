@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Order;
@@ -55,7 +54,7 @@ it('excludes cancelled orders from period summary and only counts sold products'
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 100.00,
         'profit' => 60.00,
         'created_at' => $date,
@@ -75,7 +74,7 @@ it('excludes cancelled orders from period summary and only counts sold products'
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::CANCELLED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 30.00,
         'profit' => 0.00,
         'created_at' => $date,
@@ -109,7 +108,7 @@ it('excludes cancelled orders from products sales performance query', function (
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 100.00,
         'profit' => 60.00,
         'created_at' => $date,
@@ -129,7 +128,7 @@ it('excludes cancelled orders from products sales performance query', function (
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::CANCELLED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 30.00,
         'profit' => 0.00,
         'created_at' => $date,
@@ -162,7 +161,7 @@ it('excludes cancelled orders from category performance query', function () {
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 100.00,
         'profit' => 60.00,
         'created_at' => $date,
@@ -182,7 +181,7 @@ it('excludes cancelled orders from category performance query', function () {
         'user_id' => $this->user->id,
         'shift_id' => $this->shift->id,
         'status' => OrderStatus::CANCELLED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 30.00,
         'profit' => 0.00,
         'created_at' => $date,

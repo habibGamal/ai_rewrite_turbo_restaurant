@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\ProductType;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceShiftsReport;
 use App\Filament\Widgets\CategoryPerformanceWidget;
@@ -98,7 +97,7 @@ it('shows all performance widgets when selected shifts have completed orders', f
 
     $order = Order::factory()->create([
         'shift_id' => $shift->id,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(90),
     ]);

@@ -3,7 +3,6 @@
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Exceptions\OrderException;
 use App\Models\Customer;
@@ -68,7 +67,7 @@ describe('order type catalog', function () {
         $shift = Shift::factory()->create();
 
         $dineIn = app(OrderService::class)->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $shift->id,
             userId: $user->id,
             opening: new OrderOpening('12'),
@@ -80,7 +79,7 @@ describe('order type catalog', function () {
             ->and($occupied->order_id)->toBe($dineIn->id);
 
         $takeaway = app(OrderService::class)->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $shift->id,
             userId: $user->id,
         ));
@@ -94,7 +93,7 @@ describe('order type catalog', function () {
         $customer = Customer::factory()->create(['delivery_cost' => 20]);
         $product = Product::factory()->create(['price' => 100, 'cost' => 40]);
         $order = Order::factory()->create([
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PROCESSING,
             'customer_id' => $customer->id,
             'sub_total' => 100,
@@ -124,7 +123,7 @@ describe('order type catalog', function () {
 
         $product = Product::factory()->create(['price' => 100, 'cost' => 40]);
         $dineIn = Order::factory()->create([
-            'type' => OrderType::DINE_IN,
+            'type' => 'dine_in',
             'status' => OrderStatus::PROCESSING,
             'dine_table_number' => '4',
         ]);
@@ -142,7 +141,7 @@ describe('order type catalog', function () {
 
         $customer = Customer::factory()->create(['delivery_cost' => 15]);
         $delivery = Order::factory()->create([
-            'type' => OrderType::DELIVERY,
+            'type' => 'delivery',
             'status' => OrderStatus::PROCESSING,
             'customer_id' => $customer->id,
         ]);
@@ -166,12 +165,12 @@ describe('order type catalog', function () {
         Order::factory()->create([
             'shift_id' => $shift->id,
             'user_id' => $user->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'order_number' => 1,
         ]);
 
         $first = app(OrderService::class)->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $shift->id,
             userId: $user->id,
         ));
@@ -181,12 +180,12 @@ describe('order type catalog', function () {
         Order::factory()->create([
             'shift_id' => $shift->id,
             'user_id' => $user->id,
-            'type' => OrderType::WEB_TAKEAWAY,
+            'type' => 'web_takeaway',
             'order_number' => 5,
         ]);
 
         $second = app(OrderService::class)->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $shift->id,
             userId: $user->id,
         ));
@@ -200,7 +199,7 @@ describe('order type catalog', function () {
         $orders = app(OrderService::class);
 
         $cancelled = $orders->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $shift->id,
             userId: $user->id,
             opening: new OrderOpening('3'),
@@ -211,7 +210,7 @@ describe('order type catalog', function () {
         expect(DineTable::query()->where('table_number', '3')->value('order_id'))->toBeNull();
 
         $completed = $orders->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $shift->id,
             userId: $user->id,
             opening: new OrderOpening('8'),
@@ -229,25 +228,25 @@ describe('order type catalog', function () {
         $orders = app(OrderService::class);
 
         $dineIn = $orders->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $shift->id,
             userId: $user->id,
             opening: new OrderOpening('9'),
         ));
 
-        $orders->changeOrderType($dineIn->id, OrderType::TAKEAWAY->value);
+        $orders->changeOrderType($dineIn->id, 'takeaway');
 
         expect($dineIn->fresh()->type)->toBe('takeaway')
             ->and($dineIn->fresh()->dine_table_number)->toBeNull()
             ->and(DineTable::query()->where('table_number', '9')->value('order_id'))->toBeNull();
 
         $takeaway = $orders->createOrder(new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $shift->id,
             userId: $user->id,
         ));
 
-        expect(fn () => $orders->changeOrderType($takeaway->id, OrderType::DINE_IN->value))
+        expect(fn () => $orders->changeOrderType($takeaway->id, 'dine_in'))
             ->toThrow(OrderException::class, 'رقم الطاولة مطلوب للطلبات الداخلية');
 
         expect($takeaway->fresh()->type)->toBe('takeaway')

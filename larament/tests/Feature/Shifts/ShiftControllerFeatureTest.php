@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Models\Order;
 use App\Models\Shift;
@@ -75,21 +74,21 @@ describe('ShiftController Feature Tests', function () {
 
         Order::factory()->create([
             'shift_id' => $closedShift->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PROCESSING,
             'order_number' => 1,
         ]);
 
         Order::factory()->create([
             'shift_id' => $closedShift->id,
-            'type' => OrderType::WEB_TAKEAWAY,
+            'type' => 'web_takeaway',
             'status' => OrderStatus::PENDING,
             'order_number' => 2,
         ]);
 
         Order::factory()->create([
             'shift_id' => $closedShift->id,
-            'type' => OrderType::TAKEAWAY,
+            'type' => 'takeaway',
             'status' => OrderStatus::PROCESSING,
             'order_number' => 3,
         ]);

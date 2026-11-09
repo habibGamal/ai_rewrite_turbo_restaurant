@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\ProductType;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceReport;
 use App\Filament\Widgets\CategoryPerformanceWidget;
@@ -122,7 +121,7 @@ it('shows performance widgets when there are completed orders with products', fu
 
     // Create completed order with product
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -151,7 +150,7 @@ it('does not show performance widgets for pending orders', function () {
 
     // Create pending order (not completed)
     $pendingOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PENDING,
         'created_at' => now(),
     ]);
@@ -175,7 +174,7 @@ it('does not show performance widgets for cancelled orders', function () {
 
     // Create cancelled order
     $cancelledOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::CANCELLED,
         'created_at' => now(),
     ]);
@@ -200,7 +199,7 @@ it('filters data by date range', function () {
 
     // Create order within date range
     $recentOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(5),
     ]);
@@ -216,7 +215,7 @@ it('filters data by date range', function () {
 
     // Create order outside date range
     $oldOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(40),
     ]);
@@ -247,7 +246,7 @@ it('can filter by today', function () {
 
     // Create order today
     $todayOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -271,7 +270,7 @@ it('can filter by yesterday', function () {
 
     // Create order yesterday
     $yesterdayOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDay(),
     ]);
@@ -295,7 +294,7 @@ it('can filter by last 7 days', function () {
 
     // Create order within last 7 days
     $recentOrder = Order::factory()->create([
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(3),
     ]);
@@ -326,13 +325,13 @@ it('includes all order types in performance widgets', function () {
 
     // Create orders for each order type
     $orderTypes = [
-        OrderType::DINE_IN,
-        OrderType::TAKEAWAY,
-        OrderType::DELIVERY,
-        OrderType::WEB_DELIVERY,
-        OrderType::WEB_TAKEAWAY,
-        OrderType::TALABAT,
-        OrderType::COMPANIES,
+        'dine_in',
+        'takeaway',
+        'delivery',
+        'web_delivery',
+        'web_takeaway',
+        'talabat',
+        'companies',
     ];
 
     foreach ($orderTypes as $orderType) {
@@ -375,7 +374,7 @@ it('excludes raw material products from report', function () {
 
     // Create orders for both products
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -423,7 +422,7 @@ it('includes category performance widget when products have categories', functio
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -478,7 +477,7 @@ it('can search categories by name in category performance table', function () {
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -532,7 +531,7 @@ it('can search products by name in products sales table', function () {
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -587,7 +586,7 @@ it('can search products by category name in products sales table', function () {
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -637,7 +636,7 @@ it('can sort products by name and category in products sales table', function ()
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);
@@ -687,7 +686,7 @@ it('can sort category performance table', function () {
     ]);
 
     $order = Order::factory()->create([
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now(),
     ]);

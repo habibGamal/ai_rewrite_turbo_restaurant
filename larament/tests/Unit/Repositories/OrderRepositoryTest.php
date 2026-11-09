@@ -2,7 +2,6 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Orders\OrderOpening;
@@ -21,7 +20,7 @@ describe('OrderRepository', function () {
             $shift = \App\Models\Shift::factory()->create();
 
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $shift->id,
                 userId: $user->id,
                 opening: new OrderOpening('T001'),
@@ -42,8 +41,8 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
+            $dto1 = new CreateOrderDTO('takeaway', $shift->id, $user->id);
+            $dto2 = new CreateOrderDTO('takeaway', $shift->id, $user->id);
 
             $order1 = $this->repository->create($dto1, 1);
             $order2 = $this->repository->create($dto2, 2);
@@ -57,8 +56,8 @@ describe('OrderRepository', function () {
             $shift1 = \App\Models\Shift::factory()->create();
             $shift2 = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift1->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift2->id, $user->id);
+            $dto1 = new CreateOrderDTO('takeaway', $shift1->id, $user->id);
+            $dto2 = new CreateOrderDTO('takeaway', $shift2->id, $user->id);
 
             $order1 = $this->repository->create($dto1, 1);
             $order2 = $this->repository->create($dto2, 1);
@@ -159,17 +158,17 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id), 1);
+            $this->repository->create(new CreateOrderDTO('takeaway', $shift->id, $user->id), 1);
 
             Order::factory()->create([
                 'shift_id' => $shift->id,
-                'type' => OrderType::WEB_DELIVERY,
+                'type' => 'web_delivery',
                 'order_number' => 2,
             ]);
 
             $orderNumber = $this->repository->getNextOrderNumber($shift->id, [
-                OrderType::WEB_DELIVERY->value,
-                OrderType::WEB_TAKEAWAY->value,
+                'web_delivery',
+                'web_takeaway',
             ]);
 
             expect($orderNumber)->toBe(3);

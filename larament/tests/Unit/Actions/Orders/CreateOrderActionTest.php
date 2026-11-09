@@ -2,7 +2,6 @@
 
 use App\Actions\Orders\CreateOrderAction;
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderType;
 use App\Models\Order;
 use App\Orders\OrderOpening;
 
@@ -18,7 +17,7 @@ describe('CreateOrderAction', function () {
 
     it('delegates to order service', function () {
         $createOrderDTO = new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $this->shift->id,
             userId: $this->user->id,
         );
@@ -30,7 +29,7 @@ describe('CreateOrderAction', function () {
 
     it('creates order with correct data', function () {
         $createOrderDTO = new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $this->shift->id,
             userId: $this->user->id,
             opening: new OrderOpening('T001'),
@@ -47,7 +46,7 @@ describe('CreateOrderAction', function () {
 
     it('creates takeaway order without table', function () {
         $createOrderDTO = new CreateOrderDTO(
-            typeCode: OrderType::TAKEAWAY->value,
+            typeCode: 'takeaway',
             shiftId: $this->shift->id,
             userId: $this->user->id,
         );
@@ -61,7 +60,7 @@ describe('CreateOrderAction', function () {
 
     it('creates delivery order with driver', function () {
         $createOrderDTO = new CreateOrderDTO(
-            typeCode: OrderType::DELIVERY->value,
+            typeCode: 'delivery',
             shiftId: $this->shift->id,
             userId: $this->user->id,
             driverId: $this->driver->id,

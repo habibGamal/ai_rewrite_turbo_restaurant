@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
@@ -36,7 +35,7 @@ it('builds a completed order snapshot with items and payments', function () {
         'customer_id' => $customer->id,
         'order_number' => 57,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'payment_status' => PaymentStatus::FULL_PAID,
         'return_status' => ReturnStatus::NONE,
         'sub_total' => 420.00,

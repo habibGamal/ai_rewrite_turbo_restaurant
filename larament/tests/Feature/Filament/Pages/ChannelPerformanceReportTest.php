@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Filament\Pages\Reports\ChannelPerformanceReport;
 use App\Filament\Widgets\ChannelMarketShareWidget;
 use App\Filament\Widgets\ChannelPerformanceStatsWidget;
@@ -73,7 +72,7 @@ it('shows performance widgets when there are completed orders', function () {
     // Create orders with different types (channels)
     $deliveryOrder = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(5),
     ]);
@@ -89,7 +88,7 @@ it('shows performance widgets when there are completed orders', function () {
 
     $dineInOrder = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(3),
     ]);
@@ -116,7 +115,7 @@ it('does not count pending orders in the report', function () {
     // Create pending order
     $pendingOrder = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PENDING,
         'created_at' => now()->subDays(5),
     ]);
@@ -144,7 +143,7 @@ it('does not count cancelled orders in the report', function () {
     // Create cancelled order
     $cancelledOrder = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::CANCELLED,
         'created_at' => now()->subDays(5),
     ]);
@@ -172,10 +171,10 @@ it('tracks performance for multiple channels', function () {
 
     // Create orders for different channels
     $channels = [
-        OrderType::DELIVERY,
-        OrderType::DINE_IN,
-        OrderType::TAKEAWAY,
-        OrderType::WEB_DELIVERY,
+        'delivery',
+        'dine_in',
+        'takeaway',
+        'web_delivery',
     ];
 
     foreach ($channels as $channel) {
@@ -212,7 +211,7 @@ it('shows widgets with multiple orders in same channel', function () {
     foreach ([$customer1, $customer2] as $customer) {
         $order = Order::factory()->create([
             'customer_id' => $customer->id,
-            'type' => OrderType::DELIVERY,
+            'type' => 'delivery',
             'status' => OrderStatus::COMPLETED,
             'created_at' => now()->subDays(rand(1, 7)),
         ]);
@@ -251,7 +250,7 @@ it('handles single order correctly', function () {
 
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(5),
     ]);
@@ -279,7 +278,7 @@ it('handles orders with multiple items', function () {
 
     $order = Order::factory()->create([
         'customer_id' => $customer->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::COMPLETED,
         'created_at' => now()->subDays(5),
     ]);

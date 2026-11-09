@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Filament\Resources\Orders\Pages\ListOrders;
@@ -101,11 +100,11 @@ it('can search by id', function () {
 
 // Table Filter Tests
 it('can filter by type', function () {
-    $dineInOrders = Order::factory(3)->create(['type' => OrderType::DINE_IN]);
-    $deliveryOrders = Order::factory(2)->create(['type' => OrderType::DELIVERY]);
+    $dineInOrders = Order::factory(3)->create(['type' => 'dine_in']);
+    $deliveryOrders = Order::factory(2)->create(['type' => 'delivery']);
 
     livewire(ListOrders::class)
-        ->filterTable('type', OrderType::DINE_IN->value)
+        ->filterTable('type', 'dine_in')
         ->assertCanSeeTableRecords($dineInOrders)
         ->assertCountTableRecords(3);
 });

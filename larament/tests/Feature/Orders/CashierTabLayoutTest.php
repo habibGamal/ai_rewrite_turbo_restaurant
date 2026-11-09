@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Models\Order;
 use App\Models\OrderTypeRow;
@@ -123,7 +122,7 @@ it('forces a hidden type tab with an open order in the shift', function () {
 
     Order::factory()->create([
         'shift_id' => $shift->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 
@@ -148,7 +147,7 @@ it('excludes hidden and forced tabs from visible type codes', function () {
 
     Order::factory()->create([
         'shift_id' => $shift->id,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'status' => OrderStatus::PROCESSING,
     ]);
 

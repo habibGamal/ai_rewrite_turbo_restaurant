@@ -4,7 +4,6 @@ use App\Enums\KitchenItemKind;
 use App\Enums\KitchenItemStatus;
 use App\Enums\KitchenTicketStatus;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Events\Kitchen\KitchenTicketUpdated;
 use App\Exceptions\KitchenException;
@@ -344,7 +343,7 @@ it('falls back from product to category to order type to the default target', fu
     ]);
 
     app(SettingsService::class)->set(SettingKey::KDS_ORDER_TYPE_TARGETS->value, json_encode([
-        OrderType::DELIVERY->value => 25,
+        'delivery' => 25,
     ]));
     app(SettingsService::class)->set(SettingKey::KDS_DEFAULT_PREP_MINUTES->value, '10');
 
@@ -354,7 +353,7 @@ it('falls back from product to category to order type to the default target', fu
 
     $order = Order::factory()->create([
         'status' => OrderStatus::PROCESSING,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'dine_table_number' => null,
     ]);
     OrderItem::factory()->create([
@@ -598,7 +597,7 @@ it('hooks order edits, cancellation, completion and type changes', function () {
     $product = kdsProduct(['type' => 'manufactured']);
     $order = Order::factory()->create([
         'status' => OrderStatus::PROCESSING,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'dine_table_number' => null,
     ]);
 
@@ -610,7 +609,7 @@ it('hooks order edits, cancellation, completion and type changes', function () {
     expect($updated->kitchenTicket)->not->toBeNull()
         ->and($updated->kitchenTicket->items)->toHaveCount(1);
 
-    app(OrderService::class)->changeOrderType($order->id, OrderType::DELIVERY->value);
+    app(OrderService::class)->changeOrderType($order->id, 'delivery');
     Event::assertDispatched(
         KitchenTicketUpdated::class,
         fn (KitchenTicketUpdated $event): bool => $event->reason === KitchenTicketUpdated::REASON_CHANGED,
@@ -657,7 +656,7 @@ function kdsOrder(Product $product, float $quantity, ?string $notes = null, arra
 {
     $orderModel = Order::factory()->create(array_merge([
         'status' => OrderStatus::PROCESSING,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'dine_table_number' => null,
     ], $order));
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Events\Orders\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\Order;
@@ -17,7 +16,7 @@ describe('WebOrderReceived Event', function () {
         $order = Order::factory()->create([
             'shift_id' => $shift->id,
             'customer_id' => $customer->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
         ]);
 
@@ -40,7 +39,7 @@ describe('WebOrderReceived Event', function () {
             'shift_id' => $shift->id,
             'customer_id' => $customer->id,
             'order_number' => 'WEB001',
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
             'total' => 150.50,
             'order_notes' => 'بدون بصل',

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Pages\Reports\CurrentShiftReport;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
@@ -371,21 +370,21 @@ it('handles different order types correctly', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 100.00,
     ]);
 
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 150.00,
     ]);
 
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 80.00,
     ]);
 
@@ -450,7 +449,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 250.00,
         'profit' => 75.00,
         'discount' => 10.00,
@@ -459,7 +458,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 350.00,
         'profit' => 105.00,
         'discount' => 15.00,
@@ -468,7 +467,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::PENDING,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 100.00,
         'profit' => 30.00,
     ]);

@@ -2,7 +2,6 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Exceptions\OrderException;
 use App\Models\Customer;
 use App\Models\Order;
@@ -27,7 +26,7 @@ describe('ordering core', function () {
             'cost' => 40,
         ]);
         $order = Order::factory()->create([
-            'type' => OrderType::DELIVERY,
+            'type' => 'delivery',
             'status' => OrderStatus::PROCESSING,
             'customer_id' => $customer->id,
             'discount' => 0,
@@ -72,7 +71,7 @@ describe('ordering core', function () {
             'cost' => 20,
         ]);
         $order = Order::factory()->create([
-            'type' => OrderType::TAKEAWAY,
+            'type' => 'takeaway',
             'status' => OrderStatus::PROCESSING,
             'discount' => 0,
             'temp_discount_percent' => 0,
@@ -107,7 +106,7 @@ describe('ordering core', function () {
 
     it('records item changes once per save', function () {
         $order = Order::factory()->create([
-            'type' => OrderType::TAKEAWAY,
+            'type' => 'takeaway',
             'status' => OrderStatus::PROCESSING,
         ]);
         $soup = Product::factory()->create(['name' => 'Soup', 'price' => 20, 'cost' => 8]);
@@ -129,7 +128,7 @@ describe('ordering core', function () {
     it('refuses to save items on a completed order', function () {
         $product = Product::factory()->create(['price' => 10, 'cost' => 4]);
         $order = Order::factory()->create([
-            'type' => OrderType::TAKEAWAY,
+            'type' => 'takeaway',
             'status' => OrderStatus::COMPLETED,
         ]);
         $item = $order->items()->create([
@@ -157,7 +156,7 @@ describe('ordering core', function () {
         $shift = Shift::factory()->create();
 
         expect(fn () => app(OrderOpeningService::class)->open(new CreateOrderDTO(
-            typeCode: OrderType::DINE_IN->value,
+            typeCode: 'dine_in',
             shiftId: $shift->id,
             userId: $user->id,
         )))->toThrow(OrderException::class, 'رقم الطاولة مطلوب');

@@ -690,3 +690,18 @@ Everything in *Phase 0 — ordering refactor* above. The till looks the same. Lo
 - Cloning `Order` onto `ExternalOrder` (type, profit, kitchen, stock, its own payment rows).
 - Returning or refunding a طلب خارجي.
 - A `floor_layouts` table, or grid coordinates as database columns.
+
+## As built
+
+Where the implementation differs from the text above:
+
+- The order-number `while (exists)` loop stays: web orders keep the website's own number in the same shift.
+- The pricing class is `OrderItemPricingService` (every class under `App\Services` must end in `Service`).
+- Report columns are SQL generated from the catalog by `App\Services\Reports\ReportOrderTypesService`
+  (bound type values, `type_{code}_{metric}` aliases) so Filament tables can still sort them.
+- The `OrderType` enum was deleted at the very end, after the reports stopped using it.
+- `GuestBill` lives in `App\Orders`; the receipt view model is `App\Orders\ReceiptView`.
+- Cancelling is refused for a payment in a closed shift only on partial-payment behaviors (companies).
+- A host order that has a طلب خارجي cannot be changed to a partial-payment type.
+- The takeaway customer block on receipts prints only when a customer is linked.
+- Progress, review fixes and open items: [delegation-progress.md](delegation-progress.md).

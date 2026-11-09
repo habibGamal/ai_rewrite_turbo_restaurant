@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Category;
@@ -93,7 +92,7 @@ describe('OrderController Feature Tests', function () {
             $partialPaidOrder = Order::factory()->create([
                 'status' => OrderStatus::COMPLETED,
                 'payment_status' => PaymentStatus::PARTIAL_PAID,
-                'type' => OrderType::COMPANIES,
+                'type' => 'companies',
                 'customer_id' => $this->customer->id,
                 'driver_id' => $this->driver->id,
                 'total' => 100,
@@ -379,7 +378,7 @@ describe('OrderController Feature Tests', function () {
                 'status' => OrderStatus::PROCESSING,
                 'discount' => 0,
                 'temp_discount_percent' => 0,
-                'type' => OrderType::COMPANIES,
+                'type' => 'companies',
                 'customer_id' => $this->customer->id,
             ]);
 
@@ -589,7 +588,7 @@ describe('OrderController Feature Tests', function () {
             $order = Order::factory()->create([
                 'shift_id' => $this->shift->id,
                 'user_id' => $this->user->id,
-                'type' => OrderType::TAKEAWAY,
+                'type' => 'takeaway',
             ]);
 
             $response = $this->post(route('orders.updateType', $order), [

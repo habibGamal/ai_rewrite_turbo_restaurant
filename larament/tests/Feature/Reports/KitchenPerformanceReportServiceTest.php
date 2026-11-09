@@ -2,7 +2,6 @@
 
 use App\Enums\KitchenItemStatus;
 use App\Enums\KitchenTicketStatus;
-use App\Enums\OrderType;
 use App\Models\KitchenStation;
 use App\Models\KitchenTicket;
 use App\Models\KitchenTicketItem;
@@ -17,7 +16,7 @@ use Carbon\Carbon;
 function kdsReportTicket(array $attributes = []): KitchenTicket
 {
     $order = Order::factory()->create([
-        'type' => $attributes['type'] ?? OrderType::DINE_IN,
+        'type' => $attributes['type'] ?? 'dine_in',
         'order_number' => $attributes['order_number'] ?? fake()->unique()->numberBetween(1, 999999),
     ]);
 
@@ -256,12 +255,12 @@ it('groups kitchen time by order type with enum labels', function () {
     $base = now()->startOfDay()->addHours(10);
 
     foreach ([6, 10] as $minutes) {
-        $ticket = kdsReportTicket(['first_sent_at' => $base, 'type' => OrderType::DINE_IN]);
+        $ticket = kdsReportTicket(['first_sent_at' => $base, 'type' => 'dine_in']);
         $round = kdsReportRound($ticket, $base, $base->copy()->addMinutes($minutes));
         kdsReportItem($ticket, $round);
     }
 
-    $takeaway = kdsReportTicket(['first_sent_at' => $base, 'type' => OrderType::TAKEAWAY]);
+    $takeaway = kdsReportTicket(['first_sent_at' => $base, 'type' => 'takeaway']);
     $takeawayRound = kdsReportRound($takeaway, $base, $base->copy()->addMinutes(20));
     kdsReportItem($takeaway, $takeawayRound);
 
@@ -269,11 +268,11 @@ it('groups kitchen time by order type with enum labels', function () {
         ->getOrderTypePerformance($base->toDateString(), $base->toDateString()))
         ->keyBy('type');
 
-    expect($rows[OrderType::DINE_IN->value]['label'])->toBe(OrderType::DINE_IN->label())
-        ->and($rows[OrderType::DINE_IN->value]['count'])->toBe(2)
-        ->and($rows[OrderType::DINE_IN->value]['avg_kitchen_seconds'])->toBe(480.0)
-        ->and($rows[OrderType::TAKEAWAY->value]['count'])->toBe(1)
-        ->and($rows[OrderType::TAKEAWAY->value]['avg_kitchen_seconds'])->toBe(1200.0);
+    expect($rows['dine_in']['label'])->toBe('صالة')
+        ->and($rows['dine_in']['count'])->toBe(2)
+        ->and($rows['dine_in']['avg_kitchen_seconds'])->toBe(480.0)
+        ->and($rows['takeaway']['count'])->toBe(1)
+        ->and($rows['takeaway']['avg_kitchen_seconds'])->toBe(1200.0);
 });
 
 it('sorts products slowest first', function () {

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\PaymentProcessed;
@@ -180,7 +179,7 @@ describe('OrderPaymentService', function () {
             'shift_id' => $shift->id,
             'user_id' => auth()->id(),
             'status' => OrderStatus::PROCESSING,
-            'type' => OrderType::TAKEAWAY,
+            'type' => 'takeaway',
             'sub_total' => 100,
             'tax' => 0,
             'service' => 0,

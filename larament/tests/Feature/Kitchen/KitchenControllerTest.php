@@ -3,7 +3,6 @@
 use App\Enums\KitchenItemStatus;
 use App\Enums\KitchenTicketStatus;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\SettingKey;
 use App\Models\Category;
 use App\Models\Customer;
@@ -57,7 +56,7 @@ it('renders index props that match the kds contract and are not shift bound', fu
     $closedShift = Shift::factory()->closed()->create();
     $order = Order::factory()->create([
         'status' => OrderStatus::PROCESSING,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'shift_id' => $closedShift->id,
         'customer_id' => $customer->id,
         'dine_table_number' => '12',
@@ -102,7 +101,7 @@ it('renders index props that match the kds contract and are not shift bound', fu
                 ->where('order_id', $order->id)
                 ->where('order_number', 41)
                 ->where('order_type', 'dine_in')
-                ->where('order_type_label', OrderType::DINE_IN->label())
+                ->where('order_type_label', 'صالة')
                 ->where('table_number', '12')
                 ->where('customer_name', 'أحمد')
                 ->where('kitchen_notes', 'بدون بصل')
@@ -366,7 +365,7 @@ function kitchenOrder(bool $sync = true): array
     ]);
     $order = Order::factory()->create([
         'status' => OrderStatus::PROCESSING,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'dine_table_number' => null,
     ]);
     OrderItem::factory()->create([

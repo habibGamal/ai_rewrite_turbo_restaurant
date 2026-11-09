@@ -2,7 +2,6 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Events\Orders\OrderCompleted;
 use App\Events\Orders\OrderCreated;
@@ -40,7 +39,7 @@ describe('Order Management Integration', function () {
         it('creates, updates, and completes a dine-in order', function () {
             // 1. Create order
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 opening: new OrderOpening('T001'),
@@ -97,7 +96,7 @@ describe('Order Management Integration', function () {
 
         it('creates and completes a takeaway order', function () {
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::TAKEAWAY->value,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
             );
@@ -128,7 +127,7 @@ describe('Order Management Integration', function () {
 
         it('handles multiple payment methods', function () {
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DELIVERY->value,
+                typeCode: 'delivery',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 driverId: $this->driver->id,
@@ -218,7 +217,7 @@ describe('Order Management Integration', function () {
 
         it('validates table requirements for dine-in orders', function () {
             expect(fn () => app(OrderOpeningService::class)->open(new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
             )))->toThrow(OrderException::class, 'رقم الطاولة مطلوب');
@@ -228,7 +227,7 @@ describe('Order Management Integration', function () {
     describe('Order Calculations', function () {
         it('calculates order totals correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::DINE_IN->value,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
                 opening: new OrderOpening('T001'),
@@ -265,7 +264,7 @@ describe('Order Management Integration', function () {
 
         it('calculates profit correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                typeCode: OrderType::TAKEAWAY->value,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
             );
