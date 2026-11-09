@@ -1,17 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
 import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs, Tag } from 'antd';
 import CashierLayout from '@/Layouts/CashierLayout';
 import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
 import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
+import { ReceivablesTab } from '@/Components/Orders/Index/ReceivablesTab';
 import { orderTypeColor } from '@/helpers/orderTypeColor';
-import type { CashierTab, Order, User } from '@/types';
+import type { CashierTab, Order, Receivable, User } from '@/types';
 
 interface IndexProps {
     orders: Order[];
     tabs: CashierTab[];
-    previousPartialPaidOrders: Order[];
+    receivables: Receivable[];
     auth: {
         user: User;
     };
@@ -20,13 +21,11 @@ interface IndexProps {
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
     tabs,
+    receivables,
     auth
 }) => {
     const { user } = auth;
-    const renderedTabs = useMemo(
-        () => tabs.filter((tab) => tab.key !== 'system:receivables'),
-        [tabs]
-    );
+    const renderedTabs = tabs;
 
     const initialTab = () => {
         const hash = window.location.hash.replace('#', '');
@@ -72,7 +71,9 @@ const OrdersIndex: React.FC<IndexProps> = ({
         }
 
         const children =
-            tab.key === 'system:expenses' ? (
+            tab.key === 'system:receivables' ? (
+                <ReceivablesTab orders={receivables} />
+            ) : tab.key === 'system:expenses' ? (
                 <ShiftExpensesTab />
             ) : tab.key === 'system:cancelled' ? (
                 <DisplayTab

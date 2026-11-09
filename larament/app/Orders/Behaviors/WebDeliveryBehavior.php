@@ -42,6 +42,11 @@ final class WebDeliveryBehavior implements OrderTypeBehavior
         return true;
     }
 
+    public function allowsPartialPayment(): bool
+    {
+        return false;
+    }
+
     public function usesPosOrderNumber(): bool
     {
         return false;

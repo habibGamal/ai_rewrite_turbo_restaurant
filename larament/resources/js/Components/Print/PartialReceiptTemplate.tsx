@@ -144,6 +144,26 @@ export default function PartialReceiptTemplate({
                                     {Number(order.total).toFixed(2)}
                                 </td>
                             </tr>
+                            {order.payment_status === "partial_paid" && order.receiptPayment && (
+                                <>
+                                    <tr>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            المدفوع
+                                        </td>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            {Number(order.receiptPayment.paid).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            المتبقي
+                                        </td>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            {Number(order.receiptPayment.remaining).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                </>
+                            )}
                         </tbody>
                     </table>
                     <p className="whitespace-pre-line mt-4 text-center">

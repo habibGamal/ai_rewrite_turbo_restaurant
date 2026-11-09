@@ -34,6 +34,11 @@ final class CompaniesBehavior implements OrderTypeBehavior
         return false;
     }
 
+    public function allowsPartialPayment(): bool
+    {
+        return true;
+    }
+
     public function usesPosOrderNumber(): bool
     {
         return true;
@@ -41,7 +46,7 @@ final class CompaniesBehavior implements OrderTypeBehavior
 
     public function display(OrderTypeRow $type): OrderDisplay
     {
-        return OrderDisplay::forRow($type);
+        return OrderDisplay::forRow($type, showCustomer: true);
     }
 
     public function presentation(): TabPresentation

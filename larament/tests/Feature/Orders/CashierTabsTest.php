@@ -112,12 +112,12 @@ describe('cashier tabs', function () {
             ->assertOk()
             ->assertInertia(function ($page) {
                 $page->component('Orders/Index')
-                    ->has('tabs', 10)
-                    ->where('tabs.9.key', 'type:catering')
-                    ->where('tabs.9.code', 'catering')
-                    ->where('tabs.9.visible', true)
-                    ->where('tabs.9.presentation.creation', 'immediate')
-                    ->where('tabs.9.display.label', 'كيترنج');
+                    ->has('tabs', 12)
+                    ->where('tabs.11.key', 'type:catering')
+                    ->where('tabs.11.code', 'catering')
+                    ->where('tabs.11.visible', true)
+                    ->where('tabs.11.presentation.creation', 'immediate')
+                    ->where('tabs.11.display.label', 'كيترنج');
             });
     });
 
@@ -183,6 +183,14 @@ describe('cashier tabs', function () {
     });
 
     it('rejects changing an order to a hidden type and allows a visible one', function () {
+        $entries = json_decode((string) SettingKey::CASHIER_TABS->defaultValue(), true);
+        foreach ($entries as $index => $entry) {
+            if ($entry['key'] === 'type:companies') {
+                $entries[$index]['visible'] = false;
+            }
+        }
+        setCashierTabs($entries);
+
         $order = Order::factory()->create([
             'shift_id' => $this->shift->id,
             'user_id' => $this->user->id,

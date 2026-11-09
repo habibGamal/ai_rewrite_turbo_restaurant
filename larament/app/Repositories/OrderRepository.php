@@ -54,6 +54,26 @@ class OrderRepository
     }
 
     /**
+     * Completed, partly paid orders of the given type codes, from every shift.
+     *
+     * @param  list<string>  $codes
+     */
+    public function partialPaidForTypes(array $codes): Collection
+    {
+        if ($codes === []) {
+            return new Collection;
+        }
+
+        return Order::query()
+            ->with(['customer', 'payments'])
+            ->where('status', OrderStatus::COMPLETED)
+            ->where('payment_status', PaymentStatus::PARTIAL_PAID)
+            ->whereIn('type', $codes)
+            ->orderBy('created_at')
+            ->get();
+    }
+
+    /**
      * @param  list<string>  $excludedCodes
      */
     public function getNextOrderNumber(int $shiftId, array $excludedCodes): int

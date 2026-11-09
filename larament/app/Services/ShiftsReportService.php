@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Shift;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
@@ -106,27 +107,24 @@ class ShiftsReportService
         // Get completed orders for this shift
         $completedOrders = $shift->orders()
             ->where('status', OrderStatus::COMPLETED)
-            ->with('payments')
             ->get();
 
         $sales = $completedOrders->sum('total');
         $profit = $completedOrders->sum('profit');
         $discounts = $completedOrders->sum('discount');
 
-        // Calculate payment method totals
+        // Payments belong to the shift that took the money, not the order's shift.
         $cashPayments = 0;
         $cardPayments = 0;
         $talabatCardPayments = 0;
 
-        foreach ($completedOrders as $order) {
-            foreach ($order->payments as $payment) {
-                if ($payment->method === PaymentMethod::CASH) {
-                    $cashPayments += $payment->amount;
-                } elseif ($payment->method === PaymentMethod::CARD) {
-                    $cardPayments += $payment->amount;
-                } elseif ($payment->method === PaymentMethod::TALABAT_CARD) {
-                    $talabatCardPayments += $payment->amount;
-                }
+        foreach (Payment::query()->where('shift_id', $shift->id)->get() as $payment) {
+            if ($payment->method === PaymentMethod::CASH) {
+                $cashPayments += $payment->amount;
+            } elseif ($payment->method === PaymentMethod::CARD) {
+                $cardPayments += $payment->amount;
+            } elseif ($payment->method === PaymentMethod::TALABAT_CARD) {
+                $talabatCardPayments += $payment->amount;
             }
         }
 

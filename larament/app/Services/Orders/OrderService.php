@@ -4,17 +4,22 @@ namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
+use App\Models\Shift;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
+use App\Orders\Tenders;
 use App\Repositories\OrderItemRepository;
 use App\Repositories\OrderRepository;
 use App\Services\Kitchen\KitchenTicketService;
 use App\Services\OrderItemChangeService;
 use App\Services\ShiftLoggingService;
+use App\Services\ShiftService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Closure;
@@ -28,6 +33,8 @@ class OrderService
         private readonly OrderOpeningService $orderOpeningService,
         private readonly OrderCalculationService $orderCalculationService,
         private readonly OrderCompletionService $orderCompletionService,
+        private readonly OrderPaymentService $orderPaymentService,
+        private readonly ShiftService $shiftService,
         private readonly OrderStockConversionService $orderStockConversionService,
         private readonly KitchenTicketService $kitchenTicketService,
         private readonly OrderItemRepository $orderItemRepository,
@@ -149,6 +156,29 @@ class OrderService
         });
     }
 
+    public function collectRemaining(int $orderId, Tenders $tenders): Order
+    {
+        return DB::transaction(function () use ($orderId, $tenders) {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
+
+            if ($order->status !== OrderStatus::COMPLETED || $order->payment_status !== PaymentStatus::PARTIAL_PAID) {
+                throw new OrderException('لا يمكن تحصيل متبقي إلا لطلب مكتمل ومدفوع جزئياً');
+            }
+
+            if (! $order->behavior()->allowsPartialPayment()) {
+                throw new OrderException('هذا النوع من الطلبات لا يسمح بتحصيل المتبقي');
+            }
+
+            $shift = $this->shiftService->getCurrentShift();
+
+            if ($shift === null) {
+                throw new OrderException('لا يوجد شيفت مفتوح لتحصيل المتبقي');
+            }
+
+            return $this->orderPaymentService->pay($order, $tenders, $shift->id);
+        });
+    }
+
     public function cancelOrder(int $orderId, string $reason = ''): Order
     {
         return DB::transaction(function () use ($orderId, $reason) {
@@ -156,6 +186,22 @@ class OrderService
 
             if (! $order->status->canBeCancelled()) {
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
+            }
+
+            $order->load('payments.shift');
+
+            $paidInClosedShift = $order->payments->contains(function (mixed $payment): bool {
+                if (! $payment instanceof Payment) {
+                    return false;
+                }
+
+                $shift = $payment->shift;
+
+                return $shift instanceof Shift && $shift->closed;
+            });
+
+            if ($paidInClosedShift && $order->behavior()->allowsPartialPayment()) {
+                throw new OrderException('لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
             }
 
             if ($order->status === OrderStatus::COMPLETED) {

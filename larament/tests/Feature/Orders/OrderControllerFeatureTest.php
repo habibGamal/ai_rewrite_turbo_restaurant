@@ -73,7 +73,8 @@ describe('OrderController Feature Tests', function () {
                         ->has('currentShift')
                         ->has('expenses')
                         ->has('expenseTypes')
-                        ->has('previousPartialPaidOrders');
+                        ->has('receivables')
+                        ->missing('previousPartialPaidOrders');
                 });
         });
 
@@ -90,10 +91,12 @@ describe('OrderController Feature Tests', function () {
 
         it('shows partial paid company orders from previous shifts', function () {
             $partialPaidOrder = Order::factory()->create([
+                'status' => OrderStatus::COMPLETED,
                 'payment_status' => PaymentStatus::PARTIAL_PAID,
                 'type' => OrderType::COMPANIES,
                 'customer_id' => $this->customer->id,
                 'driver_id' => $this->driver->id,
+                'total' => 100,
             ]);
 
             OrderItem::factory()->create([
@@ -109,7 +112,12 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertOk()
                 ->assertInertia(function ($page) use ($partialPaidOrder) {
-                    $page->where('previousPartialPaidOrders.0.id', $partialPaidOrder->id);
+                    $page->where('receivables.0.id', $partialPaidOrder->id)
+                        ->has('receivables.0.display')
+                        ->has('receivables.0.total')
+                        ->has('receivables.0.paid')
+                        ->has('receivables.0.remaining')
+                        ->missing('previousPartialPaidOrders');
                 });
         });
     });
@@ -371,7 +379,8 @@ describe('OrderController Feature Tests', function () {
                 'status' => OrderStatus::PROCESSING,
                 'discount' => 0,
                 'temp_discount_percent' => 0,
-                'type' => OrderType::TAKEAWAY,
+                'type' => OrderType::COMPANIES,
+                'customer_id' => $this->customer->id,
             ]);
 
             OrderItem::factory()->create([
@@ -860,6 +869,7 @@ describe('OrderController Feature Tests', function () {
                 'shift_id' => $this->shift->id,
                 'user_id' => $this->user->id,
                 'status' => OrderStatus::PROCESSING,
+                'type' => 'takeaway',
             ]);
 
             // Add items

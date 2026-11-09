@@ -3,6 +3,7 @@
     use Illuminate\Support\Facades\Storage;
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
+    $receiptPayment = $receiptPayment ?? \App\Orders\ReceiptPayment::forOrder($order);
 
     $qrLogoPath =
         setting(SettingKey::RESTAURANT_QR_LOGO) !== '' ? Storage::disk('public')->path(setting(SettingKey::RESTAURANT_QR_LOGO)) : null;
@@ -147,6 +148,16 @@
                     <td>الاجمالي النهائي</td>
                     <td class="number-cell">{{ ceil($order->total) }}</td>
                 </tr>
+                @if ($receiptPayment->partial)
+                    <tr>
+                        <td>المدفوع</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->paid, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>المتبقي</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->remaining, 2) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 

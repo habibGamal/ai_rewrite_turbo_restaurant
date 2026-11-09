@@ -155,6 +155,30 @@ export interface Order {
   payments: Payment[];
   user?: User;
   display?: OrderDisplay;
+  receiptPayment?: ReceiptPayment;
+}
+
+export interface ReceiptPayment {
+  paid: number;
+  remaining: number;
+  partial: boolean;
+}
+
+export interface Receivable {
+  id: number;
+  order_number: string;
+  created_at: string;
+  type: string;
+  payment_status: Order['payment_status'];
+  customer: {
+    id: number;
+    name: string;
+    phone: string;
+  } | null;
+  display: OrderDisplay;
+  total: number;
+  paid: number;
+  remaining: number;
 }
 
 export interface OrderItemData {
