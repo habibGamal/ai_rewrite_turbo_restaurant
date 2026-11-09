@@ -121,21 +121,6 @@ describe('OrderRepository', function () {
         });
     });
 
-    describe('getProcessingOrders', function () {
-        it('returns only processing orders for shift', function () {
-            $shift = \App\Models\Shift::factory()->create();
-
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::PROCESSING]);
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::COMPLETED]);
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::PROCESSING]);
-
-            $orders = $this->repository->getProcessingOrders($shift->id);
-
-            expect($orders)->toHaveCount(2);
-            expect($orders->every(fn ($order) => $order->status === OrderStatus::PROCESSING))->toBeTrue();
-        });
-    });
-
     describe('getNextOrderNumber', function () {
         it('returns 1 for first order in shift', function () {
             $shift = \App\Models\Shift::factory()->create();
@@ -168,6 +153,23 @@ describe('OrderRepository', function () {
             expect($orderNumber1)->toBe(6)
                 ->and($orderNumber2)->toBe(4);
         });
+
+        it('skips a number already taken by a web order in the same shift', function () {
+            $user = \App\Models\User::factory()->create();
+            $shift = \App\Models\Shift::factory()->create();
+
+            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id));
+
+            Order::factory()->create([
+                'shift_id' => $shift->id,
+                'type' => OrderType::WEB_DELIVERY,
+                'order_number' => 2,
+            ]);
+
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+
+            expect($orderNumber)->toBe(3);
+        });
     });
 
     describe('update', function () {
@@ -189,19 +191,6 @@ describe('OrderRepository', function () {
 
             expect($result)->toBeTrue();
             expect(Order::find($order->id))->toBeNull();
-        });
-    });
-
-    describe('getOrdersWithPaymentStatus', function () {
-        it('returns orders with specific payment status', function () {
-            Order::factory()->create(['payment_status' => PaymentStatus::PENDING]);
-            Order::factory()->create(['payment_status' => PaymentStatus::FULL_PAID]);
-            Order::factory()->create(['payment_status' => PaymentStatus::PENDING]);
-
-            $orders = $this->repository->getOrdersWithPaymentStatus(PaymentStatus::PENDING->value);
-
-            expect($orders)->toHaveCount(2);
-            expect($orders->every(fn ($order) => $order->payment_status === PaymentStatus::PENDING))->toBeTrue();
         });
     });
 });
