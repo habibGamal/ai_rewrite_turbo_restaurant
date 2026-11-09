@@ -4,7 +4,6 @@ namespace App\Repositories;
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Shift;
@@ -12,10 +11,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 class OrderRepository
 {
-    public function create(CreateOrderDTO $orderDTO): Order
+    public function create(CreateOrderDTO $orderDTO, int $orderNumber): Order
     {
-        $orderNumber = $this->getNextOrderNumber($orderDTO->shiftId);
-
         return Order::create([
             'type' => $orderDTO->typeCode,
             'shift_id' => $orderDTO->shiftId,
@@ -56,12 +53,15 @@ class OrderRepository
             ->get();
     }
 
-    public function getNextOrderNumber(int $shiftId): int
+    /**
+     * @param  list<string>  $excludedCodes
+     */
+    public function getNextOrderNumber(int $shiftId, array $excludedCodes): int
     {
         Shift::whereKey($shiftId)->lockForUpdate()->first();
 
         $lastOrder = Order::where('shift_id', $shiftId)
-            ->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereNotIn('type', $excludedCodes)
             ->orderBy('order_number', 'desc')
             ->first();
         $nextNumber = $lastOrder ? $lastOrder->order_number + 1 : 1;

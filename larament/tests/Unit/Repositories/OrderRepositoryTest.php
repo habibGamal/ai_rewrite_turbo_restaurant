@@ -27,7 +27,7 @@ describe('OrderRepository', function () {
                 opening: new OrderOpening('T001'),
             );
 
-            $order = $this->repository->create($createOrderDTO);
+            $order = $this->repository->create($createOrderDTO, 1);
 
             expect($order)->toBeInstanceOf(Order::class)
                 ->and($order->type)->toBe(OrderType::DINE_IN)
@@ -45,8 +45,8 @@ describe('OrderRepository', function () {
             $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
             $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id);
 
-            $order1 = $this->repository->create($dto1);
-            $order2 = $this->repository->create($dto2);
+            $order1 = $this->repository->create($dto1, 1);
+            $order2 = $this->repository->create($dto2, 2);
 
             expect($order1->order_number)->toBe(1)
                 ->and($order2->order_number)->toBe(2);
@@ -60,8 +60,8 @@ describe('OrderRepository', function () {
             $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift1->id, $user->id);
             $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift2->id, $user->id);
 
-            $order1 = $this->repository->create($dto1);
-            $order2 = $this->repository->create($dto2);
+            $order1 = $this->repository->create($dto1, 1);
+            $order2 = $this->repository->create($dto2, 1);
 
             expect($order1->order_number)->toBe(1)
                 ->and($order2->order_number)->toBe(1);
@@ -126,7 +126,7 @@ describe('OrderRepository', function () {
         it('returns 1 for first order in shift', function () {
             $shift = \App\Models\Shift::factory()->create();
 
-            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, []);
 
             expect($orderNumber)->toBe(1);
         });
@@ -136,7 +136,7 @@ describe('OrderRepository', function () {
 
             Order::factory()->create(['shift_id' => $shift->id, 'order_number' => 5]);
 
-            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, []);
 
             expect($orderNumber)->toBe(6);
         });
@@ -148,8 +148,8 @@ describe('OrderRepository', function () {
             Order::factory()->create(['shift_id' => $shift1->id, 'order_number' => 5]);
             Order::factory()->create(['shift_id' => $shift2->id, 'order_number' => 3]);
 
-            $orderNumber1 = $this->repository->getNextOrderNumber($shift1->id);
-            $orderNumber2 = $this->repository->getNextOrderNumber($shift2->id);
+            $orderNumber1 = $this->repository->getNextOrderNumber($shift1->id, []);
+            $orderNumber2 = $this->repository->getNextOrderNumber($shift2->id, []);
 
             expect($orderNumber1)->toBe(6)
                 ->and($orderNumber2)->toBe(4);
@@ -159,7 +159,7 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id));
+            $this->repository->create(new CreateOrderDTO(OrderType::TAKEAWAY->value, $shift->id, $user->id), 1);
 
             Order::factory()->create([
                 'shift_id' => $shift->id,
@@ -167,7 +167,10 @@ describe('OrderRepository', function () {
                 'order_number' => 2,
             ]);
 
-            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, [
+                OrderType::WEB_DELIVERY->value,
+                OrderType::WEB_TAKEAWAY->value,
+            ]);
 
             expect($orderNumber)->toBe(3);
         });

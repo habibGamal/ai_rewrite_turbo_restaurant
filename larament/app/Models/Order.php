@@ -8,6 +8,8 @@ use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Enums\SettingKey;
 use App\Models\Concerns\HasSyncUuid;
+use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Orders\OrderTypeCatalog;
 use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +74,11 @@ class Order extends Model
         }
 
         return 0.0;
+    }
+
+    public function behavior(): OrderTypeBehavior
+    {
+        return app(OrderTypeCatalog::class)->behaviorFor($this->type->value);
     }
 
     public function customer(): BelongsTo

@@ -3,33 +3,34 @@
 namespace App\Services\Orders;
 
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderType;
 use App\Events\Orders\OrderCreated;
-use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Orders\OrderTypeCatalog;
 use App\Repositories\OrderRepository;
+use Illuminate\Support\Facades\DB;
 
 class OrderOpeningService
 {
     public function __construct(
         private readonly OrderRepository $orderRepository,
-        private readonly TableManagementService $tableManagementService,
+        private readonly OrderTypeCatalog $catalog,
     ) {}
 
     public function open(CreateOrderDTO $dto): Order
     {
-        $requiresTable = OrderType::from($dto->typeCode)->requiresTable();
-        $tableNumber = $dto->opening->tableNumber;
+        $behavior = $this->catalog->behaviorFor($dto->typeCode);
 
-        if ($requiresTable && ($tableNumber === null || $tableNumber === '')) {
-            throw new OrderException('رقم الطاولة مطلوب');
-        }
+        $order = DB::transaction(function () use ($dto, $behavior) {
+            $excludedCodes = $this->catalog->codesWhere(
+                fn (OrderTypeBehavior $candidate): bool => ! $candidate->usesPosOrderNumber()
+            );
+            $orderNumber = $this->orderRepository->getNextOrderNumber($dto->shiftId, $excludedCodes);
+            $created = $this->orderRepository->create($dto, $orderNumber);
+            $behavior->onOpened($created, $dto->opening);
 
-        $order = $this->orderRepository->create($dto);
-
-        if ($requiresTable) {
-            $this->tableManagementService->reserveTable((string) $tableNumber, $order->id);
-        }
+            return $created;
+        });
 
         OrderCreated::dispatch($order);
 

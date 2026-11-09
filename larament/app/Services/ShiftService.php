@@ -3,18 +3,20 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
+use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Orders\OrderTypeCatalog;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class ShiftService
 {
     public function __construct(
-        private readonly SettingsService $settingsService
+        private readonly SettingsService $settingsService,
+        private readonly OrderTypeCatalog $catalog,
     ) {}
 
     /**
@@ -72,7 +74,7 @@ class ShiftService
         }
 
         return Order::where('shift_id', $lastShift->id)
-            ->whereIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereIn('type', $this->carryingTypeCodes())
             ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
             ->count();
     }
@@ -93,7 +95,7 @@ class ShiftService
 
         // Find all open web orders from the last shift
         Order::where('shift_id', $lastShift->id)
-            ->whereIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereIn('type', $this->carryingTypeCodes())
             ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
             ->update(['shift_id' => $newShiftId]);
     }
@@ -115,7 +117,7 @@ class ShiftService
 
         // If web orders shift transfer is enabled, exclude web orders from the check
         if ($this->settingsService->isWebOrdersShiftTransferAllowed()) {
-            $processingOrdersQuery->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY]);
+            $processingOrdersQuery->whereNotIn('type', $this->carryingTypeCodes());
         }
 
         $processingOrders = $processingOrdersQuery->exists();
@@ -150,6 +152,16 @@ class ShiftService
 
             return $currentShift->fresh();
         });
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function carryingTypeCodes(): array
+    {
+        return $this->catalog->codesWhere(
+            fn (OrderTypeBehavior $behavior): bool => $behavior->carriesAcrossShifts()
+        );
     }
 
     /**

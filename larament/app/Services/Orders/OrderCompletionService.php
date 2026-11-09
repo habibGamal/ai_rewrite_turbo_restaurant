@@ -11,7 +11,6 @@ class OrderCompletionService
 {
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
-        private readonly TableManagementService $tableManagementService,
         private readonly OrderCalculationService $orderCalculationService,
     ) {}
 
@@ -19,17 +18,13 @@ class OrderCompletionService
     {
         $order->load('items');
 
-        // Calculate final totals
-        if (! $order->type->isWebOrder()) {
+        if ($order->behavior()->recalculatesTotals()) {
             $this->orderCalculationService->calculateOrderTotals($order);
         }
 
         $this->orderPaymentService->pay($order, Tenders::fromArray($paymentsData), $order->shift_id);
 
-        // Free table if dine-in
-        if ($order->type->requiresTable() && $order->dine_table_number) {
-            $this->tableManagementService->freeTable($order->dine_table_number);
-        }
+        $order->behavior()->onClosed($order);
 
         // Update order status
         $order->update(['status' => OrderStatus::COMPLETED]);

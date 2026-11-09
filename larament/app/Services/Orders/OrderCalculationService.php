@@ -95,15 +95,7 @@ class OrderCalculationService
 
     private function calculateServiceCharge(Order $order, float $subtotal): float
     {
-        if ($order->type->requiresTable()) {
-            // Dine-in service charge
-            return $subtotal * $order->service_rate;
-        } elseif ($order->type->hasDeliveryFee() && $order->customer) {
-            // Delivery fee from customer
-            return $order->customer->delivery_cost ?? 0;
-        }
-
-        return 0;
+        return $order->behavior()->serviceAmount($order, $subtotal);
     }
 
     private function calculateTax(float $subtotal): float
