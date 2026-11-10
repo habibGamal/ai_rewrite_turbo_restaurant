@@ -159,6 +159,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_products_sales_performance_report' => 'تقرير مبيعات المنتجات',
                 'view_products_sales_performance_shifts_report' => 'تقرير مبيعات المنتجات بالورديات',
                 'view_stock_report' => 'تقرير المخزون',
+                'view_item_ledger_report' => 'كشف حركة صنف',
+                'view_movement_summary_report' => 'ملخص حركة المخزون',
                 'view_web_orders_report' => 'تقرير طلبات الويب',
             ],
             'نقطة البيع والعمليات (POS)' => [
