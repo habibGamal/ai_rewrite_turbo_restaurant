@@ -3,7 +3,6 @@
 namespace App\Services\Orders;
 
 use App\Enums\OrderBehavior;
-use App\Models\DineTable;
 use App\Models\OrderTypeRow;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -76,27 +75,6 @@ class FloorLayoutService
         $layout = $this->read($code);
 
         return ($layout['enabled'] ?? false) === true && ! empty($layout['tables']);
-    }
-
-    /** @return list<string> */
-    public function outsideTables(string $code, ?array $layout = null): array
-    {
-        $this->ensureDineInType($code);
-        $layout ??= $this->read($code);
-        $inLayout = array_values(array_filter(array_map(
-            static fn (array $table): string => (string) ($table['number'] ?? ''),
-            $layout['tables'] ?? [],
-        ), static fn (string $number): bool => $number !== ''));
-
-        return DineTable::query()
-            ->where('order_type_code', $code)
-            ->when($inLayout !== [], static fn ($query) => $query->whereNotIn('table_number', $inLayout))
-            ->orderBy('id')
-            ->pluck('table_number')
-            ->map(static fn ($number): string => (string) $number)
-            ->unique()
-            ->values()
-            ->all();
     }
 
     private function ensureDineInType(string $code): void

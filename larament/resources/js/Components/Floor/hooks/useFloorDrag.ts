@@ -29,7 +29,6 @@ export interface UseFloorDragOptions {
     layout: FloorLayout;
     tool: ToolMode;
     numberPrefix: string;
-    armedTableNumber?: string | null;
     onAddTableAtCell: (cell: Cell) => void;
     onCommitLayout: (nextLayout: FloorLayout) => void;
     onSelect: (target: SelectionTarget | null) => void;
@@ -53,7 +52,6 @@ export function useFloorDrag({
     layout,
     tool,
     numberPrefix,
-    armedTableNumber,
     onAddTableAtCell,
     onCommitLayout,
     onSelect,
@@ -96,7 +94,7 @@ export function useFloorDrag({
             }
             const candidate: FloorRect = { col: hoverCell.col, row: hoverCell.row, colSpan: 1, rowSpan: 1 };
             const valid = isTablePlacementValid(layout, candidate);
-            const targetNumber = armedTableNumber || nextTableNumber(layout.tables, numberPrefix);
+            const targetNumber = nextTableNumber(layout.tables, numberPrefix);
             return {
                 ...candidate,
                 valid,
@@ -140,7 +138,7 @@ export function useFloorDrag({
         const clamped = clampRectToGrid(rect, layout.columns, layout.rows);
         const label = `${nextSectionName(layout.sections)} (${clamped.colSpan}×${clamped.rowSpan})`;
         return { ...clamped, valid, kind: 'section', label };
-    }, [armedTableNumber, dragState, hoverCell, layout, numberPrefix, tool]);
+    }, [dragState, hoverCell, layout, numberPrefix, tool]);
 
     const updateDragFromClientCoords = useCallback(
         (clientX: number, clientY: number) => {

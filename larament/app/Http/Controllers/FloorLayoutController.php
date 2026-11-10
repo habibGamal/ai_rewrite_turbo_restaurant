@@ -22,7 +22,6 @@ class FloorLayoutController extends Controller
             'label' => $label,
             'backUrl' => OrderTypeRowResource::getUrl('index'),
             'layout' => $layout,
-            'outsideTables' => $floor->outsideTables($code, $layout),
         ]);
     }
 

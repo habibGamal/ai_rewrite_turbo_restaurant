@@ -10,7 +10,7 @@ import {
     Tooltip,
     Typography,
 } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import type {
     FloorLayout,
     FloorSection,
@@ -267,12 +267,9 @@ export interface PropertiesPanelProps {
     selection: SelectionTarget | null;
     savedTableFlags: boolean[];
     numberPrefix: string;
-    outsideTables: string[];
-    armedTableNumber: string | null;
     problems: LayoutProblem[];
     serverErrorMessages: string[];
     onNumberPrefixChange: (prefix: string) => void;
-    onArmOutsideTable: (tableNumber: string) => void;
     onUpdateTableLabel: (changes: Partial<TableLabelConfig>) => void;
     onUpdateTable: (changes: Partial<FloorTable>) => void;
     onUpdateSection: (changes: Partial<FloorSection>) => void;
@@ -286,12 +283,9 @@ export function PropertiesPanel({
     selection,
     savedTableFlags,
     numberPrefix,
-    outsideTables,
-    armedTableNumber,
     problems,
     serverErrorMessages,
     onNumberPrefixChange,
-    onArmOutsideTable,
     onUpdateTableLabel,
     onUpdateTable,
     onUpdateSection,
@@ -333,45 +327,11 @@ export function PropertiesPanel({
                     <div className="text-[11px] text-slate-500">
                         الرقم التالي المقترح:{' '}
                         <strong className="text-slate-800">
-                            {armedTableNumber ||
-                                nextTableNumber(layout.tables, numberPrefix)}
+                            {nextTableNumber(layout.tables, numberPrefix)}
                         </strong>
                     </div>
                 </div>
             )}
-
-            {outsideTables.length > 0 &&
-                (selection === null || tool === 'add_table') && (
-                    <div className="bg-amber-50/70 p-3 rounded-lg border border-amber-200 space-y-2">
-                        <div className="text-xs font-semibold text-amber-900">
-                            طاولات مستخدمة خارج المخطط
-                        </div>
-                        <div className="text-[11px] text-amber-800 leading-relaxed">
-                            اختر رقم طاولة لتفعيل أداة الإضافة به، ثم اضغط على
-                            خلية فارغة لوضعه في المخطط:
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                            {outsideTables.map((tableNumber) => {
-                                const isArmed =
-                                    tool === 'add_table' &&
-                                    armedTableNumber === tableNumber;
-                                return (
-                                    <Button
-                                        key={tableNumber}
-                                        size="small"
-                                        type={isArmed ? 'primary' : 'default'}
-                                        icon={<PlusOutlined />}
-                                        onClick={() =>
-                                            onArmOutsideTable(tableNumber)
-                                        }
-                                    >
-                                        {tableNumber}
-                                    </Button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
 
             {selectedTable && selection?.kind === 'table' && (
                 <TableProperties

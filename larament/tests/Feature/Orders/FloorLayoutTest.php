@@ -297,7 +297,7 @@ it('round-trips tableLabel when saved and rejects invalid tableLabel values', fu
         ->toThrow(ValidationException::class);
 });
 
-it('sends outsideTables in the designer show endpoint excluding tables already in the layout', function () {
+it('does not send a list of tables outside the layout to the designer', function () {
     Storage::fake('local');
     $user = User::factory()->admin()->create();
 
@@ -337,6 +337,6 @@ it('sends outsideTables in the designer show endpoint excluding tables already i
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Floor/Designer')
-            ->where('outsideTables', ['تراس - 3'])
+            ->missing('outsideTables')
         );
 });
