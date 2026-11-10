@@ -84,16 +84,16 @@ class StockIssueService
                 ]);
             }
 
-            $issue->load(['items.product']);
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
-            if ($issue->items->isEmpty()) {
+            if ($items->isEmpty()) {
                 throw ValidationException::withMessages([
                     'items' => 'يجب إضافة صنف واحد على الأقل لإذن الصرف.',
                 ]);
             }
 
             $itemsToRemove = [];
-            foreach ($issue->items as $item) {
+            foreach ($items as $item) {
                 if ((float) $item->quantity <= 0) {
                     throw ValidationException::withMessages([
                         'items' => 'يجب أن تكون الكمية أكبر من صفر.',
@@ -109,18 +109,18 @@ class StockIssueService
                 $itemsToRemove[] = [
                     'product_id' => (int) $item->product_id,
                     'quantity' => (float) $item->quantity,
-                    'warehouse_id' => (int) $issue->warehouse_id,
+                    'warehouse_id' => (int) $locked->warehouse_id,
                 ];
             }
 
             $movements = $this->stockService->removeStock(
                 $itemsToRemove,
                 MovementReason::STOCK_ISSUE,
-                $issue
+                $locked
             )->keyBy('product_id');
 
             $totalCost = 0.0;
-            $itemsByProduct = $issue->items->groupBy('product_id');
+            $itemsByProduct = $items->groupBy('product_id');
 
             foreach ($itemsByProduct as $productId => $productItems) {
                 $movement = $movements->get((int) $productId);
@@ -151,12 +151,14 @@ class StockIssueService
                 }
             }
 
-            $issue->update([
+            $locked->update([
                 'total_cost' => round($totalCost, 2),
                 'closed_at' => now(),
                 'closed_by' => auth()->id(),
                 'business_date' => $this->dailyAggregationService->currentBusinessDate()->toDateString(),
             ]);
         });
+
+        $issue->refresh();
     }
 }

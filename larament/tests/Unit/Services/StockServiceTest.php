@@ -18,6 +18,7 @@ describe('StockService', function () {
     beforeEach(function () {
         $this->dailyAggregationService = \Mockery::mock(InventoryDailyAggregationService::class);
         $this->dailyAggregationService->shouldReceive('aggregateMultipleMovements')->andReturn([]);
+        $this->dailyAggregationService->shouldReceive('currentBusinessDate')->andReturn(\Carbon\Carbon::today());
         $this->stockService = new StockService($this->dailyAggregationService);
         openInventoryDay();
     });

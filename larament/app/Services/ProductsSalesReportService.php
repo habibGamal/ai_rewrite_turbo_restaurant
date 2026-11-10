@@ -133,16 +133,17 @@ class ProductsSalesReportService
     /**
      * Get period statistics summary
      */
-    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
+    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
     {
         $summary = DB::table('products as p')
             ->whereNot('p.type', ProductType::RawMaterial)
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->select([
                 DB::raw('COUNT(DISTINCT order_items.product_id) as total_products'),
                 DB::raw('SUM(order_items.total) as total_sales'),
-                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+                DB::raw('SUM(order_items.total - (order_items.cost * order_items.quantity)) as total_profit'),
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
-                DB::raw('AVG((order_items.total - (p.cost * order_items.quantity)) / order_items.total * 100) as avg_profit_margin'),
+                DB::raw('AVG((order_items.total - (order_items.cost * order_items.quantity)) * 100.0 / order_items.total) as avg_profit_margin'),
                 DB::raw('MAX(order_items.total) as best_selling_product_id'),
             ])
             ->join('order_items', 'p.id', '=', 'order_items.product_id')
@@ -165,16 +166,24 @@ class ProductsSalesReportService
                     $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
+            })
             ->first();
 
         $mostProductQuery = DB::table('products as p')
             ->whereNot('p.type', ProductType::RawMaterial)
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->select([
                 'p.id',
                 'p.name',
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
                 DB::raw('SUM(order_items.total) as total_sales'),
-                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+                DB::raw('SUM(order_items.total - (order_items.cost * order_items.quantity)) as total_profit'),
             ])
             ->join('order_items', 'p.id', '=', 'order_items.product_id')
             ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
@@ -195,6 +204,13 @@ class ProductsSalesReportService
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
                     $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
+            })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
             })
             ->groupBy('p.id', 'p.name');
 
@@ -234,7 +250,7 @@ class ProductsSalesReportService
     /**
      * Get order type performance summary
      */
-    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
+    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
     {
 
         $performanceData = DB::table('orders as o')
@@ -243,11 +259,19 @@ class ProductsSalesReportService
                 DB::raw('COUNT(DISTINCT o.id) as total_orders'),
                 DB::raw('SUM(oi.quantity) as total_quantity'),
                 DB::raw('SUM(oi.total) as total_sales'),
-                DB::raw('SUM(oi.total - (p.cost * oi.quantity)) as total_profit'),
+                DB::raw('SUM(oi.total - (oi.cost * oi.quantity)) as total_profit'),
             ])
             ->leftJoin('order_items as oi', 'o.id', '=', 'oi.order_id')
             ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->where('o.status', OrderStatus::COMPLETED)
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
+            })
             ->when($shiftIds !== null, function ($query) use ($shiftIds) {
                 if (empty($shiftIds)) {
                     return $query->whereRaw('1 = 0');

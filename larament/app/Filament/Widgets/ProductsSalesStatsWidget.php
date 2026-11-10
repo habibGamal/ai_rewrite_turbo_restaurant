@@ -81,7 +81,9 @@ class ProductsSalesStatsWidget extends BaseWidget
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
+        $mainCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null);
+        $subCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null);
 
-        return $this->productsReportService->getPeriodSummary($startDate, $endDate, $shiftIds);
+        return $this->productsReportService->getPeriodSummary($startDate, $endDate, $shiftIds, $mainCategoryId, $subCategoryId);
     }
 }

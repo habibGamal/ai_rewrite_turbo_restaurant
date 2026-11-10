@@ -45,7 +45,10 @@ class ItemLedgerReportExporter extends Exporter
 
             ExportColumn::make('running_balance')
                 ->label('الرصيد التراكمي')
-                ->state(fn (InventoryItemMovement $record): float => ItemLedgerReportService::runningBalanceForMovement($record)),
+                ->state(fn (InventoryItemMovement $record, Exporter $exporter): float => ItemLedgerReportService::runningBalanceForMovement(
+                    $record,
+                    ItemLedgerReportService::nullableId($exporter->getOptions()['warehouse_id'] ?? $exporter->getOptions()['warehouseId'] ?? null),
+                )),
 
             ExportColumn::make('unit_cost')
                 ->label('تكلفة الوحدة')

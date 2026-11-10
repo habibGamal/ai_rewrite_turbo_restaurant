@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\MovementReason;
+use App\Models\InventoryItem;
 use App\Models\Stocktaking;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -63,15 +64,31 @@ class StocktakingService
         DB::beginTransaction();
 
         try {
-            // Load stocktaking items with products
-            $stocktaking->load(['items.product']);
+            $locked = Stocktaking::whereKey($stocktaking->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('الجرد مغلق بالفعل');
+            }
+
+            // Load stocktaking items with products under lock
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             // Group items by variance type for bulk operations
             $itemsToAdd = [];
             $itemsToRemove = [];
-            $warehouseId = (int) $stocktaking->warehouse_id;
+            $warehouseId = (int) $locked->warehouse_id;
+            $productIds = $items->pluck('product_id')->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
 
-            foreach ($stocktaking->items as $item) {
+            if (! empty($productIds)) {
+                InventoryItem::query()
+                    ->where('warehouse_id', $warehouseId)
+                    ->whereIn('product_id', $productIds)
+                    ->orderBy('product_id')
+                    ->lockForUpdate()
+                    ->get();
+            }
+
+            foreach ($items as $item) {
                 $currentStock = $this->stockService->getCurrentStock($item->product_id, $warehouseId);
                 $realQuantity = $item->real_quantity;
                 $variance = $realQuantity - $currentStock;
@@ -95,23 +112,25 @@ class StocktakingService
 
             // Perform bulk stock operations
             if (! empty($itemsToAdd)) {
-                $this->stockService->addStock($itemsToAdd, MovementReason::STOCKTAKING, $stocktaking);
-                Log::info('Added stock for '.count($itemsToAdd)." products in stocktaking {$stocktaking->id}");
+                $this->stockService->addStock($itemsToAdd, MovementReason::STOCKTAKING, $locked);
+                Log::info('Added stock for '.count($itemsToAdd)." products in stocktaking {$locked->id}");
             }
 
             if (! empty($itemsToRemove)) {
-                $this->stockService->removeStock($itemsToRemove, MovementReason::STOCKTAKING, $stocktaking);
-                Log::info('Removed stock for '.count($itemsToRemove)." products in stocktaking {$stocktaking->id}");
+                $this->stockService->removeStock($itemsToRemove, MovementReason::STOCKTAKING, $locked);
+                Log::info('Removed stock for '.count($itemsToRemove)." products in stocktaking {$locked->id}");
             }
 
             // Mark stocktaking as closed
-            $stocktaking->update([
+            $locked->update([
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
-                'total' => $stocktaking->items->sum('total'),
+                'total' => $items->sum('total'),
             ]);
 
             DB::commit();
+
+            $stocktaking->refresh();
 
             Log::info("Stocktaking {$stocktaking->id} closed successfully with ".
                      (count($itemsToAdd) + count($itemsToRemove)).' inventory adjustments');

@@ -25,9 +25,11 @@ class CostHistoryReportService extends InventoryDocumentReportService
             ->leftJoinSub(self::sources(), 'd', fn ($join) => $join->on('d.source_type', '=', 'h.source_type')->on('d.source_id', '=', 'h.source_id'))
             ->join('products as p', 'p.id', '=', 'h.product_id')->leftJoin('categories as c', 'c.id', '=', 'p.category_id')
             ->leftJoin('warehouses as w', 'w.id', '=', 'd.warehouse_id')->leftJoin('users as u', 'u.id', '=', 'h.user_id')
-            ->where(fn (QueryBuilder $query) => $query->whereNull('h.source_type')->orWhereNotNull('d.closed_at'))
-            ->select('h.*', 'p.name as product_name', 'w.name as warehouse_name', 'd.warehouse_id', 'd.document_id', 'd.document_type', 'u.name as user_name')
-            ->selectRaw('CASE WHEN h.source_type IS NULL THEN DATE(h.created_at) ELSE DATE(d.business_date) END as report_date');
+            ->where(fn (QueryBuilder $query) => $query->whereNull('d.source_type')->orWhereNotNull('d.closed_at'))
+            ->select('h.*', 'p.name as product_name', 'w.name as warehouse_name', 'd.warehouse_id', 'u.name as user_name')
+            ->selectRaw('COALESCE(d.document_id, h.source_id) as document_id')
+            ->selectRaw('COALESCE(d.document_type, CASE WHEN h.source_type IS NOT NULL THEN ? END) as document_type', [ItemLedgerReportService::GENERIC_DOCUMENT_LABEL])
+            ->selectRaw('CASE WHEN d.source_type IS NULL THEN DATE(h.created_at) ELSE DATE(d.business_date) END as report_date');
         static::filter($query, $filters, 'd.warehouse_id');
 
         return ProductCostHistory::query()->fromSub($query, 'product_cost_histories')

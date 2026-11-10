@@ -32,20 +32,26 @@ class PurchaseService
         try {
             DB::beginTransaction();
 
+            $locked = PurchaseInvoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('هذه الفاتورة مغلقة بالفعل');
+            }
+
             // Get all items for this invoice
-            $items = $invoice->items()->with('product')->get();
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             if ($items->isEmpty()) {
                 throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing
-            $stockItems = $items->map(function ($item) use ($invoice) {
+            $stockItems = $items->map(function ($item) use ($locked) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
                     'unit_cost' => (float) $item->price,
-                    'warehouse_id' => $invoice->warehouse_id,
+                    'warehouse_id' => $locked->warehouse_id,
                 ];
             })->toArray();
 
@@ -53,7 +59,7 @@ class PurchaseService
             $success = $this->stockService->addStock(
                 $stockItems,
                 MovementReason::PURCHASE,
-                $invoice
+                $locked
             );
 
             if ($success->isEmpty()) {
@@ -61,12 +67,14 @@ class PurchaseService
             }
 
             // Mark invoice as closed
-            $invoice->update([
+            $locked->update([
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
             ]);
 
             DB::commit();
+
+            $invoice->refresh();
 
             Log::info("Purchase invoice {$invoice->id} closed successfully");
 
@@ -93,19 +101,25 @@ class PurchaseService
         try {
             DB::beginTransaction();
 
+            $locked = ReturnPurchaseInvoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('هذه الفاتورة مغلقة بالفعل');
+            }
+
             // Get all items for this invoice
-            $items = $invoice->items()->with('product')->get();
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             if ($items->isEmpty()) {
                 throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing and validate availability
-            $stockItems = $items->map(function ($item) use ($invoice) {
+            $stockItems = $items->map(function ($item) use ($locked) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
-                    'warehouse_id' => $invoice->warehouse_id,
+                    'warehouse_id' => $locked->warehouse_id,
                 ];
             })->toArray();
 
@@ -124,7 +138,7 @@ class PurchaseService
             $success = $this->stockService->removeStock(
                 $stockItems,
                 MovementReason::PURCHASE_RETURN,
-                $invoice
+                $locked
             );
 
             if ($success->isEmpty()) {
@@ -132,12 +146,14 @@ class PurchaseService
             }
 
             // Mark invoice as closed
-            $invoice->update([
+            $locked->update([
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
             ]);
 
             DB::commit();
+
+            $invoice->refresh();
 
             Log::info("Return purchase invoice {$invoice->id} closed successfully");
 

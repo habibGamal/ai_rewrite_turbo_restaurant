@@ -316,12 +316,12 @@ class MovementSummaryReportService
         ?int $subCategoryId = null,
         ?int $productId = null,
     ): Builder {
-        $fromDate = $from ? Carbon::parse($from)->startOfDay() : Carbon::today()->subDays(29)->startOfDay();
-        $toDate = $to ? Carbon::parse($to)->endOfDay() : Carbon::today()->endOfDay();
+        $fromDate = $from ? Carbon::parse($from)->toDateString() : Carbon::today()->subDays(29)->toDateString();
+        $toDate = $to ? Carbon::parse($to)->toDateString().' 23:59:59' : Carbon::today()->toDateString().' 23:59:59';
 
         return InventoryItemMovement::query()
             ->with(['user', 'warehouse', 'product.category'])
-            ->whereBetween('inventory_item_movements.created_at', [$fromDate, $toDate])
+            ->whereBetween('inventory_item_movements.business_date', [$fromDate, $toDate])
             ->when($warehouseId !== null, fn (Builder $q) => $q->where('inventory_item_movements.warehouse_id', $warehouseId))
             ->when($productId !== null, fn (Builder $q) => $q->where('inventory_item_movements.product_id', $productId))
             ->when($subCategoryId !== null, function (Builder $q) use ($subCategoryId) {

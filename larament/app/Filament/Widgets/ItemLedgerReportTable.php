@@ -122,6 +122,7 @@ class ItemLedgerReportTable extends BaseWidget
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(ItemLedgerReportExporter::class)
+                    ->options(['warehouse_id' => $warehouseId])
                     ->fileName(fn (): string => 'item-ledger-report-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->striped()

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
 use App\Observers\InventoryItemMovementObserver;
+use App\Services\InventoryDailyAggregationService;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
  * @property int $warehouse_id
+ * @property \Carbon\Carbon|null $business_date
  * @property-read Product $product
  */
 #[ObservedBy([InventoryItemMovementObserver::class])]
@@ -23,6 +25,7 @@ class InventoryItemMovement extends Model
     protected $fillable = [
         'product_id',
         'warehouse_id',
+        'business_date',
         'unit_cost',
         'total_cost',
         'user_id',
@@ -35,6 +38,7 @@ class InventoryItemMovement extends Model
     ];
 
     protected $casts = [
+        'business_date' => 'date',
         'operation' => InventoryMovementOperation::class,
         'reason' => MovementReason::class,
         'quantity' => 'decimal:3',
@@ -46,6 +50,7 @@ class InventoryItemMovement extends Model
     {
         static::creating(function (InventoryItemMovement $movement) {
             $movement->warehouse_id ??= Warehouse::default()->id;
+            $movement->business_date ??= app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString();
         });
     }
 

@@ -108,6 +108,7 @@ class ManufacturingOrderService
                         'product_id' => $output->product_id, 'quantity' => $quantity,
                         'warehouse_id' => $order->destination_warehouse_id,
                         'unit_cost' => $allocation['unit_cost'],
+                        'total_cost' => $allocation['allocated_cost'],
                     ]], MovementReason::MANUFACTURING_IN, $order);
                 }
                 $variance = round($quantity - (float) $output->expected_quantity, 3);

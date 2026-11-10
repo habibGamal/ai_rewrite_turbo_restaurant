@@ -5,6 +5,8 @@ namespace App\Filament\Actions\Forms;
 use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Services\StockService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -98,10 +100,12 @@ class StocktakingProductImporterAction extends Action
                         });
                     }),
             ])
-            ->action(function (array $data, Set $set, Get $get) {
+            ->action(function (array $data, Set $set, Get $get, $livewire) {
                 $selectedProducts = $data['selected_collection'] ?? [];
                 $products = Product::with('inventoryItem')->whereIn('id', $selectedProducts)->get();
                 $currentItems = $get('items') ?? [];
+                $warehouseId = (int) ($get('warehouse_id') ?: ($get('../warehouse_id') ?: (($livewire->data['warehouse_id'] ?? null) ?: (($livewire->record->warehouse_id ?? null) ?: Warehouse::default()->id))));
+                $stockService = app(StockService::class);
 
                 // Get existing product IDs to avoid duplicates
                 $existingProductIds = collect($currentItems)->pluck('product_id')->filter()->toArray();
@@ -120,7 +124,7 @@ class StocktakingProductImporterAction extends Action
                     $product = $products->where('id', $productId)->first();
                     if ($product) {
                         $price = $product->cost ?? $product->price ?? 0;
-                        $stockQuantity = $product->inventoryItem ? $product->inventoryItem->quantity : 0;
+                        $stockQuantity = $stockService->getCurrentStock($product->id, $warehouseId);
                         $realQuantity = 0; // Default to zero
                         $total = ($realQuantity - $stockQuantity) * $price; // Will be 0 initially
 

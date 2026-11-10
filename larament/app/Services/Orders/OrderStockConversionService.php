@@ -171,7 +171,7 @@ class OrderStockConversionService
         /** @var OrderItem $item */
         foreach ($order->items as $item) {
             if (array_key_exists($item->id, $costs) && $item->quantity > 0) {
-                $item->update(['cost' => round($costs[$item->id] / $item->quantity, 2)]);
+                $item->update(['cost' => round($costs[$item->id] / $item->quantity, 4)]);
             }
         }
 
@@ -209,11 +209,36 @@ class OrderStockConversionService
             return $this->convertOrderItemsToStockItems($order);
         }
 
-        return $movements->map(fn (InventoryItemMovement $movement): array => [
-            'product_id' => (int) $movement->product_id,
-            'quantity' => (float) $movement->quantity,
-            'warehouse_id' => (int) $movement->warehouse_id,
-        ])->all();
+        $returnedByProductWarehouse = InventoryItemMovement::query()
+            ->where('referenceable_type', $order->getMorphClass())
+            ->where('referenceable_id', $order->getKey())
+            ->where('reason', MovementReason::ORDER_RETURN)
+            ->orderBy('id')
+            ->get()
+            ->groupBy(fn (InventoryItemMovement $movement): string => $movement->product_id.':'.$movement->warehouse_id)
+            ->map(fn (Collection $group): float => (float) $group->sum('quantity'))
+            ->all();
+
+        $outstandingItems = [];
+
+        foreach ($movements as $movement) {
+            $key = $movement->product_id.':'.$movement->warehouse_id;
+            $alreadyReturned = $returnedByProductWarehouse[$key] ?? 0.0;
+            $originalQuantity = (float) $movement->quantity;
+            $deducted = min($originalQuantity, $alreadyReturned);
+            $returnedByProductWarehouse[$key] = max(0.0, $alreadyReturned - $deducted);
+            $outstanding = round($originalQuantity - $deducted, 3);
+
+            if ($outstanding > 0) {
+                $outstandingItems[] = [
+                    'product_id' => (int) $movement->product_id,
+                    'quantity' => $outstanding,
+                    'warehouse_id' => (int) $movement->warehouse_id,
+                ];
+            }
+        }
+
+        return $outstandingItems;
     }
 
     /**

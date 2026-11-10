@@ -131,7 +131,9 @@ class OrderTypePerformanceWidget extends ChartWidget
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
+        $mainCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null);
+        $subCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null);
 
-        return $this->productsReportService->getOrderTypePerformance($startDate, $endDate, $shiftIds);
+        return $this->productsReportService->getOrderTypePerformance($startDate, $endDate, $shiftIds, $mainCategoryId, $subCategoryId);
     }
 }

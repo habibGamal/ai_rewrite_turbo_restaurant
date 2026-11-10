@@ -52,7 +52,8 @@ class WeightedAverageCostingStrategy extends OffCostingStrategy
         }
         $oldQuantity = max(0, $oldQuantity);
         $quantity = (float) $in->quantity;
-        $newCost = round(($oldQuantity * (float) $product->cost + $quantity * (float) $in->unit_cost) / ($oldQuantity + $quantity), 4);
+        $incomingCost = $in->total_cost !== null ? (float) $in->total_cost : ($quantity * (float) $in->unit_cost);
+        $newCost = round(($oldQuantity * (float) $product->cost + $incomingCost) / ($oldQuantity + $quantity), 4);
 
         app(CostHistoryRecorder::class)->during($this->method(), $in->referenceable, function () use ($product, $newCost) {
             $product->cost = $newCost;

@@ -153,8 +153,8 @@ class StockService
     }
 
     /**
-     * @param  array<int, array{product_id: int, quantity: float|int, warehouse_id?: ?int, unit_cost?: ?float}>  $items
-     * @return array<int, array{product_id: int, warehouse_id: int, quantity: float, unit_cost: ?float}>
+     * @param  array<int, array{product_id: int, quantity: float|int, warehouse_id?: ?int, unit_cost?: ?float, total_cost?: ?float}>  $items
+     * @return array<int, array{product_id: int, warehouse_id: int, quantity: float, unit_cost: ?float, total_cost: ?float}>
      */
     private function normalizeItems(array $items): array
     {
@@ -167,7 +167,12 @@ class StockService
             $productId = (int) $item['product_id'];
             $warehouseId = (int) ($item['warehouse_id'] ?? $defaultWarehouseId);
             $quantity = (float) $item['quantity'];
-            $unitCost = (float) ($item['unit_cost'] ?? $costs->get($productId, 0));
+            $hasExplicitTotal = isset($item['total_cost']);
+            $hasExplicitUnit = isset($item['unit_cost']);
+            $unitCost = $hasExplicitUnit
+                ? (float) $item['unit_cost']
+                : ($hasExplicitTotal && $quantity > 0 ? ((float) $item['total_cost'] / $quantity) : (float) $costs->get($productId, 0));
+            $lineTotal = $hasExplicitTotal ? (float) $item['total_cost'] : ($quantity * $unitCost);
             $key = $productId.':'.$warehouseId;
 
             if (! isset($grouped[$key])) {
@@ -176,18 +181,23 @@ class StockService
                     'warehouse_id' => $warehouseId,
                     'quantity' => 0.0,
                     'value' => 0.0,
+                    'unit_value' => 0.0,
                     'has_cost' => false,
+                    'has_total_cost' => false,
                 ];
             }
             $grouped[$key]['quantity'] += $quantity;
-            $grouped[$key]['value'] += $quantity * $unitCost;
-            $grouped[$key]['has_cost'] = $grouped[$key]['has_cost'] || isset($item['unit_cost']);
+            $grouped[$key]['value'] += $lineTotal;
+            $grouped[$key]['unit_value'] += $quantity * $unitCost;
+            $grouped[$key]['has_cost'] = $grouped[$key]['has_cost'] || $hasExplicitUnit || $hasExplicitTotal;
+            $grouped[$key]['has_total_cost'] = $grouped[$key]['has_total_cost'] || $hasExplicitTotal;
         }
 
         foreach ($grouped as $key => $item) {
-            $grouped[$key]['unit_cost'] = $item['has_cost'] ? round($item['value'] / $item['quantity'], 4) : null;
+            $grouped[$key]['unit_cost'] = $item['has_cost'] ? round($item['unit_value'] / $item['quantity'], 4) : null;
+            $grouped[$key]['total_cost'] = $item['has_total_cost'] ? round($item['value'], 2) : null;
             $grouped[$key]['quantity'] = round($item['quantity'], 3);
-            unset($grouped[$key]['value'], $grouped[$key]['has_cost']);
+            unset($grouped[$key]['value'], $grouped[$key]['unit_value'], $grouped[$key]['has_cost'], $grouped[$key]['has_total_cost']);
         }
 
         return array_values($grouped);
@@ -295,6 +305,7 @@ class StockService
                 warehouseId: $item['warehouse_id'],
                 unitCost: $item['unit_cost'],
                 userId: auth()->id(),
+                totalCost: $item['total_cost'] ?? null,
             );
         }
 
@@ -381,14 +392,18 @@ class StockService
         foreach ($stockMovements as $movement) {
             $product = Product::lockForUpdate()->findOrFail($movement->productId);
             $unitCost = $movement->unitCost ?? (float) $product->cost;
+            $totalCost = ($movement->operation->isIncoming() && $movement->totalCost !== null)
+                ? round($movement->totalCost, 2)
+                : round($movement->quantity * $unitCost, 2);
             $record = new InventoryItemMovement([
                 'product_id' => $movement->productId,
                 'warehouse_id' => $movement->warehouseId,
+                'business_date' => $this->dailyAggregationService->currentBusinessDate()->toDateString(),
                 'operation' => $movement->operation,
                 'quantity' => $movement->quantity,
                 'reason' => $movement->reason,
                 'unit_cost' => $unitCost,
-                'total_cost' => round($movement->quantity * $unitCost, 2),
+                'total_cost' => $totalCost,
                 'user_id' => $movement->userId,
             ]);
             if ($movement->referenceable) {
@@ -435,6 +450,7 @@ class StockService
             }
 
             $movement->unit_cost = $strategy->currentUnitCost($movement->product);
+            $movement->total_cost = null;
         }
 
         $strategy->receive($movement);

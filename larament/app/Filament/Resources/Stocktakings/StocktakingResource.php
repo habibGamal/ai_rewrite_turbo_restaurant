@@ -15,6 +15,7 @@ use App\Models\Stocktaking;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Resources\StocktakingCalculatorService;
+use App\Services\StockService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -31,6 +32,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -78,6 +81,32 @@ class StocktakingResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                                $warehouseId = (int) ($state ?: Warehouse::default()->id);
+                                $items = $get('items') ?? [];
+                                $stockService = app(StockService::class);
+                                $stocktakingTotal = 0.0;
+
+                                foreach ($items as $key => $item) {
+                                    $productId = (int) ($item['product_id'] ?? 0);
+                                    if ($productId <= 0) {
+                                        continue;
+                                    }
+
+                                    $stockQty = $stockService->getCurrentStock($productId, $warehouseId);
+                                    $realQty = (float) ($item['real_quantity'] ?? 0);
+                                    $price = (float) ($item['price'] ?? 0);
+                                    $total = ($realQty - $stockQty) * $price;
+
+                                    $items[$key]['stock_quantity'] = $stockQty;
+                                    $items[$key]['total'] = $total;
+                                    $stocktakingTotal += $total;
+                                }
+
+                                $set('items', $items);
+                                $set('total', $stocktakingTotal);
+                            })
                             ->disabled(fn (?Stocktaking $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('total')
@@ -103,6 +132,7 @@ class StocktakingResource extends Resource
                         Actions::make([
                             StocktakingProductImporterAction::make('importProducts'),
                         ])
+                            ->key('stocktakingImportActions')
                             ->alignStart(),
                         StocktakingProductSelector::make()
                             ->columnSpanFull(),

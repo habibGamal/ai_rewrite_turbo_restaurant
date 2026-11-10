@@ -321,12 +321,12 @@ class StockIssueResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return $record instanceof StockIssue && is_null($record->closed_at);
+        return $record instanceof StockIssue && is_null($record->closed_at) && parent::canEdit($record);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return $record instanceof StockIssue && is_null($record->closed_at);
+        return $record instanceof StockIssue && is_null($record->closed_at) && parent::canDelete($record);
     }
 
     public static function getPages(): array

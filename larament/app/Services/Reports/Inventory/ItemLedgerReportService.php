@@ -90,12 +90,12 @@ class ItemLedgerReportService
 
     public static function openingBalance(int $productId, ?int $warehouseId, string $from): float
     {
-        $fromBound = Carbon::parse($from)->startOfDay();
+        $fromBound = Carbon::parse($from)->toDateString();
 
         $sum = InventoryItemMovement::query()
             ->where('product_id', $productId)
             ->when($warehouseId !== null, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
-            ->where('created_at', '<', $fromBound)
+            ->where('business_date', '<', $fromBound)
             ->selectRaw(
                 'COALESCE(SUM(CASE WHEN operation = ? THEN quantity ELSE -quantity END), 0) as balance',
                 [InventoryMovementOperation::IN->value]
@@ -234,8 +234,8 @@ class ItemLedgerReportService
         ?int $mainCategoryId = null,
         ?int $subCategoryId = null,
     ): Builder {
-        $fromBound = Carbon::parse($from)->startOfDay();
-        $toBound = Carbon::parse($to)->endOfDay();
+        $fromBound = Carbon::parse($from)->toDateString();
+        $toBound = Carbon::parse($to)->toDateString().' 23:59:59';
 
         return InventoryItemMovement::query()
             ->with(['user', 'warehouse', 'product.category'])
@@ -255,7 +255,7 @@ class ItemLedgerReportService
                     );
                 });
             })
-            ->whereBetween('inventory_item_movements.created_at', [$fromBound, $toBound])
+            ->whereBetween('inventory_item_movements.business_date', [$fromBound, $toBound])
             ->orderBy('inventory_item_movements.created_at', 'asc')
             ->orderBy('inventory_item_movements.id', 'asc');
     }
