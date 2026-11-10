@@ -522,4 +522,186 @@ describe('InventoryDailyAggregationService', function () {
             expect($record)->not()->toBeNull();
         });
     });
+
+    describe('per-warehouse daily aggregation', function () {
+        it('opens a day with one row per product per warehouse that has stock', function () {
+            $main = \App\Models\Warehouse::default();
+            $grill = \App\Models\Warehouse::factory()->create(['name' => 'مخزن الشوايا']);
+
+            $product1 = Product::factory()->create();
+            $product2 = Product::factory()->create();
+
+            InventoryItem::create(['product_id' => $product1->id, 'warehouse_id' => $main->id, 'quantity' => 30.0]);
+            InventoryItem::create(['product_id' => $product1->id, 'warehouse_id' => $grill->id, 'quantity' => 10.0]);
+            InventoryItem::create(['product_id' => $product2->id, 'warehouse_id' => $main->id, 'quantity' => 50.0]);
+
+            // Previous closed day for (product1, main) only — should clone end_quantity (25.0), while others use live quantity
+            InventoryItemMovementDaily::create([
+                'product_id' => $product1->id,
+                'warehouse_id' => $main->id,
+                'date' => Carbon::yesterday()->toDateString(),
+                'start_quantity' => 20.0,
+                'end_quantity' => 25.0,
+                'closed_at' => now()->subDay(),
+            ]);
+
+            $count = $this->service->openDay();
+
+            expect($count)->toBe(3);
+
+            $todayRows = InventoryItemMovementDaily::where('date', Carbon::today())->get();
+            expect($todayRows)->toHaveCount(3);
+
+            $p1Main = $todayRows->where('product_id', $product1->id)->where('warehouse_id', $main->id)->first();
+            $p1Grill = $todayRows->where('product_id', $product1->id)->where('warehouse_id', $grill->id)->first();
+            $p2Main = $todayRows->where('product_id', $product2->id)->where('warehouse_id', $main->id)->first();
+
+            expect($p1Main)->not->toBeNull()
+                ->and((float) $p1Main->start_quantity)->toBe(25.0)
+                ->and($p1Grill)->not->toBeNull()
+                ->and((float) $p1Grill->start_quantity)->toBe(10.0)
+                ->and($p2Main)->not->toBeNull()
+                ->and((float) $p2Main->start_quantity)->toBe(50.0);
+
+            // Update live quantities and close day: each pair gets its own live end_quantity
+            InventoryItem::where('product_id', $product1->id)->where('warehouse_id', $main->id)->update(['quantity' => 22.0]);
+            InventoryItem::where('product_id', $product1->id)->where('warehouse_id', $grill->id)->update(['quantity' => 8.5]);
+
+            $this->service->closeDay();
+
+            expect((float) $p1Main->fresh()->end_quantity)->toBe(22.0)
+                ->and((float) $p1Grill->fresh()->end_quantity)->toBe(8.5)
+                ->and((float) $p2Main->fresh()->end_quantity)->toBe(50.0);
+        });
+
+        it('aggregates transfer, manufacturing and issue reasons into their own columns', function () {
+            $main = \App\Models\Warehouse::default();
+            $grill = \App\Models\Warehouse::factory()->create(['name' => 'مخزن الشوايا']);
+
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'warehouse_id' => $main->id, 'quantity' => 100.0]);
+
+            // Open day when product only exists in Main (Grill will get its first movement mid-day)
+            $this->service->openDay();
+            $openDay = InventoryItemMovementDaily::whereNull('closed_at')->first();
+            $afterOpen = $openDay->created_at->copy()->addMinutes(5);
+
+            $mainMovements = [
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::PURCHASE, 'quantity' => 20.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::ORDER, 'quantity' => 5.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::ORDER_RETURN, 'quantity' => 1.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::WASTE, 'quantity' => 2.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::PURCHASE_RETURN, 'quantity' => 3.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::TRANSFER_IN, 'quantity' => 4.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::TRANSFER_OUT, 'quantity' => 10.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::MANUFACTURING_IN, 'quantity' => 15.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::MANUFACTURING_OUT, 'quantity' => 8.0],
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::STOCK_ISSUE, 'quantity' => 6.0],
+            ];
+
+            foreach ($mainMovements as $idx => $m) {
+                InventoryItemMovement::create([
+                    'product_id' => $product->id,
+                    'warehouse_id' => $main->id,
+                    'operation' => $m['operation'],
+                    'reason' => $m['reason'],
+                    'quantity' => $m['quantity'],
+                    'created_at' => $afterOpen->copy()->addMinutes($idx),
+                ]);
+            }
+
+            // First movement in Grill mid-day
+            InventoryItemMovement::create([
+                'product_id' => $product->id,
+                'warehouse_id' => $grill->id,
+                'operation' => InventoryMovementOperation::IN,
+                'reason' => MovementReason::TRANSFER_IN,
+                'quantity' => 10.0,
+                'created_at' => $afterOpen->copy()->addMinutes(20),
+            ]);
+
+            $this->service->bulkAggregateWithInsertSelect([$product->id]);
+
+            $mainRow = InventoryItemMovementDaily::where('product_id', $product->id)
+                ->where('warehouse_id', $main->id)
+                ->whereNull('closed_at')
+                ->first();
+
+            expect($mainRow)->not->toBeNull()
+                ->and((float) $mainRow->start_quantity)->toBe(100.0)
+                ->and((float) $mainRow->incoming_quantity)->toBe(20.0)
+                ->and((float) $mainRow->sales_quantity)->toBe(5.0)
+                ->and((float) $mainRow->return_sales_quantity)->toBe(1.0)
+                ->and((float) $mainRow->return_waste_quantity)->toBe(5.0)
+                ->and((float) $mainRow->transfer_in_quantity)->toBe(4.0)
+                ->and((float) $mainRow->transfer_out_quantity)->toBe(10.0)
+                ->and((float) $mainRow->manufacturing_in_quantity)->toBe(15.0)
+                ->and((float) $mainRow->manufacturing_out_quantity)->toBe(8.0)
+                ->and((float) $mainRow->issue_quantity)->toBe(6.0);
+
+            $grillRow = InventoryItemMovementDaily::where('product_id', $product->id)
+                ->where('warehouse_id', $grill->id)
+                ->whereNull('closed_at')
+                ->first();
+
+            expect($grillRow)->not->toBeNull()
+                ->and((float) $grillRow->start_quantity)->toBe(0.0)
+                ->and((float) $grillRow->transfer_in_quantity)->toBe(10.0)
+                ->and((float) $grillRow->incoming_quantity)->toBe(0.0);
+        });
+
+        it('keeps stocktaking out of the aggregated columns', function () {
+            $main = \App\Models\Warehouse::default();
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'warehouse_id' => $main->id, 'quantity' => 50.0]);
+
+            $this->service->openDay();
+            $openDay = InventoryItemMovementDaily::whereNull('closed_at')->first();
+            $afterOpen = $openDay->created_at->copy()->addMinutes(5);
+
+            $unaggregated = [
+                ['operation' => InventoryMovementOperation::OUT, 'reason' => MovementReason::STOCKTAKING, 'quantity' => 3.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::ADJUSTMENT, 'quantity' => 2.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::MANUAL, 'quantity' => 4.0],
+                ['operation' => InventoryMovementOperation::IN, 'reason' => MovementReason::INITIAL_STOCK, 'quantity' => 10.0],
+            ];
+
+            foreach ($unaggregated as $idx => $m) {
+                InventoryItemMovement::create([
+                    'product_id' => $product->id,
+                    'warehouse_id' => $main->id,
+                    'operation' => $m['operation'],
+                    'reason' => $m['reason'],
+                    'quantity' => $m['quantity'],
+                    'created_at' => $afterOpen->copy()->addMinutes($idx),
+                ]);
+            }
+
+            $this->service->bulkAggregateWithInsertSelect([$product->id]);
+
+            $row = InventoryItemMovementDaily::where('product_id', $product->id)
+                ->where('warehouse_id', $main->id)
+                ->whereNull('closed_at')
+                ->first();
+
+            expect((float) $row->incoming_quantity)->toBe(0.0)
+                ->and((float) $row->sales_quantity)->toBe(0.0)
+                ->and((float) $row->return_sales_quantity)->toBe(0.0)
+                ->and((float) $row->return_waste_quantity)->toBe(0.0)
+                ->and((float) $row->transfer_in_quantity)->toBe(0.0)
+                ->and((float) $row->transfer_out_quantity)->toBe(0.0)
+                ->and((float) $row->manufacturing_in_quantity)->toBe(0.0)
+                ->and((float) $row->manufacturing_out_quantity)->toBe(0.0)
+                ->and((float) $row->issue_quantity)->toBe(0.0);
+        });
+
+        it('exposes assertNoOpenDocuments and rejects open stock documents', function () {
+            $this->service->assertNoOpenDocuments();
+
+            \App\Models\Waste::factory()->create(['closed_at' => null]);
+
+            expect(fn () => $this->service->assertNoOpenDocuments())
+                ->toThrow(\Exception::class, 'لا يمكن إغلاق اليوم لوجود 1 سجل هالك مفتوح');
+        });
+    });
 });

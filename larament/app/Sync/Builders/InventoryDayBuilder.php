@@ -53,15 +53,18 @@ class InventoryDayBuilder implements DocumentBuilder
         }
 
         $rows = [];
-        foreach ($records as $record) {
+        foreach ($records->groupBy('product_id') as $productRecords) {
+            /** @var InventoryItemMovementDaily $first */
+            $first = $productRecords->first();
+
             $rows[] = [
-                'product_uuid' => $record->product ? (string) $record->product->getAttribute('uuid') : '',
-                'start_qty' => Payload::qty($record->start_quantity),
-                'incoming_qty' => Payload::qty($record->incoming_quantity),
-                'sales_qty' => Payload::qty($record->sales_quantity),
-                'return_sales_qty' => Payload::qty($record->return_sales_quantity),
-                'waste_qty' => Payload::qty($record->return_waste_quantity),
-                'end_qty' => Payload::qty($record->end_quantity),
+                'product_uuid' => $first->product ? (string) $first->product->getAttribute('uuid') : '',
+                'start_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->start_quantity)),
+                'incoming_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->incoming_quantity)),
+                'sales_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->sales_quantity)),
+                'return_sales_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->return_sales_quantity)),
+                'waste_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->return_waste_quantity)),
+                'end_qty' => Payload::qty($productRecords->sum(fn (InventoryItemMovementDaily $r) => (float) $r->end_quantity)),
             ];
         }
 

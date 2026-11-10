@@ -88,3 +88,62 @@ it('is registered in BuilderRegistry and returns InventoryDay type', function ()
     expect($builder)->toBeInstanceOf(InventoryDayBuilder::class)
         ->and($builder->type())->toBe(DocumentType::InventoryDay);
 });
+
+it('keeps sending the old payload shape (one row per product, summed across warehouses) until the platform PR lands', function () {
+    $main = \App\Models\Warehouse::default();
+    $grill = \App\Models\Warehouse::factory()->create(['name' => 'مخزن الشوايا']);
+
+    $product = Product::factory()->create();
+
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'date' => '2026-11-09',
+        'start_quantity' => 30.000,
+        'incoming_quantity' => 20.000,
+        'sales_quantity' => 0.000,
+        'return_sales_quantity' => 0.000,
+        'return_waste_quantity' => 1.000,
+        'transfer_in_quantity' => 0.000,
+        'transfer_out_quantity' => 10.000,
+        'manufacturing_in_quantity' => 0.000,
+        'manufacturing_out_quantity' => 5.000,
+        'issue_quantity' => 2.000,
+        'end_quantity' => 32.000,
+        'closed_at' => '2026-11-09 23:59:00',
+    ]);
+
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'date' => '2026-11-09',
+        'start_quantity' => 2.000,
+        'incoming_quantity' => 0.000,
+        'sales_quantity' => 9.000,
+        'return_sales_quantity' => 1.000,
+        'return_waste_quantity' => 0.500,
+        'transfer_in_quantity' => 10.000,
+        'transfer_out_quantity' => 0.000,
+        'manufacturing_in_quantity' => 0.000,
+        'manufacturing_out_quantity' => 0.000,
+        'issue_quantity' => 0.000,
+        'end_quantity' => 3.500,
+        'closed_at' => '2026-11-09 23:59:00',
+    ]);
+
+    $builder = app(InventoryDayBuilder::class);
+    $data = $builder->withKey('2026-11-09')->build('dummy-uuid');
+
+    expect($data)->not->toBeNull()
+        ->and($data['date'])->toBe('2026-11-09')
+        ->and($data['rows'])->toHaveCount(1)
+        ->and($data['rows'][0])->toBe([
+            'product_uuid' => $product->uuid,
+            'start_qty' => '32.000',
+            'incoming_qty' => '20.000',
+            'sales_qty' => '9.000',
+            'return_sales_qty' => '1.000',
+            'waste_qty' => '1.500',
+            'end_qty' => '35.500',
+        ]);
+});
