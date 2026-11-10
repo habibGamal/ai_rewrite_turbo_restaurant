@@ -165,6 +165,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_stock_issues_report' => 'تقرير أذون الصرف',
                 'view_manufacturing_yield_report' => 'تقرير التصنيع والهالك الإنتاجي',
                 'view_cost_history_report' => 'سجل تغيير التكلفة',
+                'view_item_ledger_report' => 'كشف حركة صنف',
+                'view_movement_summary_report' => 'ملخص حركة المخزون',
                 'view_web_orders_report' => 'تقرير طلبات الويب',
             ],
             'نقطة البيع والعمليات (POS)' => [

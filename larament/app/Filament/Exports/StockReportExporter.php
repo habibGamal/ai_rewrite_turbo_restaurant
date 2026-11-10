@@ -78,6 +78,11 @@ class StockReportExporter extends Exporter
                 ->state(fn ($record) => $record->cost ?? 0)
                 ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
 
+            ExportColumn::make('stock_value')
+                ->label('قيمة المخزون الحالية')
+                ->state(fn ($record) => StockReportService::calculate($record)['stock_value'])
+                ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
+
             ExportColumn::make('deviation')
                 ->label('الانحراف')
                 ->state(fn ($record) => StockReportService::calculate($record)['deviation']),

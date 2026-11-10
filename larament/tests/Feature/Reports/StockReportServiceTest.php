@@ -398,7 +398,72 @@ it('exposes the warehouse filter on the stock report page and new movement colum
         ->assertTableColumnExists('transfer_out')
         ->assertTableColumnExists('manufacturing_in')
         ->assertTableColumnExists('manufacturing_out')
-        ->assertTableColumnExists('issue');
+        ->assertTableColumnExists('issue')
+        ->assertTableColumnExists('stock_value');
+});
+
+it('uses CostingStrategy stockValue and currentUnitCost for stock_value and deviation_value', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-10 15:00:00'));
+
+    $main = \App\Models\Warehouse::default();
+    $grill = \App\Models\Warehouse::factory()->create(['name' => 'مخزن الشوايا']);
+
+    $product = Product::factory()->create([
+        'name' => 'لحم بقري',
+        'type' => ProductType::RawMaterial,
+        'cost' => 120.00,
+    ]);
+
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id, 'warehouse_id' => $main->id],
+        ['quantity' => 10.0],
+    );
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id, 'warehouse_id' => $grill->id],
+        ['quantity' => 4.0],
+    );
+
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'date' => '2026-11-10',
+        'start_quantity' => 12.0,
+        'end_quantity' => 10.0,
+        'closed_at' => null,
+    ]);
+
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'date' => '2026-11-10',
+        'start_quantity' => 5.0,
+        'end_quantity' => 4.0,
+        'closed_at' => null,
+    ]);
+
+    $strategy = app(\App\Costing\CostingStrategy::class);
+
+    $grillRecord = StockReportService::query('2026-11-10', '2026-11-10', true, $grill->id)
+        ->where('products.id', $product->id)
+        ->first();
+
+    $grillCalc = StockReportService::calculate($grillRecord);
+
+    expect($grillCalc['stock_value'])->toBe(round($strategy->stockValue($product, $grill->id), 2))
+        ->and($grillCalc['stock_value'])->toBe(480.00)
+        ->and($grillCalc['deviation'])->toBe(-1.0)
+        ->and($grillCalc['deviation_value'])->toBe(-120.00);
+
+    $allRecord = StockReportService::query('2026-11-10', '2026-11-10', true)
+        ->where('products.id', $product->id)
+        ->first();
+
+    $allCalc = StockReportService::calculate($allRecord);
+
+    expect($allCalc['stock_value'])->toBe(round($strategy->stockValue($product, null), 2))
+        ->and($allCalc['stock_value'])->toBe(1680.00)
+        ->and($allCalc['deviation'])->toBe(-3.0)
+        ->and($allCalc['deviation_value'])->toBe(-360.00);
 });
 
 it('sums start and historical end quantities per warehouse in the all-warehouses view', function () {
@@ -431,4 +496,24 @@ it('sums start and historical end quantities per warehouse in the all-warehouses
         ->and((float) $all->first()->actual_remaining_quantity)->toBe(33.0) // Main 28 + Grill 5
         ->and((float) $grillOnly->start_quantity)->toBe(5.0)
         ->and((float) $grillOnly->actual_remaining_quantity)->toBe(5.0);
+});
+
+it('values a past period at its own closing quantity, not today\'s live stock', function () {
+    Carbon::setTestNow(Carbon::parse('2026-11-12 20:00:00'));
+
+    $product = Product::factory()->create(['type' => ProductType::RawMaterial, 'cost' => 10]);
+    InventoryItem::updateOrCreate(
+        ['product_id' => $product->id, 'warehouse_id' => \App\Models\Warehouse::default()->id],
+        ['quantity' => 25.0],
+    );
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id, 'warehouse_id' => \App\Models\Warehouse::default()->id,
+        'date' => '2026-11-05', 'start_quantity' => 40, 'end_quantity' => 40, 'closed_at' => '2026-11-05 23:00:00',
+    ]);
+
+    $record = StockReportService::query('2026-11-05', '2026-11-05', false)->where('products.id', $product->id)->first();
+    $calc = StockReportService::calculate($record);
+
+    expect($calc['actual'])->toBe(40.0)
+        ->and($calc['stock_value'])->toBe(400.0); // 40 kg closing × cost 10, not live 25 kg
 });

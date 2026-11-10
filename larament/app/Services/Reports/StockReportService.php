@@ -2,7 +2,9 @@
 
 namespace App\Services\Reports;
 
+use App\Costing\CostingStrategy;
 use App\Enums\ProductType;
+use App\Models\Category;
 use App\Models\Product;
 use App\Services\InventoryDailyAggregationService;
 use Carbon\Carbon;
@@ -41,10 +43,28 @@ class StockReportService
      *
      * @return Builder<Product>
      */
-    public static function query(string $start, string $end, bool $useLive, ?int $warehouseId = null): Builder
-    {
+    public static function query(
+        string $start,
+        string $end,
+        bool $useLive,
+        ?int $warehouseId = null,
+        ?int $mainCategoryId = null,
+        ?int $subCategoryId = null,
+        ?int $productId = null,
+    ): Builder {
         $query = Product::query()
             ->whereNot('type', ProductType::Manufactured)
+            ->when($productId !== null, fn (Builder $q) => $q->where('products.id', $productId))
+            ->when($subCategoryId !== null, fn (Builder $q) => $q->where('products.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function (Builder $q) use ($mainCategoryId) {
+                $q->whereIn(
+                    'products.category_id',
+                    Category::query()
+                        ->select('id')
+                        ->where('id', $mainCategoryId)
+                        ->orWhere('parent_id', $mainCategoryId)
+                );
+            })
             ->with(['category'])
             ->select([
                 'products.id',
@@ -52,6 +72,12 @@ class StockReportService
                 'products.category_id',
                 'products.cost',
             ]);
+
+        if ($warehouseId !== null) {
+            $query->selectRaw((int) $warehouseId.' as selected_warehouse_id');
+        } else {
+            $query->selectRaw('NULL as selected_warehouse_id');
+        }
 
         if ($warehouseId !== null) {
             $query->selectRaw(
@@ -286,9 +312,9 @@ class StockReportService
     /**
      * Calculate stock metrics from a report record.
      *
-     * @return array{total: float, consumed: float, ideal: float, expected: float, actual: float, deviation: float, deviation_value: float, deviation_percentage: ?float}
+     * @return array{total: float, consumed: float, ideal: float, expected: float, actual: float, stock_value: float, deviation: float, deviation_value: float, deviation_percentage: ?float}
      */
-    public static function calculate(object $record): array
+    public static function calculate(object $record, ?int $warehouseId = null): array
     {
         $start = (float) ($record->start_quantity ?? 0);
         $incoming = (float) ($record->incoming ?? $record->incoming_quantity ?? 0);
@@ -300,7 +326,20 @@ class StockReportService
         $manufacturingOut = (float) ($record->manufacturing_out ?? $record->manufacturing_out_quantity ?? 0);
         $issue = (float) ($record->issue ?? $record->issue_quantity ?? 0);
         $actual = (float) ($record->actual_remaining_quantity ?? $record->end_quantity ?? 0);
-        $cost = (float) ($record->cost ?? 0);
+
+        if ($record instanceof Product) {
+            $strategy = app(CostingStrategy::class);
+            $cost = $strategy->currentUnitCost($record);
+        } else {
+            $cost = (float) ($record->cost ?? 0);
+        }
+
+        // Current valuation of the row's own quantity (the closing quantity for past periods).
+        $stockValue = round(round($actual, 3) * $cost, 2);
+
+        if ($stockValue == 0.0) {
+            $stockValue = 0.0;
+        }
 
         $total = round($start + $incoming + $transferIn + $manufacturingIn, 3);
         $consumed = round($sales + $returnWaste + $transferOut + $manufacturingOut + $issue, 3);
@@ -331,6 +370,7 @@ class StockReportService
             'ideal' => $ideal,
             'expected' => $ideal,
             'actual' => $actual,
+            'stock_value' => $stockValue,
             'deviation' => $deviation,
             'deviation_value' => $deviationValue,
             'deviation_percentage' => $deviationPercentage,
