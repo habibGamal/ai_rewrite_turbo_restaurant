@@ -18,6 +18,10 @@ class ProductsRelationManager extends RelationManager
 
     protected static ?string $title = 'الأصناف';
 
+    protected static ?string $modelLabel = 'صنف';
+
+    protected static ?string $pluralModelLabel = 'أصناف';
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
