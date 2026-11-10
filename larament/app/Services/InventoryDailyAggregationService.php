@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovementDaily;
+use App\Models\ManufacturingOrder;
 use App\Models\PlatformConnection;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
@@ -161,6 +162,11 @@ class InventoryDailyAggregationService
         $openWastes = Waste::whereNull('closed_at')->count();
         if ($openWastes > 0) {
             throw new Exception("لا يمكن إغلاق اليوم لوجود {$openWastes} سجل هالك مفتوح");
+        }
+
+        $openManufacturingOrders = ManufacturingOrder::whereNull('closed_at')->count();
+        if ($openManufacturingOrders > 0) {
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openManufacturingOrders} أمر تصنيع مفتوح");
         }
 
         // Check for open stocktaking
