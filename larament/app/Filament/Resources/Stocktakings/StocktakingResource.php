@@ -13,6 +13,7 @@ use App\Filament\Resources\Stocktakings\Pages\ViewStocktaking;
 use App\Models\Product;
 use App\Models\Stocktaking;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\Resources\StocktakingCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -65,6 +66,19 @@ class StocktakingResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?Stocktaking $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('total')
                             ->label('إجمالي الفرق (ج.م)')
@@ -216,6 +230,11 @@ class StocktakingResource extends Resource
 
                 TextColumn::make('user.name')
                     ->label('المستخدم')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 

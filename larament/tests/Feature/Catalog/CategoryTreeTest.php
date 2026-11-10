@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\KitchenStation;
 use App\Models\OrderTypeRow;
 use App\Models\Product;
+use App\Models\Warehouse;
 use App\Services\Kitchen\KitchenRoutingService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -89,6 +90,57 @@ it('uses the parent kitchen station when the sub has none', function () {
     $sub->update(['kitchen_station_id' => $own->id]);
 
     expect($sub->fresh()->effectiveKitchenStationId())->toBe($own->id);
+});
+
+it('routes: product override > main category > default', function () {
+    $grill = Warehouse::factory()->create(['name' => 'الشواية']);
+    $bar = Warehouse::factory()->create(['name' => 'البار']);
+    $main = Category::factory()->create(['name' => 'مشاوي', 'warehouse_id' => $grill->id]);
+    $sub = Category::factory()->create([
+        'name' => 'دجاج',
+        'parent_id' => $main->id,
+        'warehouse_id' => $bar->id,
+    ]);
+    expect($sub->fresh()->warehouse_id)->toBeNull();
+
+    $fromCategory = Product::factory()->create([
+        'category_id' => $sub->id,
+        'warehouse_id' => null,
+    ]);
+    $override = Product::factory()->create([
+        'category_id' => $sub->id,
+        'warehouse_id' => $bar->id,
+    ]);
+    $unrouted = Product::factory()->create([
+        'category_id' => Category::factory()->create(['warehouse_id' => null])->id,
+        'warehouse_id' => null,
+    ]);
+
+    expect($fromCategory->stockWarehouseId())->toBe($grill->id)
+        ->and($override->stockWarehouseId())->toBe($bar->id)
+        ->and($unrouted->stockWarehouseId())->toBe(Warehouse::default()->id);
+
+    $bar->update(['is_active' => false]);
+    expect($override->fresh()->stockWarehouseId())->toBe($grill->id);
+
+    $grill->update(['is_active' => false]);
+    expect($fromCategory->fresh()->stockWarehouseId())->toBe(Warehouse::default()->id)
+        ->and($override->fresh()->stockWarehouseId())->toBe(Warehouse::default()->id);
+});
+
+it('reverses the warehouse routing columns', function () {
+    $migration = require database_path('migrations/2026_11_10_210001_add_warehouse_routing_to_categories_and_products.php');
+
+    try {
+        $migration->down();
+
+        expect(Schema::hasColumn('categories', 'warehouse_id'))->toBeFalse()
+            ->and(Schema::hasColumn('products', 'warehouse_id'))->toBeFalse();
+    } finally {
+        if (! Schema::hasColumn('categories', 'warehouse_id')) {
+            $migration->up();
+        }
+    }
 });
 
 it('reverses the category hierarchy migration', function () {

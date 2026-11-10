@@ -18,6 +18,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -64,6 +66,12 @@ class CategoryResource extends Resource
                     ->searchable()
                     ->preload()
                     ->nullable()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, mixed $state): void {
+                        if (filled($state)) {
+                            $set('warehouse_id', null);
+                        }
+                    })
                     ->disabled(fn (?Category $record): bool => $record !== null && $record->children()->exists())
                     ->helperText('اتركه فارغاً ليبقى تصنيفاً رئيسياً. التصنيف الفرعي لا يمكن أن يكون له تصنيف فرعي.')
                     ->rule(fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
@@ -76,6 +84,21 @@ class CategoryResource extends Resource
                             $fail('لا يمكن إنشاء أكثر من مستويين للتصنيفات.');
                         }
                     }),
+
+                Select::make('warehouse_id')
+                    ->label('مخزن السحب')
+                    ->relationship(
+                        'warehouse',
+                        'name',
+                        fn (Builder $query): Builder => $query->where('is_active', true),
+                    )
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->placeholder('المخزن الافتراضي')
+                    ->helperText('يُستخدم لسحب مخزون أصناف هذا التصنيف الرئيسي. التصنيف الفرعي يتبع تصنيفَه الرئيسي.')
+                    ->visible(fn (Get $get): bool => blank($get('parent_id')))
+                    ->dehydrated(fn (Get $get): bool => blank($get('parent_id'))),
 
                 Select::make('blockedOrderTypes')
                     ->label('أنواع الطلبات المحظورة')

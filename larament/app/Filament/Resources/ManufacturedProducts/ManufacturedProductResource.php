@@ -74,6 +74,18 @@ class ManufacturedProductResource extends Resource
                             ->options(Category::query()->pluck('name', 'id'))
                             ->required()
                             ->searchable(),
+                        Select::make('warehouse_id')
+                            ->label('مخزن السحب')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->placeholder('حسب التصنيف')
+                            ->helperText('اختياري. إن تُرك فارغاً يُسحب المخزون من مخزن التصنيف الرئيسي، وإلا من المخزن الافتراضي.'),
                         TextInput::make('price')
                             ->label('السعر')
                             ->required()

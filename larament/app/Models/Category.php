@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * @property int|null $parent_id
  * @property int|null $kitchen_station_id
+ * @property int|null $warehouse_id
  */
 class Category extends Model
 {
@@ -22,6 +23,7 @@ class Category extends Model
         'uuid',
         'name',
         'parent_id',
+        'warehouse_id',
         'kitchen_station_id',
         'show_on_kds',
         'prep_minutes',
@@ -35,6 +37,10 @@ class Category extends Model
     protected static function booted(): void
     {
         static::saving(function (Category $category): void {
+            if ($category->parent_id !== null) {
+                $category->warehouse_id = null;
+            }
+
             $category->assertHierarchy();
         });
     }
@@ -47,6 +53,11 @@ class Category extends Model
     public function kitchenStation(): BelongsTo
     {
         return $this->belongsTo(KitchenStation::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function parent(): BelongsTo

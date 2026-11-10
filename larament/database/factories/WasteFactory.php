@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Warehouse;
 use App\Models\Waste;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,6 +14,7 @@ class WasteFactory extends Factory
     {
         return [
             'user_id' => 1,
+            'warehouse_id' => fn () => Warehouse::default()->id,
             'total' => $this->faker->randomFloat(2, 0, 10000),
             'notes' => $this->faker->optional()->sentence(),
         ];

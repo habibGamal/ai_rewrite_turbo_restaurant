@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/** @property int|null $warehouse_id */
 class Product extends Model
 {
     use HasFactory, HasSyncUuid;
@@ -19,6 +20,7 @@ class Product extends Model
     protected $fillable = [
         'uuid',
         'category_id',
+        'warehouse_id',
         'name',
         'product_ref',
         'barcode',
@@ -60,6 +62,35 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function stockWarehouseId(): int
+    {
+        if ($this->warehouse_id !== null) {
+            $this->loadMissing('warehouse');
+            if ($this->warehouse instanceof Warehouse && $this->warehouse->is_active) {
+                return (int) $this->warehouse_id;
+            }
+        }
+
+        $this->loadMissing('category');
+        $category = $this->category;
+        if ($category instanceof Category) {
+            $main = $category->mainCategory();
+            if ($main->warehouse_id !== null) {
+                $main->loadMissing('warehouse');
+                if ($main->warehouse instanceof Warehouse && $main->warehouse->is_active) {
+                    return (int) $main->warehouse_id;
+                }
+            }
+        }
+
+        return Warehouse::default()->id;
     }
 
     public function kitchenStation(): BelongsTo

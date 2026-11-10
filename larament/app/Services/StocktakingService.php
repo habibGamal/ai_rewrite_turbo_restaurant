@@ -25,6 +25,7 @@ class StocktakingService
     public function getChangedItemsSinceCount(Stocktaking $stocktaking): array
     {
         $stocktaking->loadMissing(['items.product']);
+        $warehouseId = (int) $stocktaking->warehouse_id;
 
         $changed = [];
 
@@ -34,7 +35,7 @@ class StocktakingService
 
         foreach ($items as $item) {
             $snapshot = round((float) ($item->stock_quantity ?? 0), 3);
-            $current = round((float) $this->stockService->getCurrentStock((int) $item->product_id), 3);
+            $current = round((float) $this->stockService->getCurrentStock((int) $item->product_id, $warehouseId), 3);
 
             if (abs($snapshot - $current) >= 0.0005) {
                 $changed[] = [
@@ -68,9 +69,10 @@ class StocktakingService
             // Group items by variance type for bulk operations
             $itemsToAdd = [];
             $itemsToRemove = [];
+            $warehouseId = (int) $stocktaking->warehouse_id;
 
             foreach ($stocktaking->items as $item) {
-                $currentStock = $this->stockService->getCurrentStock($item->product_id);
+                $currentStock = $this->stockService->getCurrentStock($item->product_id, $warehouseId);
                 $realQuantity = $item->real_quantity;
                 $variance = $realQuantity - $currentStock;
 
@@ -79,12 +81,14 @@ class StocktakingService
                     $itemsToAdd[] = [
                         'product_id' => $item->product_id,
                         'quantity' => $variance,
+                        'warehouse_id' => $warehouseId,
                     ];
                 } elseif ($variance < 0) {
                     // Need to remove stock
                     $itemsToRemove[] = [
                         'product_id' => $item->product_id,
                         'quantity' => abs($variance),
+                        'warehouse_id' => $warehouseId,
                     ];
                 }
             }
