@@ -165,6 +165,12 @@ export interface ChangeTypeOption {
   showTable: boolean;
 }
 
+export interface OrderCreditFlags {
+  allow_partial_payment: boolean;
+  allow_pay_later: boolean;
+  require_customer_for_credit: boolean;
+}
+
 export interface Order {
   id: number;
   customer_id?: number;
@@ -193,6 +199,7 @@ export interface Order {
   updated_at: string;
   customer?: Customer;
   driver?: Driver;
+  credit?: OrderCreditFlags;
   items: OrderItem[];
   item_changes?: OrderItemChange[];
   payments: Payment[];
@@ -298,6 +305,7 @@ export interface ManageOrderProps extends PageProps {
   sellers: { id: number; name: string; products: { id: number; name: string; price: number | string }[] }[];
   guestDue: number;
   canAddExternalOrder: boolean;
+  credit?: OrderCreditFlags;
 }
 
 export interface ExpenseType {

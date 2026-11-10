@@ -77,6 +77,11 @@ class Order extends Model
         return app(OrderTypeCatalog::class)->behaviorFor((string) $this->type);
     }
 
+    public function typeRow(): OrderTypeRow
+    {
+        return app(OrderTypeCatalog::class)->find((string) $this->type);
+    }
+
     public function display(): OrderDisplay
     {
         return app(OrderTypeCatalog::class)->display((string) $this->type);

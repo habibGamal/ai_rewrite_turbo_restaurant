@@ -16,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -98,6 +99,25 @@ class OrderTypeRowResource extends Resource
                             ->required()
                             ->disabled(fn (?OrderTypeRow $record): bool => (bool) $record?->is_system),
                     ]),
+
+                Section::make('الدفع الآجل')
+                    ->schema([
+                        Toggle::make('allow_partial_payment')
+                            ->label('السماح بالدفع الجزئي')
+                            ->helperText('يسمح بإنهاء الطلب مع دفع جزء من المبلغ وتسجيل المتبقي كآجل.')
+                            ->default(false),
+
+                        Toggle::make('allow_pay_later')
+                            ->label('السماح بالإغلاق والدفع لاحقاً')
+                            ->helperText('يسمح بإنهاء الطلب دون دفع أي مبلغ وتسجيل كامل القيمة كآجل.')
+                            ->default(false),
+
+                        Toggle::make('require_customer_for_credit')
+                            ->label('يتطلب ربط عميل')
+                            ->helperText('يشترط تحديد عميل للطلب قبل السماح بالدفع الآجل أو الجزئي.')
+                            ->default(true),
+                    ])
+                    ->columns(3),
             ]);
     }
 
@@ -129,6 +149,18 @@ class OrderTypeRowResource extends Resource
 
                 IconColumn::make('is_system')
                     ->label('نظامي')
+                    ->boolean(),
+
+                IconColumn::make('allow_partial_payment')
+                    ->label('السماح بالدفع الجزئي')
+                    ->boolean(),
+
+                IconColumn::make('allow_pay_later')
+                    ->label('السماح بالإغلاق والدفع لاحقاً')
+                    ->boolean(),
+
+                IconColumn::make('require_customer_for_credit')
+                    ->label('يتطلب ربط عميل')
                     ->boolean(),
             ])
             ->defaultSort('id')

@@ -17,7 +17,7 @@ class ExternalOrderService
     {
         return DB::transaction(function () use ($orderId, $sellerId, $lines) {
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
-            if (! $order->status->canBeModified() || $order->behavior()->allowsPartialPayment()) {
+            if (! $order->status->canBeModified() || $order->typeRow()->allowsCredit()) {
                 throw new OrderException('لا يمكن إضافة طلب خارجي لهذا الطلب');
             }
 
@@ -73,7 +73,7 @@ class ExternalOrderService
     {
         DB::transaction(function () use ($orderId, $callback): void {
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
-            if (! $order->status->canBeModified() || $order->behavior()->allowsPartialPayment()) {
+            if (! $order->status->canBeModified() || $order->typeRow()->allowsCredit()) {
                 throw new OrderException('لا يمكن تعديل طلب خارجي لهذا الطلب');
             }
             $callback($order);

@@ -42,15 +42,24 @@ class OrderCompletionService
             ]);
         }
 
-        $remaining = round((float) $order->total - (float) $order->payments()->sum('amount'), 2);
+        $paid = (float) $order->payments()->sum('amount');
+        $remaining = round((float) $order->total - $paid, 2);
 
         if ($remaining > 0) {
-            if (! $order->behavior()->allowsPartialPayment()) {
-                throw new OrderException('المبلغ المدفوع أقل من إجمالي الطلب');
+            $typeRow = $order->typeRow();
+
+            if ($paid <= 0) {
+                if (! $typeRow->allowsPayLater()) {
+                    throw new OrderException('هذا النوع لا يسمح بالإغلاق والدفع لاحقاً');
+                }
+            } else {
+                if (! $typeRow->allowsPartialPayment()) {
+                    throw new OrderException('المبلغ المدفوع أقل من إجمالي الطلب');
+                }
             }
 
-            if ($order->customer_id === null) {
-                throw new OrderException('يجب ربط الطلب بعميل قبل الدفع الجزئي');
+            if ($typeRow->requiresCustomerForCredit() && $order->customer_id === null) {
+                throw new OrderException('يجب ربط الطلب بعميل قبل الدفع الآجل');
             }
         }
 

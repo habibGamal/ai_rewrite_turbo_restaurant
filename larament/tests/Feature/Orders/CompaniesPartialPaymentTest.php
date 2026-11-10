@@ -110,7 +110,7 @@ describe('companies partial payment', function () {
         $order->refresh();
 
         expect($order->payment_status)->toBe(PaymentStatus::FULL_PAID)
-            ->and(app(OrderRepository::class)->partialPaidForTypes(['companies']))->toHaveCount(0);
+            ->and(app(OrderRepository::class)->receivablesForTypes(['companies']))->toHaveCount(0);
 
         $shift1Stats = app(ShiftsReportService::class)->calculateShiftStats($this->shift->fresh());
         $shift2Stats = app(ShiftsReportService::class)->calculateShiftStats($shift2);
@@ -154,7 +154,7 @@ describe('companies partial payment', function () {
         $order = companiesOrder($this->shift, $this->user, null);
 
         expect(fn () => $this->orders->completeOrder($order->id, ['cash' => 60]))
-            ->toThrow(OrderException::class, 'يجب ربط الطلب بعميل قبل الدفع الجزئي');
+            ->toThrow(OrderException::class, 'يجب ربط الطلب بعميل قبل الدفع الآجل');
 
         expect($order->fresh()->status)->toBe(OrderStatus::PROCESSING)
             ->and(Payment::query()->where('order_id', $order->id)->exists())->toBeFalse();
@@ -165,7 +165,7 @@ describe('companies partial payment', function () {
         $this->orders->completeOrder($full->id, ['cash' => 100]);
 
         expect(fn () => $this->orders->collectRemaining($full->id, Tenders::fromArray(['cash' => 10])))
-            ->toThrow(OrderException::class, 'لا يمكن تحصيل متبقي إلا لطلب مكتمل ومدفوع جزئياً');
+            ->toThrow(OrderException::class, 'لا يمكن تحصيل متبقي إلا لطلب مكتمل وغير مدفوع بالكامل');
 
         $takeaway = Order::factory()->create([
             'type' => 'takeaway',

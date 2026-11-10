@@ -235,3 +235,58 @@ it('saves an existing row with an unknown icon when the icon is not changed', fu
         ->call('save')
         ->assertHasFormErrors(['icon']);
 });
+
+it('saves credit toggles on a system row and on a custom row', function () {
+    $systemRow = OrderTypeRow::query()->where('code', 'takeaway')->firstOrFail();
+
+    expect($systemRow->allow_partial_payment)->toBeFalse()
+        ->and($systemRow->allow_pay_later)->toBeFalse();
+
+    livewire(EditOrderTypeRow::class, ['record' => $systemRow->getRouteKey()])
+        ->fillForm([
+            'allow_partial_payment' => true,
+            'allow_pay_later' => true,
+            'require_customer_for_credit' => false,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $systemRow->refresh();
+    expect($systemRow->allow_partial_payment)->toBeTrue()
+        ->and($systemRow->allow_pay_later)->toBeTrue()
+        ->and($systemRow->require_customer_for_credit)->toBeFalse();
+
+    $customRow = OrderTypeRow::query()->create([
+        'code' => 'catering',
+        'label' => 'كاترينج',
+        'color' => 'primary',
+        'icon' => 'heroicon-o-tag',
+        'is_active' => true,
+        'is_system' => false,
+        'behavior' => OrderBehavior::COUNTER,
+        'allow_partial_payment' => false,
+        'allow_pay_later' => false,
+        'require_customer_for_credit' => true,
+    ]);
+
+    livewire(EditOrderTypeRow::class, ['record' => $customRow->getRouteKey()])
+        ->fillForm([
+            'allow_partial_payment' => true,
+            'allow_pay_later' => false,
+            'require_customer_for_credit' => true,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $customRow->refresh();
+    expect($customRow->allow_partial_payment)->toBeTrue()
+        ->and($customRow->allow_pay_later)->toBeFalse()
+        ->and($customRow->require_customer_for_credit)->toBeTrue();
+});
+
+it('displays credit icon columns in the order types table', function () {
+    livewire(ListOrderTypeRows::class)
+        ->assertTableColumnExists('allow_partial_payment')
+        ->assertTableColumnExists('allow_pay_later')
+        ->assertTableColumnExists('require_customer_for_credit');
+});

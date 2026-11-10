@@ -70,13 +70,9 @@ class OrderController extends Controller
             $orders[] = $this->orderPayload($order);
         }
 
-        $receivableCodes = $this->catalog->codesWhere(fn ($behavior) => $behavior->allowsPartialPayment());
+        $receivableCodes = $this->catalog->creditCodes();
         $receivables = [];
-        foreach ($this->orderRepository->partialPaidForTypes($receivableCodes) as $order) {
-            if (! $order instanceof Order) {
-                continue;
-            }
-
+        foreach ($this->orderRepository->receivablesForTypes($receivableCodes) as $order) {
             $receivables[] = $this->receivablePayload($order);
         }
 
@@ -134,6 +130,11 @@ class OrderController extends Controller
         $payload = array_merge($order->toArray(), [
             'display' => $order->display()->toArray(),
             'receiptPayment' => ReceiptPayment::forOrder($order)->toArray(),
+            'credit' => [
+                'allow_partial_payment' => (bool) $order->typeRow()->allow_partial_payment,
+                'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
+                'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
+            ],
         ]);
 
         if ($withReceiptView) {
@@ -192,6 +193,11 @@ class OrderController extends Controller
 
         return Inertia::render('Orders/ManageOrder', [
             'order' => $this->orderPayload($order, true),
+            'credit' => [
+                'allow_partial_payment' => (bool) $order->typeRow()->allow_partial_payment,
+                'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
+                'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
+            ],
             'orderDisplay' => $order->display()->toArray(),
             'changeTypeOptions' => $this->changeTypeOptions(),
             'categories' => $categories,
@@ -202,7 +208,7 @@ class OrderController extends Controller
                 ->with(['products' => fn ($query) => $query->where('is_active', true)->orderBy('name')->select('id', 'external_seller_id', 'name', 'price')])
                 ->orderBy('name')->get(['id', 'name'])
                 ->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->name, 'products' => $seller->products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'price' => $product->price])]),
-            'canAddExternalOrder' => ! $order->behavior()->allowsPartialPayment(),
+            'canAddExternalOrder' => ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);
     }
