@@ -77,9 +77,7 @@ class CompaniesAccounts extends Page implements HasTable
      */
     private function customersQuery(): Builder
     {
-        $codes = app(OrderTypeCatalog::class)->codesWhere(
-            fn ($behavior): bool => $behavior->allowsPartialPayment()
-        );
+        $codes = app(OrderTypeCatalog::class)->creditCodes();
 
         return Customer::query()
             ->whereHas('orders', fn (Builder $query) => $this->constrainPartialOrders($query, $codes))
@@ -98,7 +96,7 @@ class CompaniesAccounts extends Page implements HasTable
     private function constrainPartialOrders(Builder|Relation $query, array $codes): void
     {
         $query->where('status', OrderStatus::COMPLETED)
-            ->where('payment_status', PaymentStatus::PARTIAL_PAID)
+            ->whereIn('payment_status', [PaymentStatus::PARTIAL_PAID, PaymentStatus::PENDING])
             ->whereIn('type', $codes);
     }
 

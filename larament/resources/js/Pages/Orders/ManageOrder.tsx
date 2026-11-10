@@ -69,6 +69,7 @@ export default function ManageOrder({
     sellers,
     guestDue,
     canAddExternalOrder: typeAllowsExternalOrder,
+    credit,
 }: ManageOrderProps) {
     const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
     const user = auth.user as User;
@@ -576,6 +577,7 @@ export default function ManageOrder({
                     order={orderWithDisplay}
                     orderItems={orderItems}
                     guestDue={externalOrders.length > 0 ? guestDue : undefined}
+                    credit={credit}
                 />
                 <PrintInKitchenModal
                     open={isPrintInKitchenModalOpen}

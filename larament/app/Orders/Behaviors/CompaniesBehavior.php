@@ -34,11 +34,6 @@ final class CompaniesBehavior implements OrderTypeBehavior
         return false;
     }
 
-    public function allowsPartialPayment(): bool
-    {
-        return true;
-    }
-
     public function usesPosOrderNumber(): bool
     {
         return true;

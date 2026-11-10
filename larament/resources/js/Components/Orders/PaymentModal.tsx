@@ -26,6 +26,11 @@ interface PaymentModalProps {
     paidAmount?: number;
     remainingAmount?: number;
     guestDue?: number;
+    credit?: {
+        allow_partial_payment: boolean;
+        allow_pay_later: boolean;
+        require_customer_for_credit: boolean;
+    };
 }
 
 export default function PaymentModal({
@@ -37,6 +42,7 @@ export default function PaymentModal({
     paidAmount = 0,
     remainingAmount = 0,
     guestDue,
+    credit,
 }: PaymentModalProps) {
     const [onePaymentForm] = Form.useForm();
     const [multiPaymentForm] = Form.useForm();
@@ -45,23 +51,81 @@ export default function PaymentModal({
     >("one_payment");
     const [remaining, setRemaining] = useState<number>(0);
 
+    const creditSettings = credit ?? order.credit;
+    const allowPartial = Boolean(creditSettings?.allow_partial_payment);
+    const allowPayLater = Boolean(creditSettings?.allow_pay_later);
+
     const totals = calculateOrderTotals(order, orderItems);
     const due = mode === "collect" ? remainingAmount : guestDue ?? Math.ceil(totals.total);
 
     const { loading, finish, start } = useLoading();
 
+    const handlePayLater = () => {
+        Modal.confirm({
+            title: "تأكيد الإغلاق والدفع لاحقاً",
+            content: "هل أنت متأكد من إغلاق الطلب دون دفع أي مبلغ وتسجيله كآجل؟",
+            okText: "تأكيد",
+            cancelText: "إلغاء",
+            onOk: () => {
+                start();
+                router.post(
+                    `/orders/complete-order/${order.id}`,
+                    {
+                        cash: 0,
+                        card: 0,
+                        talabat_card: 0,
+                        print: false,
+                    },
+                    {
+                        onSuccess: () => {
+                            message.success("تم إنهاء الطلب بنجاح");
+                            onCancel();
+                            router.get(route("orders.index") + `#${order.type}`);
+                        },
+                        onFinish: () => {
+                            finish();
+                        },
+                        onError: (errors: any) => {
+                            const msg = errors?.error || "حدث خطأ أثناء إنهاء الطلب";
+                            message.error(msg);
+                        },
+                    }
+                );
+            },
+        });
+    };
+
     const onFinish = (values: any) => {
         if (mode === "complete") {
-            if (paymentMethod === "one_payment") {
-                if (Number(values.paid) < due) {
-                    message.error("يجب أن يكون المبلغ المدفوع مساويًا للإجمالي");
-                    return;
+            if (!allowPartial) {
+                if (paymentMethod === "one_payment") {
+                    if (Number(values.paid) < due) {
+                        message.error("يجب أن يكون المبلغ المدفوع مساويًا للإجمالي");
+                        return;
+                    }
+                } else {
+                    const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
+                    if (sum !== due) {
+                        message.error("يجب أن يكون مجموع المبالغ المدفوعة مساويًا للإجمالي");
+                        return;
+                    }
                 }
             } else {
-                const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
-                if (sum !== due) {
-                    message.error("يجب أن يكون مجموع المبالغ المدفوعة مساويًا للإجمالي");
-                    return;
+                if (paymentMethod === "one_payment") {
+                    if (Number(values.paid || 0) <= 0 && !allowPayLater) {
+                        message.error("يجب إدخال المبلغ المدفوع");
+                        return;
+                    }
+                } else {
+                    const sum = Number(values.cash || 0) + Number(values.card || 0) + Number(values.talabat_card || 0);
+                    if (sum > due) {
+                        message.error("مجموع المبالغ المدفوعة يتجاوز الإجمالي");
+                        return;
+                    }
+                    if (sum <= 0 && !allowPayLater) {
+                        message.error("يجب إدخال المبلغ المدفوع");
+                        return;
+                    }
                 }
             }
         } else if (paymentMethod === "multi_payment") {
@@ -178,6 +242,12 @@ export default function PaymentModal({
             <div className="grid grid-cols-2 gap-4">
                 <Descriptions bordered column={1} items={paymentItems} />
                 <div>
+                    {mode === "complete" && allowPartial && (
+                        <div className="mb-4 p-2.5 bg-blue-50 border border-blue-200 rounded text-blue-800 text-sm">
+                            مسموح بالدفع الجزئي لهذا النوع من الطلبات.
+                        </div>
+                    )}
+
                     <Radio.Group
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         value={paymentMethod}
@@ -235,9 +305,21 @@ export default function PaymentModal({
                                 </Radio.Group>
                             </Form.Item>
                             <Form.Item>
-                                <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
-                                    تم
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
+                                        تم
+                                    </Button>
+                                    {mode === "complete" && allowPayLater && (
+                                        <Button
+                                            danger
+                                            onClick={handlePayLater}
+                                            loading={loading}
+                                            disabled={loading}
+                                        >
+                                            إغلاق والدفع لاحقاً
+                                        </Button>
+                                    )}
+                                </div>
                             </Form.Item>
                         </Form>
                     )}
@@ -266,9 +348,21 @@ export default function PaymentModal({
                                 <InputNumber className="w-full" min={0} />
                             </Form.Item>
                             <Form.Item>
-                                <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
-                                    تم
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
+                                        تم
+                                    </Button>
+                                    {mode === "complete" && allowPayLater && (
+                                        <Button
+                                            danger
+                                            onClick={handlePayLater}
+                                            loading={loading}
+                                            disabled={loading}
+                                        >
+                                            إغلاق والدفع لاحقاً
+                                        </Button>
+                                    )}
+                                </div>
                             </Form.Item>
                         </Form>
                     )}

@@ -57,11 +57,6 @@ final class DineInBehavior implements OrderTypeBehavior
         return false;
     }
 
-    public function allowsPartialPayment(): bool
-    {
-        return false;
-    }
-
     public function usesPosOrderNumber(): bool
     {
         return true;

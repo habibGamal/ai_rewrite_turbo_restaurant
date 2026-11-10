@@ -34,11 +34,6 @@ final class WebTakeawayBehavior implements OrderTypeBehavior
         return true;
     }
 
-    public function allowsPartialPayment(): bool
-    {
-        return false;
-    }
-
     public function usesPosOrderNumber(): bool
     {
         return false;

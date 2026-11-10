@@ -61,3 +61,27 @@ it('lists the outstanding balance of customers with partly paid companies orders
         ->assertSee('40.00')
         ->assertSee('#41');
 });
+
+it('lists the outstanding balance of customers with pay later (pending) companies orders', function () {
+    actingAs(User::factory()->admin()->create());
+
+    $customer = Customer::factory()->create([
+        'name' => 'شركة الأهرام',
+        'phone' => '01234567890',
+    ]);
+    Order::factory()->create([
+        'type' => 'companies',
+        'status' => OrderStatus::COMPLETED,
+        'payment_status' => PaymentStatus::PENDING,
+        'customer_id' => $customer->id,
+        'total' => 200,
+        'order_number' => 52,
+    ]);
+
+    livewire(CompaniesAccounts::class)
+        ->assertSuccessful()
+        ->assertCanSeeTableRecords([$customer])
+        ->assertSee('شركة الأهرام')
+        ->assertSee('200.00')
+        ->assertSee('#52');
+});

@@ -54,11 +54,12 @@ class OrderRepository
     }
 
     /**
-     * Completed, partly paid orders of the given type codes, from every shift.
+     * Completed credit orders with an outstanding balance (pending or partial_paid) for the given type codes.
      *
      * @param  list<string>  $codes
+     * @return Collection<int, Order>
      */
-    public function partialPaidForTypes(array $codes): Collection
+    public function receivablesForTypes(array $codes): Collection
     {
         if ($codes === []) {
             return new Collection;
@@ -67,10 +68,16 @@ class OrderRepository
         return Order::query()
             ->with(['customer', 'payments'])
             ->where('status', OrderStatus::COMPLETED)
-            ->where('payment_status', PaymentStatus::PARTIAL_PAID)
+            ->whereIn('payment_status', [PaymentStatus::PENDING, PaymentStatus::PARTIAL_PAID])
             ->whereIn('type', $codes)
             ->orderBy('created_at')
-            ->get();
+            ->get()
+            ->filter(function (Order $order): bool {
+                $paid = (float) $order->payments->sum('amount');
+
+                return round((float) $order->total - $paid, 2) > 0;
+            })
+            ->values();
     }
 
     /**

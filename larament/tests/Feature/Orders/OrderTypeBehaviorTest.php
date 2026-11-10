@@ -43,6 +43,16 @@ describe('order type catalog', function () {
                 ->and($row->behavior)->toBe($attrs['behavior'])
                 ->and($row->is_system)->toBeTrue()
                 ->and($row->is_active)->toBeTrue();
+
+            if ($code === 'companies') {
+                expect($row->allow_partial_payment)->toBeTrue()
+                    ->and($row->allow_pay_later)->toBeTrue()
+                    ->and($row->require_customer_for_credit)->toBeTrue();
+            } else {
+                expect($row->allow_partial_payment)->toBeFalse()
+                    ->and($row->allow_pay_later)->toBeFalse()
+                    ->and($row->require_customer_for_credit)->toBeTrue();
+            }
         }
     });
 

@@ -123,4 +123,34 @@ final class OrderTypeCatalog
 
         return $codes;
     }
+
+    /**
+     * @param  callable(OrderTypeRow): bool  $predicate
+     * @return list<string>
+     */
+    public function codesWhereRow(callable $predicate): array
+    {
+        $codes = [];
+
+        foreach ($this->all() as $row) {
+            if ($predicate($row)) {
+                $codes[] = $row->code;
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function creditCodes(): array
+    {
+        return $this->codesWhereRow(fn (OrderTypeRow $row): bool => $row->allowsCredit());
+    }
+
+    public function flush(): void
+    {
+        $this->rows = null;
+    }
 }

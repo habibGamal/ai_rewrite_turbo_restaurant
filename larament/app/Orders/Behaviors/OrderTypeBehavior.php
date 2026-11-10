@@ -22,8 +22,6 @@ interface OrderTypeBehavior
 
     public function carriesAcrossShifts(): bool;
 
-    public function allowsPartialPayment(): bool;
-
     public function usesPosOrderNumber(): bool;
 
     public function display(OrderTypeRow $type): OrderDisplay;

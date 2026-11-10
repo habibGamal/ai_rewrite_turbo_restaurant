@@ -102,6 +102,11 @@ export interface Order {
     table?: Table;
     payments?: Payment[];
     display?: OrderDisplay;
+    credit?: {
+        allow_partial_payment: boolean;
+        allow_pay_later: boolean;
+        require_customer_for_credit: boolean;
+    };
 }
 
 export interface OrderDisplay {
@@ -141,6 +146,11 @@ export interface CashierTab {
   occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
   presentation?: TabPresentation;
     display?: OrderDisplay;
+    credit?: {
+        allow_partial_payment: boolean;
+        allow_pay_later: boolean;
+        require_customer_for_credit: boolean;
+    };
 }
 
 export interface ChangeTypeOption {

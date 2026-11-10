@@ -163,11 +163,11 @@ class OrderService
         return DB::transaction(function () use ($orderId, $tenders) {
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
 
-            if ($order->status !== OrderStatus::COMPLETED || $order->payment_status !== PaymentStatus::PARTIAL_PAID) {
-                throw new OrderException('لا يمكن تحصيل متبقي إلا لطلب مكتمل ومدفوع جزئياً');
+            if ($order->status !== OrderStatus::COMPLETED || ! in_array($order->payment_status, [PaymentStatus::PARTIAL_PAID, PaymentStatus::PENDING], true)) {
+                throw new OrderException('لا يمكن تحصيل متبقي إلا لطلب مكتمل وغير مدفوع بالكامل');
             }
 
-            if (! $order->behavior()->allowsPartialPayment()) {
+            if (! $order->typeRow()->allowsCredit()) {
                 throw new OrderException('هذا النوع من الطلبات لا يسمح بتحصيل المتبقي');
             }
 
@@ -202,7 +202,7 @@ class OrderService
                 return $shift instanceof Shift && $shift->closed;
             });
 
-            if ($paidInClosedShift && $order->behavior()->allowsPartialPayment()) {
+            if ($paidInClosedShift && $order->typeRow()->allowsCredit()) {
                 throw new OrderException('لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
             }
 
@@ -263,10 +263,10 @@ class OrderService
     {
         return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
             $newTypeRow = $this->catalog->find($newType);
-            $newBehavior = $this->catalog->behaviorFor($newType);
-            if ($newBehavior->allowsPartialPayment() && $order->externalOrders()->where('status', '!=', 'cancelled')->exists()) {
+            if ($newTypeRow->allowsCredit() && $order->externalOrders()->where('status', '!=', 'cancelled')->exists()) {
                 throw new OrderException('لا يمكن تغيير النوع مع وجود طلب خارجي');
             }
+            $newBehavior = $this->catalog->behaviorFor($newType);
             $assignsTable = $newBehavior->display($newTypeRow)->showTable;
 
             if ($assignsTable && ! $tableNumber) {
