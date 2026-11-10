@@ -44,7 +44,12 @@ class ExternalSellerAccounts extends Page implements HasTable
                     ->state(fn (ExternalSeller $record): float => app(ExternalSellerSettlementService::class)->payable($record))
                     ->formatStateUsing(fn (float $state): string => number_format($state, 2)),
             ])
+            ->recordUrl(fn (ExternalSeller $record): string => ExternalSellerAccount::getUrl(['record' => $record->id]))
             ->recordActions([
+                Action::make('view_account')
+                    ->label('عرض الحساب')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (ExternalSeller $record): string => ExternalSellerAccount::getUrl(['record' => $record->id])),
                 Action::make('pay')->label('دفع المستحقات')
                     ->visible(fn (): bool => auth()->user()?->can('update_external_sellers') ?? false)
                     ->schema([
