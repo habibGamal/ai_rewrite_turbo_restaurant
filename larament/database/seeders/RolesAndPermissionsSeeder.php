@@ -103,6 +103,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_manufacturing_recipes' => 'إضافة وصفة تصنيع',
                 'update_manufacturing_recipes' => 'تعديل وصفة تصنيع',
                 'delete_manufacturing_recipes' => 'حذف وصفة تصنيع',
+
+                'view_stock_issues' => 'عرض أذون الصرف',
+                'create_stock_issues' => 'إضافة إذن صرف',
+                'update_stock_issues' => 'تعديل إذن صرف',
+                'delete_stock_issues' => 'حذف إذن صرف',
             ],
             'العملاء والسائقين والمصروفات' => [
                 'view_customers' => 'عرض العملاء',
