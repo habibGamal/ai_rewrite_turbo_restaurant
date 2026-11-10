@@ -4,10 +4,12 @@ namespace App\Services\Orders;
 
 use App\Enums\MovementReason;
 use App\Enums\ProductType;
+use App\Models\InventoryItemMovement;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Services\StockService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class OrderStockConversionService
@@ -26,11 +28,12 @@ class OrderStockConversionService
 
         foreach ($order->items as $orderItem) {
             $product = $orderItem->product;
+            $warehouseId = $product->stockWarehouseId();
 
             switch ($product->type) {
                 case ProductType::Manufactured:
                     // Break down manufactured product into its components
-                    $componentItems = $this->getManufacturedProductComponents($product, $orderItem->quantity);
+                    $componentItems = $this->getManufacturedProductComponents($product, $orderItem->quantity, $warehouseId);
                     $stockItems = array_merge($stockItems, $componentItems);
                     break;
 
@@ -39,6 +42,7 @@ class OrderStockConversionService
                     $stockItems[] = [
                         'product_id' => $product->id,
                         'quantity' => $orderItem->quantity,
+                        'warehouse_id' => $warehouseId,
                     ];
                     break;
 
@@ -60,7 +64,7 @@ class OrderStockConversionService
     /**
      * Get components of a manufactured product with their required quantities
      */
-    private function getManufacturedProductComponents(Product $manufacturedProduct, float $orderQuantity): array
+    private function getManufacturedProductComponents(Product $manufacturedProduct, float $orderQuantity, int $warehouseId): array
     {
         $components = [];
 
@@ -78,10 +82,11 @@ class OrderStockConversionService
                 $components[] = [
                     'product_id' => $component->id,
                     'quantity' => $requiredQuantity,
+                    'warehouse_id' => $warehouseId,
                 ];
             } elseif ($component->type === ProductType::Manufactured) {
-                // Recursively break down nested manufactured products
-                $nestedComponents = $this->getManufacturedProductComponents($component, $requiredQuantity);
+                // Nested components stay on the warehouse of the item that was sold
+                $nestedComponents = $this->getManufacturedProductComponents($component, $requiredQuantity, $warehouseId);
                 $components = array_merge($components, $nestedComponents);
             }
         }
@@ -97,12 +102,12 @@ class OrderStockConversionService
         $optimized = [];
 
         foreach ($stockItems as $item) {
-            $productId = $item['product_id'];
+            $key = $item['product_id'].':'.($item['warehouse_id'] ?? 0);
 
-            if (isset($optimized[$productId])) {
-                $optimized[$productId]['quantity'] += $item['quantity'];
+            if (isset($optimized[$key])) {
+                $optimized[$key]['quantity'] += $item['quantity'];
             } else {
-                $optimized[$productId] = $item;
+                $optimized[$key] = $item;
             }
         }
 
@@ -132,9 +137,11 @@ class OrderStockConversionService
      */
     public function addStockForCancelledOrder(Order $order): bool
     {
-        $stockItems = $this->convertOrderItemsToStockItems($order);
+        $stockItems = $order->exists
+            ? $this->fullCancellationStockItems($order)
+            : $this->partialReturnStockItems($order);
 
-        if (empty($stockItems)) {
+        if ($stockItems === []) {
             return true;
         }
 
@@ -143,5 +150,60 @@ class OrderStockConversionService
             MovementReason::ORDER_RETURN,
             $order
         )->isNotEmpty();
+    }
+
+    /**
+     * @return array<int, array{product_id: int, quantity: float, warehouse_id: int}>
+     */
+    private function fullCancellationStockItems(Order $order): array
+    {
+        $movements = $this->originalSaleMovements($order);
+
+        if ($movements->isEmpty()) {
+            return $this->convertOrderItemsToStockItems($order);
+        }
+
+        return $movements->map(fn (InventoryItemMovement $movement): array => [
+            'product_id' => (int) $movement->product_id,
+            'quantity' => (float) $movement->quantity,
+            'warehouse_id' => (int) $movement->warehouse_id,
+        ])->all();
+    }
+
+    /**
+     * @return array<int, array{product_id: int, quantity: float, warehouse_id: int}>
+     */
+    private function partialReturnStockItems(Order $order): array
+    {
+        $lines = $this->convertOrderItemsToStockItems($order);
+        $warehouses = $this->originalSaleMovements($order)
+            ->groupBy(fn (InventoryItemMovement $movement): int => (int) $movement->product_id)
+            ->map(fn (Collection $group): int => (int) $group->sortBy('id')->first()->warehouse_id);
+
+        foreach ($lines as $index => $line) {
+            $productId = (int) $line['product_id'];
+            if ($warehouses->has($productId)) {
+                $lines[$index]['warehouse_id'] = $warehouses->get($productId);
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @return Collection<int, InventoryItemMovement>
+     */
+    private function originalSaleMovements(Order $order): Collection
+    {
+        if ($order->getKey() === null) {
+            return collect();
+        }
+
+        return InventoryItemMovement::query()
+            ->where('referenceable_type', $order->getMorphClass())
+            ->where('referenceable_id', $order->getKey())
+            ->where('reason', MovementReason::ORDER)
+            ->orderBy('id')
+            ->get();
     }
 }

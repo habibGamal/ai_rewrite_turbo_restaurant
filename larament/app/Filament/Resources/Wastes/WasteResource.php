@@ -12,6 +12,7 @@ use App\Filament\Resources\Wastes\Pages\ListWastes;
 use App\Filament\Resources\Wastes\Pages\ViewWaste;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Models\Waste;
 use App\Services\Resources\WasteCalculatorService;
 use Filament\Actions\BulkActionGroup;
@@ -65,6 +66,19 @@ class WasteResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?Waste $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('total')
                             ->label('إجمالي قيمة التالف (ج.م)')
@@ -223,6 +237,11 @@ class WasteResource extends Resource
 
                 TextColumn::make('user.name')
                     ->label('المستخدم')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 

@@ -40,11 +40,12 @@ class PurchaseService
             }
 
             // Prepare items for stock processing
-            $stockItems = $items->map(function ($item) {
+            $stockItems = $items->map(function ($item) use ($invoice) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
                     'unit_cost' => (float) $item->price,
+                    'warehouse_id' => $invoice->warehouse_id,
                 ];
             })->toArray();
 
@@ -100,10 +101,11 @@ class PurchaseService
             }
 
             // Prepare items for stock processing and validate availability
-            $stockItems = $items->map(function ($item) {
+            $stockItems = $items->map(function ($item) use ($invoice) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
+                    'warehouse_id' => $invoice->warehouse_id,
                 ];
             })->toArray();
 

@@ -40,6 +40,7 @@ class WasteService
                 $itemsToRemove[] = [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
+                    'warehouse_id' => $waste->warehouse_id,
                 ];
             }
 
