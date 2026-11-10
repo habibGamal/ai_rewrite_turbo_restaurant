@@ -5,8 +5,11 @@ namespace App\Filament\Pages\Reports;
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\StockReportTable;
+use App\Models\Warehouse;
+use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class StockReport extends BaseDashboard
@@ -34,6 +37,20 @@ class StockReport extends BaseDashboard
                     'last_30_days',
                     29
                 ),
+                Section::make('المخزن')
+                    ->columnSpanFull()
+                    ->schema([
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->placeholder('كل المخازن')
+                            ->options(fn (): array => Warehouse::query()
+                                ->active()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->live(),
+                    ]),
             ]);
     }
 

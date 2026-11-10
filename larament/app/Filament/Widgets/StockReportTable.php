@@ -38,8 +38,11 @@ class StockReportTable extends BaseWidget
         $endDate = $resolved['end'];
         $useLive = $resolved['useLive'];
 
+        $rawWarehouseId = $this->pageFilters['warehouse_id'] ?? $this->pageFilters['warehouseId'] ?? null;
+        $warehouseId = is_numeric($rawWarehouseId) && (int) $rawWarehouseId > 0 ? (int) $rawWarehouseId : null;
+
         return $table
-            ->query(StockReportService::query($startDate, $endDate, $useLive))
+            ->query(StockReportService::query($startDate, $endDate, $useLive, $warehouseId))
             ->columns([
                 TextColumn::make('name')
                     ->label('المنتج')
@@ -81,6 +84,28 @@ class StockReportTable extends BaseWidget
                     })
                     ->alignCenter(),
 
+                TextColumn::make('transfer_in')
+                    ->label('تحويل وارد')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'info' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('manufacturing_in')
+                    ->label('تصنيع وارد')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'info' : 'gray';
+                    })
+                    ->alignCenter(),
+
                 TextColumn::make('total_quantity')
                     ->label('الكمية الكلية')
                     ->numeric()
@@ -103,6 +128,39 @@ class StockReportTable extends BaseWidget
 
                 TextColumn::make('return_waste')
                     ->label('كمية الفاقد والمرتجع')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('transfer_out')
+                    ->label('تحويل صادر')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('manufacturing_out')
+                    ->label('تصنيع صادر')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('issue')
+                    ->label('صرف')
                     ->numeric()
                     ->sortable()
                     ->default(0)

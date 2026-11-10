@@ -29,6 +29,14 @@ class StockReportExporter extends Exporter
                 ->label('كمية الوارد')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
+            ExportColumn::make('transfer_in')
+                ->label('تحويل وارد')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('manufacturing_in')
+                ->label('تصنيع وارد')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
             ExportColumn::make('total_quantity')
                 ->label('الكمية الكلية')
                 ->state(fn ($record) => StockReportService::calculate($record)['total']),
@@ -39,6 +47,18 @@ class StockReportExporter extends Exporter
 
             ExportColumn::make('return_waste')
                 ->label('كمية الفاقد والمرتجع')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('transfer_out')
+                ->label('تحويل صادر')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('manufacturing_out')
+                ->label('تصنيع صادر')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('issue')
+                ->label('صرف')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
             ExportColumn::make('total_consumed')
