@@ -11,7 +11,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-/** @property int $warehouse_id */
+/**
+ * @property int $warehouse_id
+ * @property-read Product $product
+ */
 #[ObservedBy([InventoryItemMovementObserver::class])]
 class InventoryItemMovement extends Model
 {
@@ -56,6 +59,7 @@ class InventoryItemMovement extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

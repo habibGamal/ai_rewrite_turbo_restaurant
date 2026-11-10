@@ -16,7 +16,7 @@ readonly class StockMovementDTO
         public mixed $referenceable = null,
         public ?InventoryItem $existingInventoryItem = null,
         public int $warehouseId = 0,
-        public float $unitCost = 0,
+        public ?float $unitCost = null,
         public ?int $userId = null,
     ) {}
 

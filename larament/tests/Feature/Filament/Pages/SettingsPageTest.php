@@ -127,7 +127,8 @@ it('has shift management fields', function () {
 
 it('has purchase management fields', function () {
     livewire(Settings::class)
-        ->assertSchemaComponentExists(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value);
+        ->assertSchemaComponentExists(SettingKey::COSTING_METHOD->value)
+        ->assertSee('طريقة تقييم التكلفة');
 });
 
 // ===== Form State Tests =====
@@ -150,7 +151,7 @@ it('loads boolean settings correctly', function () {
             SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
             SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
-            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => true,
+            SettingKey::COSTING_METHOD->value => 'immediate',
         ]);
 });
 
@@ -214,7 +215,7 @@ it('can save boolean settings', function () {
             SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => true,
             SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => true,
-            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => false,
+            SettingKey::COSTING_METHOD->value => 'off',
         ])
         ->call('save')
         ->assertNotified();
@@ -227,8 +228,8 @@ it('can save boolean settings', function () {
         ->toBe('false');
     expect(Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)->first()->value)
         ->toBe('true');
-    expect(Setting::where('key', SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)->first()->value)
-        ->toBe('false');
+    expect(Setting::where('key', SettingKey::COSTING_METHOD->value)->first()->value)
+        ->toBe('off');
 });
 
 it('can save node type settings', function () {

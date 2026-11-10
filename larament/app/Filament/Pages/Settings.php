@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Costing\CostingMethod;
+use App\Costing\CostingMethodSwitcher;
 use App\Enums\KdsSound;
 use App\Enums\SettingKey;
 use App\Models\OrderTypeRow;
@@ -28,6 +30,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -75,7 +78,6 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
-                    SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                     SettingKey::KDS_ITEM_TRACKING->value,
                     SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
@@ -355,10 +357,11 @@ class Settings extends Page implements HasForms
                                 Section::make()
                                     ->description('إعدادات خاصة بفواتير الشراء وتكاليف المنتجات')
                                     ->schema([
-                                        Toggle::make(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)
-                                            ->label(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->label())
-                                            ->helperText(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->helperText())
-                                            ->inline(false),
+                                        Select::make(SettingKey::COSTING_METHOD->value)
+                                            ->label(SettingKey::COSTING_METHOD->label())
+                                            ->helperText(SettingKey::COSTING_METHOD->helperText())
+                                            ->options(CostingMethod::options())
+                                            ->required(),
                                     ]),
                             ]),
 
@@ -520,7 +523,6 @@ class Settings extends Page implements HasForms
                     SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
                     SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
                     SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
-                    SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
                     SettingKey::KDS_ITEM_TRACKING->value,
                     SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
                 ])) {
@@ -534,16 +536,19 @@ class Settings extends Page implements HasForms
                 ? json_encode($targets)
                 : '{}';
 
-            try {
-                app(CashierTabLayout::class)->save($cashierTabs);
-            } catch (ValidationException $e) {
-                throw ValidationException::withMessages([
-                    'data.'.SettingKey::CASHIER_TABS->value => $e->validator->errors()->first(SettingKey::CASHIER_TABS->value),
-                ]);
-            }
+            DB::transaction(function () use ($cashierTabs, $cleanData) {
+                try {
+                    app(CashierTabLayout::class)->save($cashierTabs);
+                } catch (ValidationException $e) {
+                    throw ValidationException::withMessages([
+                        'data.'.SettingKey::CASHIER_TABS->value => $e->validator->errors()->first(SettingKey::CASHIER_TABS->value),
+                    ]);
+                }
 
-            $settingsService = app(SettingsService::class);
-            $settingsService->setMultiple($cleanData);
+                app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($cleanData[SettingKey::COSTING_METHOD->value]));
+                unset($cleanData[SettingKey::COSTING_METHOD->value]);
+                app(SettingsService::class)->setMultiple($cleanData);
+            });
 
             Notification::make()
                 ->title('تم حفظ الإعدادات بنجاح')
@@ -572,7 +577,10 @@ class Settings extends Page implements HasForms
             $settingsService = app(SettingsService::class);
             $defaults = $settingsService->getDefaults();
 
-            $settingsService->setMultiple($defaults);
+            app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($defaults[SettingKey::COSTING_METHOD->value]));
+            $remainingDefaults = $defaults;
+            unset($remainingDefaults[SettingKey::COSTING_METHOD->value]);
+            $settingsService->setMultiple($remainingDefaults);
             $this->data = $defaults;
             $this->data[SettingKey::CASHIER_TABS->value] = app(CashierTabLayout::class)->entriesForEditor();
             $this->form->fill($this->data);

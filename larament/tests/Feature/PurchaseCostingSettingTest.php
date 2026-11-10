@@ -29,7 +29,7 @@ it('updates product cost on purchase invoice close by default', function () {
     ]);
 
     $settingsService = app(SettingsService::class);
-    expect($settingsService->shouldUpdateProductCostOnPurchase())->toBeTrue();
+    expect($settingsService->getCostingMethod())->toBe(\App\Costing\CostingMethod::Immediate);
 
     $supplier = Supplier::factory()->create();
     $user = User::factory()->create();
@@ -72,7 +72,7 @@ it('prevents update of product cost on purchase invoice close when setting is di
     ]);
 
     $settingsService = app(SettingsService::class);
-    $settingsService->set(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, 'false');
+    $settingsService->set(SettingKey::COSTING_METHOD->value, 'off');
 
     $supplier = Supplier::factory()->create();
     $user = User::factory()->create();
