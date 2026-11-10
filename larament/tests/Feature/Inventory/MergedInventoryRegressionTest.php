@@ -252,3 +252,20 @@ it('filters sales cards and order type summaries to category A only', function (
     $types = (new ReflectionMethod($chart, 'getOrderTypePerformance'))->invoke($chart);
     expect(collect($types)->sum('total_sales'))->toBe(100.0);
 })->with([false, true]);
+
+it('summarises manual, adjustment and initial stock movements so the summary agrees with the ledger', function () {
+    $product = mergedStock();
+    $stock = app(StockService::class);
+    $stock->addStock([['product_id' => $product->id, 'quantity' => 50]], MovementReason::INITIAL_STOCK);
+    $stock->removeStock([['product_id' => $product->id, 'quantity' => 4]], MovementReason::ADJUSTMENT);
+    $stock->addStock([['product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 30]], MovementReason::PURCHASE);
+
+    $today = app(\App\Services\InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString();
+    $rows = MovementSummaryReportService::rows($today, $today);
+    $net = collect($rows)->sum(fn ($row) => ($row->operation === 'in' ? 1 : -1) * (float) $row->quantity);
+
+    expect((float) $rows['other_in']->quantity)->toBe(50.0)
+        ->and((float) $rows['other_out']->quantity)->toBe(4.0)
+        ->and((float) $rows['purchase']->quantity)->toBe(10.0)
+        ->and(round($net, 3))->toBe(56.0); // 50 − 4 + 10: every movement of the day is in some summary row
+});

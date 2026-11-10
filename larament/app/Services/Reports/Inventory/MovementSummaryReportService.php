@@ -105,6 +105,20 @@ class MovementSummaryReportService
             'operation' => 'out',
             'label' => 'صرف مخزني',
         ],
+        'other_in' => [
+            'id' => 13,
+            'key' => 'other_in',
+            'reason' => 'other',
+            'operation' => 'in',
+            'label' => 'تسويات أخرى (وارد)',
+        ],
+        'other_out' => [
+            'id' => 14,
+            'key' => 'other_out',
+            'reason' => 'other',
+            'operation' => 'out',
+            'label' => 'تسويات أخرى (صادر)',
+        ],
     ];
 
     /**
@@ -147,7 +161,7 @@ class MovementSummaryReportService
 
         foreach ($movements as $movement) {
             $key = self::reasonKeyForMovement($movement);
-            if ($key !== null && isset($grouped[$key])) {
+            if (isset($grouped[$key])) {
                 $grouped[$key]->push($movement);
             }
         }
@@ -249,7 +263,7 @@ class MovementSummaryReportService
     }
 
     /**
-     * Build an Eloquent query returning the 12 summary rows for the Filament Table and Exporter.
+     * Build an Eloquent query returning the summary rows for the Filament Table and Exporter.
      *
      * @return Builder<InventoryItemMovement>
      */
@@ -288,7 +302,7 @@ class MovementSummaryReportService
         return null;
     }
 
-    public static function reasonKeyForMovement(InventoryItemMovement $movement): ?string
+    public static function reasonKeyForMovement(InventoryItemMovement $movement): string
     {
         $reasonValue = $movement->reason->value;
 
@@ -302,7 +316,9 @@ class MovementSummaryReportService
             return $reasonValue;
         }
 
-        return null;
+        // manual, adjustment, initial_stock and the legacy transfer reason still move stock,
+        // so they are summarised here to keep the report in agreement with the ledger.
+        return $movement->operation === InventoryMovementOperation::IN ? 'other_in' : 'other_out';
     }
 
     /**

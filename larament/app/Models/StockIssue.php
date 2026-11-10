@@ -56,7 +56,7 @@ class StockIssue extends Model
         });
 
         static::updating(function (StockIssue $issue) {
-            if ($issue->getOriginal('closed_at') !== null) {
+            if ($issue->getOriginal('closed_at') !== null || static::whereKey($issue->getKey())->whereNotNull('closed_at')->exists()) {
                 throw ValidationException::withMessages([
                     'stock_issue' => 'لا يمكن تعديل إذن صرف مؤكد.',
                 ]);

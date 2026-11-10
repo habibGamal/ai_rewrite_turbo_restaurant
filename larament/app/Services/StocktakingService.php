@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\MovementReason;
 use App\Models\InventoryItem;
+use App\Models\Product;
 use App\Models\Stocktaking;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,8 @@ class StocktakingService
             $productIds = $items->pluck('product_id')->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
 
             if (! empty($productIds)) {
+                // Same lock order as StockService: products first, then inventory rows.
+                Product::query()->whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get();
                 InventoryItem::query()
                     ->where('warehouse_id', $warehouseId)
                     ->whereIn('product_id', $productIds)

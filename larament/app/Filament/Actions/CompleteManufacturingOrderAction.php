@@ -36,6 +36,9 @@ class CompleteManufacturingOrderAction
                 } catch (ManufacturingException|StockOperationException $exception) {
                     Notification::make()->title('تعذر إكمال التصنيع')->body($exception->getMessage())->danger()->send();
                     $action->halt();
+                } catch (\Illuminate\Validation\ValidationException $exception) {
+                    Notification::make()->title('تعذر إكمال التصنيع')->body($exception->validator->errors()->first())->danger()->send();
+                    $action->halt();
                 }
                 Notification::make()->title('تم إكمال التصنيع بنجاح')->success()->send();
                 $livewire->redirect(ManufacturingOrderResource::getUrl('view', ['record' => $record]));
