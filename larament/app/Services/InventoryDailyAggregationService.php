@@ -9,6 +9,7 @@ use App\Models\PlatformConnection;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
+use App\Models\StockIssue;
 use App\Models\Stocktaking;
 use App\Models\Warehouse;
 use App\Models\Waste;
@@ -173,6 +174,12 @@ class InventoryDailyAggregationService
         $openStocktaking = Stocktaking::whereNull('closed_at')->count();
         if ($openStocktaking > 0) {
             throw new Exception("لا يمكن إغلاق اليوم لوجود {$openStocktaking} جرد مفتوح");
+        }
+
+        // Check for open stock issues
+        $openStockIssues = StockIssue::whereNull('closed_at')->count();
+        if ($openStockIssues > 0) {
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openStockIssues} إذن صرف مفتوح");
         }
     }
 

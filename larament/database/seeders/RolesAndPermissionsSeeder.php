@@ -108,6 +108,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_manufacturing_orders' => 'إضافة أمر تصنيع',
                 'update_manufacturing_orders' => 'تعديل وإكمال أمر تصنيع',
                 'delete_manufacturing_orders' => 'حذف أمر تصنيع',
+
+                'view_stock_issues' => 'عرض أذون الصرف',
+                'create_stock_issues' => 'إضافة إذن صرف',
+                'update_stock_issues' => 'تعديل إذن صرف',
+                'delete_stock_issues' => 'حذف إذن صرف',
             ],
             'العملاء والسائقين والمصروفات' => [
                 'view_customers' => 'عرض العملاء',
