@@ -117,7 +117,8 @@ class OrderTypeRowResource extends Resource
                             ->helperText('يشترط تحديد عميل للطلب قبل السماح بالدفع الآجل أو الجزئي.')
                             ->default(true),
                     ])
-                    ->columns(3),
+                    ->columns(3)
+                    ->columnSpanFull(),
             ]);
     }
 
