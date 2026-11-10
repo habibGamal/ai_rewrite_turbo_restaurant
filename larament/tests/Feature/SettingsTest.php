@@ -31,17 +31,15 @@ class SettingsTest extends TestCase
         $this->assertEquals('192.168.1.100', $ip);
     }
 
-    public function test_can_get_default_update_product_cost_on_purchase(): void
+    public function test_can_get_default_costing_method(): void
     {
-        $this->assertTrue($this->settingsService->shouldUpdateProductCostOnPurchase());
-        $this->assertFalse($this->settingsService->isProductCostUpdatePrevented());
+        $this->assertSame(\App\Costing\CostingMethod::Immediate, $this->settingsService->getCostingMethod());
     }
 
-    public function test_can_prevent_update_product_cost_on_purchase(): void
+    public function test_can_disable_automatic_costing(): void
     {
-        $this->settingsService->set(\App\Enums\SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, 'false');
-        $this->assertFalse($this->settingsService->shouldUpdateProductCostOnPurchase());
-        $this->assertTrue($this->settingsService->isProductCostUpdatePrevented());
+        $this->settingsService->set(\App\Enums\SettingKey::COSTING_METHOD->value, 'off');
+        $this->assertSame(\App\Costing\CostingMethod::Off, $this->settingsService->getCostingMethod());
     }
 
     public function test_can_set_and_get_setting(): void

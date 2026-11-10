@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Costing\CostingMethod;
 use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
@@ -29,7 +30,7 @@ class SettingsService
 
     public const MASTER_NODE_LINK = 'master_node_link';
 
-    public const UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
+    public const COSTING_METHOD = 'costing_method';
 
     /**
      * Get website link from settings
@@ -161,22 +162,9 @@ class SettingsService
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
-    /**
-     * Check if product cost should be updated when closing a purchase invoice
-     */
-    public function shouldUpdateProductCostOnPurchase(): bool
+    public function getCostingMethod(): CostingMethod
     {
-        $value = $this->get(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /**
-     * Check if product cost update on purchase is prevented
-     */
-    public function isProductCostUpdatePrevented(): bool
-    {
-        return ! $this->shouldUpdateProductCostOnPurchase();
+        return CostingMethod::from($this->get(SettingKey::COSTING_METHOD->value, SettingKey::COSTING_METHOD->defaultValue()));
     }
 
     /**

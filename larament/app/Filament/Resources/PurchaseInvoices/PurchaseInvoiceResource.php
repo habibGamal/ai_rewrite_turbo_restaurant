@@ -14,6 +14,7 @@ use App\Filament\Resources\PurchaseInvoices\Pages\ViewPurchaseInvoice;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -65,6 +66,19 @@ class PurchaseInvoiceResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?PurchaseInvoice $record): bool => $record?->closed_at !== null),
 
                         Select::make('supplier_id')
                             ->label('المورد')
@@ -229,6 +243,11 @@ class PurchaseInvoiceResource extends Resource
 
                 TextColumn::make('supplier.name')
                     ->label('المورد')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 

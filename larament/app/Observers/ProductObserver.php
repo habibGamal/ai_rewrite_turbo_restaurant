@@ -2,9 +2,11 @@
 
 namespace App\Observers;
 
+use App\Costing\CostHistoryRecorder;
 use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
+use App\Models\Warehouse;
 
 class ProductObserver
 {
@@ -28,6 +30,7 @@ class ProductObserver
         if ($product->type !== ProductType::Manufactured) {
             InventoryItem::create([
                 'product_id' => $product->id,
+                'warehouse_id' => Warehouse::default()->id,
                 'quantity' => 0,
             ]);
         }
@@ -54,6 +57,7 @@ class ProductObserver
      */
     public function saved(Product $product): void
     {
+        app(CostHistoryRecorder::class)->recordSaved($product);
         // Auto-assign product_ref if not provided (fallback for mass assignment)
         if ($product->type !== ProductType::Manufactured) {
             $product->load('componentOf');
@@ -66,6 +70,7 @@ class ProductObserver
             if (! InventoryItem::where('product_id', $product->id)->exists()) {
                 InventoryItem::create([
                     'product_id' => $product->id,
+                    'warehouse_id' => Warehouse::default()->id,
                     'quantity' => 0,
                 ]);
             }

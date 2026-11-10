@@ -35,8 +35,11 @@ class ProductsSalesReportService
             });
     }
 
-    public function getProductsSalesPerformanceQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
+    public function getProductsSalesPerformanceQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null)
     {
+        $subCategoryIdSql = 'CASE WHEN categories.parent_id IS NULL THEN NULL ELSE categories.id END';
+        $subCategoryNameSql = 'CASE WHEN categories.parent_id IS NULL THEN NULL ELSE categories.name END';
+
         // Get products with sales data aggregated by order type
         $query = Product::query()
             ->whereNot('products.type', ProductType::RawMaterial)
@@ -47,13 +50,18 @@ class ProductsSalesReportService
                 'products.cost',
                 'products.type',
                 'categories.name as category_name',
+                'main_categories.id as main_category_id',
+                'main_categories.name as main_category_name',
                 // Total sales across all order types
                 DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
                 DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
 
             ])
+            ->selectRaw("{$subCategoryIdSql} as sub_category_id")
+            ->selectRaw("{$subCategoryNameSql} as sub_category_name")
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->leftJoin('categories as main_categories', 'main_categories.id', '=', DB::raw('COALESCE(categories.parent_id, categories.id)'))
             ->leftJoin('order_items', function ($join) {
                 $join->on('products.id', '=', 'order_items.product_id');
                 // ->whereExists(function ($query) use ($startDate, $endDate) {
@@ -85,7 +93,27 @@ class ProductsSalesReportService
                     $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
-            ->groupBy('products.id', 'products.name', 'products.price', 'products.cost', 'products.type', 'categories.name');
+            ->groupBy(
+                'products.id',
+                'products.name',
+                'products.price',
+                'products.cost',
+                'products.type',
+                'categories.id',
+                'categories.name',
+                'categories.parent_id',
+                'main_categories.id',
+                'main_categories.name',
+            )
+            ->groupByRaw($subCategoryIdSql)
+            ->groupByRaw($subCategoryNameSql)
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('products.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
+            });
 
         foreach ($this->getReportOrderTypes($startDate, $endDate, $shiftIds) as $type) {
             $code = $type['code'];
@@ -105,16 +133,17 @@ class ProductsSalesReportService
     /**
      * Get period statistics summary
      */
-    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
+    public function getPeriodSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
     {
         $summary = DB::table('products as p')
             ->whereNot('p.type', ProductType::RawMaterial)
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->select([
                 DB::raw('COUNT(DISTINCT order_items.product_id) as total_products'),
                 DB::raw('SUM(order_items.total) as total_sales'),
-                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+                DB::raw('SUM(order_items.total - (order_items.cost * order_items.quantity)) as total_profit'),
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
-                DB::raw('AVG((order_items.total - (p.cost * order_items.quantity)) / order_items.total * 100) as avg_profit_margin'),
+                DB::raw('AVG((order_items.total - (order_items.cost * order_items.quantity)) * 100.0 / order_items.total) as avg_profit_margin'),
                 DB::raw('MAX(order_items.total) as best_selling_product_id'),
             ])
             ->join('order_items', 'p.id', '=', 'order_items.product_id')
@@ -137,16 +166,24 @@ class ProductsSalesReportService
                     $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
             })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
+            })
             ->first();
 
         $mostProductQuery = DB::table('products as p')
             ->whereNot('p.type', ProductType::RawMaterial)
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->select([
                 'p.id',
                 'p.name',
                 DB::raw('SUM(order_items.quantity) as total_quantity'),
                 DB::raw('SUM(order_items.total) as total_sales'),
-                DB::raw('SUM(order_items.total - (p.cost * order_items.quantity)) as total_profit'),
+                DB::raw('SUM(order_items.total - (order_items.cost * order_items.quantity)) as total_profit'),
             ])
             ->join('order_items', 'p.id', '=', 'order_items.product_id')
             ->join('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
@@ -167,6 +204,13 @@ class ProductsSalesReportService
                     $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
                     $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
                 ]);
+            })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
             })
             ->groupBy('p.id', 'p.name');
 
@@ -206,7 +250,7 @@ class ProductsSalesReportService
     /**
      * Get order type performance summary
      */
-    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array
+    public function getOrderTypePerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
     {
 
         $performanceData = DB::table('orders as o')
@@ -215,11 +259,19 @@ class ProductsSalesReportService
                 DB::raw('COUNT(DISTINCT o.id) as total_orders'),
                 DB::raw('SUM(oi.quantity) as total_quantity'),
                 DB::raw('SUM(oi.total) as total_sales'),
-                DB::raw('SUM(oi.total - (p.cost * oi.quantity)) as total_profit'),
+                DB::raw('SUM(oi.total - (oi.cost * oi.quantity)) as total_profit'),
             ])
             ->leftJoin('order_items as oi', 'o.id', '=', 'oi.order_id')
             ->leftJoin('products as p', 'oi.product_id', '=', 'p.id')
+            ->leftJoin('categories', 'p.category_id', '=', 'categories.id')
             ->where('o.status', OrderStatus::COMPLETED)
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('categories.id', $mainCategoryId)
+                        ->orWhere('categories.parent_id', $mainCategoryId);
+                });
+            })
             ->when($shiftIds !== null, function ($query) use ($shiftIds) {
                 if (empty($shiftIds)) {
                     return $query->whereRaw('1 = 0');
@@ -258,12 +310,107 @@ class ProductsSalesReportService
     }
 
     /**
-     * Get category performance summary
+     * Sales grouped main category → sub-category → product, with subtotals.
+     *
+     * @return list<array{
+     *     main_category_id: int,
+     *     main_category_name: string,
+     *     total_quantity: float,
+     *     total_sales: float,
+     *     total_profit: float,
+     *     sub_categories: list<array{
+     *         sub_category_id: int|null,
+     *         sub_category_name: string|null,
+     *         total_quantity: float,
+     *         total_sales: float,
+     *         total_profit: float,
+     *         products: list<array{id: int, name: string, total_quantity: float, total_sales: float, total_profit: float}>
+     *     }>
+     * }>
      */
-    public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
+    public function groupedProductSales(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
+    {
+        $rows = $this->getProductsSalesPerformanceQuery($startDate, $endDate, $shiftIds, $mainCategoryId, $subCategoryId)
+            ->orderBy('main_category_name')
+            ->orderBy('sub_category_name')
+            ->orderBy('products.name')
+            ->get();
+
+        $groups = [];
+
+        foreach ($rows as $row) {
+            $mainId = (int) $row->main_category_id;
+            $subId = $row->sub_category_id !== null ? (int) $row->sub_category_id : null;
+            $subKey = $subId === null ? 'direct' : (string) $subId;
+            $quantity = (float) $row->total_quantity;
+            $sales = (float) $row->total_sales;
+            $profit = (float) $row->total_profit;
+
+            if (! isset($groups[$mainId])) {
+                $groups[$mainId] = [
+                    'main_category_id' => $mainId,
+                    'main_category_name' => (string) $row->main_category_name,
+                    'total_quantity' => 0.0,
+                    'total_sales' => 0.0,
+                    'total_profit' => 0.0,
+                    'sub_categories' => [],
+                ];
+            }
+
+            if (! isset($groups[$mainId]['sub_categories'][$subKey])) {
+                $groups[$mainId]['sub_categories'][$subKey] = [
+                    'sub_category_id' => $subId,
+                    'sub_category_name' => $subId === null ? null : (string) $row->sub_category_name,
+                    'total_quantity' => 0.0,
+                    'total_sales' => 0.0,
+                    'total_profit' => 0.0,
+                    'products' => [],
+                ];
+            }
+
+            $groups[$mainId]['sub_categories'][$subKey]['products'][] = [
+                'id' => (int) $row->id,
+                'name' => (string) $row->name,
+                'total_quantity' => $quantity,
+                'total_sales' => $sales,
+                'total_profit' => $profit,
+            ];
+            $groups[$mainId]['sub_categories'][$subKey]['total_quantity'] += $quantity;
+            $groups[$mainId]['sub_categories'][$subKey]['total_sales'] += $sales;
+            $groups[$mainId]['sub_categories'][$subKey]['total_profit'] += $profit;
+            $groups[$mainId]['total_quantity'] += $quantity;
+            $groups[$mainId]['total_sales'] += $sales;
+            $groups[$mainId]['total_profit'] += $profit;
+        }
+
+        return array_values(array_map(function (array $group): array {
+            $group['sub_categories'] = array_values($group['sub_categories']);
+
+            return $group;
+        }, $groups));
+    }
+
+    public static function nullableFilterId(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
+     * Get category performance summary, rolled up to the main category.
+     */
+    public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null)
     {
         // Get category performance aggregated directly at the database level
         return Category::query()
+            ->whereNull('categories.parent_id')
+            ->when($mainCategoryId !== null, fn ($query) => $query->where('categories.id', $mainCategoryId))
+            ->when($subCategoryId !== null && $mainCategoryId === null, function ($query) use ($subCategoryId) {
+                $query->whereIn('categories.id', function ($sub) use ($subCategoryId) {
+                    $sub->selectRaw('CASE WHEN parent_id IS NULL THEN id ELSE parent_id END')
+                        ->from('categories')
+                        ->where('id', $subCategoryId);
+                });
+            })
             ->select([
                 DB::raw('categories.id as id'),
                 DB::raw('COALESCE(categories.name, "غير مصنف") as category_name'),
@@ -272,9 +419,10 @@ class ProductsSalesReportService
                 DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
             ])
-            ->leftJoin('products', function ($join) {
-                $join->on('categories.id', '=', 'products.category_id')
-                    ->whereNot('products.type', ProductType::RawMaterial);
+            ->leftJoin('products', function ($join) use ($subCategoryId) {
+                $join->whereRaw('products.category_id in (select tree.id from categories as tree where tree.id = categories.id or tree.parent_id = categories.id)')
+                    ->whereNot('products.type', ProductType::RawMaterial)
+                    ->when($subCategoryId !== null, fn ($productJoin) => $productJoin->where('products.category_id', $subCategoryId));
             })
             ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
                 $join->on('products.id', '=', 'order_items.product_id')

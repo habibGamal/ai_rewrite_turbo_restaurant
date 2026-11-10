@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/** @property int|null $warehouse_id */
 class Product extends Model
 {
     use HasFactory, HasSyncUuid;
@@ -19,6 +20,7 @@ class Product extends Model
     protected $fillable = [
         'uuid',
         'category_id',
+        'warehouse_id',
         'name',
         'product_ref',
         'barcode',
@@ -62,6 +64,35 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function stockWarehouseId(): int
+    {
+        if ($this->warehouse_id !== null) {
+            $this->loadMissing('warehouse');
+            if ($this->warehouse instanceof Warehouse && $this->warehouse->is_active) {
+                return (int) $this->warehouse_id;
+            }
+        }
+
+        $this->loadMissing('category');
+        $category = $this->category;
+        if ($category instanceof Category) {
+            $main = $category->mainCategory();
+            if ($main->warehouse_id !== null) {
+                $main->loadMissing('warehouse');
+                if ($main->warehouse instanceof Warehouse && $main->warehouse->is_active) {
+                    return (int) $main->warehouse_id;
+                }
+            }
+        }
+
+        return Warehouse::default()->id;
+    }
+
     public function kitchenStation(): BelongsTo
     {
         return $this->belongsTo(KitchenStation::class);
@@ -102,6 +133,7 @@ class Product extends Model
         return $this->belongsToMany(Product::class, 'product_components', 'product_id', 'component_id')->withPivot('quantity');
     }
 
+    /** @return BelongsToMany<Product, $this> */
     public function componentOf(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'component_id', 'product_id')->withPivot('quantity');
@@ -122,11 +154,18 @@ class Product extends Model
         return $this->hasMany(InventoryItemMovementDaily::class);
     }
 
-    public function updateManufacturedCost()
+    public function updateManufacturedCost(array $visited = []): void
     {
-        if ($this->type === ProductType::Manufactured) {
-            $this->cost = $this->components()->sum(DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
-            $this->save();
+        if ($this->type !== ProductType::Manufactured || in_array($this->id, $visited, true)) {
+            return;
+        }
+
+        $visited[] = $this->id;
+        $this->cost = $this->components()->sum(DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
+        $this->save();
+
+        foreach ($this->componentOf()->get() as $parent) {
+            $parent->updateManufacturedCost($visited);
         }
     }
 

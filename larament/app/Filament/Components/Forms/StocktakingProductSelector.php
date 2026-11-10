@@ -4,6 +4,8 @@ namespace App\Filament\Components\Forms;
 
 use App\Enums\ProductType;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Services\StockService;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
@@ -68,8 +70,9 @@ class StocktakingProductSelector extends Select
                 }
 
                 // Prepare new item data for stocktaking
+                $warehouseId = (int) ($get('warehouse_id') ?: Warehouse::default()->id);
                 $price = $product->cost ?? $product->price ?? 0;
-                $stockQuantity = $product->inventoryItem ? $product->inventoryItem->quantity : 0;
+                $stockQuantity = app(StockService::class)->getCurrentStock($product->id, $warehouseId);
                 $realQuantity = 0; // Default to zero
                 $total = ($realQuantity - $stockQuantity) * $price; // Will be 0 initially
 

@@ -23,6 +23,18 @@ class ProductsSalesTableExporter extends Exporter
             ExportColumn::make('name')
                 ->label('اسم المنتج'),
 
+            ExportColumn::make('main_category_name')
+                ->label('التصنيف الرئيسي')
+                ->state(function ($record) {
+                    return $record->main_category_name ?: ($record->category_name ?: 'غير مصنف');
+                }),
+
+            ExportColumn::make('sub_category_name')
+                ->label('التصنيف الفرعي')
+                ->state(function ($record) {
+                    return $record->sub_category_name ?: 'أصناف التصنيف الرئيسي';
+                }),
+
             ExportColumn::make('category_name')
                 ->label('التصنيف')
                 ->state(function ($record) {

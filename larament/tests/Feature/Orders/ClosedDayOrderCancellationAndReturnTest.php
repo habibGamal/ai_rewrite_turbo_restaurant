@@ -58,7 +58,7 @@ beforeEach(function () {
 
     // Set initial inventory
     InventoryItem::updateOrCreate(
-        ['product_id' => $this->product->id],
+        ['product_id' => $this->product->id, 'warehouse_id' => \App\Models\Warehouse::default()->id],
         ['quantity' => 100.0]
     );
 
@@ -257,13 +257,14 @@ describe('Phase 2: Closed Day Order Cancellation and Return', function () {
         ]);
 
         InventoryItem::updateOrCreate(
-            ['product_id' => $product->id],
+            ['product_id' => $product->id, 'warehouse_id' => \App\Models\Warehouse::default()->id],
             ['quantity' => 80.0]
         );
 
         $yesterday = Carbon::yesterday();
         InventoryItemMovementDaily::create([
             'product_id' => $product->id,
+            'warehouse_id' => \App\Models\Warehouse::default()->id,
             'date' => $yesterday->toDateString(),
             'start_quantity' => 100.0,
             'incoming_quantity' => 0.0,

@@ -177,13 +177,7 @@ class OrderController extends Controller
     {
         $order = $this->orderService->getOrderDetails($order->id);
 
-        $categories = Category::with([
-            'products' => function ($query) {
-                $query
-                    ->whereNot('type', ProductType::RawMaterial)
-                    ->where('legacy', false)->orderBy('name');
-            },
-        ])->orderBy('name')->get();
+        $categories = $this->categoryTree();
 
         // Get all drivers for the dropdown
         $drivers = Driver::orderBy('name')->get();
@@ -211,6 +205,58 @@ class OrderController extends Controller
             'canAddExternalOrder' => ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function categoryTree(): array
+    {
+        $productConstraint = function ($query) {
+            $query
+                ->whereNot('type', ProductType::RawMaterial)
+                ->where('legacy', false)
+                ->orderBy('name');
+        };
+
+        return Category::query()
+            ->whereNull('parent_id')
+            ->with([
+                'products' => $productConstraint,
+                'blockedOrderTypes:id,code',
+                'children' => fn ($query) => $query->orderBy('name'),
+                'children.products' => $productConstraint,
+                'children.blockedOrderTypes:id,code',
+                'children.parent.blockedOrderTypes:id,code',
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Category $category): array => $this->categoryNode($category))
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function categoryNode(Category $category): array
+    {
+        return [
+            'id' => $category->id,
+            'name' => $category->name,
+            'parent_id' => $category->parent_id,
+            'blocked_order_type_codes' => $category->blockedOrderTypeCodes(),
+            'products' => $category->products->values(),
+            'children' => $category->children
+                ->map(function (mixed $child): array {
+                    if (! $child instanceof Category) {
+                        return [];
+                    }
+
+                    return $this->categoryNode($child);
+                })
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

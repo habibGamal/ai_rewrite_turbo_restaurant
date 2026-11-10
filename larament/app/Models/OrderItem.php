@@ -28,7 +28,7 @@ class OrderItem extends Model
     protected $casts = [
         'quantity' => 'double',
         'price' => 'decimal:2',
-        'cost' => 'decimal:2',
+        'cost' => 'decimal:4',
         'total' => 'decimal:2',
         'item_discount' => 'decimal:2',
         'item_discount_percent' => 'decimal:2',

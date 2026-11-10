@@ -37,7 +37,7 @@ import CashierLayout from "@/Layouts/CashierLayout";
 import { printOrder } from "../../helpers/printTemplate";
 
 // Components
-import Categories from "@/Components/Orders/Categories";
+import Categories, { productsForOrder } from "@/Components/Orders/Categories";
 import OrderItem from "@/Components/Orders/OrderItem";
 import CustomerModal from "@/Components/Orders/CustomerModal";
 import DriverModal from "@/Components/Orders/DriverModal";
@@ -81,7 +81,7 @@ export default function ManageOrder({
         dispatch({
             type: "addByBarcode",
             barcode: barcode,
-            products: products,
+            products: scannableProducts,
             scalePrefix: scaleBarcodePrefix as string,
             user: user,
         });
@@ -96,8 +96,9 @@ export default function ManageOrder({
         },
     });
 
-    // Create initial order items from the order
-    const products = categories.flatMap((category) => category.products);
+    // Names of items already on the order still resolve after a type change hides their category.
+    const products = productsForOrder(categories, order.type, true);
+    const scannableProducts = productsForOrder(categories, order.type, false);
     const initOrderItems: OrderItemData[] = order.items.map((orderItem) => ({
         product_id: orderItem.product_id,
         name:
@@ -538,6 +539,7 @@ export default function ManageOrder({
                         <Categories
                             disabled={disableAllControls}
                             categories={categories}
+                            orderType={order.type}
                             dispatch={dispatch}
                             user={user}
                         />

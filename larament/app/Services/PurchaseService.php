@@ -13,18 +13,9 @@ class PurchaseService
 {
     protected StockService $stockService;
 
-    protected ProductCostManagementService $costManagementService;
-
-    protected SettingsService $settingsService;
-
-    public function __construct(
-        StockService $stockService,
-        ProductCostManagementService $costManagementService,
-        ?SettingsService $settingsService = null
-    ) {
+    public function __construct(StockService $stockService)
+    {
         $this->stockService = $stockService;
-        $this->costManagementService = $costManagementService;
-        $this->settingsService = $settingsService ?? app(SettingsService::class);
     }
 
     /**
@@ -41,50 +32,51 @@ class PurchaseService
         try {
             DB::beginTransaction();
 
+            $locked = PurchaseInvoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('هذه الفاتورة مغلقة بالفعل');
+            }
+
             // Get all items for this invoice
-            $items = $invoice->items()->with('product')->get();
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             if ($items->isEmpty()) {
                 throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing
-            $stockItems = $items->map(function ($item) {
+            $stockItems = $items->map(function ($item) use ($locked) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
+                    'unit_cost' => (float) $item->price,
+                    'warehouse_id' => $locked->warehouse_id,
                 ];
             })->toArray();
-
-            // Update product costs using average cost strategy if allowed by settings
-            $shouldUpdateCost = $this->settingsService->shouldUpdateProductCostOnPurchase();
-            if ($shouldUpdateCost) {
-                $this->costManagementService->updateProductCostsWithAverage($items);
-            }
 
             // Add items to stock
             $success = $this->stockService->addStock(
                 $stockItems,
                 MovementReason::PURCHASE,
-                $invoice
+                $locked
             );
 
-            if (! $success) {
+            if ($success->isEmpty()) {
                 throw new Exception('فشل في إضافة الأصناف إلى المخزون');
             }
 
             // Mark invoice as closed
-            $invoice->update([
+            $locked->update([
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
             ]);
 
             DB::commit();
 
-            $logMessage = $shouldUpdateCost
-                ? "Purchase invoice {$invoice->id} closed successfully with cost updates"
-                : "Purchase invoice {$invoice->id} closed successfully without cost updates (prevented by settings)";
-            Log::info($logMessage);
+            $invoice->refresh();
+
+            Log::info("Purchase invoice {$invoice->id} closed successfully");
 
             return true;
 
@@ -109,18 +101,25 @@ class PurchaseService
         try {
             DB::beginTransaction();
 
+            $locked = ReturnPurchaseInvoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('هذه الفاتورة مغلقة بالفعل');
+            }
+
             // Get all items for this invoice
-            $items = $invoice->items()->with('product')->get();
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             if ($items->isEmpty()) {
                 throw new Exception('لا توجد أصناف في هذه الفاتورة');
             }
 
             // Prepare items for stock processing and validate availability
-            $stockItems = $items->map(function ($item) {
+            $stockItems = $items->map(function ($item) use ($locked) {
                 return [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
+                    'warehouse_id' => $locked->warehouse_id,
                 ];
             })->toArray();
 
@@ -139,20 +138,22 @@ class PurchaseService
             $success = $this->stockService->removeStock(
                 $stockItems,
                 MovementReason::PURCHASE_RETURN,
-                $invoice
+                $locked
             );
 
-            if (! $success) {
+            if ($success->isEmpty()) {
                 throw new Exception('فشل في خصم الأصناف من المخزون');
             }
 
             // Mark invoice as closed
-            $invoice->update([
+            $locked->update([
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
             ]);
 
             DB::commit();
+
+            $invoice->refresh();
 
             Log::info("Return purchase invoice {$invoice->id} closed successfully");
 

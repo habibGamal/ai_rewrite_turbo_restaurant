@@ -79,6 +79,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'update_return_purchase_invoices' => 'تعديل مرتجع مشتريات',
                 'delete_return_purchase_invoices' => 'حذف مرتجع مشتريات',
 
+                'view_warehouses' => 'عرض المخازن',
+                'create_warehouses' => 'إضافة مخزن',
+                'update_warehouses' => 'تعديل مخزن',
+                'delete_warehouses' => 'حذف مخزن',
+
                 'view_inventory_items' => 'عرض عناصر المخزون',
                 'create_inventory_items' => 'إضافة عنصر مخزون',
                 'update_inventory_items' => 'تعديل عنصر مخزون',
@@ -93,6 +98,26 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_wastes' => 'تسجيل هالك',
                 'update_wastes' => 'تعديل هالك',
                 'delete_wastes' => 'حذف هالك',
+
+                'view_manufacturing_recipes' => 'عرض وصفات التصنيع',
+                'create_manufacturing_recipes' => 'إضافة وصفة تصنيع',
+                'update_manufacturing_recipes' => 'تعديل وصفة تصنيع',
+                'delete_manufacturing_recipes' => 'حذف وصفة تصنيع',
+
+                'view_manufacturing_orders' => 'عرض أوامر التصنيع',
+                'create_manufacturing_orders' => 'إضافة أمر تصنيع',
+                'update_manufacturing_orders' => 'تعديل وإكمال أمر تصنيع',
+                'delete_manufacturing_orders' => 'حذف أمر تصنيع',
+
+                'view_stock_transfers' => 'عرض أذون التحويل',
+                'create_stock_transfers' => 'إضافة إذن تحويل',
+                'update_stock_transfers' => 'تعديل وتأكيد إذن تحويل',
+                'delete_stock_transfers' => 'حذف إذن تحويل',
+
+                'view_stock_issues' => 'عرض أذون الصرف',
+                'create_stock_issues' => 'إضافة إذن صرف',
+                'update_stock_issues' => 'تعديل إذن صرف',
+                'delete_stock_issues' => 'حذف إذن صرف',
             ],
             'العملاء والسائقين والمصروفات' => [
                 'view_customers' => 'عرض العملاء',
@@ -139,6 +164,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_products_sales_performance_report' => 'تقرير مبيعات المنتجات',
                 'view_products_sales_performance_shifts_report' => 'تقرير مبيعات المنتجات بالورديات',
                 'view_stock_report' => 'تقرير المخزون',
+                'view_purchases_report' => 'تقرير المشتريات',
+                'view_waste_report' => 'تقرير الهالك',
+                'view_stocktaking_report' => 'تقرير الجرد',
+                'view_stock_issues_report' => 'تقرير أذون الصرف',
+                'view_transfers_report' => 'تقرير التحويلات',
+                'view_manufacturing_yield_report' => 'تقرير التصنيع والهالك الإنتاجي',
+                'view_cost_history_report' => 'سجل تغيير التكلفة',
+                'view_item_ledger_report' => 'كشف حركة صنف',
+                'view_movement_summary_report' => 'ملخص حركة المخزون',
                 'view_web_orders_report' => 'تقرير طلبات الويب',
             ],
             'نقطة البيع والعمليات (POS)' => [

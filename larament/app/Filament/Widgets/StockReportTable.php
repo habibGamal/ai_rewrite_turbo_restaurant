@@ -38,8 +38,20 @@ class StockReportTable extends BaseWidget
         $endDate = $resolved['end'];
         $useLive = $resolved['useLive'];
 
+        $rawWarehouseId = $this->pageFilters['warehouse_id'] ?? $this->pageFilters['warehouseId'] ?? null;
+        $warehouseId = is_numeric($rawWarehouseId) && (int) $rawWarehouseId > 0 ? (int) $rawWarehouseId : null;
+
+        $rawMainCategoryId = $this->pageFilters['main_category_id'] ?? $this->pageFilters['mainCategoryId'] ?? null;
+        $mainCategoryId = is_numeric($rawMainCategoryId) && (int) $rawMainCategoryId > 0 ? (int) $rawMainCategoryId : null;
+
+        $rawSubCategoryId = $this->pageFilters['sub_category_id'] ?? $this->pageFilters['subCategoryId'] ?? null;
+        $subCategoryId = is_numeric($rawSubCategoryId) && (int) $rawSubCategoryId > 0 ? (int) $rawSubCategoryId : null;
+
+        $rawProductId = $this->pageFilters['product_id'] ?? $this->pageFilters['productId'] ?? null;
+        $productId = is_numeric($rawProductId) && (int) $rawProductId > 0 ? (int) $rawProductId : null;
+
         return $table
-            ->query(StockReportService::query($startDate, $endDate, $useLive))
+            ->query(StockReportService::query($startDate, $endDate, $useLive, $warehouseId, $mainCategoryId, $subCategoryId, $productId))
             ->columns([
                 TextColumn::make('name')
                     ->label('المنتج')
@@ -81,6 +93,28 @@ class StockReportTable extends BaseWidget
                     })
                     ->alignCenter(),
 
+                TextColumn::make('transfer_in')
+                    ->label('تحويل وارد')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'info' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('manufacturing_in')
+                    ->label('تصنيع وارد')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'info' : 'gray';
+                    })
+                    ->alignCenter(),
+
                 TextColumn::make('total_quantity')
                     ->label('الكمية الكلية')
                     ->numeric()
@@ -103,6 +137,39 @@ class StockReportTable extends BaseWidget
 
                 TextColumn::make('return_waste')
                     ->label('كمية الفاقد والمرتجع')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('transfer_out')
+                    ->label('تحويل صادر')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('manufacturing_out')
+                    ->label('تصنيع صادر')
+                    ->numeric()
+                    ->sortable()
+                    ->default(0)
+                    ->toggleable()
+                    ->color(function ($state) {
+                        return $state > 0 ? 'danger' : 'gray';
+                    })
+                    ->alignCenter(),
+
+                TextColumn::make('issue')
+                    ->label('صرف')
                     ->numeric()
                     ->sortable()
                     ->default(0)
@@ -156,14 +223,25 @@ class StockReportTable extends BaseWidget
                     ->suffix(' جنيه')
                     ->alignCenter(),
 
+                TextColumn::make('stock_value')
+                    ->label('قيمة المخزون الحالية')
+                    ->tooltip('قيمة حالية')
+                    ->numeric(decimalPlaces: 2)
+                    ->toggleable()
+                    ->getStateUsing(fn ($record) => StockReportService::calculate($record, $warehouseId)['stock_value'])
+                    ->color('info')
+                    ->suffix(' جنيه')
+                    ->weight('medium')
+                    ->alignCenter(),
+
                 TextColumn::make('deviation')
                     ->label('الانحراف')
                     ->numeric()
                     ->toggleable()
                     ->tooltip('يشمل تسويات الجرد')
-                    ->getStateUsing(fn ($record) => StockReportService::calculate($record)['deviation'])
-                    ->color(function ($record) {
-                        $calc = StockReportService::calculate($record);
+                    ->getStateUsing(fn ($record) => StockReportService::calculate($record, $warehouseId)['deviation'])
+                    ->color(function ($record) use ($warehouseId) {
+                        $calc = StockReportService::calculate($record, $warehouseId);
                         if ($calc['deviation'] == 0.0) {
                             return 'success';
                         }
@@ -175,11 +253,12 @@ class StockReportTable extends BaseWidget
 
                 TextColumn::make('deviation_value')
                     ->label('قيمة الانحراف')
+                    ->tooltip('قيمة حالية')
                     ->numeric(decimalPlaces: 2)
                     ->toggleable()
-                    ->getStateUsing(fn ($record) => StockReportService::calculate($record)['deviation_value'])
-                    ->color(function ($record) {
-                        $calc = StockReportService::calculate($record);
+                    ->getStateUsing(fn ($record) => StockReportService::calculate($record, $warehouseId)['deviation_value'])
+                    ->color(function ($record) use ($warehouseId) {
+                        $calc = StockReportService::calculate($record, $warehouseId);
                         if ($calc['deviation_value'] == 0.0) {
                             return 'success';
                         }

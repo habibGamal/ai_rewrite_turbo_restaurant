@@ -65,7 +65,9 @@ it('has filter form with period selection', function () {
         ->assertSchemaExists()
         ->assertSchemaComponentExists('presetPeriod')
         ->assertSchemaComponentExists('startDate')
-        ->assertSchemaComponentExists('endDate');
+        ->assertSchemaComponentExists('endDate')
+        ->assertSchemaComponentExists('mainCategoryId')
+        ->assertSchemaComponentExists('subCategoryId');
 });
 
 it('can set custom date range filter', function () {
