@@ -11,6 +11,12 @@ class ExternalSeller extends Model
 
     protected $casts = ['is_active' => 'boolean'];
 
+    /** @return HasMany<ExternalProduct, $this> */
+    public function products(): HasMany
+    {
+        return $this->hasMany(ExternalProduct::class);
+    }
+
     /** @return HasMany<ExternalOrder, $this> */
     public function orders(): HasMany
     {

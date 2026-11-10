@@ -28,7 +28,7 @@ it('splits the guest bill while keeping restaurant money separate', function () 
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
 
-    app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
     $bill = app(GuestBill::class);
     $split = $bill->split($order, Tenders::fromArray(['card' => 100, 'cash' => 40]));
 
@@ -68,7 +68,7 @@ it('refuses an external order on a company order', function () {
     $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'companies', 'status' => OrderStatus::PROCESSING]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
 
-    expect(fn () => app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]))
+    expect(fn () => app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]))
         ->toThrow(OrderException::class);
 });
 
@@ -79,8 +79,8 @@ it('allocates seller shares in order with cash before card', function () {
     $first = ExternalSeller::create(['name' => 'البائع الأول', 'is_active' => true]);
     $second = ExternalSeller::create(['name' => 'البائع الثاني', 'is_active' => true]);
     $service = app(ExternalOrderService::class);
-    $firstOrder = $service->save($order->id, $first->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
-    $secondOrder = $service->save($order->id, $second->id, [['name' => 'مشروب', 'quantity' => 1, 'price' => 30]]);
+    $firstOrder = $service->save($order->id, $first->id, [['product_id' => $first->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
+    $secondOrder = $service->save($order->id, $second->id, [['product_id' => $second->products()->create(['name' => 'مشروب', 'price' => 30])->id, 'quantity' => 1]]);
 
     $split = app(GuestBill::class)->split($order, Tenders::fromArray(['cash' => 50, 'card' => 120]));
 
@@ -100,7 +100,7 @@ it('records only the restaurant amount as a payment when completing a guest bill
     $order->items()->create(['product_id' => $product->id, 'quantity' => 1, 'price' => 100, 'cost' => 40, 'total' => 100]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
 
     expect(fn () => app(OrderService::class)->completeOrder($order->id, ['cash' => 80]))->toThrow(OrderException::class);
     $completed = app(OrderService::class)->completeOrder($order->id, ['cash' => 150]);
@@ -119,7 +119,7 @@ it('assigns cash to the external seller when a guest pays with card and cash', f
     $order->items()->create(['product_id' => $product->id, 'quantity' => 1, 'price' => 100, 'cost' => 40, 'total' => 100]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
 
     $completed = app(OrderService::class)->completeOrder($order->id, ['card' => 100, 'cash' => 40]);
 
@@ -135,7 +135,7 @@ it('renders external lines on both receipt forms and accounts for cash and settl
     $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING, 'total' => 100]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
     $external->collections()->create(['shift_id' => $shift->id, 'user_id' => $user->id, 'method' => 'cash', 'amount' => 40]);
     $order->update(['status' => OrderStatus::COMPLETED]);
 
@@ -170,7 +170,7 @@ it('removes collections and reverses a settled amount when cancelling the host',
     $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
     $external->collections()->create(['shift_id' => $shift->id, 'user_id' => $user->id, 'method' => 'cash', 'amount' => 40]);
     $settlement = app(ExternalSellerSettlementService::class);
     $settlement->pay($seller->id, 40, null);
@@ -192,7 +192,7 @@ it('cancels a completed paid order and removes its external collections', functi
     $order->items()->create(['product_id' => $product->id, 'quantity' => 1, 'price' => 100, 'cost' => 40, 'total' => 100]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
     app(InventoryDailyAggregationService::class)->openDay();
     $orders = app(OrderService::class);
     $orders->completeOrder($order->id, ['cash' => 140]);
@@ -215,7 +215,7 @@ it('completes an external-only order without changing stock', function () {
     $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING, 'discount' => 0, 'temp_discount_percent' => 0]);
     $seller = ExternalSeller::create(['name' => 'عربة الصوص', 'is_active' => true]);
     $this->actingAs($user);
-    app(ExternalOrderService::class)->save($order->id, $seller->id, [['name' => 'صوص', 'quantity' => 1, 'price' => 40]]);
+    app(ExternalOrderService::class)->save($order->id, $seller->id, [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 40])->id, 'quantity' => 1]]);
 
     $completed = app(OrderService::class)->completeOrder($order->id, ['cash' => 40]);
 
@@ -235,7 +235,7 @@ it('saves, fulfills and removes seller lines through the till and includes them 
 
     $this->post(route('orders.external.save', $order), [
         'seller_id' => $seller->id,
-        'items' => [['name' => 'صوص', 'quantity' => 2, 'price' => 20]],
+        'items' => [['product_id' => $seller->products()->create(['name' => 'صوص', 'price' => 20])->id, 'quantity' => 2]],
     ])->assertRedirect()->assertSessionHas('success');
     $external = $order->externalOrders()->firstOrFail();
     $this->get(route('orders.manage', $order))->assertOk()->assertInertia(fn (Assert $page) => $page
@@ -296,4 +296,85 @@ it('does not offer external orders on a partial-payment type', function () {
     $this->get(route('orders.manage', $order))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Orders/ManageOrder')
         ->where('canAddExternalOrder', false));
+});
+
+it('stores the product price from the server', function () {
+    $user = User::factory()->admin()->create();
+    $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
+    $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
+    $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
+    $product = $seller->products()->create(['name' => 'Sauce', 'price' => 20, 'is_active' => true]);
+    $this->actingAs($user)->post(route('orders.external.save', $order), [
+        'seller_id' => $seller->id,
+        'items' => [['product_id' => $product->id, 'quantity' => 2, 'price' => 1]],
+    ])->assertSessionHasNoErrors();
+    $item = $order->externalOrders()->firstOrFail()->items()->firstOrFail();
+    expect((float) $item->price)->toBe(20.0)->and((float) $item->total)->toBe(40.0);
+    $product->update(['name' => 'Changed', 'price' => 99]);
+    expect($item->fresh()->name)->toBe('Sauce')->and((float) $item->fresh()->price)->toBe(20.0);
+});
+
+it('lists active sellers and their active products in name order', function () {
+    $user = User::factory()->admin()->create();
+    $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
+    $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
+    $seller = ExternalSeller::create(['name' => 'Active', 'is_active' => true]);
+    $seller->products()->create(['name' => 'Z', 'price' => 10]);
+    $first = $seller->products()->create(['name' => 'A', 'price' => 20]);
+    $seller->products()->create(['name' => 'Hidden', 'price' => 5, 'is_active' => false]);
+    ExternalSeller::create(['name' => 'Inactive', 'is_active' => false]);
+
+    $this->actingAs($user)->get(route('orders.manage', $order))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('sellers', 1)->has('sellers.0.products', 2)
+        ->where('sellers.0.products.0.id', $first->id)
+        ->where('sellers.0.products.1.name', 'Z'));
+});
+
+it('rejects inactive products and products belonging to another seller', function () {
+    $user = User::factory()->admin()->create();
+    $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
+    $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
+    $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
+    $other = ExternalSeller::create(['name' => 'Other', 'is_active' => true]);
+    $inactive = $seller->products()->create(['name' => 'Inactive', 'price' => 10, 'is_active' => false]);
+    $foreign = $other->products()->create(['name' => 'Foreign', 'price' => 10]);
+    foreach ([$inactive, $foreign] as $product) {
+        $this->actingAs($user)->post(route('orders.external.save', $order), [
+            'seller_id' => $seller->id, 'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ])->assertSessionHasErrors('items.0.product_id');
+    }
+    expect($order->externalOrders()->count())->toBe(0);
+});
+
+it('creates seller products through the relation manager', function () {
+    $user = User::factory()->admin()->create();
+    $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
+    $this->actingAs($user);
+    Livewire::test(\App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager::class, [
+        'ownerRecord' => $seller,
+        'pageClass' => \App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller::class,
+    ])->callTableAction('create', data: ['name' => 'Sauce', 'price' => 12.5, 'is_active' => true])
+        ->assertHasNoTableActionErrors();
+    expect($seller->products()->where('name', 'Sauce')->exists())->toBeTrue();
+});
+
+it('removes legacy lines and replaces them when saving selected products', function () {
+    $user = User::factory()->admin()->create();
+    $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
+    $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
+    $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
+    $product = $seller->products()->create(['name' => 'Sauce', 'price' => 20]);
+    $external = $seller->orders()->create(['host_order_id' => $order->id, 'seller_name' => $seller->name, 'status' => 'pending', 'total' => 30]);
+    $legacy = $external->items()->create(['name' => 'Legacy', 'quantity' => 1, 'price' => 30, 'total' => 30]);
+    $this->actingAs($user)->delete(route('orders.external.removeLine', [$order, $external->id, $legacy->id]))->assertSessionHasNoErrors();
+    expect($external->items()->count())->toBe(0);
+    $external->items()->create(['name' => 'Legacy', 'quantity' => 1, 'price' => 30, 'total' => 30]);
+    $this->post(route('orders.external.save', $order), [
+        'seller_id' => $seller->id, 'items' => [['product_id' => $product->id, 'quantity' => 1]],
+    ])->assertSessionHasNoErrors();
+    expect($external->items()->count())->toBe(1)
+        ->and($external->items()->first()->external_product_id)->toBe($product->id);
+    $product->delete();
+    expect($external->items()->first()->external_product_id)->toBeNull()
+        ->and($external->items()->first()->name)->toBe('Sauce');
 });
