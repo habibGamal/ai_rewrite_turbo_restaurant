@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
+use App\Services\FeatureService;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * @property Role $record
@@ -36,7 +38,7 @@ class EditRole extends EditRecord
         /** @var Role $record */
         $record = $this->getRecord();
         $rolePermissions = $record->permissions->pluck('name')->toArray();
-        $catalog = \Database\Seeders\RolesAndPermissionsSeeder::permissionsCatalog();
+        $catalog = RoleResource::visiblePermissionsCatalog();
 
         $data['permissions_catalog'] = array_values(array_intersect($rolePermissions, array_keys($catalog['إدارة المنتجات والقوائم'] ?? [])));
         $data['permissions_purchasing'] = array_values(array_intersect($rolePermissions, array_keys($catalog['المشتريات والمخزون'] ?? [])));
@@ -54,7 +56,7 @@ class EditRole extends EditRecord
         /** @var array<string, mixed> $data */
         $data = $this->data;
 
-        $selectedPermissions = array_unique(array_merge(
+        $selectedPermissions = array_values(array_unique(array_merge(
             is_array($data['permissions_catalog'] ?? null) ? $data['permissions_catalog'] : [],
             is_array($data['permissions_purchasing'] ?? null) ? $data['permissions_purchasing'] : [],
             is_array($data['permissions_customers'] ?? null) ? $data['permissions_customers'] : [],
@@ -62,10 +64,17 @@ class EditRole extends EditRecord
             is_array($data['permissions_reports'] ?? null) ? $data['permissions_reports'] : [],
             is_array($data['permissions_pos'] ?? null) ? $data['permissions_pos'] : [],
             is_array($data['permissions_kitchen'] ?? null) ? $data['permissions_kitchen'] : [],
+        )));
+
+        $visiblePermissions = array_values(array_diff(
+            $selectedPermissions,
+            app(FeatureService::class)->disabledFeaturePermissions(),
         ));
 
         /** @var Role $record */
         $record = $this->getRecord();
-        $record->syncPermissions($selectedPermissions);
+        $finalPermissions = app(FeatureService::class)->preserveHiddenRolePermissions($record, $visiblePermissions);
+        $record->syncPermissions($finalPermissions);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

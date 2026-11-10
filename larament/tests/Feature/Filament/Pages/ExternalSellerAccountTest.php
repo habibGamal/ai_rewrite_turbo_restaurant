@@ -15,6 +15,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
+    app(\App\Services\FeatureService::class)->enable(\App\Enums\OptionalFeature::OUTSOURCED_ORDERS);
     $this->admin = User::factory()->admin()->create();
     $this->shift = Shift::factory()->active()->create(['user_id' => $this->admin->id]);
 });

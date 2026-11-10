@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ExternalSellers\RelationManagers;
 
+use App\Services\FeatureService;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -11,6 +12,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ProductsRelationManager extends RelationManager
 {
@@ -21,6 +23,33 @@ class ProductsRelationManager extends RelationManager
     protected static ?string $modelLabel = 'صنف';
 
     protected static ?string $pluralModelLabel = 'أصناف';
+
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canViewForRecord($ownerRecord, $pageClass);
+    }
+
+    public function mount(): void
+    {
+        abort_unless(app(FeatureService::class)->outsourcedOrdersEnabled(), 403);
+
+        parent::mount();
+    }
+
+    protected function canCreate(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canCreate();
+    }
+
+    protected function canEdit(Model $record): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canEdit($record);
+    }
+
+    protected function canDelete(Model $record): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canDelete($record);
+    }
 
     public function form(Schema $schema): Schema
     {

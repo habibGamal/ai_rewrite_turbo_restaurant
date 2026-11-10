@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Shift;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -111,8 +112,12 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
 
-            Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه'),
-            Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه'),
+            ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['externalCash'] ?? 0)) > 0.0001
+                ? [Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه')]
+                : []),
+            ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['settlements'] ?? 0)) > 0.0001
+                ? [Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه')]
+                : []),
             $this->getAvailableCashStat($currentShift, $stats),
         ];
     }

@@ -285,16 +285,25 @@ export type OrderItemAction =
   | { type: 'addByBarcode'; barcode: string; products: Product[]; scalePrefix?: string; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
+export interface FeatureFlags {
+  revenues: boolean;
+  custom_fees: boolean;
+  outsourced_orders: boolean;
+  equipment: boolean;
+}
+
 export type PageProps<T = {}> = T & {
   auth: {
     user: User;
   };
+  features?: FeatureFlags;
   flash?: {
     success?: string;
     error?: string;
   };
   receiptFooter?: string;
   scaleBarcodePrefix?: string;
+  [key: string]: unknown;
 };
 
 export interface ManageOrderProps extends PageProps {

@@ -184,6 +184,7 @@ class OrderController extends Controller
 
         // Get all regions for the dropdown
         $regions = Region::orderBy('name')->get();
+        $outsourcedEnabled = app(\App\Services\FeatureService::class)->outsourcedOrdersEnabled();
 
         return Inertia::render('Orders/ManageOrder', [
             'order' => $this->orderPayload($order, true),
@@ -198,11 +199,13 @@ class OrderController extends Controller
             'drivers' => $drivers,
             'regions' => $regions,
             'externalOrders' => $order->externalOrders()->with('items')->where('status', '!=', 'cancelled')->orderBy('id')->get(),
-            'sellers' => \App\Models\ExternalSeller::where('is_active', true)
-                ->with(['products' => fn ($query) => $query->where('is_active', true)->orderBy('name')->select('id', 'external_seller_id', 'name', 'price')])
-                ->orderBy('name')->get(['id', 'name'])
-                ->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->name, 'products' => $seller->products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'price' => $product->price])]),
-            'canAddExternalOrder' => ! $order->typeRow()->allowsCredit(),
+            'sellers' => $outsourcedEnabled
+                ? \App\Models\ExternalSeller::where('is_active', true)
+                    ->with(['products' => fn ($query) => $query->where('is_active', true)->orderBy('name')->select('id', 'external_seller_id', 'name', 'price')])
+                    ->orderBy('name')->get(['id', 'name'])
+                    ->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->name, 'products' => $seller->products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'price' => $product->price])])
+                : [],
+            'canAddExternalOrder' => $outsourcedEnabled && ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);
     }

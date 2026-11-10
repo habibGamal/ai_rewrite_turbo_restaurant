@@ -5,10 +5,12 @@ namespace App\Filament\Pages;
 use App\Costing\CostingMethod;
 use App\Costing\CostingMethodSwitcher;
 use App\Enums\KdsSound;
+use App\Enums\OptionalFeature;
 use App\Enums\SettingKey;
 use App\Models\OrderTypeRow;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\SettingsService;
 use Exception;
@@ -68,19 +70,16 @@ class Settings extends Page implements HasForms
 
         // Initialize data with defaults first
         $this->data = $defaults;
+        foreach ($this->data as $key => $value) {
+            if (SettingKey::tryFrom($key)?->isBooleanSetting()) {
+                $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            }
+        }
 
-        // Override with existing settings, ensuring they are strings
+        // Override with existing settings, ensuring they are strings or booleans
         foreach ($settings as $key => $value) {
             if (in_array($key, array_keys($defaults))) {
-                // Convert boolean settings appropriately
-                if (in_array($key, [
-                    SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
-                    SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
-                    SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
-                    SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
-                    SettingKey::KDS_ITEM_TRACKING->value,
-                    SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
-                ])) {
+                if (SettingKey::tryFrom($key)?->isBooleanSetting()) {
                     $this->data[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 } else {
                     $this->data[$key] = is_array($value) ? json_encode($value) : (string) $value;
@@ -463,6 +462,39 @@ class Settings extends Page implements HasForms
                                                 ->all()),
                                     ]),
                             ]),
+
+                        Tabs\Tab::make('المميزات')
+                            ->icon('heroicon-m-sparkles')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
+                            ->schema([
+                                Section::make()
+                                    ->description('تفعيل أو إيقاف المميزات الاختيارية للنظام. عند إيقاف ميزة يتم إخفاء شاشاتها مع الاحتفاظ بالسجلات التاريخية.')
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                Toggle::make(SettingKey::FEATURE_REVENUES_ENABLED->value)
+                                                    ->label(SettingKey::FEATURE_REVENUES_ENABLED->label())
+                                                    ->helperText(SettingKey::FEATURE_REVENUES_ENABLED->helperText())
+                                                    ->inline(false),
+
+                                                Toggle::make(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->value)
+                                                    ->label(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->label())
+                                                    ->helperText(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->helperText())
+                                                    ->inline(false),
+
+                                                Toggle::make(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
+                                                    ->label(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->label())
+                                                    ->helperText(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->helperText())
+                                                    ->inline(false),
+
+                                                Toggle::make(SettingKey::FEATURE_EQUIPMENT_ENABLED->value)
+                                                    ->label(SettingKey::FEATURE_EQUIPMENT_ENABLED->label())
+                                                    ->helperText(SettingKey::FEATURE_EQUIPMENT_ENABLED->helperText())
+                                                    ->inline(false),
+                                            ]),
+                                    ]),
+                            ]),
                     ])
                     ->columnSpanFull(),
             ])
@@ -516,16 +548,16 @@ class Settings extends Page implements HasForms
 
             // Ensure all values are strings before saving
             $cleanData = [];
+            $featureStates = [];
             foreach ($data as $key => $value) {
-                // Handle boolean settings
-                if (in_array($key, [
-                    SettingKey::ALLOW_CASHIER_DISCOUNTS->value,
-                    SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value,
-                    SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value,
-                    SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value,
-                    SettingKey::KDS_ITEM_TRACKING->value,
-                    SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value,
-                ])) {
+                $settingKey = SettingKey::tryFrom($key);
+                if ($settingKey?->isFeatureFlag()) {
+                    $featureStates[$key] = (bool) $value;
+
+                    continue;
+                }
+
+                if ($settingKey?->isBooleanSetting()) {
                     $cleanData[$key] = $value ? 'true' : 'false';
                 } else {
                     $cleanData[$key] = is_array($value) ? json_encode($value) : (string) $value;
@@ -536,7 +568,7 @@ class Settings extends Page implements HasForms
                 ? json_encode($targets)
                 : '{}';
 
-            DB::transaction(function () use ($cashierTabs, $cleanData) {
+            DB::transaction(function () use ($cashierTabs, $cleanData, $featureStates) {
                 try {
                     app(CashierTabLayout::class)->save($cashierTabs);
                 } catch (ValidationException $e) {
@@ -547,6 +579,7 @@ class Settings extends Page implements HasForms
 
                 app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($cleanData[SettingKey::COSTING_METHOD->value]));
                 unset($cleanData[SettingKey::COSTING_METHOD->value]);
+                app(FeatureService::class)->updateFeatures($featureStates, auth()->id());
                 app(SettingsService::class)->setMultiple($cleanData);
             });
 
@@ -577,13 +610,25 @@ class Settings extends Page implements HasForms
             $settingsService = app(SettingsService::class);
             $defaults = $settingsService->getDefaults();
 
-            app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($defaults[SettingKey::COSTING_METHOD->value]));
-            $remainingDefaults = $defaults;
-            unset($remainingDefaults[SettingKey::COSTING_METHOD->value]);
-            $settingsService->setMultiple($remainingDefaults);
-            $this->data = $defaults;
-            $this->data[SettingKey::CASHIER_TABS->value] = app(CashierTabLayout::class)->entriesForEditor();
-            $this->form->fill($this->data);
+            DB::transaction(function () use ($defaults, $settingsService): void {
+                app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($defaults[SettingKey::COSTING_METHOD->value]));
+                $remainingDefaults = $defaults;
+                unset($remainingDefaults[SettingKey::COSTING_METHOD->value]);
+
+                $featureDefaults = [];
+                foreach (OptionalFeature::cases() as $feature) {
+                    $key = $feature->value;
+                    if (array_key_exists($key, $remainingDefaults)) {
+                        $featureDefaults[$key] = filter_var($remainingDefaults[$key], FILTER_VALIDATE_BOOLEAN);
+                        unset($remainingDefaults[$key]);
+                    }
+                }
+
+                app(FeatureService::class)->updateFeatures($featureDefaults, auth()->id());
+                $settingsService->setMultiple($remainingDefaults);
+            });
+
+            $this->mount();
 
             Notification::make()
                 ->title('تم إعادة تعيين الإعدادات إلى القيم الافتراضية')
@@ -592,6 +637,19 @@ class Settings extends Page implements HasForms
                 ->iconColor('success')
                 ->send();
 
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $key => $messages) {
+                foreach ($messages as $message) {
+                    $this->addError($key, $message);
+                }
+            }
+
+            Notification::make()
+                ->title('خطأ في إعادة تعيين الإعدادات')
+                ->body((string) (collect($e->errors())->flatten()->first() ?: 'حدث خطأ أثناء محاولة إعادة تعيين الإعدادات.'))
+                ->icon('heroicon-o-x-circle')
+                ->iconColor('danger')
+                ->send();
         } catch (Exception $e) {
             Notification::make()
                 ->title('خطأ في إعادة تعيين الإعدادات')

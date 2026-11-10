@@ -9,6 +9,7 @@ use App\Models\ExternalOrderCollection;
 use App\Models\ExternalOrderItem;
 use App\Models\ExternalSeller;
 use App\Models\Shift;
+use App\Services\FeatureService;
 use App\Services\Orders\ExternalSellerSettlementService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -49,7 +50,8 @@ class ExternalSellerAccount extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('view_external_sellers') ?? false;
+        return app(FeatureService::class)->outsourcedOrdersEnabled()
+            && (auth()->user()?->can('view_external_sellers') ?? false);
     }
 
     public static function getRoutePath(Panel $panel): string
@@ -188,7 +190,7 @@ class ExternalSellerAccount extends Page implements HasTable
         return [
             Action::make('pay')
                 ->label('دفع المستحقات')
-                ->visible(fn (): bool => auth()->user()?->can('update_external_sellers') ?? false)
+                ->visible(fn (): bool => app(FeatureService::class)->outsourcedOrdersEnabled() && (auth()->user()?->can('update_external_sellers') ?? false))
                 ->schema([
                     TextInput::make('amount')->label('المبلغ')->required()->numeric()->minValue(0.01),
                     Textarea::make('note')->label('ملاحظة'),

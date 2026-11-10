@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Roles;
 use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
+use App\Services\FeatureService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -43,9 +44,16 @@ class RoleResource extends Resource
         return 'الأدوار والصلاحيات';
     }
 
+    public static function visiblePermissionsCatalog(): array
+    {
+        return app(FeatureService::class)->filterPermissionCatalog(
+            RolesAndPermissionsSeeder::permissionsCatalog()
+        );
+    }
+
     public static function form(Schema $schema): Schema
     {
-        $catalog = RolesAndPermissionsSeeder::permissionsCatalog();
+        $catalog = self::visiblePermissionsCatalog();
 
         return $schema
             ->components([
@@ -69,7 +77,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_catalog')
                                             ->hiddenLabel()
-                                            ->options($catalog['إدارة المنتجات والقوائم'])
+                                            ->options($catalog['إدارة المنتجات والقوائم'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -79,7 +87,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_purchasing')
                                             ->hiddenLabel()
-                                            ->options($catalog['المشتريات والمخزون'])
+                                            ->options($catalog['المشتريات والمخزون'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -89,7 +97,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_customers')
                                             ->hiddenLabel()
-                                            ->options($catalog['العملاء والسائقين والمصروفات'])
+                                            ->options($catalog['العملاء والسائقين والمصروفات'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -104,7 +112,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_system')
                                             ->hiddenLabel()
-                                            ->options($catalog['إدارة النظام'])
+                                            ->options($catalog['إدارة النظام'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -114,7 +122,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_reports')
                                             ->hiddenLabel()
-                                            ->options($catalog['التقارير'])
+                                            ->options($catalog['التقارير'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -129,7 +137,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_pos')
                                             ->hiddenLabel()
-                                            ->options($catalog['نقطة البيع والعمليات (POS)'])
+                                            ->options($catalog['نقطة البيع والعمليات (POS)'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),
@@ -139,7 +147,7 @@ class RoleResource extends Resource
                                     ->schema([
                                         CheckboxList::make('permissions_kitchen')
                                             ->hiddenLabel()
-                                            ->options($catalog['شاشة المطبخ'])
+                                            ->options($catalog['شاشة المطبخ'] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),

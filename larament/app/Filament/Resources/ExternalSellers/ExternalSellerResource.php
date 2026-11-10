@@ -7,6 +7,7 @@ use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
 use App\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
 use App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Models\ExternalSeller;
+use App\Services\FeatureService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -16,6 +17,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class ExternalSellerResource extends Resource
 {
@@ -24,6 +27,55 @@ class ExternalSellerResource extends Resource
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
     protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::shouldRegisterNavigation();
+    }
+
+    public static function canAccess(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canAccess();
+    }
+
+    public static function canViewAny(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canViewAny();
+    }
+
+    public static function canCreate(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canCreate();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canEdit($record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canDelete($record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canDeleteAny();
+    }
+
+    public static function canGloballySearch(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canGloballySearch();
+    }
+
+    public static function getGlobalSearchResults(string $search): Collection
+    {
+        if (! app(FeatureService::class)->outsourcedOrdersEnabled()) {
+            return collect();
+        }
+
+        return parent::getGlobalSearchResults($search);
+    }
 
     public static function getModelLabel(): string
     {

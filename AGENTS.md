@@ -12,20 +12,20 @@ This workspace rewrites **turbo_resturant** (AdonisJS) into **larament** (Larave
 
 ## Commands
 
-All commands for larament must use: `cd e:\AI_rewirte\larament; <command>`
+All commands for larament must use: `cd D:/ai_rewrite_turbo_restaurant/larament; <command>`
 
 ### Larament (primary)
 
 | Task | Command |
 |---|---|
 | Quality gate (lint+test+static analysis) | `composer review` |
-| Fix code style (Pint) | `cd e:\AI_rewirte\larament; ./vendor/bin/pint` |
-| Run tests (Pest, parallel) | `cd e:\AI_rewirte\larament; ./vendor/bin/pest --parallel` |
-| Single test file | `cd e:\AI_rewirte\larament; ./vendor/bin/pest tests/Feature/SomeTest.php` |
-| Static analysis (PHPStan level 5) | `cd e:\AI_rewirte\larament; ./vendor/bin/phpstan analyse` |
-| Build frontend | `cd e:\AI_rewirte\larament; npm run build` |
-| E2E tests (Cypress) | `cd e:\AI_rewirte\larament; npm run cypress:run` |
-| Dev (all services) | `cd e:\AI_rewirte\larament; composer dev` |
+| Fix code style (Pint) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pint` |
+| Run tests (Pest, parallel) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pest --parallel` |
+| Single test file | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pest tests/Feature/SomeTest.php` |
+| Static analysis (PHPStan level 5) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/phpstan analyse` |
+| Build frontend | `cd D:/ai_rewrite_turbo_restaurant/larament; npm run build` |
+| E2E tests (Cypress) | `cd D:/ai_rewrite_turbo_restaurant/larament; npm run cypress:run` |
+| Dev (all services) | `cd D:/ai_rewrite_turbo_restaurant/larament; composer dev` |
 
 **Never run `php artisan serve`** — the user manages dev servers themselves.
 

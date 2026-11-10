@@ -21,6 +21,10 @@ use App\Sync\Builders\OrderBuilder;
 use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
 
+beforeEach(function () {
+    app(\App\Services\FeatureService::class)->enable(\App\Enums\OptionalFeature::OUTSOURCED_ORDERS);
+});
+
 it('splits the guest bill while keeping restaurant money separate', function () {
     $user = User::factory()->admin()->create();
     $shift = Shift::factory()->active()->create(['user_id' => $user->id]);

@@ -14,7 +14,23 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasFactory, HasRoles, HasSyncUuid, Notifiable, SoftDeletes;
+    use HasFactory, HasSyncUuid, Notifiable, SoftDeletes;
+    use HasRoles {
+        hasPermissionTo as spatieHasPermissionTo;
+    }
+
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        $permissionName = is_string($permission)
+            ? $permission
+            : ($permission instanceof \Spatie\Permission\Contracts\Permission ? $permission->name : null);
+
+        if ($permissionName !== null && app(\App\Services\FeatureService::class)->isPermissionDisabled($permissionName)) {
+            return false;
+        }
+
+        return $this->spatieHasPermissionTo($permission, $guardName);
+    }
 
     /**
      * The attributes that are mass assignable.

@@ -2,10 +2,12 @@
 
 namespace App\Services\Orders;
 
+use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\Order;
+use App\Services\FeatureService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Closure;
@@ -16,6 +18,7 @@ class ExternalOrderService
     public function save(int $orderId, int $sellerId, array $lines): ExternalOrder
     {
         return DB::transaction(function () use ($orderId, $sellerId, $lines) {
+            app(FeatureService::class)->lockAndAssertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
             if (! $order->status->canBeModified() || $order->typeRow()->allowsCredit()) {
                 throw new OrderException('لا يمكن إضافة طلب خارجي لهذا الطلب');
@@ -72,6 +75,7 @@ class ExternalOrderService
     private function withLockedOrder(int $orderId, Closure $callback): void
     {
         DB::transaction(function () use ($orderId, $callback): void {
+            app(FeatureService::class)->lockAndAssertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
             if (! $order->status->canBeModified() || $order->typeRow()->allowsCredit()) {
                 throw new OrderException('لا يمكن تعديل طلب خارجي لهذا الطلب');

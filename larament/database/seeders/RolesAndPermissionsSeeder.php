@@ -62,6 +62,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_order_types' => 'إضافة نوع طلب',
                 'update_order_types' => 'تعديل نوع طلب',
                 'delete_order_types' => 'حذف نوع طلب',
+
+                'view_external_sellers' => 'عرض المتاجر المتعاونة والطلبات الخارجية',
+                'create_external_sellers' => 'إضافة متجر متعاون',
+                'update_external_sellers' => 'تعديل متجر متعاون وتسوية الحسابات',
+                'delete_external_sellers' => 'حذف متجر متعاون',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',

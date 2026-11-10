@@ -69,6 +69,7 @@ export default function ExternalOrders({
     orders,
     sellers,
     disabled,
+    featureEnabled = true,
     beforeAction,
     open,
     onClose,
@@ -77,6 +78,7 @@ export default function ExternalOrders({
     orders: ExternalOrder[];
     sellers: ManageOrderProps["sellers"];
     disabled: boolean;
+    featureEnabled?: boolean;
     beforeAction: (action: () => void) => void;
     open?: boolean;
     onClose?: () => void;
@@ -95,7 +97,7 @@ export default function ExternalOrders({
         0
     );
 
-    const isModalOpen = Boolean(open) || internalOpen;
+    const isModalOpen = featureEnabled && (Boolean(open) || internalOpen);
 
     const closeModal = () => {
         if (onClose) {
@@ -205,87 +207,91 @@ export default function ExternalOrders({
                                                     {formatCurrency(Number(item.total))}
                                                 </div>
                                                 <div className="text-center">
-                                                    <Popconfirm
-                                                        title="حذف الصنف؟"
-                                                        okText="نعم"
-                                                        cancelText="لا"
-                                                        disabled={disabled}
-                                                        onConfirm={() =>
-                                                            beforeAction(() => {
-                                                                router.delete(
-                                                                    route(
-                                                                        "orders.external.removeLine",
-                                                                        [
-                                                                            orderId,
-                                                                            external.id,
-                                                                            item.id,
-                                                                        ]
-                                                                    )
-                                                                );
-                                                            })
-                                                        }
-                                                    >
-                                                        <Button
+                                                    {featureEnabled && (
+                                                        <Popconfirm
+                                                            title="حذف الصنف؟"
+                                                            okText="نعم"
+                                                            cancelText="لا"
                                                             disabled={disabled}
-                                                            size="small"
-                                                            danger
-                                                            icon={<DeleteOutlined />}
-                                                            aria-label={`حذف ${item.name}`}
-                                                        />
-                                                    </Popconfirm>
+                                                            onConfirm={() =>
+                                                                beforeAction(() => {
+                                                                    router.delete(
+                                                                        route(
+                                                                            "orders.external.removeLine",
+                                                                            [
+                                                                                orderId,
+                                                                                external.id,
+                                                                                item.id,
+                                                                            ]
+                                                                        )
+                                                                    );
+                                                                })
+                                                            }
+                                                        >
+                                                            <Button
+                                                                disabled={disabled}
+                                                                size="small"
+                                                                danger
+                                                                icon={<DeleteOutlined />}
+                                                                aria-label={`حذف ${item.name}`}
+                                                            />
+                                                        </Popconfirm>
+                                                    )}
                                                 </div>
                                             </React.Fragment>
                                         ))}
                                     </div>
 
                                     {/* Card Actions */}
-                                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                size="small"
-                                                icon={<EditOutlined />}
-                                                disabled={disabled}
-                                                onClick={() =>
-                                                    handleEditSeller(
-                                                        external.external_seller_id
-                                                    )
-                                                }
-                                            >
-                                                تعديل
-                                            </Button>
-                                            {external.status !== "fulfilled" ? (
+                                    {featureEnabled && (
+                                        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                                            <div className="flex items-center gap-2">
                                                 <Button
                                                     size="small"
-                                                    type="primary"
-                                                    icon={<CheckOutlined />}
+                                                    icon={<EditOutlined />}
                                                     disabled={disabled}
                                                     onClick={() =>
-                                                        beforeAction(() => {
-                                                            router.post(
-                                                                route(
-                                                                    "orders.external.fulfill",
-                                                                    [
-                                                                        orderId,
-                                                                        external.id,
-                                                                    ]
-                                                                )
-                                                            );
-                                                        })
+                                                        handleEditSeller(
+                                                            external.external_seller_id
+                                                        )
                                                     }
                                                 >
-                                                    تم التنفيذ
+                                                    تعديل
                                                 </Button>
-                                            ) : (
-                                                <Button
-                                                    size="small"
-                                                    icon={<CheckOutlined />}
-                                                    disabled
-                                                >
-                                                    تم التنفيذ
-                                                </Button>
-                                            )}
+                                                {external.status !== "fulfilled" ? (
+                                                    <Button
+                                                        size="small"
+                                                        type="primary"
+                                                        icon={<CheckOutlined />}
+                                                        disabled={disabled}
+                                                        onClick={() =>
+                                                            beforeAction(() => {
+                                                                router.post(
+                                                                    route(
+                                                                        "orders.external.fulfill",
+                                                                        [
+                                                                            orderId,
+                                                                            external.id,
+                                                                        ]
+                                                                    )
+                                                                );
+                                                            })
+                                                        }
+                                                    >
+                                                        تم التنفيذ
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        size="small"
+                                                        icon={<CheckOutlined />}
+                                                        disabled
+                                                    >
+                                                        تم التنفيذ
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -294,101 +300,103 @@ export default function ExternalOrders({
                 </>
             )}
 
-            <Modal
-                title="إضافة طلب خارجي"
-                open={isModalOpen}
-                onCancel={closeModal}
-                okButtonProps={{ disabled: disabled || picked.length === 0 }}
-                onOk={() => {
-                    if (!sellerId || picked.length === 0) return;
-                    beforeAction(() =>
-                        router.post(
-                            route("orders.external.save", orderId),
-                            {
-                                seller_id: sellerId,
-                                items: picked.map((product) => ({
-                                    product_id: product.id,
-                                    quantity: quantities[product.id],
-                                })),
-                            },
-                            {
-                                onSuccess: closeModal,
-                                onError: (errors) =>
-                                    message.error(
-                                        Object.values(errors)[0] ||
-                                            "تعذر حفظ الطلب الخارجي"
-                                    ),
-                            }
-                        )
-                    );
-                }}
-            >
-                <Select
-                    className="mb-3 w-full"
-                    placeholder="اختر البائع"
-                    value={sellerId}
-                    onChange={selectSeller}
-                    options={sellers.map((entry) => ({
-                        value: entry.id,
-                        label: entry.name,
-                    }))}
-                />
-                {seller && seller.products.length === 0 && (
-                    <p>
-                        لا توجد أصناف لهذا البائع — أضفها من إدارة البائعين
-                        الخارجيين
-                    </p>
-                )}
-                {seller && seller.products.length > 0 && (
-                    <>
-                        <Input.Search
-                            placeholder="ابحث عن صنف"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                        />
-                        <div className="max-h-64 overflow-y-auto">
-                            {seller.products
-                                .filter((product) =>
-                                    product.name
-                                        .toLocaleLowerCase()
-                                        .includes(search.toLocaleLowerCase())
-                                )
-                                .map((product) => (
-                                    <ProductRow
-                                        key={product.id}
-                                        product={product}
-                                        quantity={quantities[product.id] ?? 0}
-                                        onChange={(quantity) =>
-                                            setQuantities((current) => ({
-                                                ...current,
-                                                [product.id]: quantity,
-                                            }))
-                                        }
-                                    />
-                                ))}
-                        </div>
-                        {picked.length > 0 && (
-                            <div className="mt-4 space-y-1">
-                                {picked.map((product) => (
-                                    <div key={product.id}>
-                                        {product.name} × {quantities[product.id]} ={" "}
-                                        {(
-                                            Math.round(
-                                                Number(product.price) *
-                                                    quantities[product.id] *
-                                                    100
-                                            ) / 100
-                                        ).toFixed(2)}
-                                    </div>
-                                ))}
-                                <Typography.Text strong>
-                                    الإجمالي {total.toFixed(2)}
-                                </Typography.Text>
+            {featureEnabled && (
+                <Modal
+                    title="إضافة طلب خارجي"
+                    open={isModalOpen}
+                    onCancel={closeModal}
+                    okButtonProps={{ disabled: disabled || picked.length === 0 }}
+                    onOk={() => {
+                        if (!sellerId || picked.length === 0) return;
+                        beforeAction(() =>
+                            router.post(
+                                route("orders.external.save", orderId),
+                                {
+                                    seller_id: sellerId,
+                                    items: picked.map((product) => ({
+                                        product_id: product.id,
+                                        quantity: quantities[product.id],
+                                    })),
+                                },
+                                {
+                                    onSuccess: closeModal,
+                                    onError: (errors) =>
+                                        message.error(
+                                            Object.values(errors)[0] ||
+                                                "تعذر حفظ الطلب الخارجي"
+                                        ),
+                                }
+                            )
+                        );
+                    }}
+                >
+                    <Select
+                        className="mb-3 w-full"
+                        placeholder="اختر البائع"
+                        value={sellerId}
+                        onChange={selectSeller}
+                        options={sellers.map((entry) => ({
+                            value: entry.id,
+                            label: entry.name,
+                        }))}
+                    />
+                    {seller && seller.products.length === 0 && (
+                        <p>
+                            لا توجد أصناف لهذا البائع — أضفها من إدارة البائعين
+                            الخارجيين
+                        </p>
+                    )}
+                    {seller && seller.products.length > 0 && (
+                        <>
+                            <Input.Search
+                                placeholder="ابحث عن صنف"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                            />
+                            <div className="max-h-64 overflow-y-auto">
+                                {seller.products
+                                    .filter((product) =>
+                                        product.name
+                                            .toLocaleLowerCase()
+                                            .includes(search.toLocaleLowerCase())
+                                    )
+                                    .map((product) => (
+                                        <ProductRow
+                                            key={product.id}
+                                            product={product}
+                                            quantity={quantities[product.id] ?? 0}
+                                            onChange={(quantity) =>
+                                                setQuantities((current) => ({
+                                                    ...current,
+                                                    [product.id]: quantity,
+                                                }))
+                                            }
+                                        />
+                                    ))}
                             </div>
-                        )}
-                    </>
-                )}
-            </Modal>
+                            {picked.length > 0 && (
+                                <div className="mt-4 space-y-1">
+                                    {picked.map((product) => (
+                                        <div key={product.id}>
+                                            {product.name} × {quantities[product.id]} ={" "}
+                                            {(
+                                                Math.round(
+                                                    Number(product.price) *
+                                                        quantities[product.id] *
+                                                        100
+                                                ) / 100
+                                            ).toFixed(2)}
+                                        </div>
+                                    ))}
+                                    <Typography.Text strong>
+                                        الإجمالي {total.toFixed(2)}
+                                    </Typography.Text>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </Modal>
+            )}
         </>
     );
 }

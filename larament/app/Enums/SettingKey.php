@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Costing\CostingMethod;
 use Closure;
+use Illuminate\Validation\ValidationException;
 
 enum SettingKey: string
 {
@@ -35,6 +36,10 @@ enum SettingKey: string
     case KDS_CANCEL_SOUND = 'kds_cancel_sound';
     case KDS_SOUND_VOLUME = 'kds_sound_volume';
     case KDS_REMINDER_SECONDS = 'kds_reminder_seconds';
+    case FEATURE_REVENUES_ENABLED = 'feature_revenues_enabled';
+    case FEATURE_CUSTOM_FEES_ENABLED = 'feature_custom_fees_enabled';
+    case FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
+    case FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
 
     /**
      * Get default value for this setting
@@ -70,6 +75,10 @@ enum SettingKey: string
             self::KDS_CANCEL_SOUND => 'alert',
             self::KDS_SOUND_VOLUME => '80',
             self::KDS_REMINDER_SECONDS => '30',
+            self::FEATURE_REVENUES_ENABLED => 'false',
+            self::FEATURE_CUSTOM_FEES_ENABLED => 'false',
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'false',
+            self::FEATURE_EQUIPMENT_ENABLED => 'false',
         };
     }
 
@@ -109,6 +118,10 @@ enum SettingKey: string
             self::KDS_CANCEL_SOUND => self::kdsSoundRules(),
             self::KDS_SOUND_VOLUME => ['required', 'integer', 'min:0', 'max:100'],
             self::KDS_REMINDER_SECONDS => ['required', 'integer', 'min:0', 'max:600'],
+            self::FEATURE_REVENUES_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_CUSTOM_FEES_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_EQUIPMENT_ENABLED => self::storedBooleanRules(),
         };
     }
 
@@ -146,6 +159,10 @@ enum SettingKey: string
             self::KDS_CANCEL_SOUND => 'صوت إلغاء الطلب',
             self::KDS_SOUND_VOLUME => 'مستوى الصوت',
             self::KDS_REMINDER_SECONDS => 'تكرار التنبيه (ثواني، 0 = إيقاف)',
+            self::FEATURE_REVENUES_ENABLED => 'تفعيل الإيرادات (الحد الأدنى للطلبات ودخول الحفلات)',
+            self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل الرسوم الإضافية المخصصة على الطلبات',
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل الطلبات الخارجية والمتاجر المتعاونة',
+            self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
         };
     }
 
@@ -183,6 +200,10 @@ enum SettingKey: string
             self::KDS_CANCEL_SOUND => 'النغمة التي تُشغَّل عند إلغاء طلب معروض على شاشة المطبخ.',
             self::KDS_SOUND_VOLUME => 'مستوى صوت تنبيهات شاشة المطبخ من 0 (صامت) إلى 100.',
             self::KDS_REMINDER_SECONDS => 'يعيد تشغيل التنبيه طالما توجد تذاكر جديدة أو معدّلة لم يطّلع عليها المطبخ. ضع 0 لإيقاف التكرار.',
+            self::FEATURE_REVENUES_ENABLED => 'إدارة الحد الأدنى للطلبات، تذاكر دخول الحفلات، وتسجيل الإيرادات.',
+            self::FEATURE_CUSTOM_FEES_ENABLED => 'السماح بإضافة رسوم مخصصة (نسبة أو مبلغ ثابت) على الطلبات وربطها بأنواع الطلبات.',
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'إدارة المتاجر المتعاونة، أصنافها، إضافة الطلبات الخارجية في الكاشير، وتسوية حسابات الموردين.',
+            self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
         };
     }
 
@@ -220,6 +241,10 @@ enum SettingKey: string
             self::KDS_CANCEL_SOUND => 'alert',
             self::KDS_SOUND_VOLUME => '80',
             self::KDS_REMINDER_SECONDS => '30',
+            self::FEATURE_REVENUES_ENABLED => 'تفعيل',
+            self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل',
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل',
+            self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
         };
     }
 
@@ -246,7 +271,12 @@ enum SettingKey: string
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::CASHIER_TABS => self::isJsonValue($value),
             self::COSTING_METHOD => is_string($value) && CostingMethod::tryFrom($value) !== null,
-            self::KDS_ITEM_TRACKING, self::KDS_AUTO_FINISH_ON_COMPLETE => self::isStoredBoolean($value),
+            self::KDS_ITEM_TRACKING,
+            self::KDS_AUTO_FINISH_ON_COMPLETE,
+            self::FEATURE_REVENUES_ENABLED,
+            self::FEATURE_CUSTOM_FEES_ENABLED,
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
+            self::FEATURE_EQUIPMENT_ENABLED => self::isStoredBoolean($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
             self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
@@ -254,6 +284,52 @@ enum SettingKey: string
             self::KDS_ORDER_TYPE_TARGETS => self::isJsonValue($value),
             self::KDS_NEW_ORDER_SOUND, self::KDS_CHANGE_SOUND, self::KDS_CANCEL_SOUND => is_string($value) && KdsSound::tryFrom($value) !== null,
         };
+    }
+
+    public function isBooleanSetting(): bool
+    {
+        return match ($this) {
+            self::ALLOW_CASHIER_DISCOUNTS,
+            self::ALLOW_CASHIER_CANCEL_ORDERS,
+            self::ALLOW_CASHIER_ITEM_CHANGES,
+            self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER,
+            self::KDS_ITEM_TRACKING,
+            self::KDS_AUTO_FINISH_ON_COMPLETE,
+            self::FEATURE_REVENUES_ENABLED,
+            self::FEATURE_CUSTOM_FEES_ENABLED,
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
+            self::FEATURE_EQUIPMENT_ENABLED => true,
+            default => false,
+        };
+    }
+
+    public function isFeatureFlag(): bool
+    {
+        return match ($this) {
+            self::FEATURE_REVENUES_ENABLED,
+            self::FEATURE_CUSTOM_FEES_ENABLED,
+            self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
+            self::FEATURE_EQUIPMENT_ENABLED => true,
+            default => false,
+        };
+    }
+
+    public static function parseStoredBoolean(string $key, mixed $value): bool
+    {
+        if ($value === true || $value === 1 || $value === '1' || $value === 'true') {
+            return true;
+        }
+
+        if ($value === false || $value === 0 || $value === '0' || $value === 'false') {
+            return false;
+        }
+
+        $message = __('validation.boolean', ['attribute' => $key]);
+
+        throw ValidationException::withMessages([
+            'data.'.$key => $message,
+            $key => $message,
+        ]);
     }
 
     private static function cashierTabsDefault(): string

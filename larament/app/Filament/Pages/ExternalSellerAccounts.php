@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Exceptions\OrderException;
 use App\Models\ExternalSeller;
+use App\Services\FeatureService;
 use App\Services\Orders\ExternalSellerSettlementService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -29,9 +30,20 @@ class ExternalSellerAccounts extends Page implements HasTable
 
     protected string $view = 'filament.pages.external-seller-accounts';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled() && static::canAccess();
+    }
+
     public static function canAccess(): bool
     {
-        return auth()->user()?->can('view_external_sellers') ?? false;
+        return app(FeatureService::class)->outsourcedOrdersEnabled()
+            && (auth()->user()?->can('view_external_sellers') ?? false);
+    }
+
+    public function mount(): void
+    {
+        abort_unless(static::canAccess(), 403);
     }
 
     public function table(Table $table): Table
@@ -51,7 +63,7 @@ class ExternalSellerAccounts extends Page implements HasTable
                     ->icon('heroicon-o-eye')
                     ->url(fn (ExternalSeller $record): string => ExternalSellerAccount::getUrl(['record' => $record->id])),
                 Action::make('pay')->label('دفع المستحقات')
-                    ->visible(fn (): bool => auth()->user()?->can('update_external_sellers') ?? false)
+                    ->visible(fn (): bool => app(FeatureService::class)->outsourcedOrdersEnabled() && (auth()->user()?->can('update_external_sellers') ?? false))
                     ->schema([
                         TextInput::make('amount')->label('المبلغ')->required()->numeric()->minValue(0.01),
                         Textarea::make('note')->label('ملاحظة'),

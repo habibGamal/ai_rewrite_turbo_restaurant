@@ -10,11 +10,14 @@ use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\OrderReturnsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
+use App\Models\ExternalOrder;
+use App\Models\ExternalOrderItem;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -354,6 +357,35 @@ class OrderResource extends Resource
                     ->collapsed()
                     ->collapsible()
                     ->visible(fn ($record) => ! empty($record->web_preferences)),
+
+                Section::make('الطلبات الخارجية')
+                    ->schema([
+                        RepeatableEntry::make('externalOrders')
+                            ->label('تفاصيل الطلبات الخارجية')
+                            ->schema([
+                                TextEntry::make('seller.name')
+                                    ->label('البائع الخارجي'),
+                                TextEntry::make('status')
+                                    ->label('الحالة')
+                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                        'fulfilled' => 'تم التنفيذ',
+                                        'cancelled' => 'ملغي',
+                                        'pending' => 'معلق',
+                                        default => $state,
+                                    })
+                                    ->badge(),
+                                TextEntry::make('total')
+                                    ->label('الإجمالي')
+                                    ->money('EGP'),
+                                TextEntry::make('items_summary')
+                                    ->label('الأصناف')
+                                    ->state(fn (ExternalOrder $record): string => $record->items
+                                        ->map(fn (ExternalOrderItem $item): string => "{$item->name} × {$item->quantity}")
+                                        ->join('، ') ?: '-'),
+                            ])
+                            ->columns(4),
+                    ])
+                    ->visible(fn (Order $record): bool => $record->externalOrders->isNotEmpty()),
             ]);
     }
 
@@ -377,6 +409,6 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns']);
+            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns', 'externalOrders.seller', 'externalOrders.items', 'externalOrders.collections']);
     }
 }

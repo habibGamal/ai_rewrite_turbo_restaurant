@@ -11,6 +11,7 @@ use App\Jobs\ImportCsv;
 use App\Models\Category;
 use App\Models\ExpenceType;
 use App\Models\Expense;
+use App\Models\ExternalSeller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderReturn;
@@ -19,6 +20,7 @@ use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
+use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\Stocktaking;
 use App\Models\Supplier;
@@ -26,6 +28,7 @@ use App\Models\User;
 use App\Models\Waste;
 use App\Observers\ProductObserver;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Sync\SyncOutboxObserver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
@@ -33,7 +36,9 @@ use Filament\Auth\Http\Responses\LoginResponse;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
@@ -49,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(BaseImportCsv::class, ImportCsv::class);
         $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
+        $this->app->singleton(FeatureService::class);
         $this->app->scoped(OrderTypeCatalog::class);
         $this->app->scoped(CostHistoryRecorder::class);
         $this->app->bind(CostingStrategyResolver::class);
@@ -90,8 +96,25 @@ class AppServiceProvider extends ServiceProvider
             fn (): View => view('filament.global-actions'),
         );
 
-        // Grant admin role full authorization bypass
-        Gate::before(function ($user, $ability) {
+        Event::listen(TransactionRolledBack::class, static function (): void {
+            Setting::invalidateCache();
+        });
+
+        // Enforce optional feature gates before granting admin role authorization bypass
+        Gate::before(function ($user, $ability, array $arguments = []) {
+            $featureService = app(FeatureService::class);
+
+            if (is_string($ability) && $featureService->isPermissionDisabled($ability)) {
+                return false;
+            }
+
+            foreach ($arguments as $argument) {
+                $class = is_object($argument) ? $argument::class : (is_string($argument) ? $argument : null);
+                if ($class === ExternalSeller::class && ! $featureService->outsourcedOrdersEnabled()) {
+                    return false;
+                }
+            }
+
             return $user->hasRole('admin') ? true : null;
         });
 

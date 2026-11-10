@@ -187,11 +187,21 @@ export interface ManageOrderProps {
     receiptFooter?: string;
 }
 
+export interface FeatureFlags {
+    revenues: boolean;
+    custom_fees: boolean;
+    outsourced_orders: boolean;
+    equipment: boolean;
+}
+
 export interface PageProps {
     auth: {
         user: User;
     };
+    features?: FeatureFlags;
     receiptFooter: string;
+    scaleBarcodePrefix?: string;
+    [key: string]: unknown;
 }
 
 export interface OrdersPageProps extends PageProps {

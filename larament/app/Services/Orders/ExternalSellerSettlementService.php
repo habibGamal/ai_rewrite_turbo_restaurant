@@ -2,11 +2,13 @@
 
 namespace App\Services\Orders;
 
+use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
 use App\Models\ExternalOrderCollection;
 use App\Models\ExternalSeller;
 use App\Models\ExternalSellerSettlement;
 use App\Models\Shift;
+use App\Services\FeatureService;
 use Illuminate\Support\Facades\DB;
 
 class ExternalSellerSettlementService
@@ -21,6 +23,7 @@ class ExternalSellerSettlementService
     public function pay(int $sellerId, float $amount, ?string $note): ExternalSellerSettlement
     {
         return DB::transaction(function () use ($sellerId, $amount, $note) {
+            app(FeatureService::class)->lockAndAssertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
             $seller = ExternalSeller::whereKey($sellerId)->lockForUpdate()->firstOrFail();
             $shift = Shift::whereNull('end_at')->where('closed', false)->lockForUpdate()->first();
             if ($shift === null) {

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Services\FeatureService;
 use App\Services\Orders\ExternalOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,12 @@ class ExternalOrderController extends Controller
 
     public function save(Request $request, Order $order): RedirectResponse
     {
+        try {
+            app(FeatureService::class)->assertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
+        } catch (OrderException $exception) {
+            return back()->withErrors(['error' => $exception->getMessage()]);
+        }
+
         $data = $request->validate([
             'seller_id' => ['required', 'integer', 'exists:external_sellers,id'],
             'items' => ['required', 'array', 'min:1'],
@@ -33,6 +41,7 @@ class ExternalOrderController extends Controller
     public function removeLine(Order $order, int $external, int $item): RedirectResponse
     {
         try {
+            app(FeatureService::class)->assertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
             $this->service->removeLine($order->id, $external, $item);
 
             return back()->with('success', 'تم حذف الصنف الخارجي');
@@ -44,6 +53,7 @@ class ExternalOrderController extends Controller
     public function fulfill(Order $order, int $external): RedirectResponse
     {
         try {
+            app(FeatureService::class)->assertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
             $this->service->fulfill($order->id, $external);
 
             return back()->with('success', 'تم تنفيذ الطلب الخارجي');

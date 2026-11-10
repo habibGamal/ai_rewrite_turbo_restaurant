@@ -71,8 +71,10 @@ export default function ManageOrder({
     canAddExternalOrder: typeAllowsExternalOrder,
     credit,
 }: ManageOrderProps) {
-    const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
-    const user = auth.user as User;
+    const { auth, features, receiptFooter, scaleBarcodePrefix } =
+        usePage<ManageOrderProps>().props;
+    const outsourcedFeatureEnabled = Boolean(features?.outsourced_orders);
+    const user = auth.user;
     const { modal } = App.useApp();
     const barcodeScanner = (symbol: string, type: any) => {
         const barcode = symbol;
@@ -146,7 +148,10 @@ export default function ManageOrder({
     const orderCancelled = order.status === "cancelled";
     const orderInProcess = order.status === "processing";
     const orderCompleted = order.status === "completed";
-    const canAddExternalOrder = !disableAllControls && typeAllowsExternalOrder;
+    const canAddExternalOrder =
+        outsourcedFeatureEnabled &&
+        !disableAllControls &&
+        typeAllowsExternalOrder;
     const showDriver = orderDisplay?.showDriver ?? false;
     const orderWithDisplay = {
         ...order,
@@ -522,8 +527,15 @@ export default function ManageOrder({
                                 orderId={order.id}
                                 orders={externalOrders}
                                 sellers={sellers}
-                                disabled={disableAllControls}
-                                open={isExternalOrderModalOpen}
+                                disabled={
+                                    disableAllControls ||
+                                    !outsourcedFeatureEnabled
+                                }
+                                featureEnabled={outsourcedFeatureEnabled}
+                                open={
+                                    outsourcedFeatureEnabled &&
+                                    isExternalOrderModalOpen
+                                }
                                 onClose={() => setIsExternalOrderModalOpen(false)}
                                 beforeAction={(action) => save(action, () => {})}
                             />

@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
+use App\Services\FeatureService;
 use Filament\Resources\Pages\CreateRecord;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class CreateRole extends CreateRecord
 {
@@ -15,7 +17,7 @@ class CreateRole extends CreateRecord
         /** @var array<string, mixed> $data */
         $data = $this->data;
 
-        $selectedPermissions = array_unique(array_merge(
+        $selectedPermissions = array_values(array_unique(array_merge(
             is_array($data['permissions_catalog'] ?? null) ? $data['permissions_catalog'] : [],
             is_array($data['permissions_purchasing'] ?? null) ? $data['permissions_purchasing'] : [],
             is_array($data['permissions_customers'] ?? null) ? $data['permissions_customers'] : [],
@@ -23,10 +25,16 @@ class CreateRole extends CreateRecord
             is_array($data['permissions_reports'] ?? null) ? $data['permissions_reports'] : [],
             is_array($data['permissions_pos'] ?? null) ? $data['permissions_pos'] : [],
             is_array($data['permissions_kitchen'] ?? null) ? $data['permissions_kitchen'] : [],
+        )));
+
+        $visiblePermissions = array_values(array_diff(
+            $selectedPermissions,
+            app(FeatureService::class)->disabledFeaturePermissions(),
         ));
 
         /** @var Role $record */
         $record = $this->record;
-        $record->syncPermissions($selectedPermissions);
+        $record->syncPermissions($visiblePermissions);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

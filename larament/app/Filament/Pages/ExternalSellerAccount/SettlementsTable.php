@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\ExternalSellerAccount;
 
 use App\Models\ExternalSellerSettlement;
+use App\Services\FeatureService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -21,8 +22,16 @@ class SettlementsTable extends BaseWidget
 
     public int|string|null $record = null;
 
+    public static function canView(): bool
+    {
+        return app(FeatureService::class)->outsourcedOrdersEnabled()
+            && (auth()->user()?->can('view_external_sellers') ?? false);
+    }
+
     public function mount(int|string|null $sellerId = null, int|string|null $record = null): void
     {
+        abort_unless(static::canView(), 403);
+
         $this->sellerId = $sellerId ?? $record;
         $this->record = $this->sellerId;
     }
