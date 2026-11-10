@@ -215,7 +215,7 @@ export interface ExternalOrder {
   seller_name: string;
   status: string;
   total: number;
-  items: { id: number; name: string; quantity: number; price: number; total: number }[];
+  items: { id: number; external_product_id: number | null; name: string; quantity: number; price: number; total: number }[];
 }
 
 export interface ReceiptPayment {
@@ -295,7 +295,7 @@ export interface ManageOrderProps extends PageProps {
   drivers: Driver[];
   regions: Region[];
   externalOrders: ExternalOrder[];
-  sellers: { id: number; name: string }[];
+  sellers: { id: number; name: string; products: { id: number; name: string; price: number | string }[] }[];
   guestDue: number;
   canAddExternalOrder: boolean;
 }

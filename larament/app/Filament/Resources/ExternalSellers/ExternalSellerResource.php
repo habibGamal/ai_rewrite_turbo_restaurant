@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ExternalSellers;
 use App\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
 use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
 use App\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
+use App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Models\ExternalSeller;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -50,6 +51,11 @@ class ExternalSellerResource extends Resource
             TextColumn::make('phone')->label('الهاتف'),
             IconColumn::make('is_active')->label('نشط')->boolean(),
         ])->recordActions([EditAction::make(), DeleteAction::make()]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [ProductsRelationManager::class];
     }
 
     public static function getPages(): array

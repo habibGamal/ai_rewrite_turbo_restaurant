@@ -198,7 +198,10 @@ class OrderController extends Controller
             'drivers' => $drivers,
             'regions' => $regions,
             'externalOrders' => $order->externalOrders()->with('items')->where('status', '!=', 'cancelled')->orderBy('id')->get(),
-            'sellers' => \App\Models\ExternalSeller::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'sellers' => \App\Models\ExternalSeller::where('is_active', true)
+                ->with(['products' => fn ($query) => $query->where('is_active', true)->orderBy('name')->select('id', 'external_seller_id', 'name', 'price')])
+                ->orderBy('name')->get(['id', 'name'])
+                ->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->name, 'products' => $seller->products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'price' => $product->price])]),
             'canAddExternalOrder' => ! $order->behavior()->allowsPartialPayment(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
         ]);

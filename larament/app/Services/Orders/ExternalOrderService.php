@@ -15,17 +15,6 @@ class ExternalOrderService
 {
     public function save(int $orderId, int $sellerId, array $lines): ExternalOrder
     {
-        $totalAmount = 0.0;
-        foreach ($lines as $line) {
-            if (trim((string) ($line['name'] ?? '')) === '' || (float) ($line['quantity'] ?? 0) <= 0 || (float) ($line['price'] ?? -1) < 0) {
-                throw new OrderException('بيانات الصنف الخارجي غير صالحة');
-            }
-            $totalAmount += round((float) $line['quantity'] * (float) $line['price'], 2);
-        }
-        if ($lines === [] || $totalAmount > 9999999999.99) {
-            throw new OrderException('إجمالي الطلب الخارجي غير صالح');
-        }
-
         return DB::transaction(function () use ($orderId, $sellerId, $lines) {
             $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
             if (! $order->status->canBeModified() || $order->behavior()->allowsPartialPayment()) {
@@ -33,6 +22,18 @@ class ExternalOrderService
             }
 
             $seller = ExternalSeller::whereKey($sellerId)->where('is_active', true)->firstOrFail();
+            $products = $seller->products()->where('is_active', true)->whereIn('id', array_column($lines, 'product_id'))->lockForUpdate()->get()->keyBy('id');
+            $totalAmount = 0.0;
+            foreach ($lines as $line) {
+                $product = $products->get($line['product_id']);
+                if (! $product || (float) ($line['quantity'] ?? 0) <= 0) {
+                    throw new OrderException('بيانات الصنف الخارجي غير صالحة');
+                }
+                $totalAmount += round((float) $line['quantity'] * (float) $product->price, 2);
+            }
+            if ($lines === [] || $totalAmount > 9999999999.99) {
+                throw new OrderException('إجمالي الطلب الخارجي غير صالح');
+            }
             $external = ExternalOrder::firstOrNew(['host_order_id' => $order->id, 'external_seller_id' => $seller->id]);
             $external->seller_name = $external->exists ? $external->seller_name : $seller->name;
             $external->status = 'pending';
@@ -40,8 +41,9 @@ class ExternalOrderService
             $external->save();
             $external->items()->delete();
             foreach ($lines as $line) {
-                $total = round((float) $line['quantity'] * (float) $line['price'], 2);
-                $external->items()->create(['name' => $line['name'], 'quantity' => $line['quantity'], 'price' => $line['price'], 'total' => $total]);
+                $product = $products->get($line['product_id']);
+                $total = round((float) $line['quantity'] * (float) $product->price, 2);
+                $external->items()->create(['external_product_id' => $product->id, 'name' => $product->name, 'quantity' => $line['quantity'], 'price' => $product->price, 'total' => $total]);
                 $external->total += $total;
             }
             $external->save();
