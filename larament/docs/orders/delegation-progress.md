@@ -101,3 +101,22 @@ On the final `feature/order-types` tree (all merges + enum removal), with `BROAD
   in the action grid.
 - Open: a section's name is hidden when a table sits on the section's top-right corner (seen on "area 2", in the
   designer and the cashier floor).
+
+## Follow-up: outsource products, seller accounts, credit settings
+
+| Task | Implementer | Commit |
+|---|---|---|
+| Outsource products per seller (الأصناف), picked in the طلب خارجي modal, priced on the server | Codex | `4925a7c`, label fix `fec9a96` |
+| طلب خارجي list redesign on the order screen | Antigravity gemini-3.8-flash-high | `5d91781` |
+| Per-seller account page (stats, orders with date/shift/status filters, payouts) | Antigravity gemini-3.8-flash-high | `e63d435` |
+| Credit settings per order type (partial payment, pay later, customer required) | Antigravity gemini-3.8-flash-high | `196d6a5`, layout fix `c2e4318` |
+
+- The argon runs failed (network lookup error, then "Individual quota reached", resets in ~6 days); the same briefs
+  ran on gemini-3.8-flash-high.
+- Review fixes: Arabic labels on the products relation manager; removed a leftover repository alias; the credit
+  section now spans the full form width.
+- Gates: each branch 103 failed (baseline 109), no new PHPStan error, build green; merged tree 73 affected tests pass.
+- Dev database migrated (external_products, credit settings). Checked in the browser: products relation manager,
+  modal empty state, credit section, seller account page.
+- Not checked in the browser: ordering an actual product, closing an order with pay later, collecting it from
+  تحصيل الآجل (covered by feature tests).
