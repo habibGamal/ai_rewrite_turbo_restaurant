@@ -6,6 +6,7 @@ use App\Enums\MovementReason;
 use App\Enums\ProductType;
 use App\Models\InventoryItemMovement;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Services\StockService;
@@ -24,9 +25,16 @@ class OrderStockConversionService
      */
     public function convertOrderItemsToStockItems(Order $order): array
     {
+        return $this->optimizeStockItems($this->stockItemContributions($order));
+    }
+
+    private function stockItemContributions(Order $order): array
+    {
         $stockItems = [];
 
+        /** @var OrderItem $orderItem */
         foreach ($order->items as $orderItem) {
+            /** @var Product $product */
             $product = $orderItem->product;
             $warehouseId = $product->stockWarehouseId();
 
@@ -34,12 +42,15 @@ class OrderStockConversionService
                 case ProductType::Manufactured:
                     // Break down manufactured product into its components
                     $componentItems = $this->getManufacturedProductComponents($product, $orderItem->quantity, $warehouseId);
-                    $stockItems = array_merge($stockItems, $componentItems);
+                    foreach ($componentItems as $componentItem) {
+                        $stockItems[] = $componentItem + ['order_item_id' => $orderItem->id];
+                    }
                     break;
 
                 case ProductType::Consumable:
                     // Add consumable item directly
                     $stockItems[] = [
+                        'order_item_id' => $orderItem->id,
                         'product_id' => $product->id,
                         'quantity' => $orderItem->quantity,
                         'warehouse_id' => $warehouseId,
@@ -57,8 +68,7 @@ class OrderStockConversionService
             }
         }
 
-        // Optimize by summing up common components
-        return $this->optimizeStockItems($stockItems);
+        return $stockItems;
     }
 
     /**
@@ -102,6 +112,7 @@ class OrderStockConversionService
         $optimized = [];
 
         foreach ($stockItems as $item) {
+            unset($item['order_item_id']);
             $key = $item['product_id'].':'.($item['warehouse_id'] ?? 0);
 
             if (isset($optimized[$key])) {
@@ -130,6 +141,41 @@ class OrderStockConversionService
             MovementReason::ORDER,
             $order
         )->isNotEmpty();
+    }
+
+    /** @return Collection<int, InventoryItemMovement> */
+    public function removeStockWithRealCostsForCompletedOrder(Order $order): Collection
+    {
+        $contributions = collect($this->stockItemContributions($order));
+        if ($contributions->isEmpty()) {
+            return collect();
+        }
+
+        $movements = $this->stockService->removeStock(
+            $this->optimizeStockItems($contributions->all()), MovementReason::ORDER, $order
+        );
+        $byStockLine = $contributions->groupBy(fn (array $line): string => $line['product_id'].':'.$line['warehouse_id']);
+        $costs = [];
+        foreach ($movements as $movement) {
+            $lines = $byStockLine->get($movement->product_id.':'.$movement->warehouse_id, collect());
+            $quantity = (float) $lines->sum('quantity');
+            if ($quantity <= 0) {
+                continue;
+            }
+            foreach ($lines as $line) {
+                $id = $line['order_item_id'];
+                $costs[$id] = ($costs[$id] ?? 0) + (float) $movement->total_cost * $line['quantity'] / $quantity;
+            }
+        }
+
+        /** @var OrderItem $item */
+        foreach ($order->items as $item) {
+            if (array_key_exists($item->id, $costs) && $item->quantity > 0) {
+                $item->update(['cost' => round($costs[$item->id] / $item->quantity, 2)]);
+            }
+        }
+
+        return $movements;
     }
 
     /**

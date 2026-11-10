@@ -244,7 +244,7 @@ it('starts the running balance from the quantity before the date range', functio
         ->and($allRows[1]->running_balance)->toBe(33.0);
 });
 
-it('shows the user and a link to each document and falls back gracefully for StockTransfer and unknown types', function () {
+it('shows the user and a link to each document including transfers and falls back gracefully for unknown types', function () {
     $user = User::factory()->admin()->create(['name' => 'سارة المشرفة']);
     actingAs($user);
 
@@ -282,7 +282,7 @@ it('shows the user and a link to each document and falls back gracefully for Sto
         [Order::class, $order->id, MovementReason::ORDER, InventoryMovementOperation::OUT, 'طلب', route('filament.admin.resources.orders.view', ['record' => $order->id])],
         [ManufacturingOrder::class, $manufacturingOrder->id, MovementReason::MANUFACTURING_IN, InventoryMovementOperation::IN, 'أمر تصنيع', route('filament.admin.resources.manufacturing-orders.view', ['record' => $manufacturingOrder->id])],
         [StockIssue::class, $stockIssue->id, MovementReason::STOCK_ISSUE, InventoryMovementOperation::OUT, 'إذن صرف', route('filament.admin.resources.stock-issues.view', ['record' => $stockIssue->id])],
-        ['App\\Models\\StockTransfer', 77, MovementReason::TRANSFER_OUT, InventoryMovementOperation::OUT, 'إذن تحويل', null],
+        ['App\\Models\\StockTransfer', 77, MovementReason::TRANSFER_OUT, InventoryMovementOperation::OUT, 'إذن تحويل', route('filament.admin.resources.stock-transfers.view', ['record' => 77])],
         ['App\\Models\\UnknownCustomDocument', 99, MovementReason::ADJUSTMENT, InventoryMovementOperation::IN, 'مستند مخزني', null],
     ];
 
