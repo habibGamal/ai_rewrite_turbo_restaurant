@@ -104,12 +104,12 @@ describe('StockService', function () {
                 ->and($this->stockService->getCurrentStock($product->id, $warehouse->id))->toBe(4.0);
         });
 
-        it('keeps an explicit zero unit cost and accepts costs on outgoing lines', function () {
+        it('keeps an explicit zero incoming cost and values outgoing lines at current cost', function () {
             $product = Product::factory()->create(['cost' => 20]);
             $movement = $this->stockService->addStock([['product_id' => $product->id, 'quantity' => 3, 'unit_cost' => 0]])->sole();
             expect((float) $movement->unit_cost)->toBe(0.0)->and((float) $movement->total_cost)->toBe(0.0);
             $out = $this->stockService->removeStock([['product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 15.25]])->sole();
-            expect((float) $out->unit_cost)->toBe(15.25)->and((float) $out->total_cost)->toBe(30.50);
+            expect((float) $out->unit_cost)->toBe(20.0)->and((float) $out->total_cost)->toBe(40.0);
         });
 
         it('rolls back all warehouse balances and movements when a warehouse does not exist', function () {

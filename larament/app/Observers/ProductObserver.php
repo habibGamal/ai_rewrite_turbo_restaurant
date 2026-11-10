@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Costing\CostHistoryRecorder;
 use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
@@ -56,6 +57,7 @@ class ProductObserver
      */
     public function saved(Product $product): void
     {
+        app(CostHistoryRecorder::class)->recordSaved($product);
         // Auto-assign product_ref if not provided (fallback for mass assignment)
         if ($product->type !== ProductType::Manufactured) {
             $product->load('componentOf');

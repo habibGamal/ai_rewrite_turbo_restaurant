@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Costing\CostHistoryRecorder;
+use App\Costing\CostingStrategy;
+use App\Costing\CostingStrategyResolver;
 use App\Http\Responses\CustomLoginResponse;
 use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
@@ -47,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
         $this->app->scoped(OrderTypeCatalog::class);
+        $this->app->scoped(CostHistoryRecorder::class);
+        $this->app->bind(CostingStrategyResolver::class);
+        $this->app->bind(CostingStrategy::class, fn ($app) => $app->make(CostingStrategyResolver::class)->resolve());
     }
 
     /**

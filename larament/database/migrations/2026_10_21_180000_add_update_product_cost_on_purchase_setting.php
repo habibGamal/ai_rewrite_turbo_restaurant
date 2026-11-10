@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Database\Migrations\Migration;
 
@@ -12,10 +11,10 @@ return new class extends Migration
     public function up(): void
     {
         Setting::updateOrCreate(
-            ['key' => SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value],
+            ['key' => 'update_product_cost_on_purchase'],
             [
-                'key' => SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value,
-                'value' => SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->defaultValue(),
+                'key' => 'update_product_cost_on_purchase',
+                'value' => 'true',
             ]
         );
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Setting::where('key', SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)->delete();
+        Setting::where('key', 'update_product_cost_on_purchase')->delete();
     }
 };

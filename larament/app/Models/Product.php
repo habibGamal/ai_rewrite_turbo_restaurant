@@ -102,6 +102,7 @@ class Product extends Model
         return $this->belongsToMany(Product::class, 'product_components', 'product_id', 'component_id')->withPivot('quantity');
     }
 
+    /** @return BelongsToMany<Product, $this> */
     public function componentOf(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'component_id', 'product_id')->withPivot('quantity');
@@ -122,11 +123,18 @@ class Product extends Model
         return $this->hasMany(InventoryItemMovementDaily::class);
     }
 
-    public function updateManufacturedCost()
+    public function updateManufacturedCost(array $visited = []): void
     {
-        if ($this->type === ProductType::Manufactured) {
-            $this->cost = $this->components()->sum(DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
-            $this->save();
+        if ($this->type !== ProductType::Manufactured || in_array($this->id, $visited, true)) {
+            return;
+        }
+
+        $visited[] = $this->id;
+        $this->cost = $this->components()->sum(DB::raw('quantity * (select cost from products WHERE products.id  = `product_components`.`component_id`)'));
+        $this->save();
+
+        foreach ($this->componentOf()->get() as $parent) {
+            $parent->updateManufacturedCost($visited);
         }
     }
 
