@@ -109,6 +109,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'update_manufacturing_orders' => 'تعديل وإكمال أمر تصنيع',
                 'delete_manufacturing_orders' => 'حذف أمر تصنيع',
 
+                'view_stock_transfers' => 'عرض أذون التحويل',
+                'create_stock_transfers' => 'إضافة إذن تحويل',
+                'update_stock_transfers' => 'تعديل وتأكيد إذن تحويل',
+                'delete_stock_transfers' => 'حذف إذن تحويل',
+
                 'view_stock_issues' => 'عرض أذون الصرف',
                 'create_stock_issues' => 'إضافة إذن صرف',
                 'update_stock_issues' => 'تعديل إذن صرف',
@@ -163,6 +168,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_waste_report' => 'تقرير الهالك',
                 'view_stocktaking_report' => 'تقرير الجرد',
                 'view_stock_issues_report' => 'تقرير أذون الصرف',
+                'view_transfers_report' => 'تقرير التحويلات',
                 'view_manufacturing_yield_report' => 'تقرير التصنيع والهالك الإنتاجي',
                 'view_cost_history_report' => 'سجل تغيير التكلفة',
                 'view_item_ledger_report' => 'كشف حركة صنف',

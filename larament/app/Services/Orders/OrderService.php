@@ -153,7 +153,11 @@ class OrderService
             $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
 
             // Remove stock items after successful completion
-            $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
+            $this->orderStockConversionService->removeStockWithRealCostsForCompletedOrder($completedOrder);
+            $completedOrder->load('items');
+            $completedOrder->update([
+                'profit' => $this->orderCalculationService->calculateProfit($completedOrder, (float) $completedOrder->total),
+            ]);
             $this->kitchenTicketService->autoFinishForOrder($completedOrder);
 
             return $completedOrder;

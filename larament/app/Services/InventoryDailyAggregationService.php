@@ -11,6 +11,7 @@ use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\StockIssue;
 use App\Models\Stocktaking;
+use App\Models\StockTransfer;
 use App\Models\Warehouse;
 use App\Models\Waste;
 use App\Sync\DateDocument;
@@ -168,6 +169,11 @@ class InventoryDailyAggregationService
         $openManufacturingOrders = ManufacturingOrder::whereNull('closed_at')->count();
         if ($openManufacturingOrders > 0) {
             throw new Exception("لا يمكن إغلاق اليوم لوجود {$openManufacturingOrders} أمر تصنيع مفتوح");
+        }
+
+        $openTransfers = StockTransfer::whereNull('closed_at')->count();
+        if ($openTransfers > 0) {
+            throw new Exception("لا يمكن إغلاق اليوم لوجود {$openTransfers} إذن تحويل مفتوح");
         }
 
         // Check for open stocktaking

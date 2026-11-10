@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Throwable;
 
@@ -54,6 +55,39 @@ class StockService
     public function removeStock(array $items, MovementReason $reason = MovementReason::MANUAL, ?Model $referenceable = null): Collection
     {
         return $this->processStock($items, InventoryMovementOperation::OUT, $reason, $referenceable);
+    }
+
+    /** @return Collection<int, InventoryItemMovement> */
+    public function transfer(int $fromWarehouseId, int $toWarehouseId, array $items, Model $ref): Collection
+    {
+        if ($fromWarehouseId === $toWarehouseId) {
+            throw ValidationException::withMessages([
+                'to_warehouse_id' => 'يجب أن يختلف المخزن المصدر عن المخزن المستلم.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($fromWarehouseId, $toWarehouseId, $items, $ref): Collection {
+            shouldDayBeOpen();
+            $this->validateItems($items);
+            $costs = Product::whereIn('id', array_column($items, 'product_id'))
+                ->orderBy('id')->lockForUpdate()->pluck('cost', 'id');
+            $source = [];
+            $destination = [];
+            foreach ($items as $item) {
+                $line = [
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_cost' => (float) $costs->get($item['product_id'], 0),
+                ];
+                $source[] = $line + ['warehouse_id' => $fromWarehouseId];
+                $destination[] = $line + ['warehouse_id' => $toWarehouseId];
+            }
+
+            $out = $this->removeStock($source, MovementReason::TRANSFER_OUT, $ref);
+            $in = $this->addStock($destination, MovementReason::TRANSFER_IN, $ref);
+
+            return $out->concat($in)->values();
+        });
     }
 
     /**

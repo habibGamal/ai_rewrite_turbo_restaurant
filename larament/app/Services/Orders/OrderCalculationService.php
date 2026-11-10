@@ -117,7 +117,7 @@ class OrderCalculationService
         return $order->discount ?? 0;
     }
 
-    private function calculateProfit(Order $order, float $total): float
+    public function calculateProfit(Order $order, float $total): float
     {
         $totalCost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
 
