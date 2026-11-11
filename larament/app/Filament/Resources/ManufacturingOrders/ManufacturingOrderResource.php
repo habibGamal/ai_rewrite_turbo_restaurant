@@ -422,33 +422,27 @@ class ManufacturingOrderResource extends Resource
                                 $set('variance_quantity', round($actual - $planned, 3));
                             }),
 
-                        FormPlaceholder::make('cost_method_display')
-                            ->hiddenLabel()
-                            ->visible(fn (Get $get) => (bool) $get('is_main'))
-                            ->content('يأخذ الباقي'),
                         Select::make('cost_method')
                             ->label('طريقة توزيع التكلفة')
-                            ->hidden(fn (Get $get) => (bool) $get('is_main'))
-                            ->options([
-                                'fixed' => 'سعر ثابت للوحدة (ج.م)',
-                                'percent' => 'نسبة من التكلفة المتبقية (%)',
-                            ])
+                            ->options(fn (Get $get): array => $get('is_main')
+                                ? ['percent' => 'يأخذ الباقي']
+                                : ['fixed' => 'سعر ثابت للوحدة (ج.م)', 'percent' => 'نسبة من التكلفة المتبقية (%)'])
+                            ->disabled(fn (Get $get) => (bool) $get('is_main'))
+                            ->dehydrated()
+                            ->selectablePlaceholder(false)
                             ->default('percent')
                             ->live(),
 
-                        FormPlaceholder::make('cost_value_display')
-                            ->hiddenLabel()
-                            ->visible(fn (Get $get) => (bool) $get('is_main'))
-                            ->content('—'),
                         TextInput::make('cost_value')
                             ->label('القيمة')
-                            ->hidden(fn (Get $get) => (bool) $get('is_main'))
                             ->numeric()
                             ->step(0.0001)
                             ->minValue(0)
                             ->default(0)
+                            ->disabled(fn (Get $get) => (bool) $get('is_main'))
+                            ->dehydrated()
                             ->live()
-                            ->suffix(fn (Get $get): string => $get('cost_method') === 'fixed' ? 'ج.م/وحدة' : '%'),
+                            ->suffix(fn (Get $get): ?string => $get('is_main') ? null : ($get('cost_method') === 'fixed' ? 'ج.م/وحدة' : '%')),
 
                         FormPlaceholder::make('variance_quantity')
                             ->hiddenLabel()
