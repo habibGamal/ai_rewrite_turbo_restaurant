@@ -221,9 +221,24 @@ it('distributes rounded duplicate input costs without creating a negative final 
 
 it('saves edited inputs before completing from the edit page', function () {
     $input = $this->order->inputs->first();
+    $output = $this->order->outputs->first();
+    $undo = \Filament\Forms\Components\Repeater::fake();
     livewire(EditManufacturingOrder::class, ['record' => $this->order->id])
-        ->set('data.inputs.record-'.$input->id.'.actual_quantity', 21)
-        ->callAction('complete', ['actual_outputs' => [$this->mainId => 18.5]])
+        ->fillForm([
+            'inputs' => [
+                ['id' => $input->id, 'product_id' => $input->product_id, 'actual_quantity' => 21],
+                ['id' => $this->order->inputs[1]->id, 'product_id' => $this->order->inputs[1]->product_id, 'actual_quantity' => 1],
+            ],
+            'outputs' => [
+                ['id' => $output->id, 'product_id' => $output->product_id, 'is_main' => true, 'expected_quantity' => 19, 'actual_quantity' => 18.5],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+    $undo();
+    expect($output->fresh()->actual_quantity)->toBe('18.500');
+    livewire(EditManufacturingOrder::class, ['record' => $this->order->id])
+        ->callAction('complete')
         ->assertHasNoActionErrors();
     expect($input->fresh()->actual_quantity)->toBe('21.000')
         ->and($input->fresh()->planned_quantity)->toBe('20.000')
@@ -232,11 +247,11 @@ it('saves edited inputs before completing from the edit page', function () {
 });
 
 it('completes through Filament using prefilled output quantities and displays variance', function () {
+    $this->order->outputs->first()->update(['actual_quantity' => 18.5]);
     livewire(ViewManufacturingOrder::class, ['record' => $this->order->id])
-        ->assertSuccessful()->mountAction('complete')
-        ->assertActionDataSet(['actual_outputs' => [$this->mainId => '19.000']])
-        ->fillForm(['actual_outputs' => [$this->mainId => 18.5]])
-        ->callMountedAction()->assertHasNoActionErrors();
+        ->assertSuccessful()
+        ->callAction('complete')
+        ->assertHasNoActionErrors();
     livewire(ViewManufacturingOrder::class, ['record' => $this->order->id])
         ->assertSuccessful()->assertActionHidden('complete')->assertActionHidden('edit')
         ->assertSee('انحراف الكمية')->assertSee('-0.500')->assertSee('٤٤٫٣٢');
@@ -252,8 +267,9 @@ it('does not expose completion to a user without update permission', function ()
 
 it('shows an Arabic failure notification and keeps the draft when the business day is closed', function () {
     \App\Models\InventoryItemMovementDaily::query()->update(['closed_at' => now()]);
+    $this->order->outputs->first()->update(['actual_quantity' => 18.5]);
     livewire(ViewManufacturingOrder::class, ['record' => $this->order->id])
-        ->callAction('complete', ['actual_outputs' => [$this->mainId => 18.5]])
+        ->callAction('complete')
         ->assertNotified(\Filament\Notifications\Notification::make()
             ->title('تعذر إكمال التصنيع')
             ->body('فشل في تحديث المخزون: يجب فتح اليوم قبل إجراء أي عمليات على المخزون')->danger());

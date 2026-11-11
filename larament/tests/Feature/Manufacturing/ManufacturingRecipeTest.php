@@ -281,23 +281,17 @@ it('manages manufacturing recipes through Filament resource and registers permis
             'name' => 'تقطيع دجاج',
             'notes' => 'وصفة تقطيع',
             'is_active' => true,
+            'main_product_id' => $breast->id,
+            'batch_quantity' => 4,
             'inputs' => [
                 [
                     'product_id' => $chicken->id,
                     'quantity' => 10,
                 ],
             ],
-            'outputs' => [
-                [
-                    'product_id' => $breast->id,
-                    'is_main' => true,
-                    'expected_quantity' => 4,
-                    'cost_method' => 'percent',
-                    'cost_value' => 0,
-                ],
+            'extra_outputs' => [
                 [
                     'product_id' => $skin->id,
-                    'is_main' => false,
                     'expected_quantity' => 0.5,
                     'cost_method' => 'percent',
                     'cost_value' => 4,

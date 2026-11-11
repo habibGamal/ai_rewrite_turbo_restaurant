@@ -59,6 +59,172 @@ class ManufacturingOrderService
         });
     }
 
+    /**
+     * Create an order from a recipe and persist the initial form state lines.
+     *
+     * @param  array<int|string, array<string, mixed>>  $inputs
+     * @param  array<int|string, array<string, mixed>>  $outputs
+     */
+    public function createOrderWithLines(
+        ManufacturingRecipe $recipe,
+        int $sourceWarehouseId,
+        int $destinationWarehouseId,
+        float $plannedMainQuantity,
+        array $inputs,
+        array $outputs,
+        ?string $notes = null,
+    ): ManufacturingOrder {
+        return DB::transaction(function () use ($recipe, $sourceWarehouseId, $destinationWarehouseId, $plannedMainQuantity, $inputs, $outputs, $notes) {
+            $order = $this->createFromRecipe($recipe, $sourceWarehouseId, $destinationWarehouseId, $plannedMainQuantity);
+            if ($notes !== null) {
+                $order->update(['notes' => $notes]);
+            }
+
+            return $this->saveDraftLines($order, $inputs, $outputs, $plannedMainQuantity, $notes);
+        });
+    }
+
+    /**
+     * Save draft order lines (actual quantities, extra inputs, extra outputs).
+     *
+     * @param  array<int|string, array<string, mixed>>  $inputs
+     * @param  array<int|string, array<string, mixed>>  $outputs
+     */
+    public function saveDraftLines(
+        ManufacturingOrder $order,
+        array $inputs,
+        array $outputs,
+        ?float $plannedMainQuantity = null,
+        ?string $notes = null,
+    ): ManufacturingOrder {
+        return DB::transaction(function () use ($order, $inputs, $outputs, $plannedMainQuantity, $notes) {
+            $order = ManufacturingOrder::query()->lockForUpdate()->findOrFail($order->id);
+            $order->assertDraft();
+
+            if ($notes !== null && $order->notes !== $notes) {
+                $order->notes = $notes;
+                $order->save();
+            }
+
+            if ($plannedMainQuantity !== null && (float) $plannedMainQuantity > 0 && (float) $plannedMainQuantity != (float) $order->planned_main_quantity) {
+                ManufacturingOrder::query()->whereKey($order->id)->update([
+                    'planned_main_quantity' => round((float) $plannedMainQuantity, 3),
+                ]);
+                $order->planned_main_quantity = round((float) $plannedMainQuantity, 3);
+            }
+
+            // Sync inputs
+            $existingInputs = $order->inputs()->get()->keyBy('id');
+            $keptInputIds = [];
+
+            foreach ($inputs as $inputData) {
+                $productId = (int) ($inputData['product_id'] ?? 0);
+                if ($productId <= 0) {
+                    continue;
+                }
+
+                $actualQty = round((float) ($inputData['actual_quantity'] ?? 0), 3);
+                $plannedQty = round((float) ($inputData['planned_quantity'] ?? 0), 3);
+                $inputId = ! empty($inputData['id']) ? (int) $inputData['id'] : null;
+
+                if ($inputId && $existingInputs->has($inputId)) {
+                    $line = $existingInputs->get($inputId);
+                    $newPlanned = $plannedQty > 0 ? $plannedQty : (float) $line->planned_quantity;
+                    \App\Models\ManufacturingOrderInput::query()->whereKey($inputId)->update([
+                        'planned_quantity' => $newPlanned,
+                        'actual_quantity' => $actualQty,
+                    ]);
+                    $keptInputIds[] = $inputId;
+                } else {
+                    $matched = $existingInputs->first(fn ($item) => $item->product_id === $productId && ! in_array($item->id, $keptInputIds, true));
+                    if ($matched) {
+                        $newPlanned = $plannedQty > 0 ? $plannedQty : (float) $matched->planned_quantity;
+                        \App\Models\ManufacturingOrderInput::query()->whereKey($matched->id)->update([
+                            'planned_quantity' => $newPlanned,
+                            'actual_quantity' => $actualQty,
+                        ]);
+                        $keptInputIds[] = $matched->id;
+                    } else {
+                        $created = $order->inputs()->create([
+                            'product_id' => $productId,
+                            'planned_quantity' => $plannedQty,
+                            'actual_quantity' => $actualQty,
+                        ]);
+                        $keptInputIds[] = $created->id;
+                    }
+                }
+            }
+
+            foreach ($existingInputs as $existingInput) {
+                if (! in_array($existingInput->id, $keptInputIds, true)) {
+                    $existingInput->delete();
+                }
+            }
+
+            // Sync outputs
+            $existingOutputs = $order->outputs()->get()->keyBy('id');
+            $keptOutputIds = [];
+
+            foreach ($outputs as $outputData) {
+                $productId = (int) ($outputData['product_id'] ?? 0);
+                if ($productId <= 0) {
+                    continue;
+                }
+
+                $isMain = (bool) ($outputData['is_main'] ?? false);
+                $actualQty = round((float) ($outputData['actual_quantity'] ?? 0), 3);
+                $expectedQty = round((float) ($outputData['expected_quantity'] ?? 0), 3);
+                $costMethod = (string) ($outputData['cost_method'] ?? 'percent');
+                $costValue = (float) ($outputData['cost_value'] ?? 0.0);
+                $outputId = ! empty($outputData['id']) ? (int) $outputData['id'] : null;
+
+                if ($outputId && $existingOutputs->has($outputId)) {
+                    $line = $existingOutputs->get($outputId);
+                    $newExpected = $expectedQty > 0 ? $expectedQty : (float) $line->expected_quantity;
+                    \App\Models\ManufacturingOrderOutput::query()->whereKey($line->id)->update([
+                        'expected_quantity' => $newExpected,
+                        'actual_quantity' => $actualQty,
+                        'cost_method' => $line->is_main ? 'percent' : $costMethod,
+                        'cost_value' => $line->is_main ? 0.0 : $costValue,
+                    ]);
+                    $keptOutputIds[] = $outputId;
+                } else {
+                    $matched = $existingOutputs->first(fn ($item) => $item->product_id === $productId && $item->is_main === $isMain && ! in_array($item->id, $keptOutputIds, true));
+                    if ($matched) {
+                        $newExpected = $expectedQty > 0 ? $expectedQty : (float) $matched->expected_quantity;
+                        \App\Models\ManufacturingOrderOutput::query()->whereKey($matched->id)->update([
+                            'expected_quantity' => $newExpected,
+                            'actual_quantity' => $actualQty,
+                            'cost_method' => $matched->is_main ? 'percent' : $costMethod,
+                            'cost_value' => $matched->is_main ? 0.0 : $costValue,
+                        ]);
+                        $keptOutputIds[] = $matched->id;
+                    } else {
+                        $created = $order->outputs()->create([
+                            'product_id' => $productId,
+                            'is_main' => $isMain,
+                            'expected_quantity' => $expectedQty,
+                            'actual_quantity' => $actualQty,
+                            'cost_method' => $costMethod,
+                            'cost_value' => $costValue,
+                        ]);
+                        $keptOutputIds[] = $created->id;
+                    }
+                }
+            }
+
+            foreach ($existingOutputs as $existingOutput) {
+                if (! in_array($existingOutput->id, $keptOutputIds, true)) {
+                    if (! $existingOutput->is_main && (float) $existingOutput->expected_quantity == 0) {
+                        $existingOutput->delete();
+                    }
+                }
+            }
+
+            return $order->fresh(['inputs', 'outputs']);
+        });
+    }
+
     /** @param array<int, float|int|string> $actualOutputQuantities */
     public function complete(ManufacturingOrder $o, array $actualOutputQuantities): void
     {
@@ -71,7 +237,13 @@ class ManufacturingOrderService
             $inputs = $order->inputs->filter(fn ($input) => (float) $input->actual_quantity > 0);
             app(ManufacturingRecipeService::class)->validateData(
                 $inputs->map(fn ($input) => ['product_id' => $input->product_id, 'quantity' => (float) $input->actual_quantity])->all(),
-                $order->outputs->toArray(),
+                $order->outputs->map(fn ($output) => [
+                    'product_id' => $output->product_id,
+                    'is_main' => (bool) $output->is_main,
+                    'expected_quantity' => (float) ($output->expected_quantity > 0 ? $output->expected_quantity : ($quantities[$output->id] > 0 ? $quantities[$output->id] : 1)),
+                    'cost_method' => $output->cost_method,
+                    'cost_value' => (float) $output->cost_value,
+                ])->all(),
             );
 
             $movements = $this->stockService->removeStock($inputs->map(fn ($input) => [

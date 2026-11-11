@@ -23,12 +23,14 @@ class ManufacturingOrderOutput extends Model
     {
         static::saving(function (self $output): void {
             $output->order()->firstOrFail()->assertDraft();
-            if ($output->exists && $output->isDirty(['manufacturing_order_id', 'product_id', 'is_main', 'cost_method', 'cost_value', 'expected_quantity'])) {
+            if ($output->exists && (float) $output->getOriginal('expected_quantity') > 0 && $output->isDirty(['manufacturing_order_id', 'product_id', 'is_main', 'cost_method', 'cost_value', 'expected_quantity'])) {
                 throw new ManufacturingException('لا يمكن تعديل المخرجات المنسوخة من الوصفة');
             }
         });
-        static::deleting(function (): void {
-            throw new ManufacturingException('لا يمكن حذف مخرجات أمر التصنيع');
+        static::deleting(function (self $output): void {
+            if ($output->is_main || (float) $output->expected_quantity > 0) {
+                throw new ManufacturingException('لا يمكن حذف مخرجات أمر التصنيع');
+            }
         });
     }
 

@@ -6,6 +6,7 @@ use App\Exceptions\ManufacturingException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ManufacturingOrder extends Model
 {
@@ -80,5 +81,14 @@ class ManufacturingOrder extends Model
     public function outputs(): HasMany
     {
         return $this->hasMany(ManufacturingOrderOutput::class);
+    }
+
+    /** @return HasOne<ManufacturingOrderOutput, $this> */
+    public function mainOutput(): HasOne
+    {
+        $relation = $this->hasOne(ManufacturingOrderOutput::class);
+        $relation->where('is_main', true);
+
+        return $relation;
     }
 }
