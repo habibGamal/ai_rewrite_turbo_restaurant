@@ -220,7 +220,7 @@ class ManufacturingRecipeResource extends Resource
                                 FormTableColumn::make('المنتج')->width('220px'),
                                 FormTableColumn::make('الوحدة')->width('100px'),
                                 FormTableColumn::make('الكمية المتوقعة')->width('120px'),
-                                FormTableColumn::make('طريقة توزيع التكلفة')->width('180px'),
+                                FormTableColumn::make('طريقة توزيع التكلفة')->width('230px'),
                                 FormTableColumn::make('القيمة')->width('120px'),
                                 FormTableColumn::make('التكلفة المتوقعة للوحدة')->width('150px'),
                             ])
@@ -278,29 +278,22 @@ class ManufacturingRecipeResource extends Resource
                                     ->live()
                                     ->suffix(fn (Get $get): string => $get('cost_method') === 'fixed' ? 'ج.م/وحدة' : '%'),
 
-                                TextInput::make('expected_unit_cost')
-                                    ->label('التكلفة المتوقعة للوحدة')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->formatStateUsing(function (Get $get, $record, Get $formGet) {
-                                        $method = $get('cost_method');
-                                        if ($method === 'fixed') {
-                                            return number_format((float) ($get('cost_value') ?? 0), 4).' ج.م';
-                                        }
+                                FormPlaceholder::make('expected_unit_cost')
+                                    ->hiddenLabel()
+                                    ->content(function (Get $get): string {
                                         $preview = app(ManufacturingCostPreviewService::class)->previewRecipe(
-                                            $formGet('inputs') ?? [],
-                                            $formGet('main_product_id'),
-                                            $formGet('batch_quantity'),
-                                            $formGet('extra_outputs') ?? [],
+                                            $get('../../inputs') ?? [],
+                                            $get('../../main_product_id'),
+                                            $get('../../batch_quantity'),
+                                            $get('../../extra_outputs') ?? [],
                                         );
-                                        $pid = $get('product_id') ?? $record?->product_id;
                                         foreach ($preview['outputs'] as $out) {
-                                            if (! $out['is_main'] && $out['product_id'] == $pid) {
+                                            if (! $out['is_main'] && (int) $out['product_id'] === (int) $get('product_id')) {
                                                 return number_format($out['unit_cost'], 4).' ج.م';
                                             }
                                         }
 
-                                        return '-';
+                                        return '—';
                                     }),
                             ]),
                     ]),

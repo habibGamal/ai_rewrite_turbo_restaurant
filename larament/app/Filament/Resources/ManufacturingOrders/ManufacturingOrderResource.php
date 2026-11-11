@@ -365,7 +365,7 @@ class ManufacturingOrderResource extends Resource
                         FormTableColumn::make('النوع')->width('90px'),
                         FormTableColumn::make('الكمية المخططة')->width('110px'),
                         FormTableColumn::make('الكمية الفعلية')->width('110px'),
-                        FormTableColumn::make('طريقة توزيع التكلفة')->width('160px'),
+                        FormTableColumn::make('طريقة توزيع التكلفة')->width('220px'),
                         FormTableColumn::make('القيمة')->width('110px'),
                         FormTableColumn::make('الانحراف')->width('100px'),
                     ])
@@ -400,12 +400,9 @@ class ManufacturingOrderResource extends Resource
                                 return $p ? Product::formatUnit($p->unit) : null;
                             }),
 
-                        TextInput::make('type_label')
-                            ->label('النوع')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->formatStateUsing(fn (Get $get, $record) => ($get('is_main') ?? $record?->is_main) ? 'رئيسي' : 'إضافي'),
-
+                        FormPlaceholder::make('type_label')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get): string => $get('is_main') ? 'رئيسي' : 'إضافي'),
                         TextInput::make('expected_quantity')
                             ->label('الكمية المخططة')
                             ->disabled()
@@ -425,13 +422,10 @@ class ManufacturingOrderResource extends Resource
                                 $set('variance_quantity', round($actual - $planned, 3));
                             }),
 
-                        TextInput::make('cost_method_display')
-                            ->label('طريقة توزيع التكلفة')
+                        FormPlaceholder::make('cost_method_display')
+                            ->hiddenLabel()
                             ->visible(fn (Get $get) => (bool) $get('is_main'))
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->default('الباقي'),
-
+                            ->content('يأخذ الباقي'),
                         Select::make('cost_method')
                             ->label('طريقة توزيع التكلفة')
                             ->hidden(fn (Get $get) => (bool) $get('is_main'))
@@ -442,13 +436,10 @@ class ManufacturingOrderResource extends Resource
                             ->default('percent')
                             ->live(),
 
-                        TextInput::make('cost_value_display')
-                            ->label('القيمة')
+                        FormPlaceholder::make('cost_value_display')
+                            ->hiddenLabel()
                             ->visible(fn (Get $get) => (bool) $get('is_main'))
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->default('-'),
-
+                            ->content('—'),
                         TextInput::make('cost_value')
                             ->label('القيمة')
                             ->hidden(fn (Get $get) => (bool) $get('is_main'))
@@ -459,21 +450,12 @@ class ManufacturingOrderResource extends Resource
                             ->live()
                             ->suffix(fn (Get $get): string => $get('cost_method') === 'fixed' ? 'ج.م/وحدة' : '%'),
 
-                        TextInput::make('variance_quantity')
-                            ->label('الانحراف')
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->formatStateUsing(function ($record, $state, Get $get) {
-                                if ($state !== null && $state !== '') {
-                                    return $state;
-                                }
-                                $planned = (float) ($get('expected_quantity') ?? ($record ? (float) $record->expected_quantity : 0));
-                                $actual = (float) ($get('actual_quantity') ?? ($record ? (float) $record->actual_quantity : 0));
-
-                                return round($actual - $planned, 3);
-                            }),
+                        FormPlaceholder::make('variance_quantity')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get): string => (string) round((float) ($get('actual_quantity') ?? 0) - (float) ($get('expected_quantity') ?? 0), 3)),
                     ])
                     ->deleteAction(function (\Filament\Actions\Action $action) {
+                        $action->visible(fn (array $arguments, Repeater $component): bool => empty(($component->getRawState() ?? [])[$arguments['item'] ?? '']['is_main'] ?? false));
                         $action->action(function (array $arguments, Repeater $component): void {
                             $items = $component->getRawState() ?? [];
                             $itemKey = $arguments['item'] ?? null;
