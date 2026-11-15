@@ -36,6 +36,9 @@ export default function ReceiptTemplate({
             {order.display?.showTable && (
                 <p>{terms.tableNumber} : {order.dine_table_number}</p>
             )}
+            {Boolean(order.guests_count) && (
+                <p>عدد الأفراد : {order.guests_count}</p>
+            )}
             {order.display?.showCustomer && (
                 <>
                     <p>رقم الهاتف : {order.customer?.phone || "-"}</p>

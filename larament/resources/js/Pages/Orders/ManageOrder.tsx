@@ -25,6 +25,7 @@ import {
     RightOutlined,
     SaveOutlined,
     ShopOutlined,
+    TeamOutlined,
     UserAddOutlined,
 } from "@ant-design/icons";
 
@@ -47,6 +48,7 @@ import OrderNotesModal from "@/Components/Orders/OrderNotesModal";
 import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
 import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
+import GuestsCountModal from "@/Components/Orders/GuestsCountModal";
 import ExternalOrders from "@/Components/Orders/ExternalOrders";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
@@ -166,6 +168,10 @@ export default function ManageOrder({
     const [isExternalOrderModalOpen, setIsExternalOrderModalOpen] =
         useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
+    const [payAfterGuests, setPayAfterGuests] = useState(false);
+    const [isGuestsSaving, setIsGuestsSaving] = useState(false);
+    const guestsMode = order.guests_mode ?? "off";
     const [isPrintInKitchenModalOpen, setIsPrintInKitchenModalOpen] =
         useState(false);
     const [isPrintChangesModalOpen, setIsPrintChangesModalOpen] =
@@ -307,7 +313,42 @@ export default function ManageOrder({
         // if (!order.customer && !customerInfoSkip) {
         //     return save(() => askForCustomerInfo(finish), finish);
         // }
+        if (guestsMode === "required" && !order.guests_count) {
+            message.warning("يجب إدخال عدد الأفراد قبل إنهاء الطلب");
+            setPayAfterGuests(true);
+            save(() => setIsGuestsModalOpen(true), finish);
+            return;
+        }
         payment(finish);
+    };
+
+    const openGuestsModal = (finish: () => void) => {
+        setPayAfterGuests(false);
+        save(() => setIsGuestsModalOpen(true), finish);
+    };
+
+    const saveGuests = (guests: number | null) => {
+        setIsGuestsSaving(true);
+        router.post(
+            route("orders.updateGuests", order.id),
+            { guests_count: guests },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsGuestsModalOpen(false);
+                    if (payAfterGuests && guests) {
+                        setIsPaymentModalOpen(true);
+                    }
+                    setPayAfterGuests(false);
+                },
+                onError: (errors) => {
+                    message.error(
+                        errors.guests_count || "حدث خطأ أثناء حفظ عدد الأفراد"
+                    );
+                },
+                onFinish: () => setIsGuestsSaving(false),
+            }
+        );
     };
 
     const payment = (finish: () => void) => {
@@ -488,6 +529,19 @@ export default function ManageOrder({
                             >
                                 تغيير الطلب الى
                             </Button>
+                            {guestsMode !== "off" && (
+                                <LoadingButton
+                                    disabled={disableAllControls}
+                                    onCustomClick={openGuestsModal}
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<TeamOutlined />}
+                                >
+                                    {order.guests_count
+                                        ? `عدد الأفراد: ${order.guests_count}`
+                                        : "عدد الأفراد"}
+                                </LoadingButton>
+                            )}
                             {canAddExternalOrder && (
                                 <Button
                                     disabled={disableAllControls}
@@ -655,6 +709,21 @@ export default function ManageOrder({
                     onCancel={() => setIsOrderDiscountModalOpen(false)}
                     order={order}
                 />
+                {guestsMode !== "off" && (
+                    <GuestsCountModal
+                        open={isGuestsModalOpen}
+                        mode={payAfterGuests ? "required" : guestsMode}
+                        initialValue={order.guests_count}
+                        okText={payAfterGuests ? "متابعة الدفع" : "حفظ"}
+                        skipText="بدون عدد"
+                        loading={isGuestsSaving}
+                        onCancel={() => {
+                            setIsGuestsModalOpen(false);
+                            setPayAfterGuests(false);
+                        }}
+                        onSubmit={saveGuests}
+                    />
+                )}
                 <PaymentModal
                     open={isPaymentModalOpen}
                     onCancel={() => setIsPaymentModalOpen(false)}

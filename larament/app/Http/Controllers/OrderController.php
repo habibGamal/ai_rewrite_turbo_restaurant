@@ -32,6 +32,7 @@ use App\Orders\ReceiptView;
 use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
+use App\Services\Orders\OrderCompletionService;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\ReturnRules;
 use App\Services\PrintService;
@@ -177,6 +178,7 @@ class OrderController extends Controller
                     $tab = [...$tab, ...$behavior->tabData($type)];
                 }
                 $tab['display'] = $this->catalog->display($tab['code'])->toArray();
+                $tab['guests_mode'] = $type->guestsMode()->value;
                 if ($tab['presentation']['body'] === 'instant') {
                     $tab['instant'] = $this->instantPayload($shift, $tab['code']);
                 }
@@ -270,6 +272,7 @@ class OrderController extends Controller
                 'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
                 'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
             ],
+            'guests_mode' => $order->typeRow()->guestsMode()->value,
         ]);
 
         if ($order->relationLoaded('items')) {
@@ -501,6 +504,10 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
                 'payment_data' => $request->validated(),
             ], 'error');
+
+            if ($e->getMessage() === OrderCompletionService::GUESTS_REQUIRED_MESSAGE) {
+                return back()->withErrors(['guests_count' => $e->getMessage()]);
+            }
 
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنهاء الطلب: '.$e->getMessage()]);
         }
@@ -794,6 +801,25 @@ class OrderController extends Controller
     }
 
     /**
+     * Set or clear the number of guests on an open order.
+     */
+    public function updateGuestsCount(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'guests_count' => 'nullable|integer|min:1|max:999',
+        ]);
+
+        try {
+            $guests = isset($validated['guests_count']) ? (int) $validated['guests_count'] : null;
+            $this->orderService->updateGuestsCount($order->id, $guests);
+
+            return back()->with('success', 'تم حفظ عدد الأفراد');
+        } catch (Exception $e) {
+            return back()->withErrors(['guests_count' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Apply discount to order
      */
     public function applyDiscount(Request $request, Order $order)
@@ -895,6 +921,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in($this->catalog->cashierCreatableCodes())],
             'table_number' => 'nullable|string|max:50',
+            'guests_count' => 'nullable|integer|min:1|max:999',
         ]);
 
         abort_unless($this->deskUser()->canSeeTab('type:'.$validated['type']), 403, 'غير مسموح لك بهذا النوع من الطلبات');
@@ -910,7 +937,10 @@ class OrderController extends Controller
                 typeCode: $validated['type'],
                 shiftId: $currentShift->id,
                 userId: auth()->id(),
-                opening: new OrderOpening($validated['table_number'] ?? null),
+                opening: new OrderOpening(
+                    $validated['table_number'] ?? null,
+                    isset($validated['guests_count']) ? (int) $validated['guests_count'] : null,
+                ),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);

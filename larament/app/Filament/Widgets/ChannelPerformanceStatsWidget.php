@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Core\Orders\GuestStats;
 use App\Services\ChannelPerformanceReportService;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -27,7 +28,7 @@ class ChannelPerformanceStatsWidget extends BaseWidget
     {
         $metrics = $this->getChannelMetrics();
 
-        return [
+        return [...[
             Stat::make('إجمالي الإيرادات', number_format($metrics['total_revenue'], 2).' ج.م')
                 ->description('إجمالي إيرادات جميع القنوات')
                 ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
@@ -78,6 +79,30 @@ class ChannelPerformanceStatsWidget extends BaseWidget
                 ->description('عدد قنوات البيع النشطة')
                 ->descriptionIcon('heroicon-m-squares-plus', IconPosition::Before)
                 ->color('gray'),
+        ], ...$this->guestStats($metrics['guests'])];
+    }
+
+    /**
+     * «عدد الأفراد» and «متوسط الفرد», shown only once some order carries a guest count.
+     *
+     * @return list<Stat>
+     */
+    private function guestStats(GuestStats $guests): array
+    {
+        if (! $guests->hasGuests()) {
+            return [];
+        }
+
+        return [
+            Stat::make('عدد الأفراد', number_format($guests->guests).' فرد')
+                ->description('في '.number_format($guests->orders).' طلب مسجل به عدد الأفراد')
+                ->descriptionIcon('heroicon-m-user-group', IconPosition::Before)
+                ->color('info'),
+
+            Stat::make('متوسط الفرد', number_format($guests->averagePerGuest(), 2).' ج.م')
+                ->description('مبيعات الطلبات المسجل بها عدد الأفراد ÷ عدد الأفراد')
+                ->descriptionIcon('heroicon-m-user', IconPosition::Before)
+                ->color('success'),
         ];
     }
 

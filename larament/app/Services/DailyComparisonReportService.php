@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\Reports\ReturnsAggregates;
@@ -260,6 +261,7 @@ class DailyComparisonReportService
             'avg_daily_orders' => $avgDailyOrders,
             'active_periods_count' => $activePeriodsCount,
             'total_periods_count' => $totalPeriodsCount,
+            'guests' => GuestStats::fromQuery($this->getOrdersQuery($startDate, $endDate)),
         ];
     }
 

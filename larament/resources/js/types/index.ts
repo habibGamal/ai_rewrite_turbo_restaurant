@@ -236,7 +236,10 @@ export interface CashierTab {
   presentation?: TabPresentation;
   instant?: InstantTabPayload;
   display?: OrderDisplay;
+  guests_mode?: GuestsMode;
 }
+
+export type GuestsMode = 'off' | 'optional' | 'required';
 
 export interface ChangeTypeOption {
   code: string;
@@ -268,6 +271,8 @@ export interface Order {
   profit: number;
   payment_status: 'pending' | 'partial_paid' | 'full_paid';
   dine_table_number?: string;
+  guests_count?: number | null;
+  guests_mode?: GuestsMode;
   kitchen_notes?: string;
   order_notes?: string;
   order_number: string;

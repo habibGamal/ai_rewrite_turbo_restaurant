@@ -11,6 +11,8 @@ use App\Orders\Tenders;
 
 class OrderCompletionService
 {
+    public const GUESTS_REQUIRED_MESSAGE = 'يجب إدخال عدد الأفراد قبل إنهاء الطلب';
+
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
         private readonly OrderCalculationService $orderCalculationService,
@@ -20,6 +22,10 @@ class OrderCompletionService
     public function complete(Order $order, array $paymentsData, bool $shouldPrint = false): Order
     {
         $order->load('items');
+
+        if ($order->typeRow()->requiresGuests() && (int) $order->guests_count < 1) {
+            throw new OrderException(self::GUESTS_REQUIRED_MESSAGE);
+        }
 
         if ($order->behavior()->recalculatesTotals()) {
             $this->orderCalculationService->calculateOrderTotals($order);

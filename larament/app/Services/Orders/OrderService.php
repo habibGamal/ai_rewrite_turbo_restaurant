@@ -135,6 +135,27 @@ class OrderService
         });
     }
 
+    /**
+     * Set (or clear, with null) the number of guests on an open order.
+     */
+    public function updateGuestsCount(int $orderId, ?int $guestsCount): Order
+    {
+        return $this->locked($orderId, 'لا يمكن تعديل الطلب في هذه المرحلة', function (Order $order) use ($guestsCount) {
+            if (! $order->typeRow()->asksForGuests()) {
+                throw new OrderException('هذا النوع من الطلبات لا يسجل عدد الأفراد');
+            }
+
+            if ($guestsCount === null && $order->typeRow()->requiresGuests()) {
+                throw new OrderException('عدد الأفراد إجباري لهذا النوع من الطلبات');
+            }
+
+            $this->orderRepository->update($order, ['guests_count' => $guestsCount]);
+            $order->refresh();
+
+            return $order;
+        });
+    }
+
     public function applyDiscount(int $orderId, float $discount, string $discountType): Order
     {
         return $this->locked($orderId, 'لا يمكن تطبيق الخصم في هذه المرحلة', function (Order $order) use ($discount, $discountType) {
@@ -281,6 +302,8 @@ class OrderService
             $this->orderRepository->update($order, [
                 'type' => $newType,
                 'dine_table_number' => $assignsTable ? $tableNumber : null,
+                // A type that does not ask for guests keeps no count, so reports stay clean.
+                'guests_count' => $newTypeRow->asksForGuests() ? $order->guests_count : null,
             ]);
 
             $order->refresh();

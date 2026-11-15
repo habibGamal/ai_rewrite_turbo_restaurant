@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Core\Orders\GuestStats;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -33,18 +34,37 @@ class CurrentShiftDoneOrdersStats extends BaseWidget
             return [];
         }
 
-        return array_map(function (array $type): Stat {
+        $types = $this->shiftsReportService->calculateOrderTypeStats($currentShift);
+
+        $stats = array_map(function (array $type): Stat {
             $average = $type['count'] > 0 ? $type['value'] / $type['count'] : 0;
             $code = json_encode($type['code'], JSON_HEX_APOS | JSON_HEX_QUOT);
 
+            $description = 'بقيمة '.number_format($type['value'], 2).' جنيه - ربح '.number_format($type['profit'], 2).' جنيه - متوسط '.number_format($average, 2).' جنيه';
+            if (($type['guests_summary'] ?? null) !== null) {
+                $description .= ' - '.$type['guests_summary'];
+            }
+
             return Stat::make($type['label'], $type['count'].' طلب')
-                ->description('بقيمة '.number_format($type['value'], 2).' جنيه - ربح '.number_format($type['profit'], 2).' جنيه - متوسط '.number_format($average, 2).' جنيه')
+                ->description($description)
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
                     'wire:click' => "\$dispatch('filterUpdate', {filter: {type: {$code}}}); document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });",
                 ])
                 ->color($type['color']);
-        }, $this->shiftsReportService->calculateOrderTypeStats($currentShift));
+        }, $types);
+
+        $guests = new GuestStats(
+            (int) array_sum(array_column($types, 'guests')),
+            (float) array_sum(array_column($types, 'guest_sales')),
+        );
+        if ($guests->hasGuests()) {
+            $stats[] = Stat::make('عدد الأفراد', number_format($guests->guests).' فرد')
+                ->description('متوسط الفرد '.number_format($guests->averagePerGuest(), 2).' جنيه')
+                ->color('info');
+        }
+
+        return $stats;
     }
 
     private function getCurrentShift(): ?Shift

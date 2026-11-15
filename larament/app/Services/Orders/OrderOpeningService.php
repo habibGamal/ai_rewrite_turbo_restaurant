@@ -27,6 +27,10 @@ class OrderOpeningService
             );
             $orderNumber = $this->orderRepository->getNextOrderNumber($dto->shiftId, $excludedCodes);
             $created = $this->orderRepository->create($dto, $orderNumber);
+            $guests = $dto->opening->guestsCount;
+            if ($guests !== null && $guests > 0 && $this->catalog->find($dto->typeCode)->asksForGuests()) {
+                $created->update(['guests_count' => $guests]);
+            }
             $behavior->onOpened($created, $dto->opening);
             OrderOpened::dispatch($created, $dto->opening);
 

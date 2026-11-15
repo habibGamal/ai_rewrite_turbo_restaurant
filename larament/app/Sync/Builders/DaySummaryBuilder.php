@@ -77,6 +77,7 @@ class DaySummaryBuilder implements DocumentBuilder
             ->get();
 
         $completedCount = $completedOrders->count();
+        $guestsTotal = (int) $completedOrders->sum(fn (Order $order): int => max(0, (int) $order->guests_count));
 
         $netTotal = 0.0;
         $discountTotal = 0.0;
@@ -121,6 +122,7 @@ class DaySummaryBuilder implements DocumentBuilder
             'waste_total' => Payload::money($wasteTotal),
             'refunds_total' => Payload::money($returns['returnsAmount']),
             'refunds_cash' => Payload::money($returns['cashRefunds']),
+            'guests_total' => $guestsTotal,
         ];
     }
 }

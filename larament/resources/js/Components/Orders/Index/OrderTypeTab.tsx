@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { router } from "@inertiajs/react";
 import { Button, Col, Empty, Row, Typography, message } from "antd";
 import {
@@ -9,6 +9,7 @@ import {
 import { orderStatus } from "@/helpers/orderState";
 import useModal from "@/hooks/useModal";
 import ChooseTableForm from "@/Components/Orders/ChooseTableForm";
+import GuestsCountModal from "@/Components/Orders/GuestsCountModal";
 import {
     formatTableLabel,
     resolveTableLabel,
@@ -62,6 +63,36 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
     const presentation = tab.presentation!;
     const creation = presentation.creation;
+    const guestsMode = tab.guests_mode ?? "off";
+    const [pendingOpen, setPendingOpen] = useState<Record<string, string> | null>(null);
+
+    // Types that record guests ask «عدد الأفراد» before the order is opened.
+    const openOrder = (payload: Record<string, string>) => {
+        if (guestsMode === "off") {
+            router.post(route("orders.store"), payload);
+            return;
+        }
+        setPendingOpen(payload);
+    };
+
+    const submitGuests = (guests: number | null) => {
+        if (!pendingOpen) return;
+        router.post(route("orders.store"), {
+            ...pendingOpen,
+            ...(guests ? { guests_count: guests } : {}),
+        });
+        setPendingOpen(null);
+    };
+
+    const guestsModal = (
+        <GuestsCountModal
+            open={pendingOpen !== null}
+            mode={guestsMode}
+            okText="فتح الطلب"
+            onCancel={() => setPendingOpen(null)}
+            onSubmit={submitGuests}
+        />
+    );
 
     const tabOrders = orders.filter(
         (order) =>
@@ -90,15 +121,15 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
             message.error(terms.tableAlreadyInLayout);
             return;
         }
-        router.post(route("orders.store"), {
+        tableModal.closeModal();
+        openOrder({
             type: tab.code!,
             table_number: tableNumber,
         });
-        tableModal.closeModal();
     };
 
     const createOrder = () => {
-        router.post(route("orders.store"), { type: tab.code! });
+        openOrder({ type: tab.code! });
     };
 
     const cardDetails = (display: OrderDisplay | undefined, order: Order) => {
@@ -158,6 +189,7 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
         return (
             <div className="space-y-3" dir="rtl">
+                {guestsModal}
                 <IfModule name="restaurant">
                     <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
                 </IfModule>
@@ -257,9 +289,9 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                                 onClick={() =>
                                     occupied
                                         ? router.visit(`/orders/manage/${occupied.id}`)
-                                        : router.post(route("orders.store"), {
-                                              type: tab.code,
-                                              table_number: table.number,
+                                        : openOrder({
+                                              type: tab.code!,
+                                              table_number: String(table.number),
                                           })
                                 }
                                 style={{
@@ -425,6 +457,7 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
     return (
         <div>
+            {guestsModal}
             {creation === "choose_table" && (
                 <IfModule name="restaurant">
                     <ChooseTableForm

@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/update-type/{order}', [OrderController::class, 'updateOrderType'])->name('updateType');
         Route::post('/update-notes/{order}', [OrderController::class, 'updateOrderNotes'])->name('updateNotes');
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
+        Route::post('/update-guests/{order}', [OrderController::class, 'updateGuestsCount'])->name('updateGuests');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
     });
 

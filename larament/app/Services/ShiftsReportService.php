@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
@@ -393,12 +394,25 @@ class ShiftsReportService
     private function typeStats(Builder $query): array
     {
         $types = app(ReportOrderTypesService::class)->forQuery($query);
-        $data = (clone $query)->selectRaw('orders.type, COUNT(*) as count, SUM(orders.total) as value, SUM(orders.profit) as profit')->groupBy('orders.type')->get()->keyBy('type');
+        $data = (clone $query)->selectRaw(
+            'orders.type, COUNT(*) as count, SUM(orders.total) as value, SUM(orders.profit) as profit,'
+            .' SUM(CASE WHEN orders.guests_count > 0 THEN orders.guests_count ELSE 0 END) as guests,'
+            .' SUM(CASE WHEN orders.guests_count > 0 THEN orders.total ELSE 0 END) as guest_sales'
+        )->groupBy('orders.type')->get()->keyBy('type');
 
         return array_map(function (array $type) use ($data): array {
             $row = $data->get($type['code']);
+            $guests = new GuestStats((int) ($row->guests ?? 0), (float) ($row->guest_sales ?? 0));
 
-            return $type + ['count' => (int) ($row->count ?? 0), 'value' => (float) ($row->value ?? 0), 'profit' => (float) ($row->profit ?? 0)];
+            return $type + [
+                'count' => (int) ($row->count ?? 0),
+                'value' => (float) ($row->value ?? 0),
+                'profit' => (float) ($row->profit ?? 0),
+                'guests' => $guests->guests,
+                'guest_sales' => $guests->sales,
+                'avg_per_guest' => $guests->averagePerGuest(),
+                'guests_summary' => $guests->summary(),
+            ];
         }, $types);
     }
 
