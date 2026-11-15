@@ -15,6 +15,8 @@ export interface Category {
   blocked_order_type_codes?: string[];
   products: Product[];
   children?: Category[];
+  /** Retail variant group tiles; only sent when the variants feature is on. */
+  groups?: ProductGroupTile[];
 }
 
 export interface Product {
@@ -22,11 +24,46 @@ export interface Product {
   category_id: number;
   name: string;
   price: number;
-  cost: number;
+  /** Not sent for variant SKUs. */
+  cost?: number;
   type: string;
   unit: string;
   legacy: boolean;
-  barcode?: string;
+  barcode?: string | null;
+  product_group_id?: number | null;
+  variant_label?: string | null;
+}
+
+export interface ProductOptionValueTile {
+  id: number;
+  value: string;
+  color_hex: string | null;
+}
+
+export interface ProductOptionTile {
+  id: number;
+  name: string;
+  values: ProductOptionValueTile[];
+}
+
+/** One sellable SKU of a variant group, as the POS receives it. */
+export interface VariantSku extends Product {
+  product_group_id: number;
+  variant_label: string | null;
+  option_value_ids: number[];
+  /** Quantity in the warehouse the POS deducts this SKU from. */
+  stock: number;
+}
+
+export interface ProductGroupTile {
+  id: number;
+  name: string;
+  image: string | null;
+  category_id: number;
+  min_price: number;
+  max_price: number;
+  options: ProductOptionTile[];
+  skus: VariantSku[];
 }
 
 export interface Customer {
@@ -308,6 +345,7 @@ export interface FeatureFlags {
   custom_fees: boolean;
   outsourced_orders: boolean;
   equipment: boolean;
+  variants?: boolean;
 }
 
 export type ModuleKey =

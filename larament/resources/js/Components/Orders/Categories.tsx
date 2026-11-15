@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Button, ConfigProvider, Divider, Radio, RadioChangeEvent, Typography } from 'antd';
 import { Input } from 'antd';
 
-import { Category, Product, User, OrderItemAction, OrderItemData } from '@/types';
+import { Category, Product, ProductGroupTile, User, OrderItemAction, OrderItemData } from '@/types';
+import VariantPickerModal, { formatPriceRange } from '@/Components/Orders/VariantPickerModal';
 
 const { Search } = Input;
 
@@ -26,17 +27,44 @@ function visibleChildren(category: Category, orderType: string): Category[] {
     return (category.children ?? []).filter((child) => !isBlocked(child, orderType));
 }
 
-export function productsForOrder(categories: Category[], orderType: string, includeBlocked: boolean): Product[] {
+/** A category's own products plus the SKUs of its variant groups (scanner and cart lookups need them). */
+function sellables(category: Category, withGroupSkus: boolean): Product[] {
+    if (!withGroupSkus) return category.products;
+
+    return [...category.products, ...(category.groups ?? []).flatMap((group) => group.skus)];
+}
+
+/**
+ * Products sellable on this order type. Variant SKUs inside group tiles are included
+ * unless `withGroupSkus` is false (the tile grid shows those through their group).
+ */
+export function productsForOrder(
+    categories: Category[],
+    orderType: string,
+    includeBlocked: boolean,
+    withGroupSkus = true,
+): Product[] {
     return categories.flatMap((category) => {
         const categoryBlocked = isBlocked(category, orderType);
-        const own = includeBlocked || !categoryBlocked ? category.products : [];
+        const own = includeBlocked || !categoryBlocked ? sellables(category, withGroupSkus) : [];
         const children = (category.children ?? []).flatMap((child) => {
             const childBlocked = categoryBlocked || isBlocked(child, orderType);
 
-            return includeBlocked || !childBlocked ? child.products : [];
+            return includeBlocked || !childBlocked ? sellables(child, withGroupSkus) : [];
         });
 
         return [...own, ...children];
+    });
+}
+
+function groupsForOrder(categories: Category[], orderType: string): ProductGroupTile[] {
+    return categories.flatMap((category) => {
+        if (isBlocked(category, orderType)) return [];
+
+        return [
+            ...(category.groups ?? []),
+            ...visibleChildren(category, orderType).flatMap((child) => child.groups ?? []),
+        ];
     });
 }
 
@@ -48,6 +76,7 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
     const [selectedMain, setSelectedMain] = useState<number | 'all'>('all');
     const [selectedSub, setSelectedSub] = useState<number | 'all'>('all');
     const [search, setSearch] = useState('');
+    const [pickerGroup, setPickerGroup] = useState<ProductGroupTile | null>(null);
 
     const activeMain = selectedMain === 'all'
         ? null
@@ -56,7 +85,7 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
 
     const baseProducts = useMemo(() => {
         if (!activeMain) {
-            return productsForOrder(visibleMains, orderType, false);
+            return productsForOrder(visibleMains, orderType, false, false);
         }
 
         if (selectedSub === 'all') {
@@ -69,8 +98,28 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
         return subs.find((sub) => sub.id === selectedSub)?.products ?? [];
     }, [activeMain, selectedSub, subs, visibleMains, orderType]);
 
+    const baseGroups = useMemo(() => {
+        if (!activeMain) {
+            return groupsForOrder(visibleMains, orderType);
+        }
+
+        if (selectedSub === 'all') {
+            return [
+                ...(activeMain.groups ?? []),
+                ...subs.flatMap((sub) => sub.groups ?? []),
+            ];
+        }
+
+        return subs.find((sub) => sub.id === selectedSub)?.groups ?? [];
+    }, [activeMain, selectedSub, subs, visibleMains, orderType]);
+
+    const term = search.toLowerCase();
     const products = baseProducts.filter((product) =>
-        product.name.toLowerCase().includes(search.toLowerCase()),
+        product.name.toLowerCase().includes(term),
+    );
+    const groups = baseGroups.filter((group) =>
+        group.name.toLowerCase().includes(term)
+        || group.skus.some((sku) => sku.name.toLowerCase().includes(term)),
     );
 
     const onChangeCategory = ({ target: { value } }: RadioChangeEvent) => {
@@ -174,6 +223,21 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
             <Divider />
 
             <div className="grid grid-cols-4 gap-4">
+                {groups.map((group) => (
+                    <Button
+                        disabled={disabled}
+                        key={`group-${group.id}`}
+                        type="primary"
+                        onClick={() => setPickerGroup(group)}
+                        className="w-full h-full min-h-[100px] whitespace-normal bg-indigo-900"
+                        style={{ height: 'auto', minHeight: '100px' }}
+                    >
+                        <span className="flex flex-col items-center gap-1">
+                            <span className="text-xl font-bold">{group.name}</span>
+                            <span className="text-sm opacity-80" dir="ltr">{formatPriceRange(group)}</span>
+                        </span>
+                    </Button>
+                ))}
                 {products.map((product) => (
                     <Button
                         disabled={disabled}
@@ -187,6 +251,12 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
                     </Button>
                 ))}
             </div>
+
+            <VariantPickerModal
+                group={pickerGroup}
+                onClose={() => setPickerGroup(null)}
+                onPick={onAddProduct}
+            />
         </div>
     );
 }
