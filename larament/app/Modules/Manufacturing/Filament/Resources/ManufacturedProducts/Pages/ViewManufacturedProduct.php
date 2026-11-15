@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Modules\Manufacturing\Filament\Resources\ManufacturedProducts\Pages;
+
+use App\Modules\Manufacturing\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
+
+class ViewManufacturedProduct extends ViewRecord
+{
+    protected static string $resource = ManufacturedProductResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            EditAction::make(),
+        ];
+    }
+}

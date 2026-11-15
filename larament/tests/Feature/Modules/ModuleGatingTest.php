@@ -1,11 +1,11 @@
 <?php
 
-use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
 use App\Filament\Resources\Roles\RoleResource;
 use App\Models\User;
 use App\Modules\BusinessType;
 use App\Modules\Delivery\Filament\Resources\Drivers\DriverResource;
+use App\Modules\Manufacturing\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Modules\Module;
 use App\Modules\Restaurant\Filament\Pages\Reports\KitchenPerformanceReport;
 use App\Modules\Restaurant\Filament\Resources\KitchenStations\KitchenStationResource;

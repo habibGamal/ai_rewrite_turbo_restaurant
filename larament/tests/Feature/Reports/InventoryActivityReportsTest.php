@@ -5,8 +5,8 @@ use App\Models\Product;
 use App\Models\ProductCostHistory;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Modules\Manufacturing\Services\ManufacturingYieldReportService;
 use App\Services\Reports\Inventory\CostHistoryReportService;
-use App\Services\Reports\Inventory\ManufacturingYieldReportService;
 use App\Services\Reports\Inventory\StockIssuesReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

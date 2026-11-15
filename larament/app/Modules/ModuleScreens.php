@@ -5,13 +5,8 @@ namespace App\Modules;
 use App\Enums\OptionalFeature;
 use App\Filament\Pages\ExternalSellerAccount;
 use App\Filament\Pages\ExternalSellerAccounts;
-use App\Filament\Pages\Reports\ManufacturingYieldReport;
 use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
-use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
-use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
-use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
-use App\Filament\Resources\RawMaterialProducts\RawMaterialProductResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -32,11 +27,6 @@ final class ModuleScreens
     public static function map(): array
     {
         return [
-            ManufacturedProductResource::class => Module::MANUFACTURING,
-            RawMaterialProductResource::class => Module::MANUFACTURING,
-            ManufacturingRecipeResource::class => Module::MANUFACTURING,
-            ManufacturingOrderResource::class => Module::MANUFACTURING,
-            ManufacturingYieldReport::class => Module::MANUFACTURING,
         ];
     }
 

@@ -41,3 +41,7 @@ arch('delivery module internals are only used inside their module')
 arch('web orders module internals are only used inside their module')
     ->expect('App\Modules\WebOrders')
     ->toOnlyBeUsedIn('App\Modules\WebOrders');
+
+arch('manufacturing module internals are only used inside their module')
+    ->expect('App\Modules\Manufacturing')
+    ->toOnlyBeUsedIn('App\Modules\Manufacturing');

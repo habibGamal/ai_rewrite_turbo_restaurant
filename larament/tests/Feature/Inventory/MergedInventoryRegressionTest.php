@@ -23,8 +23,9 @@ use App\Models\Stocktaking;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\Waste;
-use App\Services\Manufacturing\ManufacturingOrderService;
-use App\Services\Manufacturing\ManufacturingRecipeService;
+use App\Modules\Manufacturing\Services\ManufacturingOrderService;
+use App\Modules\Manufacturing\Services\ManufacturingRecipeService;
+use App\Services\InventoryDailyAggregationService;
 use App\Services\Orders\OrderReturnService;
 use App\Services\Orders\OrderService;
 use App\Services\ProductsSalesReportService;
@@ -40,7 +41,9 @@ use App\Services\StocktakingService;
 use App\Services\WasteService;
 use Carbon\Carbon;
 use Filament\Actions\Exports\Models\Export;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 use function Pest\Livewire\livewire;
 
@@ -81,7 +84,7 @@ it('requires policy permission as well as draft state for stock issue mutations'
         ->and(StockIssueResource::canDelete($issue))->toBeFalse();
     $action = ConfirmStockIssueAction::table()->record($issue);
     expect($action->isVisible())->toBeFalse();
-    expect(fn () => ($action->getActionFunction())($issue))->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => ($action->getActionFunction())($issue))->toThrow(HttpException::class);
     expect(InventoryItemMovement::count())->toBe(0);
     $user->givePermissionTo(['update_stock_issues', 'delete_stock_issues']);
     expect(StockIssueResource::canEdit($issue))->toBeTrue()->and(StockIssueResource::canDelete($issue))->toBeTrue();
@@ -206,7 +209,7 @@ it('snapshots and refreshes stocktaking products in the selected warehouse', fun
     $page->set('data.warehouse_id', Warehouse::default()->id);
     expect((float) array_values($page->get('data.items'))[0]['stock_quantity'])->toBe(30.0);
     $page->set('data.items', [])->set('data.warehouse_id', $grill->id)
-        ->callAction(\Filament\Actions\Testing\TestAction::make('importProducts')->schemaComponent('stocktakingImportActions', 'form'), ['selected_collection' => [$product->id], 'selected_products' => []]);
+        ->callAction(TestAction::make('importProducts')->schemaComponent('stocktakingImportActions', 'form'), ['selected_collection' => [$product->id], 'selected_products' => []]);
     expect((float) array_values($page->get('data.items'))[0]['stock_quantity'])->toBe(4.0);
 });
 
@@ -260,7 +263,7 @@ it('summarises manual, adjustment and initial stock movements so the summary agr
     $stock->removeStock([['product_id' => $product->id, 'quantity' => 4]], MovementReason::ADJUSTMENT);
     $stock->addStock([['product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 30]], MovementReason::PURCHASE);
 
-    $today = app(\App\Services\InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString();
+    $today = app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString();
     $rows = MovementSummaryReportService::rows($today, $today);
     $net = collect($rows)->sum(fn ($row) => ($row->operation === 'in' ? 1 : -1) * (float) $row->quantity);
 
