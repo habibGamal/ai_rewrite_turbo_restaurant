@@ -5,6 +5,7 @@ namespace App\Enums;
 use App\Costing\CostingMethod;
 use App\Modules\BusinessType;
 use App\Modules\Module;
+use App\Modules\Wording;
 use Closure;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -136,7 +137,8 @@ enum SettingKey: string
      */
     public function label(): string
     {
-        return match ($this) {
+        // A shop's wording profile renames restaurant words (see Wording).
+        return Wording::text(match ($this) {
             self::WEBSITE_URL => 'رابط الموقع',
             self::CASHIER_PRINTER_IP => 'عنوان IP لطابعة الكاشير',
             self::RECEIPT_FOOTER => 'تذييل الفاتورة',
@@ -170,7 +172,7 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
-        };
+        });
     }
 
     /**
@@ -178,7 +180,8 @@ enum SettingKey: string
      */
     public function helperText(): string
     {
-        return match ($this) {
+        // A shop's wording profile renames restaurant words (see Wording).
+        return Wording::text(match ($this) {
             self::WEBSITE_URL => 'الرابط الأساسي للموقع الإلكتروني',
             self::CASHIER_PRINTER_IP => 'عنوان IP الخاص بطابعة الكاشير لطباعة الفواتير',
             self::RECEIPT_FOOTER => 'النص الذي يظهر في نهاية كل فاتورة مطبوعة',
@@ -212,7 +215,7 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
-        };
+        });
     }
 
     /**
@@ -220,7 +223,8 @@ enum SettingKey: string
      */
     public function placeholder(): string
     {
-        return match ($this) {
+        // A shop's wording profile renames restaurant words (see Wording).
+        return Wording::text(match ($this) {
             self::WEBSITE_URL => 'http://127.0.0.1:38794',
             self::CASHIER_PRINTER_IP => '192.168.1.100',
             self::RECEIPT_FOOTER => 'أدخل النص الذي تريد أن يظهر في نهاية الفاتورة...',
@@ -254,7 +258,7 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
-        };
+        });
     }
 
     /**

@@ -44,15 +44,64 @@ enum Module: string
     }
 
     /**
-     * Permissions owned by this module. Filled in Phase 5 when module
-     * screens move behind the module switch; empty until then so that
-     * no permission changes meaning in this phase.
+     * Permissions owned by this module. While the module is off they are
+     * denied by Gate::before (admin and vendor included), left out of the
+     * Roles screen and kept on roles untouched so switching the module back
+     * on restores them.
      *
      * @return array<int, string>
      */
     public function permissions(): array
     {
-        return [];
+        return match ($this) {
+            self::RESTAURANT => [
+                ...self::crud('table_types'),
+                ...self::crud('kitchen_stations'),
+                'kitchen.access',
+                'view_kitchen_performance_report',
+            ],
+            self::DELIVERY => [
+                ...self::crud('drivers'),
+                ...self::crud('regions'),
+                'driver.manage',
+                'view_driver_performance_report',
+            ],
+            self::WEB_ORDERS => [
+                'web_order.manage',
+                'view_web_orders_report',
+            ],
+            self::MANUFACTURING => [
+                ...self::crud('manufacturing_recipes'),
+                ...self::crud('manufacturing_orders'),
+                'view_manufacturing_yield_report',
+            ],
+            // Still gated by OptionalFeature::OUTSOURCED_ORDERS, the switch
+            // installs already use; Phase 4 folds that flag into this module.
+            self::EXTERNAL_SELLERS => [],
+            self::RETAIL => [],
+        };
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function crud(string $resource): array
+    {
+        return ["view_{$resource}", "create_{$resource}", "update_{$resource}", "delete_{$resource}"];
+    }
+
+    /**
+     * The module that owns a permission, if any.
+     */
+    public static function forPermission(string $permission): ?self
+    {
+        foreach (self::cases() as $module) {
+            if (in_array($permission, $module->permissions(), true)) {
+                return $module;
+            }
+        }
+
+        return null;
     }
 
     public function auditKey(): string

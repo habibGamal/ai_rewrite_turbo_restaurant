@@ -4,7 +4,9 @@ use App\Enums\SettingKey;
 use App\Filament\Pages\Settings;
 use App\Models\Setting;
 use App\Models\User;
+use App\Modules\Module;
 use App\Orders\CashierTabLayout;
+use App\Services\FeatureService;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -24,6 +26,9 @@ beforeEach(function () {
             ['value' => $value]
         );
     }
+
+    // A restaurant that takes web orders: the defaults leave that module off.
+    app(FeatureService::class)->enableModule(Module::WEB_ORDERS);
 });
 
 it('reorders and hides cashier tabs through the settings repeater', function () {

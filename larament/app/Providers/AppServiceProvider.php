@@ -28,6 +28,7 @@ use App\Models\Stocktaking;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Waste;
+use App\Modules\Module;
 use App\Observers\ProductObserver;
 use App\Orders\Behaviors\CompaniesBehavior;
 use App\Orders\Behaviors\CounterBehavior;
@@ -71,13 +72,14 @@ class AppServiceProvider extends ServiceProvider
             $registry = new OrderBehaviorRegistry($app);
 
             // Core behaviours. Phase 4 moves dine_in, delivery and the web
-            // behaviours into the Restaurant, Delivery and Web orders modules.
-            $registry->register(OrderBehavior::DINE_IN->value, DineInBehavior::class, 'صالة');
-            $registry->register(OrderBehavior::DELIVERY->value, DeliveryBehavior::class, 'دليفري');
+            // behaviours into the Restaurant, Delivery and Web orders modules;
+            // until then they name their module here so a shop never sees them.
+            $registry->register(OrderBehavior::DINE_IN->value, DineInBehavior::class, 'صالة', module: Module::RESTAURANT);
+            $registry->register(OrderBehavior::DELIVERY->value, DeliveryBehavior::class, 'دليفري', module: Module::DELIVERY);
             $registry->register(OrderBehavior::COUNTER->value, CounterBehavior::class, 'كاونتر');
             $registry->register(OrderBehavior::COMPANIES->value, CompaniesBehavior::class, 'شركات');
-            $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false);
-            $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false);
+            $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false, module: Module::WEB_ORDERS);
+            $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false, module: Module::WEB_ORDERS);
 
             return $registry;
         });

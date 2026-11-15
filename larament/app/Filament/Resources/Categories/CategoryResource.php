@@ -8,6 +8,9 @@ use App\Filament\Resources\Categories\Pages\EditCategory;
 use App\Filament\Resources\Categories\Pages\ListCategories;
 use App\Filament\Resources\Categories\Pages\ViewCategory;
 use App\Models\Category;
+use App\Modules\Module;
+use App\Orders\OrderBehaviorRegistry;
+use App\Services\FeatureService;
 use Closure;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -104,13 +107,18 @@ class CategoryResource extends Resource
 
                 Select::make('blockedOrderTypes')
                     ->label('أنواع الطلبات المحظورة')
-                    ->relationship('blockedOrderTypes', 'label')
+                    ->relationship(
+                        'blockedOrderTypes',
+                        'label',
+                        fn (Builder $query): Builder => $query->whereNotIn('behavior', app(OrderBehaviorRegistry::class)->unavailableCodes()),
+                    )
                     ->multiple()
                     ->preload()
                     ->searchable()
                     ->helperText('قائمة حظر. حظر التصنيف الرئيسي يسري على تصنيفاته الفرعية، والفرعي يمكنه إضافة حظر خاص به.'),
 
                 Section::make('شاشة المطبخ')
+                    ->visible(fn (): bool => self::restaurantEnabled())
                     ->description('توجيه أصناف هذه الفئة داخل شاشة المطبخ')
                     ->icon('heroicon-m-tv')
                     ->columns(3)
@@ -142,6 +150,14 @@ class CategoryResource extends Resource
             ]);
     }
 
+    /**
+     * Kitchen routing fields belong to the Restaurant module.
+     */
+    private static function restaurantEnabled(): bool
+    {
+        return app(FeatureService::class)->moduleEnabled(Module::RESTAURANT);
+    }
+
     public static function table(Table $table): Table
     {
         return ExpandableRows::make()
@@ -167,6 +183,7 @@ class CategoryResource extends Resource
                             ->counts('products')
                             ->sortable(),
                         TextColumn::make('kitchenStation.name')
+                            ->visible(fn (): bool => self::restaurantEnabled())
                             ->label('محطة المطبخ')
                             ->searchable()
                             ->placeholder('عام'),

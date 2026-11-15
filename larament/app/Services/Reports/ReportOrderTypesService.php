@@ -22,7 +22,9 @@ final class ReportOrderTypesService
         $result = [];
         foreach ($this->layout->orderedTypeCodes() as $code) {
             $row = $catalog->get($code);
-            if ($row === null || (! $row->is_active && ! in_array($code, $sold, true))) {
+            // Inactive types and types of a switched-off module show only when sold.
+            $hidden = ! $row?->is_active || ! $this->catalog->isAvailable($row);
+            if ($row === null || ($hidden && ! in_array($code, $sold, true))) {
                 continue;
             }
             self::validateCode($code);

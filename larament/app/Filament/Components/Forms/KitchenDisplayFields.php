@@ -3,6 +3,8 @@
 namespace App\Filament\Components\Forms;
 
 use App\Models\Product;
+use App\Modules\Module;
+use App\Services\FeatureService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -24,6 +26,7 @@ class KitchenDisplayFields
     {
         return [
             Section::make('شاشة المطبخ')
+                ->visible(fn (): bool => app(FeatureService::class)->moduleEnabled(Module::RESTAURANT))
                 ->description('توجيه هذا المنتج داخل شاشة المطبخ، ويتجاوز إعدادات الفئة')
                 ->icon('heroicon-m-tv')
                 ->columns(3)

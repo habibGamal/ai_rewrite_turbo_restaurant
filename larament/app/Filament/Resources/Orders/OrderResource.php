@@ -14,9 +14,13 @@ use App\Filament\Resources\Orders\RelationManagers\OrderTimelineRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
 use App\Models\ExternalOrder;
 use App\Models\ExternalOrderItem;
+use App\Models\KitchenTicket;
 use App\Models\KitchenTicketItem;
+use App\Models\KitchenTicketRound;
 use App\Models\Order;
+use App\Modules\Module;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\KitchenPerformanceReportService;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -44,7 +48,7 @@ class OrderResource extends Resource
 
     protected static ?string $pluralModelLabel = 'الطلبات';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 1;
 
@@ -54,6 +58,14 @@ class OrderResource extends Resource
             ->components([
                 // This is a view-only resource, no form fields needed
             ]);
+    }
+
+    /**
+     * Table number, kitchen notes and kitchen items belong to the Restaurant module.
+     */
+    private static function restaurantEnabled(): bool
+    {
+        return app(FeatureService::class)->moduleEnabled(Module::RESTAURANT);
     }
 
     public static function table(Table $table): Table
@@ -211,6 +223,7 @@ class OrderResource extends Resource
                             ->badge(),
 
                         TextEntry::make('dine_table_number')
+                            ->visible(fn (): bool => self::restaurantEnabled())
                             ->label('رقم الطاولة')
                             ->placeholder('غير محدد'),
 
@@ -300,6 +313,7 @@ class OrderResource extends Resource
                 Section::make('ملاحظات')
                     ->schema([
                         TextEntry::make('kitchen_notes')
+                            ->visible(fn (): bool => self::restaurantEnabled())
                             ->label('ملاحظات المطبخ')
                             ->placeholder('لا توجد ملاحظات'),
 
@@ -422,14 +436,14 @@ class OrderResource extends Resource
                         TextEntry::make('kitchen_duration')
                             ->label('إجمالي وقت المطبخ')
                             ->state(function (Order $record): string {
-                                /** @var \App\Models\KitchenTicket|null $ticket */
+                                /** @var KitchenTicket|null $ticket */
                                 $ticket = $record->kitchenTicket;
                                 if (! $ticket) {
                                     return '-';
                                 }
                                 $seconds = 0;
                                 foreach ($ticket->rounds as $round) {
-                                    /** @var \App\Models\KitchenTicketRound $round */
+                                    /** @var KitchenTicketRound $round */
                                     if ($round->ended_at) {
                                         $seconds += max(0, $round->ended_at->getTimestamp() - $round->started_at->getTimestamp());
                                     }

@@ -7,6 +7,7 @@ use App\Filament\Resources\KitchenStations\Pages\EditKitchenStation;
 use App\Filament\Resources\KitchenStations\Pages\ListKitchenStations;
 use App\Filament\Resources\KitchenStations\RelationManagers\CategoriesRelationManager;
 use App\Filament\Resources\KitchenStations\RelationManagers\ProductsRelationManager;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\KitchenStation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class KitchenStationResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = KitchenStation::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-fire';

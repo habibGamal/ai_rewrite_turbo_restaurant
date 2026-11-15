@@ -3,7 +3,9 @@
 namespace App\Orders;
 
 use App\Enums\OrderBehavior;
+use App\Modules\Module;
 use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Services\FeatureService;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
 
@@ -16,7 +18,7 @@ use InvalidArgumentException;
  */
 final class OrderBehaviorRegistry
 {
-    /** @var array<string, array{class: class-string<OrderTypeBehavior>, label: string, selectable: bool}> */
+    /** @var array<string, array{class: class-string<OrderTypeBehavior>, label: string, selectable: bool, module: ?Module}> */
     private array $behaviors = [];
 
     public function __construct(
@@ -26,14 +28,16 @@ final class OrderBehaviorRegistry
     /**
      * @param  class-string<OrderTypeBehavior>  $class
      * @param  bool  $selectable  whether an admin may pick it for a new order type
+     * @param  Module|null  $module  the module that owns it; while that module is
+     *                               off, order types with this behaviour are hidden
      */
-    public function register(string $code, string $class, string $label, bool $selectable = true): void
+    public function register(string $code, string $class, string $label, bool $selectable = true, ?Module $module = null): void
     {
         if (! is_subclass_of($class, OrderTypeBehavior::class)) {
             throw new InvalidArgumentException("[{$class}] must implement ".OrderTypeBehavior::class.'.');
         }
 
-        $this->behaviors[$code] = ['class' => $class, 'label' => $label, 'selectable' => $selectable];
+        $this->behaviors[$code] = ['class' => $class, 'label' => $label, 'selectable' => $selectable, 'module' => $module];
     }
 
     public function has(OrderBehavior|string $code): bool
@@ -63,7 +67,8 @@ final class OrderBehaviorRegistry
     }
 
     /**
-     * Behaviours an admin may pick for a new order type, code => label.
+     * Behaviours an admin may pick for a new order type, code => label. A
+     * behaviour of a switched-off module is left out.
      *
      * @return array<string, string>
      */
@@ -71,8 +76,37 @@ final class OrderBehaviorRegistry
     {
         return array_map(
             fn (array $entry): string => $entry['label'],
-            array_filter($this->behaviors, fn (array $entry): bool => $entry['selectable']),
+            array_filter(
+                $this->behaviors,
+                fn (array $entry, string $code): bool => $entry['selectable'] && $this->isAvailable($code),
+                ARRAY_FILTER_USE_BOTH,
+            ),
         );
+    }
+
+    /**
+     * Behaviour codes whose module is switched off.
+     *
+     * @return list<string>
+     */
+    public function unavailableCodes(): array
+    {
+        return array_values(array_filter($this->codes(), fn (string $code): bool => ! $this->isAvailable($code)));
+    }
+
+    public function moduleFor(OrderBehavior|string $code): ?Module
+    {
+        return $this->behaviors[self::code($code)]['module'] ?? null;
+    }
+
+    /**
+     * Whether the behaviour's module (if it has one) is switched on.
+     */
+    public function isAvailable(OrderBehavior|string $code): bool
+    {
+        $module = $this->moduleFor($code);
+
+        return $module === null || $this->container->make(FeatureService::class)->moduleEnabled($module);
     }
 
     public function label(OrderBehavior|string|null $code): string
