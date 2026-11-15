@@ -66,6 +66,7 @@ import {
     newClientUuid,
     saveCart,
 } from "@/Components/Orders/Instant/instantCart";
+import { fetchProductsByIds, mergeProducts } from "@/Components/Orders/Instant/remoteCatalog";
 
 interface InstantSaleTabProps {
     tab: CashierTab;
@@ -112,11 +113,34 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     const can = instant.can ?? { discount: false, changeItems: false, returns: false };
     const canReturn = Boolean(can.returns);
 
-    const scannableProducts = useMemo(
-        () => productsForOrder(categories, typeCode, false),
-        [categories, typeCode]
+    // A big catalogue arrives as categories only: products found by searching or scanning
+    // are kept here so held sales, returns and the cart can use them.
+    const remote = Boolean(instant.remoteCatalog);
+    const [knownProducts, setKnownProducts] = useState<Product[]>([]);
+    const rememberProducts = useCallback(
+        (products: Product[]) => setKnownProducts((known) => mergeProducts(known, products)),
+        []
     );
-    const allProducts = useMemo(() => productsForOrder(categories, typeCode, true), [categories, typeCode]);
+    const resolveProduct = useMemo(
+        () =>
+            remote
+                ? async (productId: number): Promise<Product | null> => {
+                      const [product] = await fetchProductsByIds(typeCode, [productId]);
+                      if (product) rememberProducts([product]);
+                      return product ?? null;
+                  }
+                : undefined,
+        [remote, typeCode, rememberProducts]
+    );
+
+    const scannableProducts = useMemo(
+        () => (remote ? knownProducts : productsForOrder(categories, typeCode, false)),
+        [remote, knownProducts, categories, typeCode]
+    );
+    const allProducts = useMemo(
+        () => (remote ? knownProducts : productsForOrder(categories, typeCode, true)),
+        [remote, knownProducts, categories, typeCode]
+    );
 
     // ---- Cart state (client side only; no order exists until pay) ----
     const storageKey = `instant-cart:${shiftId ?? "none"}:${tab.key}`;
@@ -215,7 +239,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         const { quantity, code } = parseScan(scan);
         if (!code) return;
         setScan("");
-        const result = await lookupProduct(code, scannableProducts);
+        const result = await lookupProduct(code, scannableProducts, resolveProduct);
         if (!result.ok) {
             if (result.message) message.warning(result.message);
             focusScan();
@@ -280,11 +304,26 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         }
     };
 
-    const loadHeld = (held: HeldSale) => {
+    const loadHeld = async (held: HeldSale) => {
+        let available = allProducts;
+        if (remote) {
+            const missingIds = (held.lines ?? [])
+                .map((line) => Number(line.product_id))
+                .filter((id) => !available.some((p) => p.id === id));
+            try {
+                const fetched = await fetchProductsByIds(typeCode, missingIds);
+                rememberProducts(fetched);
+                available = mergeProducts(available, fetched);
+            } catch (error) {
+                message.error(errorMessage(error, "تعذر تحميل أصناف البيع المعلق"));
+                return;
+            }
+        }
+
         const lines: OrderItemData[] = [];
         let missing = 0;
         (held.lines ?? []).forEach((line) => {
-            const product = allProducts.find((p) => p.id === Number(line.product_id));
+            const product = available.find((p) => p.id === Number(line.product_id));
             if (!product) {
                 missing += 1;
                 return;
@@ -736,6 +775,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                             orderType={typeCode}
                             dispatch={categoriesDispatch}
                             user={user}
+                            remote={remote}
+                            onProductsLoaded={rememberProducts}
                         />
                     </div>
                 </Col>
@@ -789,6 +830,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                     focusScan();
                 }}
                 products={scannableProducts}
+                resolveProduct={resolveProduct}
                 typeCode={typeCode}
                 user={user}
                 onDone={onReturnDone}

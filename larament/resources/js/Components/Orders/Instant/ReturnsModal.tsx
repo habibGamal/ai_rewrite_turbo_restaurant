@@ -70,12 +70,14 @@ interface ReturnsModalProps {
     open: boolean;
     onClose: () => void;
     products: Product[];
+    /** Big catalogues: fetches a scanned product the screen has not loaded yet. */
+    resolveProduct?: (productId: number) => Promise<Product | null>;
     typeCode: string;
     user: User;
     onDone: (result: ReturnResult) => void;
 }
 
-export default function ReturnsModal({ open, onClose, products, typeCode, user, onDone }: ReturnsModalProps) {
+export default function ReturnsModal({ open, onClose, products, resolveProduct, typeCode, user, onDone }: ReturnsModalProps) {
     const [number, setNumber] = useState("");
     const [order, setOrder] = useState<ReturnOrder | null>(null);
     const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -136,7 +138,7 @@ export default function ReturnsModal({ open, onClose, products, typeCode, user, 
         const { quantity, code } = parseScan(scan);
         if (!code) return;
         setScan("");
-        const result = await lookupProduct(code, products);
+        const result = await lookupProduct(code, products, resolveProduct);
         if (!result.ok) {
             if (result.message) message.warning(result.message);
             return;

@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Button, ConfigProvider, Divider, Radio, RadioChangeEvent, Typography } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, ConfigProvider, Divider, Empty, Radio, RadioChangeEvent, Spin, Typography } from 'antd';
 import { Input } from 'antd';
 
 import { Category, Product, ProductGroupTile, User, OrderItemAction, OrderItemData } from '@/types';
 import VariantPickerModal, { formatPriceRange } from '@/Components/Orders/VariantPickerModal';
+import { searchProducts } from '@/Components/Orders/Instant/remoteCatalog';
 
 const { Search } = Input;
 
@@ -13,6 +14,13 @@ interface CategoriesProps {
     dispatch: React.Dispatch<OrderItemAction>;
     disabled?: boolean;
     user: User;
+    /**
+     * Big catalogue: the categories come without products and the tiles are fetched
+     * from the server for the chosen category or the typed search.
+     */
+    remote?: boolean;
+    /** Called with every batch of products fetched in remote mode. */
+    onProductsLoaded?: (products: Product[]) => void;
 }
 
 function isBlocked(category: Category, orderType: string): boolean {
@@ -68,7 +76,7 @@ function groupsForOrder(categories: Category[], orderType: string): ProductGroup
     });
 }
 
-export default function Categories({ categories, orderType, dispatch, disabled, user }: CategoriesProps) {
+export default function Categories({ categories, orderType, dispatch, disabled, user, remote = false, onProductsLoaded }: CategoriesProps) {
     const visibleMains = useMemo(
         () => categories.filter((category) => !isBlocked(category, orderType)),
         [categories, orderType],
@@ -113,11 +121,46 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
         return subs.find((sub) => sub.id === selectedSub)?.groups ?? [];
     }, [activeMain, selectedSub, subs, visibleMains, orderType]);
 
+    const [remoteProducts, setRemoteProducts] = useState<Product[]>([]);
+    const [remoteLoading, setRemoteLoading] = useState(false);
+    const remoteCategoryId = selectedSub !== 'all' ? selectedSub : (activeMain?.id ?? null);
+    const remoteIdle = remote && remoteCategoryId === null && search.trim().length < 2;
+
+    useEffect(() => {
+        if (!remote) return;
+        if (remoteIdle) {
+            setRemoteProducts([]);
+            return;
+        }
+
+        let cancelled = false;
+        const timer = window.setTimeout(() => {
+            setRemoteLoading(true);
+            searchProducts(orderType, { q: search.trim(), categoryId: remoteCategoryId })
+                .then((found) => {
+                    if (cancelled) return;
+                    setRemoteProducts(found);
+                    onProductsLoaded?.(found);
+                })
+                .catch(() => {
+                    if (!cancelled) setRemoteProducts([]);
+                })
+                .finally(() => {
+                    if (!cancelled) setRemoteLoading(false);
+                });
+        }, 250);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [remote, remoteIdle, search, remoteCategoryId, orderType, onProductsLoaded]);
+
     const term = search.toLowerCase();
-    const products = baseProducts.filter((product) =>
-        product.name.toLowerCase().includes(term),
-    );
-    const groups = baseGroups.filter((group) =>
+    const products = remote
+        ? remoteProducts
+        : baseProducts.filter((product) => product.name.toLowerCase().includes(term));
+    const groups = remote ? [] : baseGroups.filter((group) =>
         group.name.toLowerCase().includes(term)
         || group.skus.some((sku) => sku.name.toLowerCase().includes(term)),
     );
@@ -222,7 +265,15 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
 
             <Divider />
 
-            <div className="grid grid-cols-4 gap-4">
+            {remote && (remoteIdle || (!remoteLoading && products.length === 0)) && (
+                <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={remoteIdle ? 'اكتب اسم الصنف أو الباركود، أو اختر تصنيفاً' : 'لا توجد أصناف مطابقة'}
+                />
+            )}
+
+            <Spin spinning={remote && remoteLoading}>
+                <div className="grid grid-cols-4 gap-4">
                 {groups.map((group) => (
                     <Button
                         disabled={disabled}
@@ -250,7 +301,8 @@ export default function Categories({ categories, orderType, dispatch, disabled, 
                         {product.name}
                     </Button>
                 ))}
-            </div>
+                </div>
+            </Spin>
 
             <VariantPickerModal
                 group={pickerGroup}

@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Pos\HeldSaleController;
 use App\Http\Controllers\Pos\InstantReturnController;
 use App\Http\Controllers\Pos\InstantSaleController;
+use App\Http\Controllers\Pos\PosProductController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
@@ -66,6 +67,8 @@ Route::middleware('auth')->group(function () {
     // Instant sale (Phase 6c): one request per sale, held carts, returns and exchanges
     Route::prefix('pos')->name('pos.')->middleware(['shift', 'permission:pos.access'])->group(function () {
         Route::post('/instant-sales', [InstantSaleController::class, 'store'])->name('instant-sales.store');
+        Route::get('/products/search', [PosProductController::class, 'search'])->name('products.search');
+        Route::get('/products', [PosProductController::class, 'index'])->name('products.index');
         Route::get('/held-sales', [HeldSaleController::class, 'index'])->name('held-sales.index');
         Route::post('/held-sales', [HeldSaleController::class, 'store'])->name('held-sales.store');
         Route::delete('/held-sales/{heldSale}', [HeldSaleController::class, 'destroy'])->name('held-sales.destroy');
