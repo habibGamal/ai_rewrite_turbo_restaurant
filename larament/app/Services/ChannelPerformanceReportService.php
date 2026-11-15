@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Services\Reports\ReportOrderTypesService;
+use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,10 @@ class ChannelPerformanceReportService
      */
     public function getChannelPerformanceSummary(?string $startDate = null, ?string $endDate = null): Collection
     {
+        // Refunds paid in the period, grouped by the original order's channel.
+        $aggregates = app(ReturnsAggregates::class);
+        $returns = $aggregates->groupedBy($aggregates->periodQuery($startDate, $endDate), 'ro.type');
+
         return $this->getOrdersQuery($startDate, $endDate)
             ->select([
                 'orders.type',
@@ -51,9 +56,14 @@ class ChannelPerformanceReportService
             ->groupBy('orders.type')
             ->orderByDesc('total_sales')
             ->get()
-            ->map(function ($item) {
+            ->map(function ($item) use ($returns) {
                 $item->type_label = $this->labelForOrderType($item->type);
                 $item->market_share = 0; // Will be calculated later
+                $channelReturns = $returns[(string) $item->type] ?? ['amount' => 0.0, 'profit_impact' => 0.0, 'count' => 0];
+                $item->returns_count = $channelReturns['count'];
+                $item->total_refunds = $channelReturns['amount'];
+                $item->net_sales = round((float) $item->total_sales - $channelReturns['amount'], 2);
+                $item->net_profit = round((float) $item->total_profit - $channelReturns['profit_impact'], 2);
 
                 return $item;
             });

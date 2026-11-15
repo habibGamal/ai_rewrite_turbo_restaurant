@@ -58,6 +58,8 @@ it('builds a day_summary snapshot for a business date', function () {
         'cogs_total' => '50.00',
         'expenses_total' => '30.00',
         'waste_total' => '15.00',
+        'refunds_total' => '0.00',
+        'refunds_cash' => '0.00',
     ]);
 });
 
@@ -87,6 +89,8 @@ it('returns zeros for day with closed inventory movement but no orders, expenses
         'cogs_total' => '0.00',
         'expenses_total' => '0.00',
         'waste_total' => '0.00',
+        'refunds_total' => '0.00',
+        'refunds_cash' => '0.00',
     ]);
 });
 

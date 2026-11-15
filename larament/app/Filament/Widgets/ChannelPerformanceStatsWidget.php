@@ -33,6 +33,11 @@ class ChannelPerformanceStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
                 ->color('success'),
 
+            Stat::make('المرتجعات', number_format((float) $metrics['channel_summary']->sum('total_refunds'), 2).' ج.م')
+                ->description('صافي المبيعات '.number_format((float) $metrics['channel_summary']->sum('net_sales'), 2).' ج.م')
+                ->descriptionIcon('heroicon-m-arrow-uturn-left', IconPosition::Before)
+                ->color('danger'),
+
             Stat::make('إجمالي الطلبات', number_format($metrics['total_orders']))
                 ->description('إجمالي عدد الطلبات من جميع القنوات')
                 ->descriptionIcon('heroicon-m-shopping-bag', IconPosition::Before)

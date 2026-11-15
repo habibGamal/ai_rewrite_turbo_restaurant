@@ -67,11 +67,13 @@ it('builds an order return snapshot with items and refunds', function () {
         'total_refund' => '150.00',
         'reason' => 'wrong item delivered',
         'reverse_stock' => true,
+        'is_exchange' => false,
         'items' => [
             [
                 'order_item_uuid' => $orderItem->uuid,
                 'quantity' => '2.000',
                 'refund_amount' => '150.00',
+                'restocked' => true,
             ],
         ],
         'refunds' => [

@@ -21,7 +21,10 @@ class OrderReturnService
     /**
      * Process an order return
      *
-     * @param  array  $returnItems  [['order_item_id' => int, 'quantity' => float, 'refund_amount' => float], ...]
+     * A line goes back to stock unless $reverseStock is false or the line says
+     * 'restocked' => false (damaged: it already left stock at sale, so no movement).
+     *
+     * @param  array  $returnItems  [['order_item_id' => int, 'quantity' => float, 'refund_amount' => float, 'restocked' => ?bool], ...]
      * @param  array  $refundDistribution  [['method' => string, 'amount' => float], ...]
      *
      * @throws Exception
@@ -45,6 +48,12 @@ class OrderReturnService
             // Validate return items
             $this->validateReturnItems($order, $returnItems);
 
+            $returnItems = array_map(fn (array $item): array => [
+                ...$item,
+                'restocked' => $reverseStock && ($item['restocked'] ?? true),
+            ], $returnItems);
+            $anyRestocked = collect($returnItems)->contains('restocked', true);
+
             // Calculate total refund
             $totalRefund = collect($returnItems)->sum('refund_amount');
 
@@ -58,7 +67,7 @@ class OrderReturnService
                 'shift_id' => $shiftId,
                 'total_refund' => $totalRefund,
                 'reason' => $reason,
-                'reverse_stock' => $reverseStock,
+                'reverse_stock' => $anyRestocked,
             ]);
 
             // Create return items
@@ -68,6 +77,7 @@ class OrderReturnService
                     'order_item_id' => $item['order_item_id'],
                     'quantity' => $item['quantity'],
                     'refund_amount' => $item['refund_amount'],
+                    'restocked' => $item['restocked'],
                 ]);
             }
 
@@ -80,9 +90,10 @@ class OrderReturnService
                 ]);
             }
 
-            // Reverse stock if requested
-            if ($reverseStock) {
-                $this->reverseStockForReturnedItems($order, $returnItems);
+            // Put the restocked lines back; damaged lines move no stock.
+            $restockedItems = array_values(array_filter($returnItems, fn (array $item): bool => $item['restocked']));
+            if ($restockedItems !== []) {
+                $this->reverseStockForReturnedItems($order, $restockedItems);
             }
 
             // Update order return status

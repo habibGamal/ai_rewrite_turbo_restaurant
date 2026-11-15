@@ -1,4 +1,5 @@
 import { Order, OrderItemData } from "@/types";
+import { Code128Barcode } from "@/utils/code128";
 import { usePage } from "@inertiajs/react";
 import ExternalReceipt from "./ExternalReceipt";
 import { useTerms } from "@/lib/wording";
@@ -148,7 +149,12 @@ export default function ReceiptTemplate({
                 </tbody>
             </table>
             <ExternalReceipt receipt={order.receiptView} />
-            <p className="text-center mt-4">الرقم المرجعي - {order.id}</p>
+            <div className="mt-4">
+                <Code128Barcode code={`#${order.id}`} />
+                <p className="text-center">
+                    الرقم المرجعي: <span dir="ltr">#{order.id}</span>
+                </p>
+            </div>
             <p className="whitespace-pre-line  text-center">{receiptFooter}</p>
             <img
                 className="block mx-auto w-[50mm] mt-4"

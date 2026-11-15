@@ -10,7 +10,9 @@ import {
     Modal,
     Radio,
     Select,
+    Switch,
     Table,
+    Tag,
     Typography,
     message,
 } from "antd";
@@ -46,9 +48,26 @@ interface ReturnLine {
 interface ReturnOrder {
     id: number;
     order_number: string | number;
+    reference: string;
     created_at: string;
+    age_days: number;
+    too_old: boolean;
+    age_blocked?: boolean;
+    max_days?: number;
     total: number;
     items: ReturnLine[];
+}
+
+/** One of several receipts the typed number can mean (receipt numbers restart every shift). */
+interface ReturnCandidate {
+    id: number;
+    order_number: number;
+    reference: string;
+    created_at: string;
+    cashier: string | null;
+    total: number;
+    current_shift: boolean;
+    too_old: boolean;
 }
 
 export interface ReturnResult {
@@ -74,13 +93,20 @@ interface ReturnsModalProps {
     resolveProduct?: (productId: number) => Promise<Product | null>;
     typeCode: string;
     user: User;
+    /** order.return_without_restock: may mark a line as damaged (not back to stock). */
+    canSkipRestock?: boolean;
     onDone: (result: ReturnResult) => void;
 }
 
-export default function ReturnsModal({ open, onClose, products, resolveProduct, typeCode, user, onDone }: ReturnsModalProps) {
+const formatDate = (value: string) =>
+    new Date(value).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" });
+
+export default function ReturnsModal({ open, onClose, products, resolveProduct, typeCode, user, canSkipRestock = false, onDone }: ReturnsModalProps) {
     const [number, setNumber] = useState("");
     const [order, setOrder] = useState<ReturnOrder | null>(null);
+    const [candidates, setCandidates] = useState<ReturnCandidate[]>([]);
     const [quantities, setQuantities] = useState<Record<number, number>>({});
+    const [damaged, setDamaged] = useState<Record<number, boolean>>({});
     const [reason, setReason] = useState("");
     const [exchangeItems, dispatchExchange] = useReducer(orderItemsReducer, []);
     const [scan, setScan] = useState("");
@@ -94,7 +120,9 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
     const reset = () => {
         setNumber("");
         setOrder(null);
+        setCandidates([]);
         setQuantities({});
+        setDamaged({});
         setReason("");
         dispatchExchange({ type: "init", orderItems: [], user });
         setScan("");
@@ -108,18 +136,22 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
         onClose();
     };
 
-    const lookup = async () => {
-        const value = number.trim();
+    const lookup = async (reference?: string) => {
+        const value = (reference ?? number).trim();
         if (!value) return;
         setLooking(true);
         try {
-            const { data } = await axios.get<{ order: ReturnOrder }>(route("pos.instant-returns.lookup"), {
-                params: { number: value },
-            });
-            setOrder(data.order);
+            const { data } = await axios.get<{ order?: ReturnOrder; candidates?: ReturnCandidate[] }>(
+                route("pos.instant-returns.lookup"),
+                { params: { number: value } }
+            );
+            setOrder(data.order ?? null);
+            setCandidates(data.candidates ?? []);
             setQuantities({});
+            setDamaged({});
         } catch (error: any) {
             setOrder(null);
+            setCandidates([]);
             message.error(
                 error?.response?.status === 404
                     ? errorMessage(error, "لم يتم العثور على الفاتورة")
@@ -173,7 +205,11 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
             const { data } = await axios.post<ReturnResult>(route("pos.instant-returns.store"), {
                 order_id: order.id,
                 reason: reason || undefined,
-                items: returnedLines.map((line) => ({ order_item_id: line.id, quantity: quantities[line.id] })),
+                items: returnedLines.map((line) => ({
+                    order_item_id: line.id,
+                    quantity: quantities[line.id],
+                    ...(canSkipRestock && damaged[line.id] ? { restocked: false } : {}),
+                })),
                 exchange:
                     exchangeItems.length > 0
                         ? { client_uuid: exchangeUuid.current, type: typeCode, items: itemsForApi(exchangeItems) }
@@ -208,29 +244,103 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
             okText="تأكيد"
             cancelText="إلغاء"
             onOk={submit}
-            okButtonProps={{ loading: submitting, disabled: !order || returnedLines.length === 0 }}
+            okButtonProps={{ loading: submitting, disabled: !order || order.age_blocked || returnedLines.length === 0 }}
         >
             <div className="flex gap-2 mb-4">
                 <Input
                     ref={numberRef}
                     size="large"
-                    placeholder="رقم الفاتورة"
+                    prefix={<BarcodeOutlined />}
+                    placeholder="رقم الفاتورة أو امسح باركود الإيصال"
                     value={number}
                     onChange={(e) => setNumber(e.target.value)}
-                    onPressEnter={lookup}
+                    onPressEnter={() => lookup()}
                 />
-                <Button size="large" type="primary" icon={<SearchOutlined />} loading={looking} onClick={lookup}>
+                <Button size="large" type="primary" icon={<SearchOutlined />} loading={looking} onClick={() => lookup()}>
                     بحث
                 </Button>
             </div>
 
-            {!order ? (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="ابحث برقم الفاتورة" />
+            {!order && candidates.length > 0 ? (
+                <>
+                    <Alert
+                        className="mb-2"
+                        type="info"
+                        showIcon
+                        message="يوجد أكثر من فاتورة بهذا الرقم، اختر الفاتورة الصحيحة"
+                    />
+                    <Table<ReturnCandidate>
+                        size="small"
+                        rowKey="id"
+                        pagination={false}
+                        dataSource={candidates}
+                        onRow={(candidate) => ({
+                            onClick: () => lookup(candidate.reference),
+                            style: { cursor: "pointer" },
+                        })}
+                        columns={[
+                            {
+                                title: "المرجع",
+                                dataIndex: "reference",
+                                render: (value: string, candidate) => (
+                                    <span dir="ltr">
+                                        {value}
+                                        {candidate.current_shift && (
+                                            <Tag color="green" className="ms-2">
+                                                الوردية الحالية
+                                            </Tag>
+                                        )}
+                                    </span>
+                                ),
+                            },
+                            { title: "رقم الفاتورة", dataIndex: "order_number" },
+                            { title: "التاريخ", dataIndex: "created_at", render: formatDate },
+                            { title: "الكاشير", dataIndex: "cashier", render: (value) => value ?? "-" },
+                            {
+                                title: "الإجمالي",
+                                dataIndex: "total",
+                                render: (value: number, candidate) => (
+                                    <>
+                                        {formatCurrency(Number(value))}
+                                        {candidate.too_old && (
+                                            <Tag color="orange" className="ms-2">
+                                                أقدم من الحد
+                                            </Tag>
+                                        )}
+                                    </>
+                                ),
+                            },
+                            {
+                                title: "",
+                                render: (_, candidate) => (
+                                    <Button size="small" type="link" onClick={() => lookup(candidate.reference)}>
+                                        اختيار
+                                    </Button>
+                                ),
+                            },
+                        ]}
+                    />
+                </>
+            ) : !order ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="ابحث برقم الفاتورة أو امسح باركود الإيصال" />
             ) : (
                 <>
                     <Typography.Title level={5} className="mt-0">
-                        فاتورة #{order.order_number} · {formatCurrency(Number(order.total))}
+                        فاتورة #{order.order_number} · <span dir="ltr">{order.reference}</span> ·{" "}
+                        {formatCurrency(Number(order.total))} · {formatDate(order.created_at)}
                     </Typography.Title>
+                    {order.too_old && (
+                        <Alert
+                            className="mb-2"
+                            type={order.age_blocked ? "error" : "warning"}
+                            showIcon
+                            message={
+                                order.age_blocked
+                                    ? `الطلب عمره ${order.age_days} يوم وأقصى مدة للمرتجع ${order.max_days} يوم، ولا تملك صلاحية مرتجع الطلبات القديمة`
+                                    : `الطلب عمره ${order.age_days} يوم، أقدم من أقصى مدة للمرتجع (${order.max_days} يوم)`
+                            }
+                        />
+                    )}
                     <Table<ReturnLine>
                         size="small"
                         rowKey="id"
@@ -259,6 +369,24 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
                                     />
                                 ),
                             },
+                            ...(canSkipRestock
+                                ? [
+                                      {
+                                          title: "يرجع للمخزن",
+                                          render: (_: unknown, line: ReturnLine) => (
+                                              <Switch
+                                                  checked={!damaged[line.id]}
+                                                  checkedChildren="نعم"
+                                                  unCheckedChildren="تالف"
+                                                  disabled={(quantities[line.id] ?? 0) <= 0}
+                                                  onChange={(checked) =>
+                                                      setDamaged((prev) => ({ ...prev, [line.id]: !checked }))
+                                                  }
+                                              />
+                                          ),
+                                      },
+                                  ]
+                                : []),
                         ]}
                     />
 

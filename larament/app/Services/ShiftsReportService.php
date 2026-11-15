@@ -8,7 +8,9 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
 use App\Services\Reports\ReportOrderTypesService;
+use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
@@ -167,6 +169,9 @@ class ShiftsReportService
         $externalCash = (float) DB::table('external_order_collections')->where('shift_id', $shift->id)->where('method', 'cash')->sum('amount');
         $settlements = (float) DB::table('external_seller_settlements')->where('shift_id', $shift->id)->sum('amount');
 
+        // Refunds paid by this shift, whatever shift sold the order.
+        $returns = app(ReturnsAggregates::class)->forShifts([$shift->id]);
+
         // Calculate average receipt value
         $avgReceiptValue = $completedOrders->count() > 0 ? $sales / $completedOrders->count() : 0;
 
@@ -181,12 +186,12 @@ class ShiftsReportService
             'cashPayments' => $cashPayments,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
-            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash - $settlements - $expenses,
+            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash - $settlements - $expenses - $returns['cashRefunds'],
             'cardPayments' => $cardPayments,
             'talabatCardPayments' => $talabatCardPayments,
             'avgReceiptValue' => $avgReceiptValue,
             'profitPercent' => $profitPercent,
-        ] + $this->creditReconciliation([$shift->id]);
+        ] + $this->netOfReturns((float) $sales, (float) $profit, $returns) + $returns + $this->creditReconciliation([$shift->id]);
     }
 
     /**
@@ -287,6 +292,7 @@ class ShiftsReportService
         $externalCash = (float) DB::table('external_order_collections')->whereIn('shift_id', clone $scope)->where('method', 'cash')->sum('amount');
         $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', clone $scope)->sum('amount');
         $startCash = (float) (clone $shiftsQuery)->sum('shifts.start_cash');
+        $returns = app(ReturnsAggregates::class)->forShifts(clone $scope);
         $totalStats = [
             'sales' => $ordersData->sales ?? 0,
             'profit' => $ordersData->profit ?? 0,
@@ -296,7 +302,7 @@ class ShiftsReportService
             'cashPayments' => $paymentsData->cash_payments ?? 0,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
-            'availableCash' => $startCash + (float) ($paymentsData->cash_payments ?? 0) + $externalCash - $settlements - (float) ($expensesData->expenses ?? 0),
+            'availableCash' => $startCash + (float) ($paymentsData->cash_payments ?? 0) + $externalCash - $settlements - (float) ($expensesData->expenses ?? 0) - $returns['cashRefunds'],
             'cardPayments' => $paymentsData->card_payments ?? 0,
             'talabatCardPayments' => $paymentsData->talabat_card_payments ?? 0,
 
@@ -305,7 +311,24 @@ class ShiftsReportService
             'totalOrders' => $ordersData->total_orders ?? 0,
         ];
 
-        return $totalStats + $this->creditReconciliation($scope);
+        return $totalStats
+            + $this->netOfReturns((float) ($ordersData->sales ?? 0), (float) ($ordersData->profit ?? 0), $returns)
+            + $returns
+            + $this->creditReconciliation($scope);
+    }
+
+    /**
+     * Gross sales and profit minus the refunds paid in the same scope.
+     *
+     * @param  array{returnsAmount: float, returnsProfitImpact: float}  $returns
+     * @return array{netSales: float, netProfit: float}
+     */
+    private function netOfReturns(float $sales, float $profit, array $returns): array
+    {
+        return [
+            'netSales' => round($sales - $returns['returnsAmount'], 2),
+            'netProfit' => round($profit - $returns['returnsProfitImpact'], 2),
+        ];
     }
 
     /**
@@ -338,7 +361,7 @@ class ShiftsReportService
         return $this->typeStats($query);
     }
 
-    private function typeStats(\Illuminate\Database\Eloquent\Builder $query): array
+    private function typeStats(Builder $query): array
     {
         $types = app(ReportOrderTypesService::class)->forQuery($query);
         $data = (clone $query)->selectRaw('orders.type, COUNT(*) as count, SUM(orders.total) as value, SUM(orders.profit) as profit')->groupBy('orders.type')->get()->keyBy('type');

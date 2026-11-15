@@ -919,6 +919,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 resolveProduct={resolveProduct}
                 typeCode={typeCode}
                 user={user}
+                canSkipRestock={Boolean(can.returnWithoutRestock)}
                 onDone={onReturnDone}
             />
         </div>

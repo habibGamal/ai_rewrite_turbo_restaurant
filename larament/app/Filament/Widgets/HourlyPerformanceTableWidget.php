@@ -62,6 +62,15 @@ class HourlyPerformanceTableWidget extends BaseWidget
                     ->color('success')
                     ->weight('semibold'),
 
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray'),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP'),
+
                 TextColumn::make('total_profit')
                     ->label('إجمالي الأرباح')
                     ->money('EGP')
@@ -152,6 +161,8 @@ class HourlyPerformanceTableWidget extends BaseWidget
                 'total_orders' => $totalOrders,
                 'total_sales' => $totalSales,
                 'total_profit' => $totalProfit,
+                'total_refunds' => (float) data_get($existing, 'total_refunds', 0.0),
+                'net_sales' => (float) data_get($existing, 'net_sales', $totalSales),
                 'profit_margin' => $profitMargin,
                 'avg_order_value' => $avgOrderValue,
                 'unique_customers' => $uniqueCustomers,

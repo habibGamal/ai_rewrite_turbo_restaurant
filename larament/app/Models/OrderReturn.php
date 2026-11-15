@@ -20,6 +20,7 @@ class OrderReturn extends Model
         'total_refund',
         'reason',
         'reverse_stock',
+        'exchange_order_id',
     ];
 
     protected $casts = [
@@ -40,6 +41,12 @@ class OrderReturn extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    /** The sale made in the same step when this return was an exchange. */
+    public function exchangeOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'exchange_order_id');
     }
 
     public function items(): HasMany

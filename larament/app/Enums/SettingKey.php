@@ -47,6 +47,7 @@ enum SettingKey: string
     case BUSINESS_TYPE = 'business_type';
     case ENABLED_MODULES = 'enabled_modules';
     case SETUP_COMPLETED = 'setup_completed';
+    case RETURNS_MAX_DAYS = 'returns_max_days';
 
     /**
      * Get default value for this setting
@@ -89,6 +90,7 @@ enum SettingKey: string
             self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
             self::ENABLED_MODULES => self::enabledModulesDefault(),
             self::SETUP_COMPLETED => 'false',
+            self::RETURNS_MAX_DAYS => '0',
         };
     }
 
@@ -135,6 +137,7 @@ enum SettingKey: string
             self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
             self::ENABLED_MODULES => ['nullable', 'json'],
             self::SETUP_COMPLETED => self::storedBooleanRules(),
+            self::RETURNS_MAX_DAYS => ['required', 'integer', 'min:0', 'max:3650'],
         };
     }
 
@@ -180,6 +183,7 @@ enum SettingKey: string
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
             self::SETUP_COMPLETED => 'اكتمل الإعداد الأولي',
+            self::RETURNS_MAX_DAYS => 'أقصى عدد أيام للمرتجع',
         });
     }
 
@@ -225,6 +229,7 @@ enum SettingKey: string
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
             self::SETUP_COMPLETED => 'يتم ضبطه عند إنهاء معالج الإعداد الأولي.',
+            self::RETURNS_MAX_DAYS => 'لا يُقبل مرتجع لطلب أقدم من هذا العدد من الأيام إلا لمن لديه صلاحية مرتجع الطلبات القديمة. ضع 0 لإلغاء الحد.',
         });
     }
 
@@ -270,6 +275,7 @@ enum SettingKey: string
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
             self::SETUP_COMPLETED => 'false',
+            self::RETURNS_MAX_DAYS => '0',
         });
     }
 
@@ -309,6 +315,7 @@ enum SettingKey: string
             self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
             self::KDS_REMINDER_SECONDS => self::isIntInRange($value, 0, 600),
+            self::RETURNS_MAX_DAYS => self::isIntInRange($value, 0, 3650),
             self::KDS_ORDER_TYPE_TARGETS => self::isJsonValue($value),
             self::KDS_NEW_ORDER_SOUND, self::KDS_CHANGE_SOUND, self::KDS_CANCEL_SOUND => is_string($value) && KdsSound::tryFrom($value) !== null,
         };
