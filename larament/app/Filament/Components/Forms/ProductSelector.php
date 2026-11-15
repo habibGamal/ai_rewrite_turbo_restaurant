@@ -128,6 +128,45 @@ class ProductSelector extends Select
             ->dehydrated(false); // Don't save this field's value
     }
 
+    /**
+     * Add a scanned product to the items list: a new row with the scanned quantity,
+     * or more quantity on the row that already holds this product.
+     */
+    public static function addScannedProduct(Product $product, float $quantity, Set $set, Get $get, ?callable $additionalProps = null): void
+    {
+        $items = $get('items') ?? [];
+        $found = false;
+
+        foreach ($items as $key => $item) {
+            if ((int) ($item['product_id'] ?? 0) === $product->id) {
+                $newQuantity = (float) ($item['quantity'] ?? 0) + $quantity;
+                $items[$key]['quantity'] = $newQuantity;
+                $items[$key]['total'] = $newQuantity * (float) ($item['price'] ?? 0);
+                $found = true;
+                break;
+            }
+        }
+
+        if (! $found) {
+            $price = (float) ($product->cost ?? $product->price);
+            $newItem = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'unit' => Product::formatUnit($product->unit),
+                'quantity' => $quantity,
+                'price' => $price,
+                'total' => $quantity * $price,
+            ];
+            if ($additionalProps) {
+                $newItem = array_merge($newItem, $additionalProps($product));
+            }
+            $items[] = $newItem;
+        }
+
+        $set('items', $items);
+        $set('total', collect($items)->sum(fn ($item) => (float) ($item['total'] ?? 0)));
+    }
+
     public static function make(?string $name = 'product_selector'): static
     {
         return parent::make($name);

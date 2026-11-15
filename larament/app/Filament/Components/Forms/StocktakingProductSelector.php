@@ -113,6 +113,44 @@ class StocktakingProductSelector extends Select
             ->dehydrated(false); // Don't save this field's value
     }
 
+    /**
+     * Count a scanned product: adds the scanned quantity to its counted (real) quantity,
+     * adding the product to the list first if it is not there yet.
+     */
+    public static function addScannedProduct(Product $product, float $quantity, Set $set, Get $get): void
+    {
+        $items = $get('items') ?? [];
+        $found = false;
+
+        foreach ($items as $key => $item) {
+            if ((int) ($item['product_id'] ?? 0) === $product->id) {
+                $real = (float) ($item['real_quantity'] ?? 0) + $quantity;
+                $items[$key]['real_quantity'] = $real;
+                $items[$key]['total'] = ($real - (float) ($item['stock_quantity'] ?? 0)) * (float) ($item['price'] ?? 0);
+                $found = true;
+                break;
+            }
+        }
+
+        if (! $found) {
+            $warehouseId = (int) ($get('warehouse_id') ?: Warehouse::default()->id);
+            $price = (float) ($product->cost ?? $product->price ?? 0);
+            $stockQuantity = app(StockService::class)->getCurrentStock($product->id, $warehouseId);
+            $items[] = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'unit' => Product::formatUnit($product->unit),
+                'stock_quantity' => $stockQuantity,
+                'real_quantity' => $quantity,
+                'price' => $price,
+                'total' => ($quantity - $stockQuantity) * $price,
+            ];
+        }
+
+        $set('items', $items);
+        $set('total', collect($items)->sum(fn ($item) => ((float) ($item['real_quantity'] ?? 0) - (float) ($item['stock_quantity'] ?? 0)) * (float) ($item['price'] ?? 0)));
+    }
+
     public static function make(?string $name = 'stocktaking_product_selector'): static
     {
         return parent::make($name);

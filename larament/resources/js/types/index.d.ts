@@ -188,6 +188,7 @@ export type OrderItemAction =
     | { type: 'changeQuantity'; id: number; quantity: number; user: User }
     | { type: 'changeNotes'; id: number; notes: string; user: User }
     | { type: 'delete'; id: number; user: User }
+    | { type: 'addScanned'; product: Product; quantity: number; user: User }
     | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
 export interface ManageOrderProps {

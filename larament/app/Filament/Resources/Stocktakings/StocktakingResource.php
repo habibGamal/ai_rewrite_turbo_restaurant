@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Stocktakings;
 use App\Filament\Actions\CloseStocktakingAction;
 use App\Filament\Actions\Forms\StocktakingProductImporterAction;
 use App\Filament\Actions\PrintStocktakingAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
 use App\Filament\Components\Forms\StocktakingProductSelector;
 use App\Filament\Resources\Stocktakings\Pages\CreateStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\EditStocktaking;
@@ -14,6 +15,7 @@ use App\Models\Product;
 use App\Models\Stocktaking;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\StocktakingCalculatorService;
 use App\Services\StockService;
 use Filament\Actions\BulkActionGroup;
@@ -135,6 +137,9 @@ class StocktakingResource extends Resource
                         ])
                             ->key('stocktakingImportActions')
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, $set, $get) => StocktakingProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         StocktakingProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')

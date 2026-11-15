@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\RawMaterialProducts;
 
 use App\Enums\ProductType;
+use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Resources\RawMaterialProducts\Pages\CreateRawMaterialProduct;
 use App\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
 use App\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
@@ -61,10 +62,8 @@ class RawMaterialProductResource extends Resource
                     ->label('اسم المادة الخام')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('barcode')
-                    ->label('الباركود')
-                    ->maxLength(255)
-                    ->placeholder('اختياري'),
+                ProductBarcodeFields::primary(),
+                ProductBarcodeFields::extra(),
                 Select::make('category_id')
                     ->label('الفئة')
                     ->options(Category::all()->pluck('name', 'id'))

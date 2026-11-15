@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ConsumableProducts;
 
 use App\Enums\ProductType;
 use App\Filament\Components\Forms\KitchenDisplayFields;
+use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
@@ -61,10 +62,8 @@ class ConsumableProductResource extends Resource
                     ->label('اسم المنتج الاستهلاكي')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('barcode')
-                    ->label('الباركود')
-                    ->maxLength(255)
-                    ->placeholder('اختياري'),
+                ProductBarcodeFields::primary(),
+                ProductBarcodeFields::extra(),
                 Select::make('category_id')
                     ->label('الفئة')
                     ->options(Category::query()->pluck('name', 'id'))

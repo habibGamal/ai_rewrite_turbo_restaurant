@@ -103,6 +103,17 @@ class Product extends Model
         return $this->belongsToMany(Printer::class);
     }
 
+    public function barcodes(): HasMany
+    {
+        return $this->hasMany(ProductBarcode::class);
+    }
+
+    /** Barcodes other than the primary one (which mirrors products.barcode). */
+    public function extraBarcodes(): HasMany
+    {
+        return $this->hasMany(ProductBarcode::class)->where('is_primary', false);
+    }
+
     public function inventoryItem(): HasOne
     {
         return $this->hasOne(InventoryItem::class);

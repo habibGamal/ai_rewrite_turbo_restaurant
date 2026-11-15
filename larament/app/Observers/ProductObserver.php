@@ -7,6 +7,7 @@ use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Services\Products\ProductBarcodeService;
 
 class ProductObserver
 {
@@ -58,6 +59,11 @@ class ProductObserver
     public function saved(Product $product): void
     {
         app(CostHistoryRecorder::class)->recordSaved($product);
+
+        if ($product->wasRecentlyCreated || $product->wasChanged('barcode')) {
+            app(ProductBarcodeService::class)->syncPrimary($product);
+        }
+
         // Auto-assign product_ref if not provided (fallback for mass assignment)
         if ($product->type !== ProductType::Manufactured) {
             $product->load('componentOf');
