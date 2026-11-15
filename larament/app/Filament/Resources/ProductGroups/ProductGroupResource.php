@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ProductGroups;
 use App\Filament\Resources\ProductGroups\Pages\CreateProductGroup;
 use App\Filament\Resources\ProductGroups\Pages\EditProductGroup;
 use App\Filament\Resources\ProductGroups\Pages\ListProductGroups;
+use App\Filament\Resources\ProductGroups\Pages\ProductGroupStock;
 use App\Filament\Resources\ProductGroups\RelationManagers\VariantsRelationManager;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -270,6 +271,7 @@ class ProductGroupResource extends Resource
             'index' => ListProductGroups::route('/'),
             'create' => CreateProductGroup::route('/create'),
             'edit' => EditProductGroup::route('/{record}/edit'),
+            'stock' => ProductGroupStock::route('/{record}/stock'),
         ];
     }
 }

@@ -28,6 +28,12 @@ class EditProductGroup extends EditRecord
     {
         return [
             $this->generateVariantsAction(),
+            Action::make('stock')
+                ->label('مصفوفة المخزون')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url(fn (ProductGroup $record): string => ProductGroupStock::getUrl(['record' => $record]))
+                ->visible(fn (ProductGroup $record): bool => $record->variants()->exists()),
             DeleteAction::make()
                 ->visible(fn (ProductGroup $record): bool => ! $record->variants()->exists()),
         ];
