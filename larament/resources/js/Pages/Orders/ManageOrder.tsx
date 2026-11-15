@@ -123,23 +123,27 @@ export default function ManageOrder({
     // Names of items already on the order still resolve after a type change hides their category.
     const products = productsForOrder(categories, order.type, true);
     const scannableProducts = productsForOrder(categories, order.type, false);
-    const initOrderItems: OrderItemData[] = order.items.map((orderItem) => ({
-        product_id: orderItem.product_id,
-        name:
-            products.find((product) => product.id === orderItem.product_id)
-                ?.name || "",
-        price: parseFloat(orderItem.price.toString()),
-        quantity: orderItem.quantity,
-        notes: orderItem.notes,
-        initial_quantity: orderItem.quantity,
-        item_discount: orderItem.item_discount || 0,
-        item_discount_type: orderItem.item_discount_type,
-        item_discount_percent: orderItem.item_discount_percent,
-        product: products.find(
-            (product) => product.id === orderItem.product_id
-        )!,
-        kitchen_status: orderItem.kitchen_status,
-    }));
+    // A product deactivated after it was added (e.g. a retired variant SKU) is no
+    // longer on the menu, so fall back to the order item's own product row.
+    const initOrderItems: OrderItemData[] = order.items.map((orderItem) => {
+        const product =
+            products.find((p) => p.id === orderItem.product_id) ??
+            orderItem.product;
+
+        return {
+            product_id: orderItem.product_id,
+            name: product?.name || "",
+            price: parseFloat(orderItem.price.toString()),
+            quantity: orderItem.quantity,
+            notes: orderItem.notes,
+            initial_quantity: orderItem.quantity,
+            item_discount: orderItem.item_discount || 0,
+            item_discount_type: orderItem.item_discount_type,
+            item_discount_percent: orderItem.item_discount_percent,
+            product: product!,
+            kitchen_status: orderItem.kitchen_status,
+        };
+    });
 
     const [orderItems, dispatch] = useReducer(orderItemsReducer, []);
     const [customerInfoSkip, setCustomerInfoSkip] = useState<boolean>(false);
