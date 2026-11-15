@@ -75,7 +75,7 @@ class ProductGroupGridService
 
                 // Without a filter on another axis a cell would hold several
                 // variants; only a single match is a cell.
-                $cells[$rowValue->id][$colValue?->id ?? 0] = $matches->count() === 1 ? $matches->first()['product'] : null;
+                $cells[$rowValue->id][$colValue === null ? 0 : $colValue->id] = $matches->count() === 1 ? $matches->first()['product'] : null;
             }
         }
 
@@ -128,7 +128,7 @@ class ProductGroupGridService
             ->get()
             ->map(fn (Product $product): array => [
                 'product' => $product,
-                'values' => $product->optionValues->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+                'values' => array_values($product->optionValues->pluck('id')->map(fn ($id): int => (int) $id)->all()),
             ]);
     }
 }

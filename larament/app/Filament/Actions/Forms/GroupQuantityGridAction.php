@@ -56,8 +56,8 @@ class GroupQuantityGridAction extends Action
                         ->afterStateUpdated(function (?string $state, Set $set): void {
                             $group = ProductGroup::query()->find($state);
                             $grid = $group ? app(ProductGroupGridService::class)->grid($group) : null;
-                            $set('row_option_id', $grid['row']?->id ?? null);
-                            $set('col_option_id', $grid['col']?->id ?? null);
+                            $set('row_option_id', $grid === null ? null : $grid['row']?->id);
+                            $set('col_option_id', $grid === null ? null : $grid['col']?->id);
                             $set('fixed', []);
                             $set('qty', []);
                             $set('cost', $group ? (float) $group->base_cost : null);
@@ -185,7 +185,7 @@ class GroupQuantityGridAction extends Action
         foreach ($grid['rows'] as $rowValue) {
             $cells = [];
             foreach ($grid['cols']->isEmpty() ? [null] : $grid['cols'] as $colValue) {
-                $product = $grid['cells'][$rowValue->id][$colValue?->id ?? 0] ?? null;
+                $product = $grid['cells'][$rowValue->id][$colValue === null ? 0 : $colValue->id] ?? null;
                 $label = $rowValue->value.($colValue ? ' / '.$colValue->value : '');
 
                 $cells[] = $product === null

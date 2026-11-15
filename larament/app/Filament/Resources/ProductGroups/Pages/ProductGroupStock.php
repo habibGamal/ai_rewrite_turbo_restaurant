@@ -4,7 +4,6 @@ namespace App\Filament\Resources\ProductGroups\Pages;
 
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Models\ProductGroup;
-use App\Models\ProductOption;
 use App\Models\Warehouse;
 use App\Services\Products\ProductGroupGridService;
 use Filament\Actions\Action;
@@ -37,10 +36,12 @@ class ProductGroupStock extends Page
 
     public function mount(int|string $record): void
     {
-        $this->record = $this->resolveRecord($record);
+        $group = $this->resolveRecord($record);
+        abort_unless($group instanceof ProductGroup, 404);
+        $this->record = $group;
         abort_unless(static::getResource()::canEdit($this->record), 403);
 
-        $grid = app(ProductGroupGridService::class)->grid($this->record);
+        $grid = app(ProductGroupGridService::class)->grid($group);
         $this->rowOptionId = $grid['row']?->id;
         $this->colOptionId = $grid['col']?->id;
     }
@@ -104,10 +105,5 @@ class ProductGroupStock extends Page
             'colTotals' => $colTotals,
             'total' => array_sum($rowTotals),
         ];
-    }
-
-    public function axisName(?ProductOption $option): string
-    {
-        return $option?->name ?? '';
     }
 }
