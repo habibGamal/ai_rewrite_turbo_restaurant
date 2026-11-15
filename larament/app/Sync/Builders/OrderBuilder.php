@@ -25,7 +25,7 @@ class OrderBuilder implements DocumentBuilder
     {
         /** @var Order|null $order */
         $order = Order::query()
-            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift', 'externalOrders.items', 'externalOrders.collections', 'equipmentLines'])
+            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift', 'externalOrders.items', 'externalOrders.collections', 'equipmentLines', 'fees'])
             ->where('uuid', $uuid)
             ->first();
 
@@ -128,6 +128,11 @@ class OrderBuilder implements DocumentBuilder
                     'collected_at' => Payload::ts($collection->getAttribute('created_at')),
                 ])->all(),
             ])->all(),
+            'fees' => $order->fees->map(fn ($fee) => [
+                'uuid' => (string) $fee->getAttribute('uuid'),
+                'name' => (string) $fee->getAttribute('name'),
+                'amount' => Payload::money($fee->getAttribute('amount')),
+            ])->values()->all(),
         ];
     }
 }

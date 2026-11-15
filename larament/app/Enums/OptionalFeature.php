@@ -97,7 +97,11 @@ enum OptionalFeature: string
                 'order.remove_equipment',
                 'view_equipment_report',
             ],
-            self::CUSTOM_FEES,
+            self::CUSTOM_FEES => [
+                'order.add_fees',
+                'order.remove_fees',
+                'view_custom_fees_report',
+            ],
             self::VARIANTS => [],
         };
     }

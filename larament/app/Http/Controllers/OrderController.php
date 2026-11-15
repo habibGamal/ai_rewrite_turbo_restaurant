@@ -34,6 +34,7 @@ use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderCompletionService;
 use App\Services\Orders\OrderEquipmentService;
+use App\Services\Orders\OrderFeeService;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\ReturnRules;
 use App\Services\PrintService;
@@ -334,6 +335,8 @@ class OrderController extends Controller
         // Get all regions for the dropdown
         $regions = Region::orderBy('name')->get();
         $outsourcedEnabled = app(FeatureService::class)->outsourcedOrdersEnabled();
+        $feeService = app(OrderFeeService::class);
+        $feesEnabled = app(FeatureService::class)->customFeesEnabled() && $feeService->orderAcceptsFees($order);
 
         return Inertia::render('Orders/ManageOrder', [
             'order' => $this->orderPayload($order, true),
@@ -357,6 +360,8 @@ class OrderController extends Controller
             'canAddExternalOrder' => $outsourcedEnabled && ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(GuestBill::class)->due($order),
             ...$this->equipmentProps($order),
+            'canAddFees' => $feesEnabled,
+            'feeSuggestions' => $feesEnabled ? $feeService->suggestions() : [],
             'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
         ]);
     }

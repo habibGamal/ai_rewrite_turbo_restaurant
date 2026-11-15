@@ -16,6 +16,7 @@ use App\Core\Listeners\BroadcastOrderCompleted;
 use App\Core\Listeners\BroadcastOrderCreated;
 use App\Core\Listeners\BroadcastOrderTypeChanged;
 use App\Core\Listeners\BroadcastPaymentProcessed;
+use App\Core\Orders\CustomFeesDisableBlocker;
 use App\Enums\OptionalFeature;
 use App\Services\FeatureService;
 use Illuminate\Support\Facades\Event;
@@ -48,6 +49,11 @@ class CoreServiceProvider extends ServiceProvider
                 OptionalFeature::EQUIPMENT,
                 fn (): array => $this->app->make(EquipmentDisableBlocker::class)(),
             );
+        });
+
+        // Custom fees cannot be switched off while an open order carries fee lines.
+        $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
+            $features->registerDisableBlocker(OptionalFeature::CUSTOM_FEES, new CustomFeesDisableBlocker);
         });
     }
 

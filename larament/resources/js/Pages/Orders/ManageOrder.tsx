@@ -21,6 +21,7 @@ import {
     ClockCircleOutlined,
     EditOutlined,
     PercentageOutlined,
+    PlusCircleOutlined,
     PrinterOutlined,
     RightOutlined,
     SaveOutlined,
@@ -52,6 +53,7 @@ import PaymentModal from "@/Components/Orders/PaymentModal";
 import GuestsCountModal from "@/Components/Orders/GuestsCountModal";
 import ExternalOrders from "@/Components/Orders/ExternalOrders";
 import OrderEquipment from "@/Components/Orders/OrderEquipment";
+import OrderFees from "@/Components/Orders/OrderFees";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
 import CanAccess from "@/Components/CanAccess";
@@ -78,6 +80,8 @@ export default function ManageOrder({
     sellers,
     guestDue,
     canAddExternalOrder: typeAllowsExternalOrder,
+    canAddFees: typeAllowsFees = false,
+    feeSuggestions = [],
     credit,
     equipmentLines = [],
     equipmentOptions = [],
@@ -179,6 +183,7 @@ export default function ManageOrder({
     const [isExternalOrderModalOpen, setIsExternalOrderModalOpen] =
         useState(false);
     const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+    const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
     const [payAfterGuests, setPayAfterGuests] = useState(false);
@@ -229,6 +234,8 @@ export default function ManageOrder({
         canEditEquipment &&
         !disableAllControls &&
         (equipmentOptions.length > 0 || equipmentLines.length > 0);
+    const canAddFees = typeAllowsFees && !disableAllControls;
+    const orderFees = order.fees ?? [];
     const showDriver = deliveryEnabled && (orderDisplay?.showDriver ?? false);
     const orderWithDisplay = {
         ...order,
@@ -457,6 +464,15 @@ export default function ManageOrder({
                   },
               ]
             : []),
+        ...(totals.fees > 0
+            ? [
+                  {
+                      key: "fees",
+                      label: "رسوم إضافية",
+                      children: formatCurrency(totals.fees),
+                  },
+              ]
+            : []),
         {
             key: "5",
             label: "الاجمالي",
@@ -593,6 +609,18 @@ export default function ManageOrder({
                                     إضافة معدات
                                 </Button>
                             )}
+                            {canAddFees && (
+                                <CanAccess permission="order.add_fees">
+                                    <Button
+                                        onClick={() => setIsFeesModalOpen(true)}
+                                        size="large"
+                                        className="col-span-2"
+                                        icon={<PlusCircleOutlined />}
+                                    >
+                                        رسوم إضافية
+                                    </Button>
+                                </CanAccess>
+                            )}
                             <CanAccess permission="order.apply_discount">
                                 <LoadingButton
                                     disabled={disableAllControls || hasItemDiscounts}
@@ -710,6 +738,17 @@ export default function ManageOrder({
                                 onClose={() => setIsEquipmentModalOpen(false)}
                                 beforeAction={(action) => save(action, () => {})}
                             />
+                            {(typeAllowsFees || orderFees.length > 0) && (
+                                <OrderFees
+                                    orderId={order.id}
+                                    fees={orderFees}
+                                    suggestions={feeSuggestions}
+                                    disabled={disableAllControls}
+                                    open={canAddFees && isFeesModalOpen}
+                                    onClose={() => setIsFeesModalOpen(false)}
+                                    beforeAction={(action) => save(action, () => {})}
+                                />
+                            )}
                             <Descriptions
                                 bordered
                                 title="الحساب"

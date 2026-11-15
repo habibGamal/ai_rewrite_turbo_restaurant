@@ -6,6 +6,8 @@ export interface OrderTotals {
   tax: number;
   service: number;
   discount: number;
+  /** Custom fee lines; added after service and discount, which stay on items. */
+  fees: number;
   total: number;
 }
 
@@ -71,6 +73,7 @@ export const calculateOrderTotals = (
     tax,
     service,
     discount,
+    fees,
     total,
   };
 };

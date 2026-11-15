@@ -233,6 +233,7 @@ it('computes day_summary totals from completed orders of shifts with that busine
         'cogs_total' => '250.00',
         'expenses_total' => '100.00',
         'revenues_total' => '0.00',
+        'fees_total' => '0.00',
         'waste_total' => '60.00',
         'refunds_total' => '0.00',
         'refunds_cash' => '0.00',

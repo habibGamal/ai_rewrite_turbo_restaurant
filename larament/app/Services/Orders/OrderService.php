@@ -63,7 +63,7 @@ class OrderService
     public function getOrderDetails(int $orderId): Order
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments', 'kitchenTicket.items']);
+        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments', 'kitchenTicket.items', 'fees']);
 
         return $order;
     }

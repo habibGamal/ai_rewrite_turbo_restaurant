@@ -78,6 +78,13 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ])
                 ->color('warning'),
 
+            ...(app(FeatureService::class)->customFeesEnabled() || abs((float) ($stats['fees'] ?? 0)) > 0.0001
+                ? [Stat::make('الرسوم الإضافية', number_format((float) ($stats['fees'] ?? 0), 2).' جنيه')
+                    ->description('رسوم إضافية ضمن المبيعات المكتملة')
+                    ->descriptionIcon('heroicon-m-plus-circle')
+                    ->color('success')]
+                : []),
+
             Stat::make('النقود المدفوعة كاش', number_format($stats['cashPayments'], 2).' جنيه')
                 ->description('المدفوعات النقدية')
                 ->descriptionIcon('heroicon-m-banknotes')

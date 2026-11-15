@@ -10,6 +10,7 @@ use App\Http\Controllers\Pos\CustomerDisplayController;
 use App\Http\Controllers\Pos\HeldSaleController;
 use App\Http\Controllers\Pos\InstantReturnController;
 use App\Http\Controllers\Pos\InstantSaleController;
+use App\Http\Controllers\Pos\OrderFeeController;
 use App\Http\Controllers\Pos\PosProductController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ProductLabelController;
@@ -62,6 +63,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
         Route::post('/{order}/equipment', [OrderEquipmentController::class, 'save'])->name('equipment.save');
         Route::delete('/{order}/equipment/{line}', [OrderEquipmentController::class, 'remove'])->name('equipment.remove');
+        Route::post('/{order}/fees', [OrderFeeController::class, 'store'])->name('fees.store');
+        Route::delete('/{order}/fees/{fee}', [OrderFeeController::class, 'destroy'])->name('fees.destroy');
     });
 
     // Quick operations routes
