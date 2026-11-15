@@ -29,6 +29,17 @@ All commands for larament must use: `cd D:/ai_rewrite_turbo_restaurant/larament;
 
 **Never run `php artisan serve`** — the user manages dev servers themselves.
 
+### Claude Code cloud sessions
+
+A fresh cloud container has no `vendor/`. The SessionStart hook (`.claude/hooks/session-start.js`) runs `larament/scripts/cloud-setup.sh` automatically once this lands on the branch the session starts from. If `larament/vendor` is missing (e.g. after checking out a branch), run it yourself:
+
+```bash
+bash larament/scripts/cloud-setup.sh   # ~30 s fresh, instant when vendor/ is current
+cd larament && php vendor/bin/pest --parallel
+```
+
+Why: the cloud proxy blocks GitHub zip downloads, so plain `composer install` falls back to full git clones of all ~200 packages (10+ min). `scripts/composer-prefetch.sh` shallow-fetches only the locked commit of each package into Composer's cache, then `composer install` loads everything from cache. Cloud images ship PHP 8.3, so the script passes `--ignore-platform-req=php` there (the lock targets 8.4; tests run fine on 8.3).
+
 ### manage_operations
 
 | Task | Command |
