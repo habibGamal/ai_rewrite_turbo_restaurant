@@ -19,12 +19,12 @@ beforeEach(function () {
     actingAs($this->admin);
 });
 
-it('lists the seven system order types', function () {
+it('lists the eight system order types', function () {
     livewire(ListOrderTypeRows::class)
         ->assertSuccessful()
         ->assertCanSeeTableRecords(OrderTypeRow::query()->orderBy('id')->get(), inOrder: true);
 
-    expect(OrderTypeRow::query()->where('is_system', true)->count())->toBe(7);
+    expect(OrderTypeRow::query()->where('is_system', true)->count())->toBe(8);
 });
 
 it('creates a custom counter order type', function () {

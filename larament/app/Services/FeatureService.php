@@ -10,6 +10,7 @@ use App\Exceptions\OrderException;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\FeatureFlagAudit;
+use App\Models\OrderTypeRow;
 use App\Models\Setting;
 use App\Modules\BusinessType;
 use App\Modules\Module;
@@ -23,6 +24,8 @@ use Spatie\Permission\Models\Role;
 
 class FeatureService
 {
+    public const INSTANT_SALE_TYPE = 'instant_sale';
+
     /**
      * Custom disable blocker callbacks keyed by feature value.
      *
@@ -509,6 +512,14 @@ class FeatureService
 
             if ($applyDefaultModules) {
                 $this->setModules($type->defaultModules(), $actorId);
+            }
+
+            // Instant sale is the default counter for every business except
+            // restaurants, which turn it on themselves for counter sales.
+            if ($old !== $type) {
+                OrderTypeRow::query()
+                    ->where('code', self::INSTANT_SALE_TYPE)
+                    ->update(['is_active' => $type !== BusinessType::RESTAURANT]);
             }
 
             Setting::invalidateCache();

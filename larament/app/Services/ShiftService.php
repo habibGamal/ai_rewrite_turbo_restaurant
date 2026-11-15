@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Models\HeldSale;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
@@ -144,6 +145,9 @@ class ShiftService
                 'end_at' => now(),
                 'closed' => true,
             ]);
+
+            // Carts parked on the instant-sale screen never became orders; they end with the shift.
+            HeldSale::query()->where('shift_id', $currentShift->id)->delete();
 
             return $currentShift->fresh();
         });

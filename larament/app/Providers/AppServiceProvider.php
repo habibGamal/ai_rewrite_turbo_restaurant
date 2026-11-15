@@ -33,6 +33,7 @@ use App\Orders\Behaviors\CompaniesBehavior;
 use App\Orders\Behaviors\CounterBehavior;
 use App\Orders\Behaviors\DeliveryBehavior;
 use App\Orders\Behaviors\DineInBehavior;
+use App\Orders\Behaviors\InstantSaleBehavior;
 use App\Orders\Behaviors\WebDeliveryBehavior;
 use App\Orders\Behaviors\WebTakeawayBehavior;
 use App\Orders\OrderBehaviorRegistry;
@@ -78,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
             $registry->register(OrderBehavior::COMPANIES->value, CompaniesBehavior::class, 'شركات');
             $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false);
             $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false);
+            $registry->register(OrderBehavior::INSTANT->value, InstantSaleBehavior::class, 'بيع مباشر', selectable: false);
 
             return $registry;
         });

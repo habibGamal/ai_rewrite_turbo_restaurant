@@ -151,19 +151,30 @@ class OrderService
                 throw new OrderException('الطلب غير متاح للإكمال');
             }
 
-            // Complete the order
-            $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
-
-            // Remove stock items after successful completion
-            $this->orderStockConversionService->removeStockWithRealCostsForCompletedOrder($completedOrder);
-            $completedOrder->load('items');
-            $completedOrder->update([
-                'profit' => $this->orderCalculationService->calculateProfit($completedOrder, (float) $completedOrder->total),
-            ]);
-            OrderCompleted::dispatch($completedOrder, $shouldPrint);
-
-            return $completedOrder;
+            return $this->finishCompletion($order, $paymentsData, $shouldPrint);
         });
+    }
+
+    /**
+     * The completion path shared by the order screen and instant sale: payments,
+     * OrderCompleting, status, stock removal with real costs, profit and
+     * OrderCompleted. Callers hold a transaction and the order's row lock.
+     *
+     * @param  array<string, mixed>  $paymentsData
+     */
+    public function finishCompletion(Order $order, array $paymentsData, bool $shouldPrint = false): Order
+    {
+        $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
+
+        // Remove stock items after successful completion
+        $this->orderStockConversionService->removeStockWithRealCostsForCompletedOrder($completedOrder);
+        $completedOrder->load('items');
+        $completedOrder->update([
+            'profit' => $this->orderCalculationService->calculateProfit($completedOrder, (float) $completedOrder->total),
+        ]);
+        OrderCompleted::dispatch($completedOrder, $shouldPrint);
+
+        return $completedOrder;
     }
 
     public function collectRemaining(int $orderId, Tenders $tenders): Order

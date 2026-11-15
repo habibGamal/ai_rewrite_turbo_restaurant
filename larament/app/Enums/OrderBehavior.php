@@ -10,4 +10,5 @@ enum OrderBehavior: string
     case COMPANIES = 'companies';
     case WEB_DELIVERY = 'web_delivery';
     case WEB_TAKEAWAY = 'web_takeaway';
+    case INSTANT = 'instant';
 }
