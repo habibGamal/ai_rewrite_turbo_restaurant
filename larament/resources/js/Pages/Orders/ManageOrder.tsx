@@ -53,6 +53,9 @@ import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/Print
 import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
+import IfModule from "@/Components/IfModule";
+import { useModule } from "@/hooks/useModule";
+import { useTerms } from "@/lib/wording";
 import axios from "axios";
 import { useSymbologyScanner } from "@use-symbology-scanner/react";
 import {
@@ -75,7 +78,11 @@ export default function ManageOrder({
 }: ManageOrderProps) {
     const { auth, features, receiptFooter } =
         usePage<ManageOrderProps>().props;
-    const outsourcedFeatureEnabled = Boolean(features?.outsourced_orders);
+    const restaurantEnabled = useModule("restaurant");
+    const deliveryEnabled = useModule("delivery");
+    const externalSellersEnabled = useModule("external_sellers");
+    const terms = useTerms();
+    const outsourcedFeatureEnabled = externalSellersEnabled && Boolean(features?.outsourced_orders);
     const user = auth.user;
     const { modal } = App.useApp();
     // The server resolves the code (extra barcodes, pack sizes, scale labels);
@@ -194,7 +201,7 @@ export default function ManageOrder({
         outsourcedFeatureEnabled &&
         !disableAllControls &&
         typeAllowsExternalOrder;
-    const showDriver = orderDisplay?.showDriver ?? false;
+    const showDriver = deliveryEnabled && (orderDisplay?.showDriver ?? false);
     const orderWithDisplay = {
         ...order,
         display: order.display ?? orderDisplay,
@@ -241,7 +248,7 @@ export default function ManageOrder({
     const handleSave = (finish: () => void) => {
         const changed = detectChangedItems(orderItems, initOrderItems);
 
-        if (changed.length > 0) {
+        if (restaurantEnabled && changed.length > 0) {
             setPendingChangedItems(changed);
             setIsPrintChangesModalOpen(true);
             finish();
@@ -271,9 +278,9 @@ export default function ManageOrder({
                         notes: item.notes || null,
                     })),
                 });
-                message.success("تم إرسال التغييرات للمطبخ بنجاح");
+                message.success(terms.changesSentToKitchen);
             } catch {
-                message.error("حدث خطأ أثناء إرسال التغييرات للمطبخ");
+                message.error(terms.sendChangesFailed);
             } finally {
                 setIsPrintChangesModalOpen(false);
             }
@@ -406,7 +413,7 @@ export default function ManageOrder({
                             separator=">"
                             items={breadcrumbItems}
                         />
-                        {order.kitchen_status && (
+                        {restaurantEnabled && order.kitchen_status && (
                             <Tooltip title={order.kitchen_status === 'ready' ? 'جاهز' : 'قيد التحضير'}>
                                 <Tag
                                     color={order.kitchen_status === 'ready' ? 'success' : 'processing'}
@@ -430,14 +437,16 @@ export default function ManageOrder({
                             >
                                 طباعة الفاتورة
                             </LoadingButton>
-                            <LoadingButton
-                                disabled={orderCancelled}
-                                onCustomClick={printInKitchen}
-                                size="large"
-                                icon={<PrinterOutlined />}
-                            >
-                                طباعة في المطبخ
-                            </LoadingButton>
+                            <IfModule name="restaurant">
+                                <LoadingButton
+                                    disabled={orderCancelled}
+                                    onCustomClick={printInKitchen}
+                                    size="large"
+                                    icon={<PrinterOutlined />}
+                                >
+                                    {terms.printInKitchen}
+                                </LoadingButton>
+                            </IfModule>
                             <Button
                                 onClick={() => setIsCustomerModalOpen(true)}
                                 disabled={orderCancelled}
@@ -576,6 +585,7 @@ export default function ManageOrder({
                                 />
                             ))}
                             <Divider />
+                            {externalSellersEnabled && (
                             <ExternalOrders
                                 orderId={order.id}
                                 orders={externalOrders}
@@ -592,6 +602,7 @@ export default function ManageOrder({
                                 onClose={() => setIsExternalOrderModalOpen(false)}
                                 beforeAction={(action) => save(action, () => {})}
                             />
+                            )}
                             <Descriptions
                                 bordered
                                 title="الحساب"
@@ -617,11 +628,13 @@ export default function ManageOrder({
                     onCancel={() => setIsCustomerModalOpen(false)}
                     order={order}
                 />
-                <DriverModal
-                    open={isDriverModalOpen}
-                    onCancel={() => setIsDriverModalOpen(false)}
-                    order={order}
-                />
+                <IfModule name="delivery">
+                    <DriverModal
+                        open={isDriverModalOpen}
+                        onCancel={() => setIsDriverModalOpen(false)}
+                        order={order}
+                    />
+                </IfModule>
                 <OrderNotesModal
                     open={isOrderNotesModalOpen}
                     onCancel={() => setIsOrderNotesModalOpen(false)}
@@ -646,20 +659,22 @@ export default function ManageOrder({
                     guestDue={externalOrders.length > 0 ? guestDue : undefined}
                     credit={credit}
                 />
-                <PrintInKitchenModal
-                    open={isPrintInKitchenModalOpen}
-                    onCancel={() => setIsPrintInKitchenModalOpen(false)}
-                    order={order}
-                    orderItems={orderItems}
-                />
-                <PrintChangesModal
-                    open={isPrintChangesModalOpen}
-                    onCancel={() => setIsPrintChangesModalOpen(false)}
-                    onSaveOnly={handleSaveOnly}
-                    onSaveAndPrint={handleSaveAndPrint}
-                    loading={isChangesLoading}
-                    changedItems={pendingChangedItems}
-                />
+                <IfModule name="restaurant">
+                    <PrintInKitchenModal
+                        open={isPrintInKitchenModalOpen}
+                        onCancel={() => setIsPrintInKitchenModalOpen(false)}
+                        order={order}
+                        orderItems={orderItems}
+                    />
+                    <PrintChangesModal
+                        open={isPrintChangesModalOpen}
+                        onCancel={() => setIsPrintChangesModalOpen(false)}
+                        onSaveOnly={handleSaveOnly}
+                        onSaveAndPrint={handleSaveAndPrint}
+                        loading={isChangesLoading}
+                        changedItems={pendingChangedItems}
+                    />
+                </IfModule>
             </div>
         </CashierLayout>
     );

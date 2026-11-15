@@ -3,6 +3,8 @@ import { Modal, Form, Radio, message, InputNumber, Spin } from 'antd';
 import { router } from '@inertiajs/react';
 import { ChangeTypeOption, Order } from '@/types';
 import useTableTypes from '@/hooks/useTableTypes';
+import { useModule } from '@/hooks/useModule';
+import { useTerms } from '@/lib/wording';
 
 interface ChangeOrderTypeModalProps {
     open: boolean;
@@ -17,7 +19,9 @@ export default function ChangeOrderTypeModal({ open, onCancel, order, options }:
     const { tableTypes, loading, error } = useTableTypes();
 
     const selectedOption = options.find((option) => option.code === selectedType);
-    const showTableFields = selectedOption?.showTable ?? false;
+    const restaurantEnabled = useModule('restaurant');
+    const terms = useTerms();
+    const showTableFields = restaurantEnabled && (selectedOption?.showTable ?? false);
 
     // Reset the selected type when the modal opens or the order changes
     useEffect(() => {
@@ -127,9 +131,9 @@ export default function ChangeOrderTypeModal({ open, onCancel, order, options }:
                         ) : (
                             <>
                                 <Form.Item
-                                    label="نوع الطاولة"
+                                    label={terms.tableType}
                                     name="tableType"
-                                    rules={[{ required: true, message: 'يرجى اختيار نوع الطاولة' }]}
+                                    rules={[{ required: true, message: terms.chooseTableType }]}
                                 >
                                     <Radio.Group
                                         options={tableOptions}
@@ -138,9 +142,9 @@ export default function ChangeOrderTypeModal({ open, onCancel, order, options }:
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="رقم الطاولة"
+                                    label={terms.tableNumber}
                                     name="tableNumber"
-                                    rules={[{ required: true, message: 'يرجى اختيار رقم الطاولة' }]}
+                                    rules={[{ required: true, message: terms.chooseTableNumber }]}
                                 >
                                     <InputNumber min={1} className="w-full" />
                                 </Form.Item>

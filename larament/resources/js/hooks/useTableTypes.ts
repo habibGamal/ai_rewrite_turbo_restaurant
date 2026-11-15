@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useModule } from '@/hooks/useModule';
+import { useTerms } from '@/lib/wording';
 
 export interface TableType {
     id: number | null;
@@ -8,14 +10,22 @@ export interface TableType {
     updated_at: string | null;
 }
 
+/**
+ * Table types come from the Restaurant module; without it there is nothing
+ * to fetch (the /table-types route is not served).
+ */
 export default function useTableTypes() {
+    const restaurantEnabled = useModule('restaurant');
+    const terms = useTerms();
     const [tableTypes, setTableTypes] = useState<TableType[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(restaurantEnabled);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchTableTypes();
-    }, []);
+        if (restaurantEnabled) {
+            fetchTableTypes();
+        }
+    }, [restaurantEnabled]);
 
     const fetchTableTypes = async () => {
         try {
@@ -26,13 +36,13 @@ export default function useTableTypes() {
             setTableTypes(response.data);
         } catch (err: any) {
             console.error('Error fetching table types:', err);
-            setError(err.response?.data?.error || 'حدث خطأ أثناء جلب أنواع الطاولات');
+            setError(err.response?.data?.error || terms.fetchTableTypesFailed);
 
             // Set default option if fetch fails
             setTableTypes([
                 {
                     id: null,
-                    name: 'صالة',
+                    name: terms.defaultTableType,
                     created_at: null,
                     updated_at: null,
                 }

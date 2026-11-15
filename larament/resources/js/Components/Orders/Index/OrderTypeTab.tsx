@@ -16,6 +16,8 @@ import {
 import { OrderCard } from "./OrderCard";
 import { OrderTimer } from "./OrderTimer";
 import type { CashierTab, Order, OrderDisplay } from "@/types";
+import IfModule from "@/Components/IfModule";
+import { useTerms } from "@/lib/wording";
 
 const webOrderStatus = (status: string) => {
     const statusConfig: Record<string, { color: string; text: string }> = {
@@ -36,6 +38,7 @@ interface OrderTypeTabProps {
 
 export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
     const tableModal = useModal();
+    const terms = useTerms();
 
     const presentation = tab.presentation!;
     const creation = presentation.creation;
@@ -64,7 +67,7 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
             presentation.body === "floor" &&
             tab.layout?.tables.some((table) => table.number === tableNumber)
         ) {
-            message.error("الطاولة موجودة في المخطط");
+            message.error(terms.tableAlreadyInLayout);
             return;
         }
         router.post(route("orders.store"), {
@@ -135,7 +138,9 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
 
         return (
             <div className="space-y-3" dir="rtl">
-                <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
+                <IfModule name="restaurant">
+                    <ChooseTableForm tableModal={tableModal} onFinish={makeNewOrder} />
+                </IfModule>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-5 bg-white border border-slate-200 rounded-lg px-4 h-10 text-sm font-medium text-slate-700">
@@ -176,7 +181,7 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                         onClick={() => tableModal.showModal()}
                         className="h-10 px-4 font-medium"
                     >
-                        طاولة خارج المخطط
+                        {terms.tableOutsideLayout}
                     </Button>
                 </div>
 
@@ -330,7 +335,7 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                 {outsideOccupied.length > 0 && (
                     <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5">
                         <div className="text-sm font-bold text-slate-700">
-                            طاولات خارج المخطط
+                            {terms.tablesOutsideLayout}
                         </div>
                         <div className="flex flex-wrap gap-2.5">
                             {outsideOccupied.map(([tableNumber, occupied]) => (
@@ -401,10 +406,12 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
     return (
         <div>
             {creation === "choose_table" && (
-                <ChooseTableForm
-                    tableModal={tableModal}
-                    onFinish={makeNewOrder}
-                />
+                <IfModule name="restaurant">
+                    <ChooseTableForm
+                        tableModal={tableModal}
+                        onFinish={makeNewOrder}
+                    />
+                </IfModule>
             )}
 
             <Row gutter={[16, 16]}>
@@ -417,7 +424,7 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                             type="primary"
                             size="large"
                         >
-                            <div className="mt-2">إضافة طاولة جديدة</div>
+                            <div className="mt-2">{terms.addTable}</div>
                         </Button>
                     </Col>
                 )}
@@ -450,7 +457,7 @@ export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                         order={order}
                         headerTitle={
                             presentation.cardTitle === "table"
-                                ? `طاولة ${order.dine_table_number || "غير محدد"}`
+                                ? `${terms.table} ${order.dine_table_number || "غير محدد"}`
                                 : `# طلب رقم ${order.order_number}`
                         }
                         subtitle={
