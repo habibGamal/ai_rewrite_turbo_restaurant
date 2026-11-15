@@ -8,6 +8,7 @@ use App\Models\ProductGroup;
 use App\Services\Products\ProductVariantService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Arr;
@@ -34,6 +35,24 @@ class EditProductGroup extends EditRecord
                 ->color('gray')
                 ->url(fn (ProductGroup $record): string => ProductGroupStock::getUrl(['record' => $record]))
                 ->visible(fn (ProductGroup $record): bool => $record->variants()->exists()),
+            Action::make('labels')
+                ->label('طباعة الملصقات')
+                ->icon('heroicon-o-qr-code')
+                ->color('gray')
+                ->visible(fn (ProductGroup $record): bool => $record->variants()->exists())
+                ->schema([
+                    Radio::make('copies')
+                        ->label('عدد الملصقات')
+                        ->options([
+                            'one' => 'ملصق واحد لكل صنف',
+                            'stock' => 'بعدد الكمية في المخزون',
+                        ])
+                        ->default('one')
+                        ->required(),
+                ])
+                ->action(function (array $data, ProductGroup $record): void {
+                    $this->js('window.open('.json_encode(route('labels.group', ['group' => $record, 'copies' => $data['copies']])).', \'_blank\')');
+                }),
             DeleteAction::make()
                 ->visible(fn (ProductGroup $record): bool => ! $record->variants()->exists()),
         ];
