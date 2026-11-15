@@ -15,6 +15,8 @@ use App\Sync\Builders\ProductBuilder;
 use App\Sync\Builders\ProductGroupBuilder;
 use App\Sync\Builders\PurchaseBuilder;
 use App\Sync\Builders\RecipeBuilder;
+use App\Sync\Builders\RevenueBuilder;
+use App\Sync\Builders\RevenueTypeBuilder;
 use App\Sync\Builders\ShiftBuilder;
 use App\Sync\Builders\StaffBuilder;
 use App\Sync\Builders\StocktakingBuilder;
@@ -47,6 +49,8 @@ class BuilderRegistry
             DocumentType::InventoryDay => app(InventoryDayBuilder::class),
             DocumentType::DaySummary => app(DaySummaryBuilder::class),
             DocumentType::AuditLog => app(AuditLogBuilder::class),
+            DocumentType::Revenue => app(RevenueBuilder::class),
+            DocumentType::RevenueType => app(RevenueTypeBuilder::class),
         };
     }
 }

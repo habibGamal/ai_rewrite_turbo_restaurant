@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\InventoryItemMovementDaily;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Revenue;
 use App\Models\Shift;
 use App\Models\Waste;
 use App\Services\Reports\ReturnsAggregates;
@@ -99,6 +100,10 @@ class DaySummaryBuilder implements DocumentBuilder
         // Refunds paid by the day's shifts, whatever day sold the order.
         $returns = app(ReturnsAggregates::class)->forShifts($shiftIds->all());
 
+        $revenuesTotal = (float) Revenue::query()
+            ->whereIn('shift_id', $shiftIds)
+            ->sum('amount');
+
         $wasteTotal = (float) Waste::query()
             ->whereDate('business_date', $date)
             ->whereNotNull('closed_at')
@@ -112,6 +117,7 @@ class DaySummaryBuilder implements DocumentBuilder
             'discount_total' => Payload::money($discountTotal),
             'cogs_total' => Payload::money($cogsTotal),
             'expenses_total' => Payload::money($expensesTotal),
+            'revenues_total' => Payload::money($revenuesTotal),
             'waste_total' => Payload::money($wasteTotal),
             'refunds_total' => Payload::money($returns['returnsAmount']),
             'refunds_cash' => Payload::money($returns['cashRefunds']),

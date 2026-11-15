@@ -53,6 +53,11 @@ class Shift extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function revenues(): HasMany
+    {
+        return $this->hasMany(Revenue::class);
+    }
+
     public function getIsActiveAttribute(): bool
     {
         return $this->end_at === null && ! $this->closed;

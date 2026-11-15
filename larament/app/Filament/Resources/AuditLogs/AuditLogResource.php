@@ -77,6 +77,7 @@ class AuditLogResource extends Resource
             'Order' => 'طلب',
             'OrderReturn' => 'مرتجع',
             'Revenue' => 'إيراد',
+            'RevenueType' => 'بند إيراد',
             'OrderFee' => 'رسوم طلب',
             'OrderEquipment' => 'معدات طلب',
             default => class_basename((string) $type),

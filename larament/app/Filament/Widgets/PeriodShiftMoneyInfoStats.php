@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -18,6 +19,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     use CreditReconciliationStats;
     use InteractsWithPageFilters;
+    use OtherRevenuesStats;
     use ReturnsStats;
 
     protected ShiftsReportService $shiftsReportService;
@@ -113,6 +115,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
 
+            ...$this->otherRevenuesStats($stats),
+
             ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['externalCash'] ?? 0)) > 0.0001
                 ? [Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه')]
                 : []),
@@ -120,11 +124,24 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ? [Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه')]
                 : []),
             Stat::make('النقدية المتاحة', number_format($stats['availableCash'], 2).' جنيه'),
-            Stat::make('صافي الربح', number_format($stats['netProfit'] - $stats['expenses'], 2).' جنيه')
-                ->description('الربح بعد المرتجعات والمصروفات')
-                ->descriptionIcon('heroicon-m-currency-dollar')
-                ->color($stats['netProfit'] - $stats['expenses'] >= 0 ? 'success' : 'danger'),
+            $this->netProfitStat($stats),
         ];
+    }
+
+    /**
+     * Net profit = order profit after returns + other revenues − expenses.
+     *
+     * @param  array<string, mixed>  $stats
+     */
+    private function netProfitStat(array $stats): Stat
+    {
+        $revenues = (float) ($stats['revenues'] ?? 0);
+        $net = (float) $stats['netProfit'] + $revenues - (float) $stats['expenses'];
+
+        return Stat::make('صافي الربح', number_format($net, 2).' جنيه')
+            ->description(abs($revenues) > 0.0001 ? 'الربح بعد المرتجعات + الإيرادات الأخرى − المصروفات' : 'الربح بعد المرتجعات والمصروفات')
+            ->descriptionIcon('heroicon-m-currency-dollar')
+            ->color($net >= 0 ? 'success' : 'danger');
     }
 
     private function getPeriodStats()

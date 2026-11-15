@@ -168,6 +168,7 @@ class ShiftsReportService
         $expenses = $shift->expenses()->sum('amount');
         $externalCash = (float) DB::table('external_order_collections')->where('shift_id', $shift->id)->where('method', 'cash')->sum('amount');
         $settlements = (float) DB::table('external_seller_settlements')->where('shift_id', $shift->id)->sum('amount');
+        $revenues = $this->revenueTotals([$shift->id]);
 
         // Refunds paid by this shift, whatever shift sold the order.
         $returns = app(ReturnsAggregates::class)->forShifts([$shift->id]);
@@ -186,12 +187,12 @@ class ShiftsReportService
             'cashPayments' => $cashPayments,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
-            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash - $settlements - $expenses - $returns['cashRefunds'],
+            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash + $revenues['cashRevenues'] - $settlements - $expenses - $returns['cashRefunds'],
             'cardPayments' => $cardPayments,
             'talabatCardPayments' => $talabatCardPayments,
             'avgReceiptValue' => $avgReceiptValue,
             'profitPercent' => $profitPercent,
-        ] + $this->netOfReturns((float) $sales, (float) $profit, $returns) + $returns + $this->creditReconciliation([$shift->id]);
+        ] + $this->netOfReturns((float) $sales, (float) $profit, $returns) + $returns + $revenues + $this->creditReconciliation([$shift->id]);
     }
 
     /**
@@ -232,6 +233,32 @@ class ShiftsReportService
             'uncollectedCreditCount' => (int) ($uncollected->orders_count ?? 0),
             'previousCollections' => round((float) ($collections->amount ?? 0), 2),
             'previousCollectionsCount' => (int) ($collections->orders_count ?? 0),
+        ];
+    }
+
+    /**
+     * Misc shift revenues (rows of the revenues table, never orders) for a set of
+     * shifts. Cash revenues are in the drawer, so they count in availableCash;
+     * card revenues are reported next to card payments.
+     *
+     * @param  QueryBuilder|array<int|string>  $shiftIds
+     * @return array{revenues: float, cashRevenues: float, cardRevenues: float}
+     */
+    public function revenueTotals(QueryBuilder|array $shiftIds): array
+    {
+        $row = DB::table('revenues')
+            ->whereIn('shift_id', $this->cloneScope($shiftIds))
+            ->selectRaw("COALESCE(SUM(CASE WHEN method = 'cash' THEN amount ELSE 0 END), 0) as cash_amount")
+            ->selectRaw("COALESCE(SUM(CASE WHEN method = 'card' THEN amount ELSE 0 END), 0) as card_amount")
+            ->first();
+
+        $cash = round((float) ($row->cash_amount ?? 0), 2);
+        $card = round((float) ($row->card_amount ?? 0), 2);
+
+        return [
+            'revenues' => round($cash + $card, 2),
+            'cashRevenues' => $cash,
+            'cardRevenues' => $card,
         ];
     }
 
@@ -293,6 +320,7 @@ class ShiftsReportService
         $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', clone $scope)->sum('amount');
         $startCash = (float) (clone $shiftsQuery)->sum('shifts.start_cash');
         $returns = app(ReturnsAggregates::class)->forShifts(clone $scope);
+        $revenues = $this->revenueTotals($scope);
         $totalStats = [
             'sales' => $ordersData->sales ?? 0,
             'profit' => $ordersData->profit ?? 0,
@@ -302,7 +330,7 @@ class ShiftsReportService
             'cashPayments' => $paymentsData->cash_payments ?? 0,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
-            'availableCash' => $startCash + (float) ($paymentsData->cash_payments ?? 0) + $externalCash - $settlements - (float) ($expensesData->expenses ?? 0) - $returns['cashRefunds'],
+            'availableCash' => $startCash + (float) ($paymentsData->cash_payments ?? 0) + $externalCash + $revenues['cashRevenues'] - $settlements - (float) ($expensesData->expenses ?? 0) - $returns['cashRefunds'],
             'cardPayments' => $paymentsData->card_payments ?? 0,
             'talabatCardPayments' => $paymentsData->talabat_card_payments ?? 0,
 
@@ -314,6 +342,7 @@ class ShiftsReportService
         return $totalStats
             + $this->netOfReturns((float) ($ordersData->sales ?? 0), (float) ($ordersData->profit ?? 0), $returns)
             + $returns
+            + $revenues
             + $this->creditReconciliation($scope);
     }
 

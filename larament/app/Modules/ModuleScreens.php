@@ -4,6 +4,7 @@ namespace App\Modules;
 
 use App\Enums\OptionalFeature;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
+use App\Filament\Resources\RevenueTypes\RevenueTypeResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -27,6 +28,7 @@ final class ModuleScreens
     {
         return [
             ProductGroupResource::class => OptionalFeature::VARIANTS,
+            RevenueTypeResource::class => OptionalFeature::REVENUES,
         ];
     }
 

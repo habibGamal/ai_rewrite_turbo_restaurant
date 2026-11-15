@@ -82,7 +82,12 @@ enum OptionalFeature: string
                 'update_external_sellers',
                 'delete_external_sellers',
             ],
-            self::REVENUES,
+            self::REVENUES => [
+                'view_revenue_types',
+                'create_revenue_types',
+                'update_revenue_types',
+                'delete_revenue_types',
+            ],
             self::CUSTOM_FEES,
             self::EQUIPMENT,
             self::VARIANTS => [],

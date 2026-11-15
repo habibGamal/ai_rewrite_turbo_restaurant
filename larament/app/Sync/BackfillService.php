@@ -128,6 +128,22 @@ class BackfillService
                 [$now]
             );
 
+            // Revenue Types
+            $total += DB::affectingStatement(
+                "INSERT INTO sync_outbox (doc_type, doc_uuid, doc_key, op, priority, occurred_at)
+                SELECT 'revenue_type', rt.uuid, NULL, 'upsert', 1, ?
+                FROM revenue_types rt
+                WHERE rt.uuid IS NOT NULL
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sync_outbox o
+                    WHERE o.doc_type = 'revenue_type'
+                      AND o.doc_uuid = rt.uuid
+                      AND o.sent_at IS NULL
+                      AND o.failed_at IS NULL
+                  )",
+                [$now]
+            );
+
             // Staff (Users)
             $total += DB::affectingStatement(
                 "INSERT INTO sync_outbox (doc_type, doc_uuid, doc_key, op, priority, occurred_at)
@@ -237,6 +253,24 @@ class BackfillService
                     SELECT 1 FROM sync_outbox so
                     WHERE so.doc_type = 'expense'
                       AND so.doc_uuid = e.uuid
+                      AND so.sent_at IS NULL
+                      AND so.failed_at IS NULL
+                  )",
+                [$now, $fromDate, $toDate]
+            );
+
+            // Revenues of those shifts
+            $total += DB::affectingStatement(
+                "INSERT INTO sync_outbox (doc_type, doc_uuid, doc_key, op, priority, occurred_at)
+                SELECT 'revenue', r.uuid, NULL, 'upsert', 1, ?
+                FROM revenues r
+                JOIN shifts s ON r.shift_id = s.id
+                WHERE r.uuid IS NOT NULL
+                  AND s.business_date >= ? AND s.business_date <= ?
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sync_outbox so
+                    WHERE so.doc_type = 'revenue'
+                      AND so.doc_uuid = r.uuid
                       AND so.sent_at IS NULL
                       AND so.failed_at IS NULL
                   )",

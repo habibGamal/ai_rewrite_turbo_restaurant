@@ -20,6 +20,8 @@ use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
+use App\Models\Revenue;
+use App\Models\RevenueType;
 use App\Models\Shift;
 use App\Models\Stocktaking;
 use App\Models\Supplier;
@@ -71,6 +73,7 @@ class SyncOutboxObserver
             OrderItem::class, Payment::class => $this->recordParentOrderIfFinal($model),
             Shift::class => Outbox::record(DocumentType::Shift, $this->getModelUuid($model)),
             Expense::class => Outbox::record(DocumentType::Expense, $this->getModelUuid($model)),
+            Revenue::class => Outbox::record(DocumentType::Revenue, $this->getModelUuid($model)),
             PurchaseInvoice::class => $model->closed_at !== null
                 ? Outbox::record(DocumentType::PurchaseInvoice, $this->getModelUuid($model))
                 : null,
@@ -87,6 +90,7 @@ class SyncOutboxObserver
             Category::class => Outbox::record(DocumentType::Category, $this->getModelUuid($model)),
             Supplier::class => Outbox::record(DocumentType::Supplier, $this->getModelUuid($model)),
             ExpenceType::class => Outbox::record(DocumentType::ExpenseType, $this->getModelUuid($model)),
+            RevenueType::class => Outbox::record(DocumentType::RevenueType, $this->getModelUuid($model)),
             // The vendor account never leaves the install.
             User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model)),
             ProductComponent::class => $this->handleProductComponentSaved($model),
@@ -132,6 +136,7 @@ class SyncOutboxObserver
             Order::class => $this->handleOrderDeleted($model),
             OrderItem::class, Payment::class => $this->recordParentOrderIfFinal($model),
             Expense::class => Outbox::record(DocumentType::Expense, $this->getModelUuid($model), 'delete'),
+            Revenue::class => Outbox::record(DocumentType::Revenue, $this->getModelUuid($model), 'delete'),
             PurchaseInvoice::class => $model->closed_at !== null
                 ? Outbox::record(DocumentType::PurchaseInvoice, $this->getModelUuid($model), 'delete')
                 : null,
@@ -148,6 +153,7 @@ class SyncOutboxObserver
             Category::class => Outbox::record(DocumentType::Category, $this->getModelUuid($model), 'delete'),
             Supplier::class => Outbox::record(DocumentType::Supplier, $this->getModelUuid($model), 'delete'),
             ExpenceType::class => Outbox::record(DocumentType::ExpenseType, $this->getModelUuid($model), 'delete'),
+            RevenueType::class => Outbox::record(DocumentType::RevenueType, $this->getModelUuid($model), 'delete'),
             User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model), 'delete'),
             ProductComponent::class => $this->handleProductComponentDeleted($model),
             ProductGroup::class => Outbox::record(DocumentType::ProductGroup, $this->getModelUuid($model), 'delete'),
