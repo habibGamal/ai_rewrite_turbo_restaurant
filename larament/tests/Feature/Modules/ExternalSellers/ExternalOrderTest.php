@@ -2,8 +2,8 @@
 
 use App\Enums\OrderStatus;
 use App\Exceptions\OrderException;
-use App\Filament\Pages\ExternalSellerAccounts;
-use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Models\ExternalSeller;
 use App\Models\InventoryItem;
 use App\Models\Order;
@@ -13,8 +13,8 @@ use App\Models\User;
 use App\Orders\GuestBill;
 use App\Orders\Tenders;
 use App\Services\InventoryDailyAggregationService;
-use App\Services\Orders\ExternalOrderService;
-use App\Services\Orders\ExternalSellerSettlementService;
+use App\Modules\ExternalSellers\Services\ExternalOrderService;
+use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftsReportService;
 use App\Sync\Builders\OrderBuilder;
@@ -354,9 +354,9 @@ it('creates seller products through the relation manager', function () {
     $user = User::factory()->admin()->create();
     $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
     $this->actingAs($user);
-    Livewire::test(\App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager::class, [
+    Livewire::test(\App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager::class, [
         'ownerRecord' => $seller,
-        'pageClass' => \App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller::class,
+        'pageClass' => \App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\EditExternalSeller::class,
     ])->callTableAction('create', data: ['name' => 'Sauce', 'price' => 12.5, 'is_active' => true])
         ->assertHasNoTableActionErrors();
     expect($seller->products()->where('name', 'Sauce')->exists())->toBeTrue();

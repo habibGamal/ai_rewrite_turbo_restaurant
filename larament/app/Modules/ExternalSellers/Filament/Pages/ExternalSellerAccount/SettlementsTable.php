@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Pages\ExternalSellerAccount;
+namespace App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount;
 
 use App\Models\ExternalSellerSettlement;
 use App\Services\FeatureService;

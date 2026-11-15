@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\ExternalSellers\Pages;
+namespace App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages;
 
-use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 

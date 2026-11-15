@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Modules\ExternalSellers\Filament\Pages;
 
 use App\Exceptions\OrderException;
 use App\Filament\Resources\Orders\OrderResource;
@@ -10,7 +10,7 @@ use App\Models\ExternalOrderItem;
 use App\Models\ExternalSeller;
 use App\Models\Shift;
 use App\Services\FeatureService;
-use App\Services\Orders\ExternalSellerSettlementService;
+use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;

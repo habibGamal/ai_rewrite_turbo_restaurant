@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\ExternalSellers\Http\Controllers;
+
+use App\Http\Controllers\Controller;
 
 use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Services\FeatureService;
-use App\Services\Orders\ExternalOrderService;
+use App\Modules\ExternalSellers\Services\ExternalOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

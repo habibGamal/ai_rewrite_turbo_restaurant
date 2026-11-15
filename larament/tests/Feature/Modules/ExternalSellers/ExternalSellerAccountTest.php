@@ -1,8 +1,8 @@
 <?php
 
-use App\Filament\Pages\ExternalSellerAccount;
-use App\Filament\Pages\ExternalSellerAccount\SettlementsTable;
-use App\Filament\Pages\ExternalSellerAccounts;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount\SettlementsTable;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\ExternalSellerSettlement;

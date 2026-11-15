@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Orders;
+namespace App\Modules\ExternalSellers\Services;
 
 use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;

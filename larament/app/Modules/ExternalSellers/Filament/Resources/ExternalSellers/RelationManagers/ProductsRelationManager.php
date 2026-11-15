@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\ExternalSellers\RelationManagers;
+namespace App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers;
 
 use App\Services\FeatureService;
 use Filament\Actions\CreateAction;

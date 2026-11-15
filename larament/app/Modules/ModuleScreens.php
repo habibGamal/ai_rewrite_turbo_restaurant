@@ -3,9 +3,6 @@
 namespace App\Modules;
 
 use App\Enums\OptionalFeature;
-use App\Filament\Pages\ExternalSellerAccount;
-use App\Filament\Pages\ExternalSellerAccounts;
-use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
@@ -15,35 +12,20 @@ use Filament\Resources\Pages\Page as ResourcePage;
  * out of the navigation and answers 404 on a direct URL (see
  * EnsureModuleScreenEnabled), never a "feature disabled" message.
  *
- * A screen under app/Modules/<Module>/ belongs to that module by its
- * namespace. map() lists the screens still outside the modules; Phase 4
- * empties it as each module's screens move in.
+ * A screen belongs to a module by its namespace: everything under
+ * app/Modules/<Module>/ is that module's. Screens of core stay visible.
  */
 final class ModuleScreens
 {
     /**
-     * @return array<class-string, Module>
-     */
-    public static function map(): array
-    {
-        return [
-        ];
-    }
-
-    /**
      * Screens switched by a vendor-owned optional feature rather than (or
      * on top of) a module; they also answer 404 while the feature is off.
-     * External sellers keep OUTSOURCED_ORDERS (vendor-owned) until Phase 4
-     * folds that flag into Module::EXTERNAL_SELLERS.
      *
      * @return array<class-string, OptionalFeature>
      */
     public static function featureMap(): array
     {
         return [
-            ExternalSellerResource::class => OptionalFeature::OUTSOURCED_ORDERS,
-            ExternalSellerAccounts::class => OptionalFeature::OUTSOURCED_ORDERS,
-            ExternalSellerAccount::class => OptionalFeature::OUTSOURCED_ORDERS,
             ProductGroupResource::class => OptionalFeature::VARIANTS,
         ];
     }
@@ -53,18 +35,8 @@ final class ModuleScreens
      */
     public static function moduleFor(string $class): ?Module
     {
-        $map = self::map();
-
-        if (isset($map[$class])) {
-            return $map[$class];
-        }
-
         if (is_subclass_of($class, ResourcePage::class)) {
             $class = $class::getResource();
-
-            if (isset($map[$class])) {
-                return $map[$class];
-            }
         }
 
         return self::moduleOfNamespace($class);

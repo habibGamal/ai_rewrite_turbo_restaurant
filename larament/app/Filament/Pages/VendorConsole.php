@@ -18,6 +18,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -82,7 +83,7 @@ class VendorConsole extends Page implements HasForms, HasTable
             'modules' => array_map(fn (Module $module): string => $module->value, $features->enabledModules()),
         ];
 
-        foreach (OptionalFeature::cases() as $feature) {
+        foreach (OptionalFeature::standalone() as $feature) {
             $state['features'][$feature->value] = $features->isEnabled($feature);
         }
 
@@ -112,10 +113,15 @@ class VendorConsole extends Page implements HasForms, HasTable
                             ->native(false)
                             ->disabled($locked)
                             ->live()
-                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
                                 $type = BusinessType::tryFrom((string) $state);
                                 if ($type !== null) {
-                                    $set('modules', array_map(fn (Module $module): string => $module->value, $type->defaultModules()));
+                                    // External sellers is never a default; keep the current choice.
+                                    $modules = array_map(fn (Module $module): string => $module->value, $type->defaultModules());
+                                    if (in_array(Module::EXTERNAL_SELLERS->value, (array) $get('modules'), true)) {
+                                        $modules[] = Module::EXTERNAL_SELLERS->value;
+                                    }
+                                    $set('modules', $modules);
                                 }
                             }),
                     ]),
@@ -141,7 +147,7 @@ class VendorConsole extends Page implements HasForms, HasTable
                                 ->label($feature->label())
                                 ->helperText($feature->helperText())
                                 ->inline(false),
-                            OptionalFeature::cases(),
+                            OptionalFeature::standalone(),
                         )),
                     ]),
             ])
@@ -166,7 +172,7 @@ class VendorConsole extends Page implements HasForms, HasTable
                 $service->setModules($data['modules'] ?? [], $actorId);
 
                 $featureStates = [];
-                foreach (OptionalFeature::cases() as $feature) {
+                foreach (OptionalFeature::standalone() as $feature) {
                     $featureStates[$feature->value] = (bool) ($data['features'][$feature->value] ?? false);
                 }
                 $service->updateFeatures($featureStates, $actorId);
@@ -184,7 +190,13 @@ class VendorConsole extends Page implements HasForms, HasTable
                 if (str_starts_with($key, 'data.')) {
                     $key = substr($key, 5);
                 }
-                $path = OptionalFeature::tryFrom($key) !== null ? 'data.features.'.$key : 'data.'.(str_starts_with($key, 'modules') ? 'modules' : $key);
+                $feature = OptionalFeature::tryFrom($key);
+                $path = match (true) {
+                    // A module's own switch (outsourced orders) reports on the module list.
+                    $feature?->module() !== null, str_starts_with($key, 'modules') => 'data.modules',
+                    $feature !== null => 'data.features.'.$key,
+                    default => 'data.'.$key,
+                };
                 $errors[$path] = $messages;
             }
 

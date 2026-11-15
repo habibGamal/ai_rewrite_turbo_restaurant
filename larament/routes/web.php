@@ -2,7 +2,6 @@
 
 use App\Events\TestEvent;
 use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\ExternalOrderController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
 use App\Http\Controllers\OrderController;
@@ -46,9 +45,6 @@ Route::middleware('auth')->group(function () {
     Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access', 'order.tab'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
-        Route::post('/{order}/external', [ExternalOrderController::class, 'save'])->name('external.save');
-        Route::delete('/{order}/external/{external}/items/{item}', [ExternalOrderController::class, 'removeLine'])->name('external.removeLine');
-        Route::post('/{order}/external/{external}/fulfill', [ExternalOrderController::class, 'fulfill'])->name('external.fulfill');
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
         Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
         Route::post('/complete-order/{order}', [OrderController::class, 'completeOrder'])->name('complete');

@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Filament\Resources\ExternalSellers;
+namespace App\Modules\ExternalSellers\Filament\Resources\ExternalSellers;
 
-use App\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
-use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
-use App\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
-use App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Models\ExternalSeller;
 use App\Modules\ModuleScreens;
 use App\Services\FeatureService;

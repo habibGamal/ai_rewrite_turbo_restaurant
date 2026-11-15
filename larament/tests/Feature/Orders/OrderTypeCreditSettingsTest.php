@@ -11,9 +11,9 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\User;
+use App\Modules\ExternalSellers\Services\ExternalOrderService;
 use App\Orders\OrderTypeCatalog;
 use App\Repositories\OrderRepository;
-use App\Services\Orders\ExternalOrderService;
 use App\Services\Orders\OrderService;
 use Inertia\Testing\AssertableInertia as Assert;
 
