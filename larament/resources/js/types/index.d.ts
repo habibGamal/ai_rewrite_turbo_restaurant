@@ -157,7 +157,7 @@ export interface InstantCartDiscount {
 
 export interface InstantLastSale {
   id: number;
-  order_number: string | number;
+  order_number: number;
   total: number;
   change: number;
 }
@@ -171,7 +171,7 @@ export interface InstantTabPayload {
     allow_pay_later: boolean;
     require_customer_for_credit: boolean;
   };
-  can: { discount: boolean; changeItems: boolean };
+  can: { discount: boolean; changeItems: boolean; returns?: boolean };
 }
 
 export interface CashierTab {
