@@ -15,6 +15,7 @@ use App\Filament\Resources\KitchenStations\KitchenStationResource;
 use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
 use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
 use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
+use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RawMaterialProducts\RawMaterialProductResource;
 use App\Filament\Resources\Regions\RegionResource;
 use App\Filament\Resources\TableTypes\TableTypeResource;
@@ -56,7 +57,8 @@ final class ModuleScreens
     }
 
     /**
-     * Screens still switched by an optional feature rather than a module.
+     * Screens switched by a vendor-owned optional feature rather than (or
+     * on top of) a module; they also answer 404 while the feature is off.
      * External sellers keep OUTSOURCED_ORDERS (vendor-owned) until Phase 4
      * folds that flag into Module::EXTERNAL_SELLERS.
      *
@@ -68,6 +70,7 @@ final class ModuleScreens
             ExternalSellerResource::class => OptionalFeature::OUTSOURCED_ORDERS,
             ExternalSellerAccounts::class => OptionalFeature::OUTSOURCED_ORDERS,
             ExternalSellerAccount::class => OptionalFeature::OUTSOURCED_ORDERS,
+            ProductGroupResource::class => OptionalFeature::VARIANTS,
         ];
     }
 
