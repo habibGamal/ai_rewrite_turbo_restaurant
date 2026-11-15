@@ -9,6 +9,7 @@ use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -152,80 +153,97 @@ class OrderReturnService
      */
     private function validateReturnItems(Order $order, array $returnItems): void
     {
-        $returned = $order->returns->flatMap->items;
+        // Earlier returns plus the lines already checked in this request, so two
+        // lines on the same item, fee or equipment cannot over-refund it.
+        $returned = collect($order->returns->flatMap->items->all());
 
         foreach ($returnItems as $item) {
-            if (isset($item['order_fee_id'], $item['order_equipment_id']) || (isset($item['order_item_id']) && ! self::isItemLine($item))) {
-                throw new Exception('سطر المرتجع يجب أن يشير إلى صنف أو رسوم أو معدة واحدة فقط');
+            $this->validateReturnLine($order, $item, $returned);
+            $returned->push([
+                'order_item_id' => self::isItemLine($item) ? ($item['order_item_id'] ?? null) : null,
+                'order_fee_id' => $item['order_fee_id'] ?? null,
+                'order_equipment_id' => $item['order_equipment_id'] ?? null,
+                'quantity' => isset($item['order_fee_id']) ? 0 : (float) ($item['quantity'] ?? 0),
+                'refund_amount' => (float) ($item['refund_amount'] ?? 0),
+            ]);
+        }
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $returned
+     */
+    private function validateReturnLine(Order $order, array $item, Collection $returned): void
+    {
+        if (isset($item['order_fee_id'], $item['order_equipment_id']) || (isset($item['order_item_id']) && ! self::isItemLine($item))) {
+            throw new Exception('سطر المرتجع يجب أن يشير إلى صنف أو رسوم أو معدة واحدة فقط');
+        }
+
+        if ((float) ($item['refund_amount'] ?? 0) < 0) {
+            throw new Exception('مبلغ الاسترجاع يجب أن يكون موجباً');
+        }
+
+        if (isset($item['order_fee_id'])) {
+            $fee = $order->fees->firstWhere('id', $item['order_fee_id']);
+            if (! $fee) {
+                throw new Exception('الرسوم غير موجودة في هذا الطلب');
             }
 
-            if ((float) ($item['refund_amount'] ?? 0) < 0) {
-                throw new Exception('مبلغ الاسترجاع يجب أن يكون موجباً');
+            $left = round((float) $fee->amount - (float) $returned->where('order_fee_id', $fee->id)->sum('refund_amount'), 2);
+            $amount = round((float) $item['refund_amount'], 2);
+            if ($amount <= 0) {
+                throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» يجب أن يكون أكبر من صفر");
+            }
+            if ($amount > $left + 0.001) {
+                throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$amount}");
             }
 
-            if (isset($item['order_fee_id'])) {
-                $fee = $order->fees->firstWhere('id', $item['order_fee_id']);
-                if (! $fee) {
-                    throw new Exception('الرسوم غير موجودة في هذا الطلب');
-                }
+            return;
+        }
 
-                $left = round((float) $fee->amount - (float) $returned->where('order_fee_id', $fee->id)->sum('refund_amount'), 2);
-                $amount = round((float) $item['refund_amount'], 2);
-                if ($amount <= 0) {
-                    throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» يجب أن يكون أكبر من صفر");
-                }
-                if ($amount > $left + 0.001) {
-                    throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$amount}");
-                }
-
-                continue;
+        if (isset($item['order_equipment_id'])) {
+            $line = $order->equipmentLines->firstWhere('id', $item['order_equipment_id']);
+            if (! $line) {
+                throw new Exception('المعدة غير موجودة في هذا الطلب');
             }
 
-            if (isset($item['order_equipment_id'])) {
-                $line = $order->equipmentLines->firstWhere('id', $item['order_equipment_id']);
-                if (! $line) {
-                    throw new Exception('المعدة غير موجودة في هذا الطلب');
-                }
-
-                $quantity = (float) ($item['quantity'] ?? 0);
-                $left = (int) $line->quantity - (float) $returned->where('order_equipment_id', $line->id)->sum('quantity');
-                if ($quantity <= 0 || floor($quantity) !== $quantity) {
-                    throw new Exception("كمية المعدة «{$line->name}» يجب أن تكون عدداً صحيحاً أكبر من صفر");
-                }
-                if ($quantity > $left) {
-                    throw new Exception("الكمية المطلوب إرجاعها للمعدة «{$line->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$quantity}");
-                }
-                $max = round($quantity * (float) $line->unit_price, 2);
-                if ((float) $item['refund_amount'] > $max + 0.001) {
-                    throw new Exception("مبلغ استرجاع المعدة «{$line->name}» أكبر من قيمتها ({$max})");
-                }
-
-                continue;
+            $quantity = (float) ($item['quantity'] ?? 0);
+            $left = (int) $line->quantity - (float) $returned->where('order_equipment_id', $line->id)->sum('quantity');
+            if ($quantity <= 0 || floor($quantity) !== $quantity) {
+                throw new Exception("كمية المعدة «{$line->name}» يجب أن تكون عدداً صحيحاً أكبر من صفر");
+            }
+            if ($quantity > $left) {
+                throw new Exception("الكمية المطلوب إرجاعها للمعدة «{$line->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$quantity}");
+            }
+            $max = round($quantity * (float) $line->unit_price, 2);
+            if ((float) $item['refund_amount'] > $max + 0.001) {
+                throw new Exception("مبلغ استرجاع المعدة «{$line->name}» أكبر من قيمتها ({$max})");
             }
 
-            $orderItem = $order->items->firstWhere('id', $item['order_item_id'] ?? null);
+            return;
+        }
 
-            if (! $orderItem) {
-                throw new Exception('صنف الطلب غير موجود');
-            }
+        $orderItem = $order->items->firstWhere('id', $item['order_item_id'] ?? null);
 
-            // Calculate already returned quantity
-            $alreadyReturned = $returned
-                ->where('order_item_id', $orderItem->id)
-                ->sum('quantity');
+        if (! $orderItem) {
+            throw new Exception('صنف الطلب غير موجود');
+        }
 
-            $availableForReturn = $orderItem->quantity - $alreadyReturned;
+        // Calculate already returned quantity
+        $alreadyReturned = $returned
+            ->where('order_item_id', $orderItem->id)
+            ->sum('quantity');
 
-            if ($item['quantity'] > $availableForReturn) {
-                throw new Exception(
-                    "الكمية المطلوب إرجاعها للصنف {$orderItem->product->name} أكبر من المتاح. ".
-                    "المتاح: {$availableForReturn}, المطلوب: {$item['quantity']}"
-                );
-            }
+        $availableForReturn = $orderItem->quantity - $alreadyReturned;
 
-            if ($item['quantity'] <= 0) {
-                throw new Exception('الكمية يجب أن تكون أكبر من صفر');
-            }
+        if ($item['quantity'] > $availableForReturn) {
+            throw new Exception(
+                "الكمية المطلوب إرجاعها للصنف {$orderItem->product->name} أكبر من المتاح. ".
+                "المتاح: {$availableForReturn}, المطلوب: {$item['quantity']}"
+            );
+        }
+
+        if ($item['quantity'] <= 0) {
+            throw new Exception('الكمية يجب أن تكون أكبر من صفر');
         }
     }
 

@@ -236,3 +236,17 @@ it('refunds a fee and an equipment use from the admin create-return page', funct
     expect((float) $return->total_refund)->toBe(80.0)
         ->and($return->items->map->kind()->sort()->values()->all())->toBe(['equipment', 'fee']);
 });
+
+it('does not let two lines in one return over-refund the same fee or equipment', function () {
+    expect(fn () => refundCharges([
+        ['order_fee_id' => $this->feeLine->id, 'refund_amount' => 20],
+        ['order_fee_id' => $this->feeLine->id, 'refund_amount' => 20],
+    ]))->toThrow(Exception::class, 'أكبر من المتاح');
+
+    expect(fn () => refundCharges([
+        ['order_equipment_id' => $this->equipmentLine->id, 'quantity' => 2, 'refund_amount' => 100],
+        ['order_equipment_id' => $this->equipmentLine->id, 'quantity' => 1, 'refund_amount' => 50],
+    ]))->toThrow(Exception::class, 'أكبر من المتاح');
+
+    expect($this->order->fresh()->returns()->count())->toBe(0);
+});
