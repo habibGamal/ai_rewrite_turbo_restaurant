@@ -29,7 +29,9 @@ class ReturnsReportStats extends BaseWidget
                 ->color('primary'),
 
             Stat::make('قيمة المرتجعات', number_format($stats['returnsAmount'], 2).' جنيه')
-                ->description('أثر على الربح '.number_format($stats['returnsProfitImpact'], 2).' جنيه')
+                ->description($stats['feesRefunds'] > 0 || $stats['equipmentRefunds'] > 0
+                    ? 'أصناف '.number_format($stats['itemsRefunds'], 2).' · رسوم '.number_format($stats['feesRefunds'], 2).' · معدات '.number_format($stats['equipmentRefunds'], 2)
+                    : 'أثر على الربح '.number_format($stats['returnsProfitImpact'], 2).' جنيه')
                 ->descriptionIcon('heroicon-m-arrow-uturn-left')
                 ->color('danger'),
 

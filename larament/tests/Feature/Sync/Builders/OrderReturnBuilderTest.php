@@ -70,7 +70,10 @@ it('builds an order return snapshot with items and refunds', function () {
         'is_exchange' => false,
         'items' => [
             [
+                'kind' => 'item',
                 'order_item_uuid' => $orderItem->uuid,
+                'order_fee_uuid' => null,
+                'order_equipment_uuid' => null,
                 'quantity' => '2.000',
                 'refund_amount' => '150.00',
                 'restocked' => true,

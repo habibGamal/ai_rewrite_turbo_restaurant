@@ -24,7 +24,15 @@ class OrderReturnService
      * A line goes back to stock unless $reverseStock is false or the line says
      * 'restocked' => false (damaged: it already left stock at sale, so no movement).
      *
-     * @param  array  $returnItems  [['order_item_id' => int, 'quantity' => float, 'refund_amount' => float, 'restocked' => ?bool], ...]
+     * A line is one of:
+     *  - an item: ['order_item_id' => int, 'quantity' => float, 'refund_amount' => float, 'restocked' => ?bool]
+     *  - a custom fee, refunded by amount (in full or in part): ['order_fee_id' => int, 'refund_amount' => float]
+     *  - an equipment line, by quantity, the refund at most qty × unit price:
+     *    ['order_equipment_id' => int, 'quantity' => int, 'refund_amount' => float]
+     * Fee and equipment lines never move stock, and equipment cost stays on the
+     * order (it was consumed).
+     *
+     * @param  array  $returnItems  lines as above
      * @param  array  $refundDistribution  [['method' => string, 'amount' => float], ...]
      *
      * @throws Exception
@@ -43,15 +51,23 @@ class OrderReturnService
             DB::beginTransaction();
 
             // Load order with items and previous returns
-            $order->load(['items', 'returns.items']);
+            $order->load(['items', 'fees', 'equipmentLines', 'returns.items']);
+
+            if ($returnItems === []) {
+                throw new Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
+            }
 
             // Validate return items
             $this->validateReturnItems($order, $returnItems);
 
-            $returnItems = array_map(fn (array $item): array => [
-                ...$item,
-                'restocked' => $reverseStock && ($item['restocked'] ?? true),
-            ], $returnItems);
+            $returnItems = array_map(fn (array $item): array => self::isItemLine($item)
+                ? [...$item, 'restocked' => $reverseStock && ($item['restocked'] ?? true)]
+                : [
+                    ...$item,
+                    // A fee is refunded by amount only; quantity stays 0.
+                    'quantity' => isset($item['order_fee_id']) ? 0 : $item['quantity'],
+                    'restocked' => false,
+                ], $returnItems);
             $anyRestocked = collect($returnItems)->contains('restocked', true);
 
             // Calculate total refund
@@ -74,7 +90,9 @@ class OrderReturnService
             foreach ($returnItems as $item) {
                 OrderReturnItem::create([
                     'order_return_id' => $orderReturn->id,
-                    'order_item_id' => $item['order_item_id'],
+                    'order_item_id' => $item['order_item_id'] ?? null,
+                    'order_fee_id' => $item['order_fee_id'] ?? null,
+                    'order_equipment_id' => $item['order_equipment_id'] ?? null,
                     'quantity' => $item['quantity'],
                     'refund_amount' => $item['refund_amount'],
                     'restocked' => $item['restocked'],
@@ -91,7 +109,7 @@ class OrderReturnService
             }
 
             // Put the restocked lines back; damaged lines move no stock.
-            $restockedItems = array_values(array_filter($returnItems, fn (array $item): bool => $item['restocked']));
+            $restockedItems = array_values(array_filter($returnItems, fn (array $item): bool => self::isItemLine($item) && $item['restocked']));
             if ($restockedItems !== []) {
                 $this->reverseStockForReturnedItems($order, $restockedItems);
             }
@@ -123,20 +141,76 @@ class OrderReturnService
         }
     }
 
+    private static function isItemLine(array $item): bool
+    {
+        return ! isset($item['order_fee_id']) && ! isset($item['order_equipment_id']);
+    }
+
     /**
-     * Validate return items against available quantities
+     * Validate return lines against what is left on each item, fee and
+     * equipment line.
      */
     private function validateReturnItems(Order $order, array $returnItems): void
     {
+        $returned = $order->returns->flatMap->items;
+
         foreach ($returnItems as $item) {
-            $orderItem = $order->items->firstWhere('id', $item['order_item_id']);
+            if (isset($item['order_fee_id'], $item['order_equipment_id']) || (isset($item['order_item_id']) && ! self::isItemLine($item))) {
+                throw new Exception('سطر المرتجع يجب أن يشير إلى صنف أو رسوم أو معدة واحدة فقط');
+            }
+
+            if ((float) ($item['refund_amount'] ?? 0) < 0) {
+                throw new Exception('مبلغ الاسترجاع يجب أن يكون موجباً');
+            }
+
+            if (isset($item['order_fee_id'])) {
+                $fee = $order->fees->firstWhere('id', $item['order_fee_id']);
+                if (! $fee) {
+                    throw new Exception('الرسوم غير موجودة في هذا الطلب');
+                }
+
+                $left = round((float) $fee->amount - (float) $returned->where('order_fee_id', $fee->id)->sum('refund_amount'), 2);
+                $amount = round((float) $item['refund_amount'], 2);
+                if ($amount <= 0) {
+                    throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» يجب أن يكون أكبر من صفر");
+                }
+                if ($amount > $left + 0.001) {
+                    throw new Exception("مبلغ استرجاع الرسوم «{$fee->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$amount}");
+                }
+
+                continue;
+            }
+
+            if (isset($item['order_equipment_id'])) {
+                $line = $order->equipmentLines->firstWhere('id', $item['order_equipment_id']);
+                if (! $line) {
+                    throw new Exception('المعدة غير موجودة في هذا الطلب');
+                }
+
+                $quantity = (float) ($item['quantity'] ?? 0);
+                $left = (int) $line->quantity - (float) $returned->where('order_equipment_id', $line->id)->sum('quantity');
+                if ($quantity <= 0 || floor($quantity) !== $quantity) {
+                    throw new Exception("كمية المعدة «{$line->name}» يجب أن تكون عدداً صحيحاً أكبر من صفر");
+                }
+                if ($quantity > $left) {
+                    throw new Exception("الكمية المطلوب إرجاعها للمعدة «{$line->name}» أكبر من المتاح. المتاح: {$left}, المطلوب: {$quantity}");
+                }
+                $max = round($quantity * (float) $line->unit_price, 2);
+                if ((float) $item['refund_amount'] > $max + 0.001) {
+                    throw new Exception("مبلغ استرجاع المعدة «{$line->name}» أكبر من قيمتها ({$max})");
+                }
+
+                continue;
+            }
+
+            $orderItem = $order->items->firstWhere('id', $item['order_item_id'] ?? null);
 
             if (! $orderItem) {
                 throw new Exception('صنف الطلب غير موجود');
             }
 
             // Calculate already returned quantity
-            $alreadyReturned = $order->returns->flatMap->items
+            $alreadyReturned = $returned
                 ->where('order_item_id', $orderItem->id)
                 ->sum('quantity');
 
@@ -151,10 +225,6 @@ class OrderReturnService
 
             if ($item['quantity'] <= 0) {
                 throw new Exception('الكمية يجب أن تكون أكبر من صفر');
-            }
-
-            if ($item['refund_amount'] < 0) {
-                throw new Exception('مبلغ الاسترجاع يجب أن يكون موجباً');
             }
         }
     }
@@ -207,24 +277,51 @@ class OrderReturnService
     }
 
     /**
-     * Update order return status based on returned quantities
+     * Update order return status: FULL only when every item, fee and
+     * equipment line is fully refunded.
      */
     private function updateOrderReturnStatus(Order $order): void
     {
-        $order->load(['items', 'returns.items']);
+        $order->load(['items', 'fees', 'equipmentLines', 'returns.items']);
+        $returned = $order->returns->flatMap->items;
 
-        $totalOriginalQuantity = $order->items->sum('quantity');
-        $totalReturnedQuantity = $order->returns->flatMap->items->sum('quantity');
-
-        if ($totalReturnedQuantity <= 0) {
+        if ($returned->isEmpty()) {
             $returnStatus = ReturnStatus::NONE;
-        } elseif ($totalReturnedQuantity >= $totalOriginalQuantity) {
-            $returnStatus = ReturnStatus::FULL_RETURN;
         } else {
-            $returnStatus = ReturnStatus::PARTIAL_RETURN;
+            $itemsLeft = $order->items->sum(fn ($item) => max(0, (float) $item->quantity - (float) $returned->where('order_item_id', $item->id)->sum('quantity')));
+            $feesLeft = $order->fees->sum(fn ($fee) => max(0, round((float) $fee->amount - (float) $returned->where('order_fee_id', $fee->id)->sum('refund_amount'), 2)));
+            $equipmentLeft = $order->equipmentLines->sum(fn ($line) => max(0, (int) $line->quantity - (float) $returned->where('order_equipment_id', $line->id)->sum('quantity')));
+
+            $returnStatus = ($itemsLeft + $feesLeft + $equipmentLeft) <= 0.001
+                ? ReturnStatus::FULL_RETURN
+                : ReturnStatus::PARTIAL_RETURN;
         }
 
         $order->update(['return_status' => $returnStatus]);
+    }
+
+    /** What can still be refunded on a fee line, in money. */
+    public function getRefundableFeeAmount(Order $order, int $orderFeeId): float
+    {
+        $order->loadMissing(['fees', 'returns.items']);
+        $fee = $order->fees->firstWhere('id', $orderFeeId);
+        if (! $fee) {
+            return 0;
+        }
+
+        return max(0, round((float) $fee->amount - (float) $order->returns->flatMap->items->where('order_fee_id', $orderFeeId)->sum('refund_amount'), 2));
+    }
+
+    /** Uses of an equipment line not yet refunded. */
+    public function getAvailableEquipmentQuantity(Order $order, int $orderEquipmentId): int
+    {
+        $order->loadMissing(['equipmentLines', 'returns.items']);
+        $line = $order->equipmentLines->firstWhere('id', $orderEquipmentId);
+        if (! $line) {
+            return 0;
+        }
+
+        return max(0, (int) $line->quantity - (int) $order->returns->flatMap->items->where('order_equipment_id', $orderEquipmentId)->sum('quantity'));
     }
 
     /**

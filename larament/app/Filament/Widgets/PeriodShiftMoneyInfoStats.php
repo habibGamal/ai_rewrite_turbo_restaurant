@@ -73,9 +73,11 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ])
                 ->color('warning'),
 
-            ...(app(FeatureService::class)->customFeesEnabled() || abs((float) ($stats['fees'] ?? 0)) > 0.0001
+            ...(app(FeatureService::class)->customFeesEnabled() || abs((float) ($stats['fees'] ?? 0)) > 0.0001 || (float) ($stats['feesRefunds'] ?? 0) > 0
                 ? [Stat::make('الرسوم الإضافية', number_format((float) ($stats['fees'] ?? 0), 2).' جنيه')
-                    ->description('رسوم إضافية ضمن المبيعات المكتملة')
+                    ->description((float) ($stats['feesRefunds'] ?? 0) > 0
+                        ? 'مرتجع '.number_format((float) $stats['feesRefunds'], 2).' · صافي '.number_format((float) ($stats['fees'] ?? 0) - (float) $stats['feesRefunds'], 2).' جنيه'
+                        : 'رسوم إضافية ضمن المبيعات المكتملة')
                     ->descriptionIcon('heroicon-m-plus-circle')
                     ->color('success')]
                 : []),

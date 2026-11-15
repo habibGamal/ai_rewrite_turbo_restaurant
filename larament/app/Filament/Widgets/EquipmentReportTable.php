@@ -47,6 +47,19 @@ class EquipmentReportTable extends BaseWidget
                     ->money('EGP')
                     ->alignCenter()
                     ->sortable(),
+                TextColumn::make('refunded')
+                    ->label('المرتجع')
+                    ->state(fn ($record): float => (float) ($record->refunded ?? 0))
+                    ->description(fn ($record): string => ((int) ($record->refunded_uses ?? 0)).' استخدام')
+                    ->money('EGP')
+                    ->alignCenter()
+                    ->color('danger')
+                    ->sortable(),
+                TextColumn::make('net_revenue')
+                    ->label('صافي الإيراد')
+                    ->state(fn ($record): float => (float) ($record->revenue ?? 0) - (float) ($record->refunded ?? 0))
+                    ->money('EGP')
+                    ->alignCenter(),
                 TextColumn::make('cost')
                     ->label('التكلفة')
                     ->state(fn ($record): float => (float) ($record->cost ?? 0))
@@ -55,7 +68,7 @@ class EquipmentReportTable extends BaseWidget
                     ->sortable(),
                 TextColumn::make('profit')
                     ->label('الربح')
-                    ->state(fn ($record): float => (float) ($record->revenue ?? 0) - (float) ($record->cost ?? 0))
+                    ->state(fn ($record): float => (float) ($record->revenue ?? 0) - (float) ($record->refunded ?? 0) - (float) ($record->cost ?? 0))
                     ->money('EGP')
                     ->alignCenter()
                     ->weight('bold'),

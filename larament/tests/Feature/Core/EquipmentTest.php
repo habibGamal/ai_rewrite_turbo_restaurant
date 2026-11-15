@@ -237,7 +237,7 @@ it('completes an order with equipment and reports it', function () {
     equipmentService()->sync($other->id, [test()->ps->id => 1]); // still open: not reported
 
     $summary = app(EquipmentReportService::class)->summary([test()->shift->id]);
-    expect($summary)->toBe(['uses' => 2, 'revenue' => 100.0, 'cost' => 30.0, 'profit' => 70.0]);
+    expect($summary)->toBe(['uses' => 2, 'revenue' => 100.0, 'cost' => 30.0, 'profit' => 70.0, 'refunded_uses' => 0, 'refunded' => 0.0, 'net_revenue' => 100.0, 'net_profit' => 70.0]);
 
     $rows = app(EquipmentReportService::class)->perEquipmentQuery([test()->shift->id])->get()->keyBy('name');
     expect((int) $rows['شيشة']->uses)->toBe(2)

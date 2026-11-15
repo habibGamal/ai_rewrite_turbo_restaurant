@@ -4,6 +4,7 @@ namespace App\Filament\Resources\OrderReturns;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Forms\ReturnChargeLines;
 use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
 use App\Filament\Resources\OrderReturns\Pages\ListOrderReturns;
 use App\Filament\Resources\OrderReturns\Pages\ViewOrderReturn;
@@ -81,6 +82,8 @@ class OrderReturnResource extends Resource
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if (! $state) {
                                     $set('return_items', []);
+                                    $set('return_fees', []);
+                                    $set('return_equipment', []);
                                     $set('refund_distribution', []);
 
                                     return;
@@ -109,6 +112,10 @@ class OrderReturnResource extends Resource
                                 })->toArray();
 
                                 $set('return_items', $returnItems);
+
+                                $charges = ReturnChargeLines::defaults($order);
+                                $set('return_fees', $charges['return_fees']);
+                                $set('return_equipment', $charges['return_equipment']);
 
                                 // Set refund distribution based on payment methods
                                 $paymentsByMethod = $order->payments->groupBy('method')->map(function ($payments) {
@@ -217,8 +224,12 @@ class OrderReturnResource extends Resource
                             ->columnSpanFull()
                             ->default([]),
 
+                        ReturnChargeLines::feesRepeater(),
+
+                        ReturnChargeLines::equipmentRepeater(),
+
                         Placeholder::make('total_refund_info')
-                            ->label('إجمالي الاسترجاع من الأصناف')
+                            ->label('إجمالي الاسترجاع')
                             ->content(fn (Get $get) => number_format((float) ($get('total_refund_display') ?? 0), 2).' ج.م')
                             ->columnSpanFull(),
                     ]),
@@ -268,7 +279,7 @@ class OrderReturnResource extends Resource
 
                         Placeholder::make('refund_hint')
                             ->label('')
-                            ->content('💡 تلميح: يجب أن يساوي مجموع مبالغ الاسترجاع إجمالي مبالغ الأصناف المرتجعة')
+                            ->content('💡 تلميح: يجب أن يساوي مجموع مبالغ الاسترجاع إجمالي مبالغ الأصناف والرسوم والمعدات المرتجعة')
                             ->columnSpanFull(),
                     ]),
 

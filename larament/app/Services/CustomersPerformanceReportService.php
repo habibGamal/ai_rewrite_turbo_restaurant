@@ -43,11 +43,11 @@ class CustomersPerformanceReportService
 
         $returns = DB::table('order_return_items as ori')
             ->join('order_returns as orr', 'orr.id', '=', 'ori.order_return_id')
-            ->join('order_items as roi', 'roi.id', '=', 'ori.order_item_id')
+            ->leftJoin('order_items as roi', 'roi.id', '=', 'ori.order_item_id')
             ->select('orr.order_id')
             ->selectRaw('SUM(ori.refund_amount) as refund')
-            ->selectRaw('SUM(ori.quantity) as qty')
-            ->selectRaw('SUM(CASE WHEN ori.restocked = 1 THEN ori.quantity * roi.cost ELSE 0 END) as cost_back')
+            ->selectRaw('SUM(CASE WHEN ori.order_item_id IS NOT NULL THEN ori.quantity ELSE 0 END) as qty')
+            ->selectRaw('SUM(CASE WHEN ori.order_item_id IS NOT NULL AND ori.restocked = 1 THEN ori.quantity * COALESCE(roi.cost, 0) ELSE 0 END) as cost_back')
             ->groupBy('orr.order_id');
 
         return DB::table('orders')

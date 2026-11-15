@@ -29,12 +29,13 @@ class CustomFeesLinesTable extends BaseWidget
         $catalog = app(OrderTypeCatalog::class);
 
         return $table
-            ->query(app(CustomFeesReportService::class)->linesQuery($scope)->with(['order.shift', 'user']))
+            ->query(app(CustomFeesReportService::class)->linesQuery($scope)->with(['order.shift', 'user'])->withSum('returnLines as refunded', 'refund_amount'))
             ->defaultSort('id', 'desc')
             ->columns([
                 TextColumn::make('name')->label('اسم الرسوم')->searchable(),
                 TextColumn::make('amount')->label('القيمة')->money('EGP')->sortable()
                     ->summarize(Sum::make()->label('الإجمالي')->money('EGP')),
+                TextColumn::make('refunded')->label('المرتجع')->money('EGP')->placeholder('-')->color('danger'),
                 TextColumn::make('order.order_number')->label('رقم الطلب'),
                 TextColumn::make('order.type')->label('نوع الطلب')
                     ->formatStateUsing(fn (?string $state): string => $state ? $catalog->display($state)->label : '-'),

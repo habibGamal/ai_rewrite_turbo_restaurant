@@ -62,6 +62,8 @@ it('builds a day_summary snapshot for a business date', function () {
         'waste_total' => '15.00',
         'refunds_total' => '0.00',
         'refunds_cash' => '0.00',
+        'refunds_fees' => '0.00',
+        'refunds_equipment' => '0.00',
         'guests_total' => 0,
         'equipment_total' => '0.00',
     ]);
@@ -97,6 +99,8 @@ it('returns zeros for day with closed inventory movement but no orders, expenses
         'waste_total' => '0.00',
         'refunds_total' => '0.00',
         'refunds_cash' => '0.00',
+        'refunds_fees' => '0.00',
+        'refunds_equipment' => '0.00',
         'guests_total' => 0,
         'equipment_total' => '0.00',
     ]);
