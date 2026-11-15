@@ -3,11 +3,13 @@
 namespace App\Core;
 
 use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderChargesChanged;
 use App\Core\Events\OrderCompleted;
 use App\Core\Events\OrderOpened;
 use App\Core\Events\OrderTypeChanged;
 use App\Core\Events\PaymentRecorded;
 use App\Core\Listeners\BroadcastOrderCancelled;
+use App\Core\Listeners\BroadcastOrderChargesChanged;
 use App\Core\Listeners\BroadcastOrderCompleted;
 use App\Core\Listeners\BroadcastOrderCreated;
 use App\Core\Listeners\BroadcastOrderTypeChanged;
@@ -29,6 +31,7 @@ class CoreServiceProvider extends ServiceProvider
         OrderCancelled::class => [BroadcastOrderCancelled::class],
         PaymentRecorded::class => [BroadcastPaymentProcessed::class],
         OrderTypeChanged::class => [BroadcastOrderTypeChanged::class],
+        OrderChargesChanged::class => [BroadcastOrderChargesChanged::class],
     ];
 
     public function register(): void

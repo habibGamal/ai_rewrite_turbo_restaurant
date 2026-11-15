@@ -1,6 +1,7 @@
 <?php
 
 use App\Sync\BuilderRegistry;
+use App\Sync\Builders\AuditLogBuilder;
 use App\Sync\Builders\CategoryBuilder;
 use App\Sync\Builders\DaySummaryBuilder;
 use App\Sync\Builders\ExpenseBuilder;
@@ -42,4 +43,5 @@ it('resolves builders for all supported document types', function (DocumentType 
     [DocumentType::Staff, StaffBuilder::class],
     [DocumentType::InventoryDay, InventoryDayBuilder::class],
     [DocumentType::DaySummary, DaySummaryBuilder::class],
+    [DocumentType::AuditLog, AuditLogBuilder::class],
 ]);

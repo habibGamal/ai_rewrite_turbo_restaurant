@@ -27,6 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage_excel_import' => 'استيراد البيانات من إكسل',
                 'manage_users' => 'إدارة المستخدمين',
                 'manage_roles' => 'إدارة الأدوار والصلاحيات',
+                'view_audit_logs' => 'عرض سجل التعديلات',
             ],
             'إدارة المنتجات والقوائم' => [
                 'view_categories' => 'عرض الفئات',

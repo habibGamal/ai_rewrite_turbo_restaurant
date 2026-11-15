@@ -96,6 +96,10 @@ it('builds a completed order snapshot with items and payments', function () {
         'total' => '400.00',
         'profit' => '120.00',
         'web_pos_diff' => null,
+        'fees_total' => '0.00',
+        'equipment_total' => '0.00',
+        'equipment_cost' => '0.00',
+        'guests_count' => null,
     ])
         ->and(array_keys($data))->toEqual([
             'number',
@@ -117,6 +121,10 @@ it('builds a completed order snapshot with items and payments', function () {
             'total',
             'profit',
             'web_pos_diff',
+            'fees_total',
+            'equipment_total',
+            'equipment_cost',
+            'guests_count',
             'items',
             'payments',
             'external_orders',

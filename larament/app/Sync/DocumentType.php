@@ -21,4 +21,5 @@ enum DocumentType: string
     case Supplier = 'supplier';
     case ExpenseType = 'expense_type';
     case Staff = 'staff';
+    case AuditLog = 'audit_log';
 }

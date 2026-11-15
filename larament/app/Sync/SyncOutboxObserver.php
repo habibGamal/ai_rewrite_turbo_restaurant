@@ -3,6 +3,7 @@
 namespace App\Sync;
 
 use App\Enums\OrderStatus;
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -34,6 +35,12 @@ class SyncOutboxObserver
     public function created(Model $model): void
     {
         if (! PlatformConnection::active()) {
+            return;
+        }
+
+        if ($model instanceof AuditLog) {
+            Outbox::record(DocumentType::AuditLog, $this->getModelUuid($model));
+
             return;
         }
 
