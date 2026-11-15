@@ -82,10 +82,16 @@ class OrderReturnCalculatorService
                     item.refund_amount = (item.quantity * unitPrice).toFixed(2);
                 });
 
-                // Calculate total refund from items
+                // Fee (by amount) and equipment (by quantity) lines keep their own
+                // refund amounts; the server caps them on blur.
+                const rows = (value) => Array.isArray(value) ? value : Object.values(value || {});
+                const chargesRefund = [...rows($wire.data.return_fees), ...rows($wire.data.return_equipment)]
+                    .reduce((total, line) => total + (parseFloat(line.refund_amount) || 0), 0);
+
+                // Calculate total refund from items, fees and equipment
                 const totalRefund = items.reduce((total, item) => {
                     return total + (parseFloat(item.refund_amount) || 0);
-                }, 0);
+                }, 0) + chargesRefund;
 
                 // Calculate total from refund distribution
                 let refunds = $wire.data.refund_distribution;

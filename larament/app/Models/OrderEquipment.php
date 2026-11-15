@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One equipment line on an order. Name, unit price and unit cost are a
@@ -61,5 +62,11 @@ class OrderEquipment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Refunds of this line («مرتجع»). */
+    public function returnLines(): HasMany
+    {
+        return $this->hasMany(OrderReturnItem::class, 'order_equipment_id');
     }
 }

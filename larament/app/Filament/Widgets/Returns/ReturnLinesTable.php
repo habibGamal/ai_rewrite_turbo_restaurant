@@ -38,7 +38,7 @@ class ReturnLinesTable extends BaseWidget
             ->query(
                 OrderReturnItem::query()
                     ->whereIn('order_return_id', $returnIds)
-                    ->with(['orderReturn.user', 'orderReturn.order', 'orderReturn.refunds', 'orderItem.product'])
+                    ->with(['orderReturn.user', 'orderReturn.order', 'orderReturn.refunds', ...OrderReturnItem::LINE_NAME_RELATIONS])
                     ->latest('id')
             )
             ->columns([
@@ -60,9 +60,13 @@ class ReturnLinesTable extends BaseWidget
                     ->label('الكاشير')
                     ->default('-'),
 
-                TextColumn::make('orderItem.product.name')
+                TextColumn::make('line_name')
                     ->label('الصنف')
-                    ->searchable()
+                    ->state(fn (OrderReturnItem $record): string => $record->lineName())
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $inner) => $inner
+                        ->whereHas('orderItem.product', fn (Builder $product) => $product->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('orderFee', fn (Builder $fee) => $fee->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('orderEquipment', fn (Builder $line) => $line->where('name', 'like', "%{$search}%"))))
                     ->weight('medium'),
 
                 TextColumn::make('quantity')
@@ -77,7 +81,8 @@ class ReturnLinesTable extends BaseWidget
                 IconColumn::make('restocked')
                     ->label('رجع للمخزن')
                     ->boolean()
-                    ->tooltip(fn (OrderReturnItem $record) => $record->restocked ? 'رجع للمخزن' : 'تالف'),
+                    ->state(fn (OrderReturnItem $record): ?bool => $record->order_item_id !== null ? (bool) $record->restocked : null)
+                    ->tooltip(fn (OrderReturnItem $record) => $record->order_item_id === null ? 'رسوم أو معدات: لا تمس المخزن' : ($record->restocked ? 'رجع للمخزن' : 'تالف')),
 
                 TextColumn::make('refund_method')
                     ->label('طريقة الرد')
@@ -101,7 +106,22 @@ class ReturnLinesTable extends BaseWidget
                 TernaryFilter::make('restocked')
                     ->label('الحالة')
                     ->trueLabel('رجع للمخزن')
-                    ->falseLabel('تالف'),
+                    ->falseLabel('تالف')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('order_item_id')->where('restocked', true),
+                        false: fn (Builder $query) => $query->whereNotNull('order_item_id')->where('restocked', false),
+                        blank: fn (Builder $query) => $query,
+                    ),
+
+                SelectFilter::make('kind')
+                    ->label('النوع')
+                    ->options(['item' => 'أصناف', 'fee' => 'رسوم إضافية', 'equipment' => 'معدات'])
+                    ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
+                        'item' => $query->whereNotNull('order_item_id'),
+                        'fee' => $query->whereNotNull('order_fee_id'),
+                        'equipment' => $query->whereNotNull('order_equipment_id'),
+                        default => $query,
+                    }),
 
                 SelectFilter::make('cashier')
                     ->label('الكاشير')

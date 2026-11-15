@@ -4,6 +4,7 @@ namespace App\Filament\Actions;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Forms\ReturnChargeLines;
 use App\Models\Order;
 use App\Services\Orders\OrderReturnService;
 use Exception;
@@ -44,6 +45,7 @@ class ReturnOrderAction
                         ])
                         ->values()
                         ->toArray();
+                    $returnItems = [...$returnItems, ...ReturnChargeLines::fromFormData($data)];
 
                     if (empty($returnItems)) {
                         throw new Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
@@ -185,6 +187,10 @@ class ReturnOrderAction
                 ->reorderable(false)
                 ->columnSpanFull(),
 
+            ReturnChargeLines::feesRepeater(fn (): array => ReturnChargeLines::defaults($order)['return_fees']),
+
+            ReturnChargeLines::equipmentRepeater(fn (): array => ReturnChargeLines::defaults($order)['return_equipment']),
+
             Textarea::make('reason')
                 ->label('سبب الإرجاع')
                 ->required()
@@ -245,7 +251,7 @@ class ReturnOrderAction
 
             Placeholder::make('refund_hint')
                 ->label('')
-                ->content('💡 تلميح: يجب أن يساوي مجموع مبالغ الاسترجاع إجمالي مبالغ الأصناف المرتجعة')
+                ->content('💡 تلميح: يجب أن يساوي مجموع مبالغ الاسترجاع إجمالي مبالغ الأصناف والرسوم والمعدات المرتجعة')
                 ->columnSpanFull(),
 
             Toggle::make('reverse_stock')

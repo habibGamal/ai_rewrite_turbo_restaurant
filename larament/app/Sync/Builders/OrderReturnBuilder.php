@@ -25,7 +25,7 @@ class OrderReturnBuilder implements DocumentBuilder
     {
         /** @var OrderReturn|null $orderReturn */
         $orderReturn = OrderReturn::query()
-            ->with(['order', 'shift', 'items.orderItem', 'refunds'])
+            ->with(['order', 'shift', 'items.orderItem', 'items.orderFee', 'items.orderEquipment', 'refunds'])
             ->where('uuid', $uuid)
             ->first();
 
@@ -38,7 +38,10 @@ class OrderReturnBuilder implements DocumentBuilder
         foreach ($orderReturn->items as $item) {
             $orderItem = $item->orderItem;
             $items[] = [
+                'kind' => $item->kind(),
                 'order_item_uuid' => $orderItem ? $orderItem->getAttribute('uuid') : null,
+                'order_fee_uuid' => $item->orderFee?->getAttribute('uuid'),
+                'order_equipment_uuid' => $item->orderEquipment?->getAttribute('uuid'),
                 'quantity' => Payload::qty($item->quantity),
                 'refund_amount' => Payload::money($item->refund_amount),
                 'restocked' => (bool) $item->restocked,

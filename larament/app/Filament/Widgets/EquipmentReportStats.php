@@ -27,10 +27,14 @@ class EquipmentReportStats extends BaseWidget
                 ->color('primary'),
             Stat::make('إيراد المعدات', number_format($summary['revenue'], 2).' جنيه')
                 ->color('success'),
+            Stat::make('مرتجع المعدات', number_format($summary['refunded'], 2).' جنيه')
+                ->description($summary['refunded_uses'].' استخدام مرتجع · الصافي '.number_format($summary['net_revenue'], 2).' جنيه')
+                ->color('warning'),
             Stat::make('تكلفة المعدات', number_format($summary['cost'], 2).' جنيه')
                 ->color('danger'),
-            Stat::make('ربح المعدات', number_format($summary['profit'], 2).' جنيه')
-                ->color($summary['profit'] >= 0 ? 'success' : 'danger'),
+            Stat::make('ربح المعدات', number_format($summary['net_profit'], 2).' جنيه')
+                ->description('بعد المرتجعات')
+                ->color($summary['net_profit'] >= 0 ? 'success' : 'danger'),
         ];
     }
 }

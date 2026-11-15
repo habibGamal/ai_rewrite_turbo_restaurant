@@ -128,6 +128,8 @@ class DaySummaryBuilder implements DocumentBuilder
             'waste_total' => Payload::money($wasteTotal),
             'refunds_total' => Payload::money($returns['returnsAmount']),
             'refunds_cash' => Payload::money($returns['cashRefunds']),
+            'refunds_fees' => Payload::money($returns['feesRefunds']),
+            'refunds_equipment' => Payload::money($returns['equipmentRefunds']),
             'guests_total' => $guestsTotal,
             'equipment_total' => Payload::money($equipmentTotal),
         ];

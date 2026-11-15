@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\OrderReturns\Pages;
 
+use App\Filament\Forms\ReturnChargeLines;
 use App\Filament\Resources\OrderReturns\OrderReturnResource;
 use App\Models\Order;
 use App\Services\Orders\OrderReturnService;
@@ -56,7 +57,9 @@ class CreateOrderReturn extends CreateRecord
                     'quantity' => $item['quantity'],
                     'refund_amount' => $item['refund_amount'],
                 ])
+                ->values()
                 ->toArray();
+            $returnItems = [...$returnItems, ...ReturnChargeLines::fromFormData($data)];
 
             // Prepare refund distribution
             $refundDistribution = collect($data['refund_distribution'])

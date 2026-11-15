@@ -202,8 +202,8 @@ it('counts fees of completed orders in shift stats and the fees report', functio
     expect($shiftStats['fees'])->toBe(100.0)
         ->and($periodStats['fees'])->toBe(100.0)
         ->and(array_values($summary))->toBe([
-            ['name' => 'رسوم دخول تورتة', 'count' => 2, 'amount' => 80.0, 'average' => 40.0, 'share' => 80.0],
-            ['name' => 'رسوم حجز', 'count' => 1, 'amount' => 20.0, 'average' => 20.0, 'share' => 20.0],
+            ['name' => 'رسوم دخول تورتة', 'count' => 2, 'amount' => 80.0, 'average' => 40.0, 'share' => 80.0, 'refunded' => 0.0, 'net' => 80.0],
+            ['name' => 'رسوم حجز', 'count' => 1, 'amount' => 20.0, 'average' => 20.0, 'share' => 20.0, 'refunded' => 0.0, 'net' => 20.0],
         ]);
 });
 
