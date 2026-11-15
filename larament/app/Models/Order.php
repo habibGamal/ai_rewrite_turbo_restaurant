@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\KitchenItemStatus;
+use App\Enums\KitchenTicketStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
@@ -122,6 +125,12 @@ class Order extends Model
         return $this->hasOne(KitchenTicket::class);
     }
 
+    /** @return HasManyThrough<KitchenTicketItem, KitchenTicket, $this> */
+    public function kitchenItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(KitchenTicketItem::class, KitchenTicket::class);
+    }
+
     /** @return HasMany<ExternalOrder, $this> */
     public function externalOrders(): HasMany
     {
@@ -146,6 +155,11 @@ class Order extends Model
     public function itemChanges(): HasMany
     {
         return $this->hasMany(OrderItemChange::class)->orderBy('created_at', 'desc');
+    }
+
+    public function histories(): HasMany
+    {
+        return $this->hasMany(OrderHistory::class)->orderBy('created_at', 'desc');
     }
 
     // Computed attributes
@@ -197,5 +211,103 @@ class Order extends Model
     public function getReturnStatusStringAttribute(): string
     {
         return $this->return_status ? $this->return_status->label() : ReturnStatus::NONE->label();
+    }
+
+    public function getKitchenStatus(): ?string
+    {
+        if (setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) !== 'true') {
+            return null;
+        }
+
+        /** @var KitchenTicket|null $ticket */
+        $ticket = $this->relationLoaded('kitchenTicket')
+            ? $this->kitchenTicket
+            : $this->kitchenTicket()->first();
+
+        if ($ticket === null) {
+            return null;
+        }
+
+        return match ($ticket->status) {
+            KitchenTicketStatus::DONE => 'ready',
+            KitchenTicketStatus::ACTIVE => 'in_progress',
+            default => null,
+        };
+    }
+
+    public function getItemKitchenStatus(int $productId): ?string
+    {
+        if (setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) !== 'true') {
+            return null;
+        }
+
+        /** @var KitchenTicket|null $ticket */
+        $ticket = $this->relationLoaded('kitchenTicket')
+            ? $this->kitchenTicket
+            : $this->kitchenTicket()->with('items')->first();
+
+        if ($ticket === null) {
+            return null;
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, KitchenTicketItem> $items */
+        $items = $ticket->relationLoaded('items')
+            ? $ticket->items
+            : $ticket->items()->get();
+
+        $kitchenItems = $items
+            ->where('product_id', $productId)
+            ->where('status', '!=', KitchenItemStatus::VOIDED);
+
+        if ($kitchenItems->isEmpty()) {
+            return null;
+        }
+
+        $allDone = $kitchenItems->every(fn (KitchenTicketItem $item): bool => $item->status === KitchenItemStatus::DONE);
+
+        return $allDone ? 'ready' : 'in_progress';
+    }
+
+    /**
+     * @return array{done: int, total: int, status: string}|null
+     */
+    public function getKitchenProgress(): ?array
+    {
+        if (setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) !== 'true') {
+            return null;
+        }
+
+        /** @var KitchenTicket|null $ticket */
+        $ticket = $this->relationLoaded('kitchenTicket')
+            ? $this->kitchenTicket
+            : $this->kitchenTicket()->with('items')->first();
+
+        if ($ticket === null || $ticket->status === KitchenTicketStatus::CANCELLED) {
+            return null;
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, KitchenTicketItem> $items */
+        $items = $ticket->relationLoaded('items')
+            ? $ticket->items
+            : $ticket->items()->get();
+
+        $activeItems = $items->where('status', '!=', KitchenItemStatus::VOIDED);
+        $total = $activeItems->count();
+
+        if ($total === 0) {
+            return null;
+        }
+
+        $done = $activeItems->where('status', KitchenItemStatus::DONE)->count();
+
+        if ($ticket->status === KitchenTicketStatus::DONE) {
+            $done = $total;
+        }
+
+        return [
+            'done' => $done,
+            'total' => $total,
+            'status' => $ticket->status === KitchenTicketStatus::DONE ? 'ready' : 'in_progress',
+        ];
     }
 }

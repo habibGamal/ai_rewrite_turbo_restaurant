@@ -48,7 +48,7 @@ class OrderRepository
     public function getShiftOrders(int $shiftId): Collection
     {
         return Order::where('shift_id', $shiftId)
-            ->with(['customer', 'driver', 'table', 'items.product'])
+            ->with(['customer', 'driver', 'table', 'items.product', 'kitchenTicket.items'])
             ->orderBy('created_at', 'asc')
             ->get();
     }

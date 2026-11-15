@@ -157,6 +157,7 @@ it('accepts every new kds setting default under its validation rules', function 
         SettingKey::KDS_ORDER_TYPE_TARGETS,
         SettingKey::KDS_WARNING_PERCENT,
         SettingKey::KDS_AUTO_FINISH_ON_COMPLETE,
+        SettingKey::KDS_CASHIER_STATUS_ENABLED,
         SettingKey::KDS_RECALL_MINUTES,
         SettingKey::KDS_NEW_ORDER_SOUND,
         SettingKey::KDS_CHANGE_SOUND,

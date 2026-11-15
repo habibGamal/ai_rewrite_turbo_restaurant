@@ -744,11 +744,14 @@ class KitchenTicketService
             return;
         }
 
+        $shiftId = $order->shift_id ?? app(\App\Services\ShiftService::class)->getCurrentShift()?->id;
+
         KitchenTicketUpdated::dispatch(
             $ticket->id,
             (int) $order->order_number,
             $reason,
             $this->stationIds($ticket),
+            $shiftId,
         );
     }
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Roles\Pages;
 
 use App\Filament\Resources\Roles\RoleResource;
+use App\Orders\TabPermissions;
 use App\Services\FeatureService;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -47,6 +48,7 @@ class EditRole extends EditRecord
         $data['permissions_reports'] = array_values(array_intersect($rolePermissions, array_keys($catalog['التقارير'] ?? [])));
         $data['permissions_pos'] = array_values(array_intersect($rolePermissions, array_keys($catalog['نقطة البيع والعمليات (POS)'] ?? [])));
         $data['permissions_kitchen'] = array_values(array_intersect($rolePermissions, array_keys($catalog['شاشة المطبخ'] ?? [])));
+        $data['permissions_pos_tabs'] = array_values(array_intersect($rolePermissions, array_keys($catalog[TabPermissions::GROUP] ?? [])));
 
         return $data;
     }
@@ -64,6 +66,7 @@ class EditRole extends EditRecord
             is_array($data['permissions_reports'] ?? null) ? $data['permissions_reports'] : [],
             is_array($data['permissions_pos'] ?? null) ? $data['permissions_pos'] : [],
             is_array($data['permissions_kitchen'] ?? null) ? $data['permissions_kitchen'] : [],
+            is_array($data['permissions_pos_tabs'] ?? null) ? $data['permissions_pos_tabs'] : [],
         )));
 
         $visiblePermissions = array_values(array_diff(

@@ -210,4 +210,24 @@ describe('cashier tabs', function () {
 
         expect($order->fresh()->type)->toBe('delivery');
     });
+
+    it('passes cashier tabs orientation setting to inertia orders index', function () {
+        app(SettingsService::class)->set(SettingKey::CASHIER_TABS_ORIENTATION->value, 'horizontal');
+
+        $this->get(route('orders.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Orders/Index')
+                ->where('tabsOrientation', 'horizontal')
+            );
+
+        app(SettingsService::class)->set(SettingKey::CASHIER_TABS_ORIENTATION->value, 'vertical');
+
+        $this->get(route('orders.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Orders/Index')
+                ->where('tabsOrientation', 'vertical')
+            );
+    });
 });

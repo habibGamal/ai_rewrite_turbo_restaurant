@@ -44,14 +44,13 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
 
         return $table
             ->query($expenseQuery)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'expenses_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->extraAttributes([
-                        'id' => 'expenses_table',
-                    ])
                     ->exporter(CurrentShiftExpensesDetailedExporter::class)
                     ->fileName(fn () => 'current-shift-expenses-detailed-'.now()->format('Y-m-d-H-i-s').'.xlsx')
                     ->visible(fn () => $this->getCurrentShift() !== null),

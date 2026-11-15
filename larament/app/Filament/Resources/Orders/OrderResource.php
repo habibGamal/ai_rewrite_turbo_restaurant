@@ -8,12 +8,16 @@ use App\Enums\ReturnStatus;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager;
+use App\Filament\Resources\Orders\RelationManagers\KitchenItemsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\OrderReturnsRelationManager;
+use App\Filament\Resources\Orders\RelationManagers\OrderTimelineRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
 use App\Models\ExternalOrder;
 use App\Models\ExternalOrderItem;
+use App\Models\KitchenTicketItem;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
+use App\Services\KitchenPerformanceReportService;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\IconEntry;
@@ -386,6 +390,73 @@ class OrderResource extends Resource
                             ->columns(4),
                     ])
                     ->visible(fn (Order $record): bool => $record->externalOrders->isNotEmpty()),
+
+                Section::make('أداء المطبخ وأوقات التحضير')
+                    ->schema([
+                        TextEntry::make('kitchenTicket.status')
+                            ->label('حالة تذكرة المطبخ')
+                            ->badge()
+                            ->formatStateUsing(fn ($state) => match ($state instanceof \BackedEnum ? $state->value : (string) $state) {
+                                'active' => 'قيد التحضير',
+                                'done' => 'جاهز',
+                                'cancelled' => 'ملغي',
+                                default => (string) ($state instanceof \BackedEnum ? $state->value : ($state ?? 'غير محدد')),
+                            })
+                            ->color(fn ($state) => match ($state instanceof \BackedEnum ? $state->value : (string) $state) {
+                                'done' => 'success',
+                                'active' => 'primary',
+                                'cancelled' => 'danger',
+                                default => 'gray',
+                            }),
+
+                        TextEntry::make('kitchenTicket.first_sent_at')
+                            ->label('وقت الإرسال الأول')
+                            ->dateTime('Y-m-d H:i:s')
+                            ->placeholder('غير محدد'),
+
+                        TextEntry::make('kitchenTicket.done_at')
+                            ->label('وقت الانتهاء')
+                            ->dateTime('Y-m-d H:i:s')
+                            ->placeholder('قيد التحضير'),
+
+                        TextEntry::make('kitchen_duration')
+                            ->label('إجمالي وقت المطبخ')
+                            ->state(function (Order $record): string {
+                                /** @var \App\Models\KitchenTicket|null $ticket */
+                                $ticket = $record->kitchenTicket;
+                                if (! $ticket) {
+                                    return '-';
+                                }
+                                $seconds = 0;
+                                foreach ($ticket->rounds as $round) {
+                                    /** @var \App\Models\KitchenTicketRound $round */
+                                    if ($round->ended_at) {
+                                        $seconds += max(0, $round->ended_at->getTimestamp() - $round->started_at->getTimestamp());
+                                    }
+                                }
+
+                                return KitchenPerformanceReportService::formatDuration($seconds);
+                            })
+                            ->color('info')
+                            ->weight('semibold'),
+
+                        TextEntry::make('delayed_items_count')
+                            ->label('البنود المتأخرة')
+                            ->state(function (Order $record): string {
+                                $items = $record->kitchenItems;
+                                $lateCount = $items->filter(fn (KitchenTicketItem $item): bool => $item->isLate())->count();
+
+                                return $lateCount > 0 ? "{$lateCount} صنف متأخر" : 'لا توجد أصناف متأخرة';
+                            })
+                            ->badge()
+                            ->color(function (Order $record): string {
+                                $lateCount = $record->kitchenItems->filter(fn (KitchenTicketItem $item): bool => $item->isLate())->count();
+
+                                return $lateCount > 0 ? 'danger' : 'success';
+                            }),
+                    ])
+                    ->columns(3)
+                    ->visible(fn (Order $record): bool => $record->kitchenTicket !== null),
             ]);
     }
 
@@ -393,8 +464,10 @@ class OrderResource extends Resource
     {
         return [
             ItemsRelationManager::class,
+            KitchenItemsRelationManager::class,
             PaymentsRelationManager::class,
             OrderReturnsRelationManager::class,
+            OrderTimelineRelationManager::class,
         ];
     }
 
@@ -409,6 +482,6 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns', 'externalOrders.seller', 'externalOrders.items', 'externalOrders.collections']);
+            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns', 'externalOrders.seller', 'externalOrders.items', 'externalOrders.collections', 'kitchenTicket.rounds', 'kitchenItems']);
     }
 }

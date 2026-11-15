@@ -69,6 +69,15 @@ class OrderPaymentService
         ));
 
         PaymentProcessed::dispatch($payment, $order);
+
+        app(\App\Services\OrderHistoryService::class)->record(
+            orderId: $order->id,
+            action: 'payment_added',
+            actionName: 'سداد دفعة',
+            description: "تم سداد دفعة بقيمة {$amount} ج.م ({$method})",
+            details: ['amount' => $amount, 'method' => $method],
+            userId: auth()->id() ?? $order->user_id
+        );
     }
 
     private function updateOrderPaymentStatus(Order $order): void

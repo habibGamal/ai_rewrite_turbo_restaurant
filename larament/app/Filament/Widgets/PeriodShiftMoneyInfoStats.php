@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\CreditReconciliationStats;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -14,6 +15,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     protected ?string $pollingInterval = null;
 
+    use CreditReconciliationStats;
     use InteractsWithPageFilters;
 
     protected ShiftsReportService $shiftsReportService;
@@ -48,10 +50,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-arrow-down-circle')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch()
-                        document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
+                    'x-on:click' => "document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })",
                 ])
                 ->color('danger'),
 
@@ -103,6 +102,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ])
                 ->color('warning'),
 
+            ...$this->creditReconciliationStats($stats, 'الفترة'),
+
             Stat::make('متوسط قيمة الاوردر', number_format($stats['avgReceiptValue'], 2).' جنيه')
                 ->description('متوسط قيمة الطلب الواحد')
                 ->descriptionIcon('heroicon-m-calculator')
@@ -124,17 +125,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     private function getPeriodStats()
     {
-        $filterType = $this->pageFilters['filterType'] ?? 'period';
-
-        if ($filterType === 'shifts') {
-            $shiftIds = $this->pageFilters['shifts'] ?? [];
-
-            return $this->shiftsReportService->calculatePeriodStats(null, null, $shiftIds);
-        } else {
-            $startDate = $this->pageFilters['startDate'] ?? now()->subDays(7)->startOfDay()->toDateString();
-            $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
-
-            return $this->shiftsReportService->calculatePeriodStats($startDate, $endDate, null);
-        }
+        return $this->shiftsReportService->calculatePeriodStats(
+            ...$this->shiftsReportService->scopeFromFilters($this->pageFilters)
+        );
     }
 }

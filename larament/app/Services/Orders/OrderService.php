@@ -62,7 +62,7 @@ class OrderService
     public function getOrderDetails(int $orderId): Order
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments']);
+        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments', 'kitchenTicket.items']);
 
         return $order;
     }
@@ -208,7 +208,9 @@ class OrderService
                 return $shift instanceof Shift && $shift->closed;
             });
 
-            if ($paidInClosedShift && $order->typeRow()->allowsCredit()) {
+            // Cancelling deletes the order's payments; a payment taken in a closed shift would silently
+            // change that shift's cash after it was counted and closed. Block it for every order type.
+            if ($paidInClosedShift) {
                 throw new OrderException('لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
             }
 
@@ -346,6 +348,7 @@ class OrderService
                 'product_name' => $product instanceof Product ? $product->name : '',
                 'quantity' => $item->getAttribute('quantity'),
                 'notes' => $item->getAttribute('notes'),
+                'price' => (float) $item->getAttribute('price'),
             ];
         })->all();
     }

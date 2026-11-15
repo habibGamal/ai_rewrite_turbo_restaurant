@@ -8,6 +8,8 @@ use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Components\Forms\ProductComponentSelector;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\Products\RecipeCycleDetectionService;
+use Closure;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -154,6 +156,28 @@ class ManufacturedProductResource extends Resource
                         Repeater::make('productComponents')
                             ->label('المكونات')
                             ->relationship('productComponents', fn ($query) => $query->with('component.category'))
+                            ->rules([
+                                static fn ($record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($record) {
+                                    if (! is_array($value)) {
+                                        return;
+                                    }
+
+                                    $componentIds = collect($value)
+                                        ->pluck('component_id')
+                                        ->filter()
+                                        ->map(fn ($id) => (int) $id)
+                                        ->all();
+
+                                    $cycle = app(RecipeCycleDetectionService::class)->detectCycleForProduct(
+                                        $record?->id,
+                                        $componentIds
+                                    );
+
+                                    if ($cycle) {
+                                        $fail('لا يمكن حفظ المكونات: تم اكتشاف تبعية دائرية في الوصفة ('.implode(' ← ', $cycle).').');
+                                    }
+                                },
+                            ])
                             ->table([
                                 TableColumn::make('المكون')
                                     ->width('200px'),

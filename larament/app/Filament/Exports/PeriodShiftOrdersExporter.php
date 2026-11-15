@@ -4,6 +4,7 @@ namespace App\Filament\Exports;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Filament\Exports\Concerns\ScopedExportPayments;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
 use Filament\Actions\Exports\ExportColumn;
@@ -12,6 +13,8 @@ use Filament\Actions\Exports\Models\Export;
 
 class PeriodShiftOrdersExporter extends Exporter
 {
+    use ScopedExportPayments;
+
     protected static ?string $model = Order::class;
 
     public static function getColumns(): array
@@ -22,7 +25,7 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('shift_info')
                 ->label('الشفت')
-                ->state(function ($record) {
+                ->state(function ($record, array $options) {
                     return $record->shift ?
                         'شفت '.$record->shift->start_at->format('d/m/Y H:i') :
                         'غير محدد';
@@ -38,7 +41,7 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('customer_name')
                 ->label('العميل')
-                ->state(function ($record) {
+                ->state(function ($record, array $options) {
                     return $record->customer?->name ?? 'غير محدد';
                 }),
 
@@ -68,8 +71,8 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('payment_methods')
                 ->label('طرق الدفع')
-                ->state(function ($record) {
-                    $methods = $record->payments
+                ->state(function ($record, array $options) {
+                    $methods = self::scopedPayments($record, $options)
                         ->pluck('method')
                         ->map(fn ($method) => $method instanceof PaymentMethod ? $method->label() : $method)
                         ->unique()
@@ -80,8 +83,8 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('cash_amount')
                 ->label('مدفوع كاش (جنيه)')
-                ->state(function ($record) {
-                    $amount = $record->payments
+                ->state(function ($record, array $options) {
+                    $amount = self::scopedPayments($record, $options)
                         ->where('method', PaymentMethod::CASH)
                         ->sum('amount');
 
@@ -90,8 +93,8 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('card_amount')
                 ->label('مدفوع فيزا (جنيه)')
-                ->state(function ($record) {
-                    $amount = $record->payments
+                ->state(function ($record, array $options) {
+                    $amount = self::scopedPayments($record, $options)
                         ->where('method', PaymentMethod::CARD)
                         ->sum('amount');
 
@@ -100,17 +103,19 @@ class PeriodShiftOrdersExporter extends Exporter
 
             ExportColumn::make('talabat_card_amount')
                 ->label('مدفوع بطاقة طلبات (جنيه)')
-                ->state(function ($record) {
-                    $amount = $record->payments
+                ->state(function ($record, array $options) {
+                    $amount = self::scopedPayments($record, $options)
                         ->where('method', PaymentMethod::TALABAT_CARD)
                         ->sum('amount');
 
                     return number_format($amount, 2);
                 }),
 
+            ...self::scopedPaymentExportColumns(),
+
             ExportColumn::make('employee_name')
                 ->label('الموظف')
-                ->state(function ($record) {
+                ->state(function ($record, array $options) {
                     return $record->user?->name ?? 'غير محدد';
                 }),
 

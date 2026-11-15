@@ -6,18 +6,23 @@ use App\Costing\CostingMethod;
 use App\Costing\CostingMethodSwitcher;
 use App\Enums\KdsSound;
 use App\Enums\OptionalFeature;
+use App\Enums\ProductType;
 use App\Enums\SettingKey;
 use App\Models\OrderTypeRow;
+use App\Models\Product;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderTypeCatalog;
 use App\Services\FeatureService;
 use App\Services\PrintService;
+use App\Services\Products\RecipeCycleDetectionService;
 use App\Services\SettingsService;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -26,12 +31,15 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -61,6 +69,8 @@ class Settings extends Page implements HasForms
     protected static ?int $navigationSort = 100;
 
     public ?array $data = [];
+
+    public ?array $cycleDiagnosisResult = null;
 
     public function mount(): void
     {
@@ -275,34 +285,6 @@ class Settings extends Page implements HasForms
                                     ]),
                             ]),
 
-                        Tabs\Tab::make('صلاحيات الكاشير')
-                            ->icon('heroicon-m-user-group')
-                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
-                            ->badgeColor('danger')
-                            ->schema([
-                                Section::make()
-                                    ->description('تحديد الصلاحيات الإضافية للكاشير في إدارة الطلبات')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Toggle::make(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
-                                                    ->label(SettingKey::ALLOW_CASHIER_DISCOUNTS->label())
-                                                    ->helperText(SettingKey::ALLOW_CASHIER_DISCOUNTS->helperText())
-                                                    ->inline(false),
-
-                                                Toggle::make(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
-                                                    ->label(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->label())
-                                                    ->helperText(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->helperText())
-                                                    ->inline(false),
-                                            ]),
-
-                                        Toggle::make(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)
-                                            ->label(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->label())
-                                            ->helperText(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->helperText())
-                                            ->inline(false),
-                                    ]),
-                            ]),
-
                         Tabs\Tab::make('إدارة الورديات')
                             ->icon('heroicon-m-clock')
                             ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
@@ -323,24 +305,44 @@ class Settings extends Page implements HasForms
                             ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
                             ->badgeColor('danger')
                             ->schema([
-                                Section::make()
+                                Section::make('طريقة العرض')
+                                    ->schema([
+                                        Radio::make(SettingKey::CASHIER_TABS_ORIENTATION->value)
+                                            ->label(SettingKey::CASHIER_TABS_ORIENTATION->label())
+                                            ->helperText(SettingKey::CASHIER_TABS_ORIENTATION->helperText())
+                                            ->options([
+                                                'horizontal' => 'أفقي (أعلى الشاشة)',
+                                                'vertical' => 'عمودي (جانب الشاشة)',
+                                            ])
+                                            ->inline()
+                                            ->default('horizontal')
+                                            ->required(),
+                                    ]),
+
+                                Section::make('ترتيب وظهور التبويبات')
                                     ->description(SettingKey::CASHIER_TABS->helperText())
                                     ->schema([
                                         Repeater::make(SettingKey::CASHIER_TABS->value)
                                             ->hiddenLabel()
+                                            ->table([
+                                                TableColumn::make('التبويب'),
+                                                TableColumn::make('مرئي')
+                                                    ->width('120px')
+                                                    ->alignment(Alignment::Center),
+                                            ])
                                             ->schema([
                                                 Hidden::make('key'),
 
                                                 TextInput::make('label')
                                                     ->label('التبويب')
+                                                    ->hiddenLabel()
                                                     ->disabled()
                                                     ->dehydrated(false),
 
                                                 Toggle::make('visible')
                                                     ->label('مرئي')
-                                                    ->inline(false),
+                                                    ->hiddenLabel(),
                                             ])
-                                            ->columns(3)
                                             ->addable(false)
                                             ->deletable(false)
                                             ->reorderable()
@@ -372,7 +374,7 @@ class Settings extends Page implements HasForms
                                 Section::make()
                                     ->description('إعدادات نظام عرض المطبخ')
                                     ->schema([
-                                        Grid::make(2)
+                                        Grid::make(3)
                                             ->schema([
                                                 Toggle::make(SettingKey::KDS_ITEM_TRACKING->value)
                                                     ->label(SettingKey::KDS_ITEM_TRACKING->label())
@@ -382,6 +384,11 @@ class Settings extends Page implements HasForms
                                                 Toggle::make(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
                                                     ->label(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->label())
                                                     ->helperText(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->helperText())
+                                                    ->inline(false),
+
+                                                Toggle::make(SettingKey::KDS_CASHIER_STATUS_ENABLED->value)
+                                                    ->label(SettingKey::KDS_CASHIER_STATUS_ENABLED->label())
+                                                    ->helperText(SettingKey::KDS_CASHIER_STATUS_ENABLED->helperText())
                                                     ->inline(false),
                                             ]),
 
@@ -493,6 +500,37 @@ class Settings extends Page implements HasForms
                                                     ->helperText(SettingKey::FEATURE_EQUIPMENT_ENABLED->helperText())
                                                     ->inline(false),
                                             ]),
+                                    ]),
+                            ]),
+
+                        Tabs\Tab::make('التشخيص والصيانة')
+                            ->icon('heroicon-m-wrench-screwdriver')
+                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
+                            ->badgeColor('danger')
+                            ->schema([
+                                Section::make('تشخيص مكونات المنتجات المصنعة (Cyclic Dependencies)')
+                                    ->description('فحص مكونات المنتجات المصنعة للتأكد من خلوها من التبعيات الدائرية والإشارات الذاتية التي تسبب استهلاك الذاكرة وتوقف النظام عند إتمام الطلبات.')
+                                    ->schema([
+                                        Actions::make([
+                                            Action::make('checkCyclicDependencies')
+                                                ->label('فحص التبعيات الدائرية')
+                                                ->icon('heroicon-o-magnifying-glass')
+                                                ->color('warning')
+                                                ->action('runCycleDiagnosis'),
+
+                                            Action::make('fixCyclicDependencies')
+                                                ->label('إصلاح التبعيات الذاتية تلقائياً')
+                                                ->icon('heroicon-o-wrench')
+                                                ->color('danger')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('تأكيد إصلاح التبعيات الدائرية')
+                                                ->modalDescription('سيتم حذف المكونات التي تشير إلى المنتج نفسه مباشرة لمنع انهيار النظام عند إتمام الطلبات. هل أنت متأكد؟')
+                                                ->modalSubmitActionLabel('نعم، قم بالإصلاح')
+                                                ->visible(fn () => ! empty($this->cycleDiagnosisResult['cycles']))
+                                                ->action('fixCyclicDependenciesAction'),
+                                        ]),
+
+                                        View::make('filament.pages.partials.cycle-diagnosis-results'),
                                     ]),
                             ]),
                     ])
@@ -693,6 +731,48 @@ class Settings extends Page implements HasForms
         return collect(KdsSound::cases())
             ->mapWithKeys(fn (KdsSound $sound): array => [$sound->value => $sound->getLabel()])
             ->all();
+    }
+
+    public function runCycleDiagnosis(): void
+    {
+        $cycleDetector = app(RecipeCycleDetectionService::class);
+        $cycles = $cycleDetector->findAllCycles();
+        $totalManufactured = Product::where('type', ProductType::Manufactured)->count();
+
+        $this->cycleDiagnosisResult = [
+            'checked_at' => now()->format('Y-m-d H:i:s'),
+            'checked_count' => $totalManufactured,
+            'cycles' => $cycles,
+        ];
+
+        if (empty($cycles)) {
+            Notification::make()
+                ->title('الفحص سليم')
+                ->body('لم يتم العثور على أي تبعيات دائرية في مكونات المنتجات المصنعة.')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('تم اكتشاف تبعيات دائرية!')
+                ->body('تم العثور على '.count($cycles).' تبعية دائرية في مكونات المنتجات المصنعة.')
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
+    public function fixCyclicDependenciesAction(): void
+    {
+        $cycleDetector = app(RecipeCycleDetectionService::class);
+        $fixedCount = $cycleDetector->fixSelfReferencingComponents();
+
+        $this->runCycleDiagnosis();
+
+        Notification::make()
+            ->title('تم الإصلاح بنجاح')
+            ->body("تم حذف {$fixedCount} من المكونات الدائرية غير الصالحة.")
+            ->success()
+            ->send();
     }
 
     protected function getFormActions(): array

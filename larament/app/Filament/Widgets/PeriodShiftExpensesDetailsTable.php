@@ -50,7 +50,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
             $endDate = $this->pageFilters['endDate'];
             $expenseQuery = Expense::query()
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
+                    $query->whereBetween('start_at', [
                         Carbon::parse($startDate)->startOfDay(),
                         Carbon::parse($endDate)->endOfDay(),
                     ]);
@@ -61,14 +61,13 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
 
         return $table
             ->query($expenseQuery)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'expenses_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->extraAttributes([
-                        'id' => 'expenses_table',
-                    ])
                     ->exporter(PeriodShiftExpensesDetailedExporter::class)
                     ->fileName(fn () => 'period-shift-expenses-detailed-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])

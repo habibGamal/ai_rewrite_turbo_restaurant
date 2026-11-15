@@ -40,26 +40,32 @@ class KitchenPerformanceOrderTypesWidget extends BaseWidget
                     ->label('نوع الطلب')
                     ->weight('bold')
                     ->badge()
+                    ->sortable()
                     ->color(fn (string $state): string => $this->typeColor($state)),
 
                 TextColumn::make('count')
                     ->label('عدد الطلبات')
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => number_format((int) $state).' طلب')
                     ->badge()
                     ->color('info'),
 
                 TextColumn::make('avg_kitchen_seconds')
                     ->label('متوسط وقت المطبخ')
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => KitchenPerformanceReportService::formatDuration((float) $state))
                     ->color('primary')
                     ->weight('semibold'),
 
                 TextColumn::make('late_rounds_percent')
                     ->label('نسبة الجولات المتأخرة')
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => number_format((float) $state, 1).'%')
                     ->badge()
-                    ->color(fn ($state): string => $this->lateColor((float) $state)),
+                    ->color(fn ($state): string => $this->lateColor((float) $state))
+                    ->tooltip('نسبة الجولات التي تجاوزت أكبر وقت تحضير مستهدف لبنودها غير الملغاة'),
             ])
+            ->defaultSort('count', 'desc')
             ->paginated(false);
     }
 
@@ -70,6 +76,24 @@ class KitchenPerformanceOrderTypesWidget extends BaseWidget
             $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString(),
             $this->stationId(),
         );
+
+        $sortColumn = $this->getTableSortColumn() ?: 'count';
+        $sortDirection = strtolower((string) ($this->getTableSortDirection() ?: 'desc'));
+
+        usort($rows, function (array $a, array $b) use ($sortColumn, $sortDirection): int {
+            $valA = $a[$sortColumn] ?? null;
+            $valB = $b[$sortColumn] ?? null;
+
+            if ($valA === $valB) {
+                return 0;
+            }
+
+            $cmp = is_numeric($valA) && is_numeric($valB)
+                ? ((float) $valA <=> (float) $valB)
+                : strcmp((string) $valA, (string) $valB);
+
+            return $sortDirection === 'desc' ? -$cmp : $cmp;
+        });
 
         $arrayKeyName = ArrayRecord::getKeyName();
 

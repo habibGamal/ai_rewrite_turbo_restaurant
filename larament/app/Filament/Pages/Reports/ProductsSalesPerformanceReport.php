@@ -2,7 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
-use App\Filament\Components\PeriodFilterFormComponent;
+use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\CategoryPerformanceWidget;
 use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
@@ -49,8 +49,9 @@ class ProductsSalesPerformanceReport extends BaseDashboard
     {
         return $schema
             ->components([
-                PeriodFilterFormComponent::make(
+                ...PeriodWithShiftFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض أداء المنتجات في المبيعات',
+                    'اختر الشفتات المحددة',
                     'last_30_days',
                     29
                 ),
@@ -91,12 +92,16 @@ class ProductsSalesPerformanceReport extends BaseDashboard
 
     public function getWidgets(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-        $ordersCount = $this->productsReportService->getOrdersQuery(
-            $startDate,
-            $endDate
-        )->count();
+        $filterType = $this->filters['filterType'] ?? 'period';
+
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            $ordersCount = $this->productsReportService->getOrdersQuery(null, null, $shiftIds)->count();
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            $ordersCount = $this->productsReportService->getOrdersQuery($startDate, $endDate, null)->count();
+        }
 
         if ($ordersCount === 0) {
             return [

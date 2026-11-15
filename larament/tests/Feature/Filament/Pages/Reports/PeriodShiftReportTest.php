@@ -3,6 +3,7 @@
 use App\Enums\OrderStatus;
 use App\Filament\Pages\Reports\PeriodShiftReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
 use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftExpensesTable;
@@ -247,6 +248,7 @@ describe('Widgets - With Data', function () {
 
         expect($widgets)
             ->toContain(PeriodShiftOrdersTable::class)
+            ->toContain(PeriodShiftCreditCollectionsTable::class)
             ->toContain(PeriodShiftExpensesDetailsTable::class)
             ->toContain(PeriodShiftExpensesTable::class);
     });

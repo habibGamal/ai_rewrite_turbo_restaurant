@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\CurrentShiftCreditCollectionsTable;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
 use App\Filament\Widgets\CurrentShiftExpensesDetailsTable;
 use App\Filament\Widgets\CurrentShiftExpensesTable;
@@ -55,6 +56,7 @@ class CurrentShiftReport extends BaseDashboard
             CurrentShiftOrdersStats::class,
             CurrentShiftDoneOrdersStats::class,
             CurrentShiftOrdersTable::class,
+            CurrentShiftCreditCollectionsTable::class,
             CurrentShiftExpensesDetailsTable::class,
             CurrentShiftExpensesTable::class,
         ];

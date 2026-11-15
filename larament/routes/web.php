@@ -64,7 +64,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Order Management Routes
-    Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access'])->group(function () {
+    Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access', 'order.tab'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
         Route::post('/{order}/external', [\App\Http\Controllers\ExternalOrderController::class, 'save'])->name('external.save');
@@ -93,7 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift', 'permission:pos.access']);
 
     // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->middleware('permission:web_order.manage')->group(function () {
+    Route::prefix('web-orders')->name('web-orders.')->middleware(['permission:web_order.manage', 'order.tab'])->group(function () {
         Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
         Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
         Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
@@ -104,7 +104,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Printer Management Routes
-    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware('permission:pos.access');
+    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware(['permission:pos.access', 'order.tab']);
     Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
     Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen')->middleware('permission:pos.access');
     Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
@@ -116,7 +116,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Expense Management Routes
-    Route::prefix('expenses')->name('expenses.')->middleware(['shift', 'permission:pos.access'])->group(function () {
+    Route::prefix('expenses')->name('expenses.')->middleware(['shift', 'permission:pos.access', 'permission:pos.tab.system.expenses'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');

@@ -64,6 +64,6 @@ All commands for larament must use: `cd D:/ai_rewrite_turbo_restaurant/larament;
 ## Conventions
 
 - `composer review` is the pre-push quality gate: Pint → Pest → PHPStan
-- FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.github/skills/` for planning/testing patterns
+- FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.claude/skills/` for planning/testing patterns
 - `lang/ar.json` is the primary translation file (Arabic UI)
 - Default seed user: `admin@example.com` / `password`

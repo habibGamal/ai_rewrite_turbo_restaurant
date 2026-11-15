@@ -96,4 +96,69 @@ class KitchenTicketItem extends Model
     {
         return $this->belongsTo(User::class, 'done_by');
     }
+
+    public function prepSeconds(): ?int
+    {
+        if ($this->done_at !== null) {
+            return (int) max(0, $this->done_at->getTimestamp() - $this->sent_at->getTimestamp());
+        }
+
+        if ($this->status === KitchenItemStatus::PENDING) {
+            return (int) max(0, now()->getTimestamp() - $this->sent_at->getTimestamp());
+        }
+
+        return null;
+    }
+
+    public function isLate(): bool
+    {
+        if ($this->status === KitchenItemStatus::VOIDED || $this->target_minutes <= 0) {
+            return false;
+        }
+
+        $seconds = $this->prepSeconds();
+
+        return $seconds !== null && $seconds > ($this->target_minutes * 60);
+    }
+
+    public function delaySeconds(): int
+    {
+        if (! $this->isLate()) {
+            return 0;
+        }
+
+        return (int) max(0, ($this->prepSeconds() ?? 0) - ($this->target_minutes * 60));
+    }
+
+    public function formattedPrepTime(): string
+    {
+        $seconds = $this->prepSeconds();
+
+        if ($seconds === null) {
+            return '-';
+        }
+
+        $total = max(0, $seconds);
+
+        return sprintf('%02d:%02d', intdiv($total, 60), $total % 60);
+    }
+
+    public function delayLabel(): string
+    {
+        if ($this->status === KitchenItemStatus::VOIDED) {
+            return 'ملغي';
+        }
+
+        if ($this->isLate()) {
+            $delayMinutes = (int) ceil($this->delaySeconds() / 60);
+
+            return "متأخر بـ {$delayMinutes} دقيقة";
+        }
+
+        if ($this->status === KitchenItemStatus::DONE) {
+            return 'في الموعد';
+        }
+
+        return 'قيد التحضير';
+    }
 }

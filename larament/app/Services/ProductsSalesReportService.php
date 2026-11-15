@@ -390,84 +390,191 @@ class ProductsSalesReportService
         }, $groups));
     }
 
+    /**
+     * Get summary of all main categories with sales in the period/shifts.
+     *
+     * @return list<array{
+     *     main_category_id: int,
+     *     main_category_name: string,
+     *     total_quantity: float,
+     *     total_sales: float,
+     *     total_profit: float,
+     *     products_count: int
+     * }>
+     */
+    public function getMainCategoriesSalesSummary(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
+    {
+        $query = DB::table('products as p')
+            ->whereNot('p.type', ProductType::RawMaterial)
+            ->leftJoin('categories as c', 'p.category_id', '=', 'c.id')
+            ->leftJoin('categories as mc', 'mc.id', '=', DB::raw('COALESCE(c.parent_id, c.id)'))
+            ->join('order_items as oi', 'p.id', '=', 'oi.product_id')
+            ->join('orders as o', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('oi.order_id', '=', 'o.id')
+                    ->where('o.status', OrderStatus::COMPLETED);
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('o.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('o.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
+                ]);
+            })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('c.id', $mainCategoryId)
+                        ->orWhere('c.parent_id', $mainCategoryId);
+                });
+            });
+
+        /** @var \Illuminate\Support\Collection<int, object> $rows */
+        $rows = $query->select([
+            DB::raw('COALESCE(mc.id, 0) as main_category_id'),
+            DB::raw('COALESCE(mc.name, "غير مصنف") as main_category_name'),
+            DB::raw('COALESCE(SUM(oi.quantity), 0) as total_quantity'),
+            DB::raw('COALESCE(SUM(oi.total), 0) as total_sales'),
+            DB::raw('COALESCE(SUM(oi.total - (oi.cost * oi.quantity)), 0) as total_profit'),
+            DB::raw('COUNT(DISTINCT p.id) as products_count'),
+        ])
+            ->groupBy('mc.id', 'mc.name')
+            ->orderBy('main_category_name')
+            ->get();
+
+        return $rows->map(fn (object $row): array => [
+            'main_category_id' => (int) $row->main_category_id,
+            'main_category_name' => (string) $row->main_category_name,
+            'total_quantity' => (float) $row->total_quantity,
+            'total_sales' => (float) $row->total_sales,
+            'total_profit' => (float) $row->total_profit,
+            'products_count' => (int) $row->products_count,
+        ])->all();
+    }
+
     public static function nullableFilterId(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;
     }
 
     /**
-     * Get category performance summary, rolled up to the main category.
+     * Get category performance summary, rolled up to the main category or by secondary category.
      */
-    public function getCategoryPerformance(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null)
-    {
-        // Get category performance aggregated directly at the database level
-        return Category::query()
-            ->whereNull('categories.parent_id')
-            ->when($mainCategoryId !== null, fn ($query) => $query->where('categories.id', $mainCategoryId))
-            ->when($subCategoryId !== null && $mainCategoryId === null, function ($query) use ($subCategoryId) {
-                $query->whereIn('categories.id', function ($sub) use ($subCategoryId) {
-                    $sub->selectRaw('CASE WHEN parent_id IS NULL THEN id ELSE parent_id END')
-                        ->from('categories')
-                        ->where('id', $subCategoryId);
+    public function getCategoryPerformance(
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?array $shiftIds = null,
+        ?int $mainCategoryId = null,
+        ?int $subCategoryId = null,
+        string $mode = 'main'
+    ) {
+        $isSecondary = ($mode === 'secondary');
+
+        $query = Category::query();
+
+        if ($isSecondary) {
+            $query->whereNotNull('categories.parent_id')
+                ->leftJoin('categories as parent_categories', 'categories.parent_id', '=', 'parent_categories.id')
+                ->when($mainCategoryId !== null, fn ($q) => $q->where('categories.parent_id', $mainCategoryId))
+                ->when($subCategoryId !== null, fn ($q) => $q->where('categories.id', $subCategoryId));
+        } else {
+            $query->whereNull('categories.parent_id')
+                ->when($mainCategoryId !== null, fn ($q) => $q->where('categories.id', $mainCategoryId))
+                ->when($subCategoryId !== null && $mainCategoryId === null, function ($q) use ($subCategoryId) {
+                    $q->whereIn('categories.id', function ($sub) use ($subCategoryId) {
+                        $sub->selectRaw('CASE WHEN parent_id IS NULL THEN id ELSE parent_id END')
+                            ->from('categories')
+                            ->where('id', $subCategoryId);
+                    });
                 });
-            })
-            ->select([
-                DB::raw('categories.id as id'),
-                DB::raw('COALESCE(categories.name, "غير مصنف") as category_name'),
-                DB::raw('COUNT(DISTINCT products.id) as products_count'),
-                DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
-                DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
-            ])
-            ->leftJoin('products', function ($join) use ($subCategoryId) {
+        }
+
+        $selects = [
+            DB::raw('categories.id as id'),
+            DB::raw('COALESCE(categories.name, "غير مصنف") as category_name'),
+            DB::raw('COUNT(DISTINCT products.id) as products_count'),
+            DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
+            DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
+            DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
+        ];
+
+        if ($isSecondary) {
+            $selects[] = DB::raw('COALESCE(parent_categories.name, "غير محدد") as parent_category_name');
+        }
+
+        $query->select($selects);
+
+        if ($isSecondary) {
+            $query->leftJoin('products', function ($join) {
+                $join->on('products.category_id', '=', 'categories.id')
+                    ->whereNot('products.type', ProductType::RawMaterial);
+            });
+        } else {
+            $query->leftJoin('products', function ($join) use ($subCategoryId) {
                 $join->whereRaw('products.category_id in (select tree.id from categories as tree where tree.id = categories.id or tree.parent_id = categories.id)')
                     ->whereNot('products.type', ProductType::RawMaterial)
                     ->when($subCategoryId !== null, fn ($productJoin) => $productJoin->where('products.category_id', $subCategoryId));
-            })
-            ->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('products.id', '=', 'order_items.product_id')
-                    ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
-                        $query->select(DB::raw(1))
-                            ->from('orders')
-                            ->whereColumn('orders.id', 'order_items.order_id')
-                            ->where('orders.status', OrderStatus::COMPLETED);
+            });
+        }
 
-                        if ($shiftIds !== null) {
-                            if (empty($shiftIds)) {
-                                $query->whereRaw('1 = 0');
-                            } else {
-                                $query->whereIn('orders.shift_id', $shiftIds);
-                            }
+        $query->leftJoin('order_items', function ($join) use ($startDate, $endDate, $shiftIds) {
+            $join->on('products.id', '=', 'order_items.product_id')
+                ->whereExists(function ($query) use ($startDate, $endDate, $shiftIds) {
+                    $query->select(DB::raw(1))
+                        ->from('orders')
+                        ->whereColumn('orders.id', 'order_items.order_id')
+                        ->where('orders.status', OrderStatus::COMPLETED);
 
-                            return;
+                    if ($shiftIds !== null) {
+                        if (empty($shiftIds)) {
+                            $query->whereRaw('1 = 0');
+                        } else {
+                            $query->whereIn('orders.shift_id', $shiftIds);
                         }
 
-                        $query->whereBetween('orders.created_at', [
-                            $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                            $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
-                        ]);
-                    });
-            })
-            ->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->where('orders.status', OrderStatus::COMPLETED);
-
-                if ($shiftIds !== null) {
-                    if (empty($shiftIds)) {
-                        $join->whereRaw('1 = 0');
-                    } else {
-                        $join->whereIn('orders.shift_id', $shiftIds);
+                        return;
                     }
 
-                    return;
+                    $query->whereBetween('orders.created_at', [
+                        $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                        $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
+                    ]);
+                });
+        });
+
+        $query->leftJoin('orders', function ($join) use ($startDate, $endDate, $shiftIds) {
+            $join->on('order_items.order_id', '=', 'orders.id')
+                ->where('orders.status', OrderStatus::COMPLETED);
+
+            if ($shiftIds !== null) {
+                if (empty($shiftIds)) {
+                    $join->whereRaw('1 = 0');
+                } else {
+                    $join->whereIn('orders.shift_id', $shiftIds);
                 }
 
-                $join->whereBetween('orders.created_at', [
-                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
-                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
-                ]);
-            })
-            ->groupBy('categories.id', 'categories.name');
+                return;
+            }
+
+            $join->whereBetween('orders.created_at', [
+                $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
+            ]);
+        });
+
+        $groupBys = ['categories.id', 'categories.name'];
+        if ($isSecondary) {
+            $groupBys[] = 'parent_categories.name';
+        }
+
+        return $query->groupBy($groupBys);
     }
 
     /**

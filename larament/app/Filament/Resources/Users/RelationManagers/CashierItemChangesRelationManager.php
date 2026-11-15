@@ -1,0 +1,135 @@
+<?php
+
+namespace App\Filament\Resources\Users\RelationManagers;
+
+use App\Models\OrderItemChange;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+class CashierItemChangesRelationManager extends RelationManager
+{
+    protected static string $relationship = 'itemChanges';
+
+    protected static ?string $title = 'تعديلات وحركات الأصناف للكاشير';
+
+    protected static ?string $modelLabel = 'تعديل صنف';
+
+    protected static ?string $pluralModelLabel = 'تعديلات الأصناف';
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema->components([]);
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->recordTitleAttribute('product_name')
+            ->columns([
+                TextColumn::make('order.order_number')
+                    ->label('رقم الطلب')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->formatStateUsing(fn ($record) => '#'.($record->order->order_number ?? $record->order_id)),
+
+                TextColumn::make('product_name')
+                    ->label('اسم المنتج')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('change_type')
+                    ->label('نوع الحركة')
+                    ->badge()
+                    ->formatStateUsing(fn ($state, $record) => match ($state) {
+                        'added' => 'إضافة',
+                        'removed' => 'حذف',
+                        default => (float) $record->delta > 0 ? 'زيادة' : 'نقص',
+                    })
+                    ->color(fn ($state, $record) => match ($state) {
+                        'added' => 'success',
+                        'removed' => 'danger',
+                        default => (float) $record->delta > 0 ? 'info' : 'warning',
+                    }),
+
+                TextColumn::make('old_quantity')
+                    ->label('الكمية السابقة')
+                    ->numeric(decimalPlaces: 2)
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('new_quantity')
+                    ->label('الكمية الجديدة')
+                    ->numeric(decimalPlaces: 2)
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('delta')
+                    ->label('الكمية')
+                    ->formatStateUsing(fn ($state) => ((float) $state > 0 ? '+' : '').(float) $state)
+                    ->color(fn ($state) => (float) $state >= 0 ? 'success' : 'danger')
+                    ->weight('bold')
+                    ->sortable(),
+
+                TextColumn::make('unit_price')
+                    ->label('سعر الوحدة')
+                    ->money('EGP')
+                    ->sortable()
+                    ->toggleable(),
+
+                TextColumn::make('total_price')
+                    ->label('إجمالي القيمة')
+                    ->formatStateUsing(fn ($state, $record) => ((float) $record->delta > 0 ? '+' : '-').number_format((float) $state, 2).' ج.م')
+                    ->color(fn ($record) => (float) $record->delta >= 0 ? 'success' : 'danger')
+                    ->weight('bold')
+                    ->sortable(),
+
+                TextColumn::make('created_at')
+                    ->label('التاريخ والوقت')
+                    ->dateTime('Y-m-d H:i:s')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('change_type')
+                    ->label('نوع الحركة')
+                    ->options([
+                        'added' => 'إضافة',
+                        'removed' => 'حذف',
+                        'quantity_changed' => 'تعديل كمية',
+                    ]),
+
+                Filter::make('created_at')
+                    ->label('تاريخ التعديل')
+                    ->schema([
+                        DatePicker::make('created_from')->label('من تاريخ'),
+                        DatePicker::make('created_until')->label('إلى تاريخ'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['created_from'], fn (Builder $q, $d) => $q->whereDate('created_at', '>=', $d))
+                            ->when($data['created_until'], fn (Builder $q, $d) => $q->whereDate('created_at', '<=', $d));
+                    }),
+            ])
+            ->headerActions([])
+            ->recordActions([
+                Action::make('view_order')
+                    ->label('عرض الطلب')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn (OrderItemChange $record): string => url("/admin/orders/{$record->order_id}")),
+            ])
+            ->toolbarActions([])
+            ->defaultSort('created_at', 'desc')
+            ->striped();
+    }
+
+    public function isReadOnly(): bool
+    {
+        return true;
+    }
+}

@@ -73,7 +73,7 @@ class PeriodShiftExpensesTable extends BaseWidget
             $endDate = $this->pageFilters['endDate'];
             $totalExpensesOverPeriod = Expense::query()
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
+                    $query->whereBetween('start_at', [
                         Carbon::parse($startDate)->startOfDay(),
                         Carbon::parse($endDate)->endOfDay(),
                     ]);
@@ -83,7 +83,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ->withCount([
                     'expenses' => function ($query) use ($startDate, $endDate) {
                         $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                            $query->whereBetween('created_at', [
+                            $query->whereBetween('start_at', [
                                 Carbon::parse($startDate)->startOfDay(),
                                 Carbon::parse($endDate)->endOfDay(),
                             ]);
@@ -93,7 +93,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ->withSum([
                     'expenses' => function ($query) use ($startDate, $endDate) {
                         $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                            $query->whereBetween('created_at', [
+                            $query->whereBetween('start_at', [
                                 Carbon::parse($startDate)->startOfDay(),
                                 Carbon::parse($endDate)->endOfDay(),
                             ]);
@@ -104,7 +104,7 @@ class PeriodShiftExpensesTable extends BaseWidget
             $detailedExportQuery = function (Builder $query) use ($startDate, $endDate) {
                 return Expense::query()
                     ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                        $query->whereBetween('created_at', [
+                        $query->whereBetween('start_at', [
                             Carbon::parse($startDate)->startOfDay(),
                             Carbon::parse($endDate)->endOfDay(),
                         ]);

@@ -141,6 +141,8 @@ php artisan storage:link --force
 
 # --- Optimization ---
 php artisan migrate --force
+php artisan db:seed --class=RolesAndPermissionsSeeder --force
+php artisan permission:cache-reset
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

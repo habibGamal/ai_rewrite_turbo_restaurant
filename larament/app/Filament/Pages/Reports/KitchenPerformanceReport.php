@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Reports;
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\KitchenPerformanceOrderTypesWidget;
+use App\Filament\Widgets\KitchenPerformanceSlowestOrdersWidget;
 use App\Filament\Widgets\KitchenPerformanceSlowestProductsWidget;
 use App\Filament\Widgets\KitchenPerformanceStationsWidget;
 use App\Filament\Widgets\KitchenPerformanceStatsWidget;
@@ -65,6 +66,7 @@ class KitchenPerformanceReport extends BaseDashboard
         return [
             KitchenPerformanceStatsWidget::class,
             KitchenPerformanceOrderTypesWidget::class,
+            KitchenPerformanceSlowestOrdersWidget::class,
             KitchenPerformanceSlowestProductsWidget::class,
             KitchenPerformanceStationsWidget::class,
             KitchenPerformanceWasteCandidatesWidget::class,

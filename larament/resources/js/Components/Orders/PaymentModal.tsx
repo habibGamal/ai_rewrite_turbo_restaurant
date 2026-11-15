@@ -7,6 +7,7 @@ import {
     Button,
     Typography,
     Descriptions,
+    Checkbox,
     message,
 } from "antd";
 import { router } from "@inertiajs/react";
@@ -50,6 +51,7 @@ export default function PaymentModal({
         "one_payment" | "multi_payment"
     >("one_payment");
     const [remaining, setRemaining] = useState<number>(0);
+    const [printCollection, setPrintCollection] = useState<boolean>(false);
 
     const creditSettings = credit ?? order.credit;
     const allowPartial = Boolean(creditSettings?.allow_partial_payment);
@@ -136,14 +138,15 @@ export default function PaymentModal({
             }
         }
         start();
-        let finalValues = { ...values, print: false };
+        const print = mode === "collect" && printCollection;
+        let finalValues = { ...values, print };
 
         if (paymentMethod === "one_payment") {
             finalValues = {
                 cash: 0,
                 card: 0,
                 talabat_card: 0,
-                print: false,
+                print,
             };
             finalValues[values.payment_method] = values.paid;
         }
@@ -309,6 +312,14 @@ export default function PaymentModal({
                                     <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
                                         تم
                                     </Button>
+                                    {mode === "collect" && (
+                                        <Checkbox
+                                            checked={printCollection}
+                                            onChange={(e) => setPrintCollection(e.target.checked)}
+                                        >
+                                            طباعة إيصال التحصيل
+                                        </Checkbox>
+                                    )}
                                     {mode === "complete" && allowPayLater && (
                                         <Button
                                             danger
@@ -352,6 +363,14 @@ export default function PaymentModal({
                                     <Button loading={loading} disabled={loading} htmlType="submit" type="primary">
                                         تم
                                     </Button>
+                                    {mode === "collect" && (
+                                        <Checkbox
+                                            checked={printCollection}
+                                            onChange={(e) => setPrintCollection(e.target.checked)}
+                                        >
+                                            طباعة إيصال التحصيل
+                                        </Checkbox>
+                                    )}
                                     {mode === "complete" && allowPayLater && (
                                         <Button
                                             danger

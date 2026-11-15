@@ -6,6 +6,7 @@ use App\Enums\SettingKey;
 use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Models\Shift;
+use App\Models\User;
 use App\Services\SettingsService;
 use Illuminate\Validation\ValidationException;
 
@@ -13,7 +14,7 @@ final class CashierTabLayout
 {
     private const OPEN_STATUSES = ['processing', 'pending', 'out_for_delivery'];
 
-    private const SYSTEM_TABS = [
+    public const SYSTEM_TABS = [
         'receivables' => [
             'label' => 'تحصيل الآجل',
             'color' => 'warning',
@@ -86,6 +87,29 @@ final class CashierTabLayout
         }
 
         return $tabs;
+    }
+
+    /**
+     * resolve() limited to the tabs the user holds a tab permission for. Forced-visible
+     * tabs (a hidden tab with an open order) are filtered like any other.
+     *
+     * @return list<array{
+     *     key: string,
+     *     kind: 'type'|'system',
+     *     code: ?string,
+     *     label: string,
+     *     color: string,
+     *     icon: string,
+     *     visible: bool,
+     *     forcedVisible: bool
+     * }>
+     */
+    public function resolveFor(?Shift $shift, User $user): array
+    {
+        return array_values(array_filter(
+            $this->resolve($shift),
+            fn (array $tab): bool => $user->canSeeTab($tab['key']),
+        ));
     }
 
     /** @return list<string> */

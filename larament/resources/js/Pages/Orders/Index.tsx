@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd';
+import { Button, Descriptions, Empty, Form, InputNumber, Modal, Popconfirm, Tabs, notification } from 'antd';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import CashierLayout from '@/Layouts/CashierLayout';
 import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
@@ -14,9 +15,11 @@ interface IndexProps {
     tabs: CashierTab[];
     receivables: Receivable[];
     currentShift: { id: number };
+    kdsCashierStatusEnabled?: boolean;
     auth: {
         user: User;
     };
+    tabsOrientation?: 'horizontal' | 'vertical';
 }
 
 const OrdersIndex: React.FC<IndexProps> = ({
@@ -24,12 +27,17 @@ const OrdersIndex: React.FC<IndexProps> = ({
     tabs,
     receivables,
     currentShift,
-    auth
+    kdsCashierStatusEnabled = true,
+    auth,
+    tabsOrientation,
 }) => {
+    const pageProps = usePage().props as { tabsOrientation?: 'horizontal' | 'vertical' };
+    const effectiveOrientation = tabsOrientation ?? pageProps.tabsOrientation ?? 'horizontal';
+    const isVertical = effectiveOrientation === 'vertical';
     const { user } = auth;
     const hasFloor = tabs.some((item) => item.presentation?.body === 'floor');
     useEffect(() => {
-        if (!window.Echo || !hasFloor) {
+        if (!window.Echo) {
             return;
         }
 
@@ -43,10 +51,29 @@ const OrdersIndex: React.FC<IndexProps> = ({
         ];
         events.forEach((event) => channel.listen(`.${event}`, refresh));
 
+        const handleKitchenUpdate = (data: { ticket_id: number; order_number: number; reason: string }) => {
+            router.reload({
+                only: ['orders'],
+            });
+            if (data.reason === 'done' && kdsCashierStatusEnabled) {
+                const audio = new Audio('/audio/web-notification.wav');
+                audio.play().catch(() => {});
+                notification.success({
+                    message: `طلب رقم ${data.order_number} جاهز`,
+                    description: 'تم الانتهاء من تحضير أصناف الطلب في المطبخ',
+                    icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+                    placement: 'topLeft',
+                });
+            }
+        };
+
+        channel.listen('.KitchenTicketUpdated', handleKitchenUpdate);
+
         return () => {
             events.forEach((event) => channel.stopListening(`.${event}`, refresh));
+            channel.stopListening('.KitchenTicketUpdated', handleKitchenUpdate);
         };
-    }, [currentShift.id, hasFloor]);
+    }, [currentShift.id, hasFloor, kdsCashierStatusEnabled]);
     const renderedTabs = tabs;
 
     const initialTab = () => {
@@ -162,16 +189,26 @@ const OrdersIndex: React.FC<IndexProps> = ({
                     </Modal>
                 </div>
 
-                <Tabs
-                    onChange={(key) => {
-                        setTab(key);
-                        window.location.hash = key;
-                    }}
-                    activeKey={tab}
-                    type="card"
-                    size="large"
-                    items={tabItems}
-                />
+                {tabItems.length === 0 ? (
+                    <Empty
+                        data-testid="no-tabs"
+                        description="لا توجد تبويبات متاحة لك"
+                        className="py-16"
+                    />
+                ) : (
+                    <Tabs
+                        className={isVertical ? 'cashier-vertical-tabs' : undefined}
+                        tabPosition={isVertical ? 'right' : 'top'}
+                        onChange={(key) => {
+                            setTab(key);
+                            window.location.hash = key;
+                        }}
+                        activeKey={tab}
+                        type="card"
+                        size="large"
+                        items={tabItems}
+                    />
+                )}
             </div>
         </CashierLayout>
     );

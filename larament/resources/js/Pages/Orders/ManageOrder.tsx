@@ -13,10 +13,12 @@ import {
     Popconfirm,
     Row,
     Tag,
+    Tooltip,
     Typography,
 } from "antd";
 import {
     CheckCircleOutlined,
+    ClockCircleOutlined,
     EditOutlined,
     PercentageOutlined,
     PrinterOutlined,
@@ -116,6 +118,7 @@ export default function ManageOrder({
         product: products.find(
             (product) => product.id === orderItem.product_id
         )!,
+        kitchen_status: orderItem.kitchen_status,
     }));
 
     const [orderItems, dispatch] = useReducer(orderItemsReducer, []);
@@ -142,6 +145,25 @@ export default function ManageOrder({
     useEffect(() => {
         dispatch({ type: "init", orderItems: initOrderItems, user });
     }, [order.items]);
+
+    useEffect(() => {
+        if (!window.Echo || !order.shift_id) {
+            return;
+        }
+
+        const channel = window.Echo.private(`shift.${order.shift_id}`);
+        const handleKitchenUpdate = (data: { ticket_id: number; order_number: number; reason: string }) => {
+            if (String(data.order_number) === String(order.order_number)) {
+                router.reload({ only: ['order'] });
+            }
+        };
+
+        channel.listen('.KitchenTicketUpdated', handleKitchenUpdate);
+
+        return () => {
+            channel.stopListening('.KitchenTicketUpdated', handleKitchenUpdate);
+        };
+    }, [order.shift_id, order.order_number]);
 
     // Order state checks
     const disableAllControls = order.status !== "processing";
@@ -352,7 +374,7 @@ export default function ManageOrder({
                     color={orderStatusConfig.color}
                     text={orderStatusConfig.text}
                 >
-                    <div className="isolate flex gap-4 items-center">
+                    <div className="isolate flex gap-4 items-center flex-wrap">
                         <Button
                             onClick={() => router.get("/orders#" + order.type)}
                             size="large"
@@ -364,6 +386,17 @@ export default function ManageOrder({
                             separator=">"
                             items={breadcrumbItems}
                         />
+                        {order.kitchen_status && (
+                            <Tooltip title={order.kitchen_status === 'ready' ? 'جاهز' : 'قيد التحضير'}>
+                                <Tag
+                                    color={order.kitchen_status === 'ready' ? 'success' : 'processing'}
+                                    icon={order.kitchen_status === 'ready' ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+                                    className="text-sm py-0.5 px-2 !m-0 inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                    {order.kitchen_progress ? `(${order.kitchen_progress.done} من ${order.kitchen_progress.total})` : ''}
+                                </Tag>
+                            </Tooltip>
+                        )}
                     </div>
                 </Badge.Ribbon>
 

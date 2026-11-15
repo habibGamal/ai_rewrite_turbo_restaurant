@@ -54,3 +54,31 @@ it('reorders and hides cashier tabs through the settings repeater', function () 
         ->and(collect($stored)->firstWhere('key', 'type:delivery')['visible'])->toBeFalse()
         ->and(collect($stored)->firstWhere('key', 'type:takeaway')['visible'])->toBeTrue();
 });
+
+it('loads cashier tabs orientation default and can save vertical orientation', function () {
+    livewire(Settings::class)
+        ->assertSchemaComponentExists(SettingKey::CASHIER_TABS_ORIENTATION->value)
+        ->assertSchemaStateSet([
+            SettingKey::CASHIER_TABS_ORIENTATION->value => 'horizontal',
+        ])
+        ->fillForm([
+            SettingKey::CASHIER_TABS_ORIENTATION->value => 'vertical',
+        ])
+        ->call('save')
+        ->assertNotified()
+        ->assertHasNoFormErrors();
+
+    expect(Setting::where('key', SettingKey::CASHIER_TABS_ORIENTATION->value)->value('value'))->toBe('vertical');
+    expect(app(SettingsService::class)->getCashierTabsOrientation())->toBe('vertical');
+});
+
+it('validates cashier tabs orientation', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::CASHIER_TABS_ORIENTATION->value => 'diagonal',
+        ])
+        ->call('save')
+        ->assertHasFormErrors([
+            SettingKey::CASHIER_TABS_ORIENTATION->value,
+        ]);
+});

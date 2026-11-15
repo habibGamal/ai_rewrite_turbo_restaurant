@@ -438,7 +438,7 @@ it('routes programmatic setters through guarded transitions, validates booleans 
             ->toThrow(ValidationException::class);
         expect(fn () => $settingsService->setMultiple([SettingKey::FEATURE_EQUIPMENT_ENABLED->value => $invalidValue]))
             ->toThrow(ValidationException::class);
-        expect(fn () => $settingsService->set(SettingKey::ALLOW_CASHIER_DISCOUNTS->value, $invalidValue))
+        expect(fn () => $settingsService->set(SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value, $invalidValue))
             ->toThrow(ValidationException::class);
     }
 

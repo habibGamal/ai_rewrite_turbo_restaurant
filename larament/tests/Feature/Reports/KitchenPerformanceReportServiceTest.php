@@ -343,3 +343,35 @@ it('formats durations as mm:ss', function () {
         ->and(KitchenPerformanceReportService::formatDuration(65))->toBe('01:05')
         ->and(KitchenPerformanceReportService::formatDuration(600))->toBe('10:00');
 });
+
+it('orders slowest tickets first and identifies late rounds', function () {
+    $base = now()->startOfDay()->addHours(10);
+
+    // Fast order: 5 minutes
+    $fastTicket = kdsReportTicket([
+        'order_number' => 101,
+        'first_sent_at' => $base,
+    ]);
+    $fastRound = kdsReportRound($fastTicket, $base, $base->copy()->addMinutes(5));
+    kdsReportItem($fastTicket, $fastRound, ['target_minutes' => 10]);
+
+    // Slow order: 25 minutes (late)
+    $slowTicket = kdsReportTicket([
+        'order_number' => 102,
+        'first_sent_at' => $base,
+    ]);
+    $slowRound = kdsReportRound($slowTicket, $base, $base->copy()->addMinutes(25));
+    kdsReportItem($slowTicket, $slowRound, ['target_minutes' => 15]);
+
+    $service = app(KitchenPerformanceReportService::class);
+    $slowestOrders = $service->getSlowestOrders($base->toDateString(), $base->toDateString());
+
+    expect($slowestOrders)->toHaveCount(2)
+        ->and((string) $slowestOrders[0]['order_number'])->toBe('102')
+        ->and($slowestOrders[0]['kitchen_seconds'])->toBe(1500.0)
+        ->and($slowestOrders[0]['is_late'])->toBeTrue()
+        ->and($slowestOrders[0]['late_rounds'])->toBe(1)
+        ->and((string) $slowestOrders[1]['order_number'])->toBe('101')
+        ->and($slowestOrders[1]['kitchen_seconds'])->toBe(300.0)
+        ->and($slowestOrders[1]['is_late'])->toBeFalse();
+});

@@ -3,8 +3,11 @@
 namespace App\Models;
 
 use App\Enums\OrderBehavior;
+use App\Observers\OrderTypeRowObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 
+#[ObservedBy(OrderTypeRowObserver::class)]
 class OrderTypeRow extends Model
 {
     protected $table = 'order_types';

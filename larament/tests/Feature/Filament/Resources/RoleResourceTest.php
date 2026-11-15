@@ -89,6 +89,51 @@ it('can update role and sync permissions', function () {
         ->and($role->hasPermissionTo('order.apply_discount'))->toBeTrue();
 });
 
+it('shows the cashier tabs group and keeps tab permissions when saving a role', function () {
+    $role = Role::create(['name' => 'tab_role', 'guard_name' => 'web']);
+    $role->givePermissionTo(['pos.access', 'pos.tab.type.dine_in', 'pos.tab.system.completed']);
+
+    livewire(EditRole::class, ['record' => $role->getRouteKey()])
+        ->assertSee('تبويبات الكاشير')
+        ->assertSchemaStateSet([
+            'permissions_pos_tabs' => ['pos.tab.type.dine_in', 'pos.tab.system.completed'],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $role->refresh();
+    expect($role->hasPermissionTo('pos.tab.type.dine_in'))->toBeTrue()
+        ->and($role->hasPermissionTo('pos.tab.system.completed'))->toBeTrue()
+        ->and($role->hasPermissionTo('pos.tab.system.expenses'))->toBeFalse();
+});
+
+it('can change a role tab permissions from the roles screen', function () {
+    $role = Role::create(['name' => 'tab_role_two', 'guard_name' => 'web']);
+    $role->givePermissionTo(['pos.access', 'pos.tab.type.dine_in']);
+
+    livewire(EditRole::class, ['record' => $role->getRouteKey()])
+        ->fillForm(['permissions_pos_tabs' => ['pos.tab.type.takeaway']])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $role->refresh();
+    expect($role->hasPermissionTo('pos.tab.type.takeaway'))->toBeTrue()
+        ->and($role->hasPermissionTo('pos.tab.type.dine_in'))->toBeFalse()
+        ->and($role->hasPermissionTo('pos.access'))->toBeTrue();
+});
+
+it('saves tab permissions when creating a role', function () {
+    livewire(CreateRole::class)
+        ->fillForm([
+            'name' => 'tab_creator',
+            'permissions_pos_tabs' => ['pos.tab.type.delivery'],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Role::findByName('tab_creator', 'web')->hasPermissionTo('pos.tab.type.delivery'))->toBeTrue();
+});
+
 it('prevents deleting the admin role', function () {
     $adminRole = Role::findByName('admin', 'web');
 

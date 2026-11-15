@@ -133,33 +133,14 @@ class SettingsService
     }
 
     /**
-     * Check if cashiers are allowed to apply discounts
+     * Get cashier screen tabs orientation ('horizontal' or 'vertical')
      */
-    public function isCashierDiscountsAllowed(): bool
+    public function getCashierTabsOrientation(): string
     {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_DISCOUNTS->value, SettingKey::ALLOW_CASHIER_DISCOUNTS->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /**
-     * Check if cashiers are allowed to cancel orders
-     */
-    public function isCashierCancelOrdersAllowed(): bool
-    {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value, SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /**
-     * Check if cashiers are allowed to change order items after saving
-     */
-    public function isCashierItemChangesAllowed(): bool
-    {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value, SettingKey::ALLOW_CASHIER_ITEM_CHANGES->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        return (string) $this->get(
+            SettingKey::CASHIER_TABS_ORIENTATION->value,
+            SettingKey::CASHIER_TABS_ORIENTATION->defaultValue(),
+        );
     }
 
     /**

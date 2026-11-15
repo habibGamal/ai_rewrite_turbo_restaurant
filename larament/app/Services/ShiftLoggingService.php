@@ -58,6 +58,41 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        $orderHistoryService = app(OrderHistoryService::class);
+        foreach ($differences as $diff) {
+            if ($diff['type'] === 'notes_changed') {
+                $orderHistoryService->record(
+                    orderId: $orderId,
+                    action: 'notes_updated',
+                    actionName: 'تعديل ملاحظات',
+                    description: $diff['description'] ?? 'تعديل ملاحظات الصنف',
+                    details: $diff
+                );
+
+                continue;
+            }
+
+            $actionType = match ($diff['type']) {
+                'added' => 'items_added',
+                'removed' => 'items_removed',
+                default => 'items_modified',
+            };
+
+            $actionName = match ($diff['type']) {
+                'added' => 'إضافة صنف',
+                'removed' => 'حذف صنف',
+                default => 'تعديل كمية صنف',
+            };
+
+            $orderHistoryService->record(
+                orderId: $orderId,
+                action: $actionType,
+                actionName: $actionName,
+                description: $diff['description'] ?? null,
+                details: $diff
+            );
+        }
     }
 
     /**
@@ -82,6 +117,16 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        $typeLabel = $orderTypeMap[$orderType] ?? $orderType;
+        $tableInfo = $tableNumber ? " - طاولة {$tableNumber}" : '';
+        app(OrderHistoryService::class)->record(
+            orderId: $orderId,
+            action: 'created',
+            actionName: 'إنشاء الطلب',
+            description: "تم إنشاء طلب جديد ({$typeLabel}{$tableInfo})",
+            details: $details
+        );
     }
 
     /**
@@ -105,6 +150,14 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        app(OrderHistoryService::class)->record(
+            orderId: $orderId,
+            action: 'completed',
+            actionName: 'إتمام الطلب',
+            description: "تم إتمام الطلب بنجاح (المبلغ: {$totalAmount} ج.م - ".implode(', ', $paymentDetails).')',
+            details: $details
+        );
     }
 
     /**
@@ -119,6 +172,14 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        app(OrderHistoryService::class)->record(
+            orderId: $orderId,
+            action: 'cancelled',
+            actionName: 'إلغاء الطلب',
+            description: 'تم إلغاء الطلب'.($reason ? ": {$reason}" : ''),
+            details: $details
+        );
     }
 
     /**
@@ -146,6 +207,16 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        if ($orderId) {
+            app(OrderHistoryService::class)->record(
+                orderId: $orderId,
+                action: 'customer_linked',
+                actionName: 'ربط عميل',
+                description: $action,
+                details: $details
+            );
+        }
     }
 
     /**
@@ -171,6 +242,16 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        if ($orderId) {
+            app(OrderHistoryService::class)->record(
+                orderId: $orderId,
+                action: 'driver_linked',
+                actionName: 'ربط سائق',
+                description: $action,
+                details: $details
+            );
+        }
     }
 
     /**
@@ -191,6 +272,14 @@ class ShiftLoggingService
         ];
 
         $this->logAction($action, $details);
+
+        app(OrderHistoryService::class)->record(
+            orderId: $orderId,
+            action: 'discount_applied',
+            actionName: 'تطبيق خصم',
+            description: "{$action}: {$discountText}",
+            details: $details
+        );
     }
 
     /**
@@ -284,6 +373,7 @@ class ShiftLoggingService
         foreach ($newItems as $newItem) {
             $productId = $newItem['product_id'];
             $productName = $newItem['product_name'] ?? "المنتج رقم {$productId}";
+            $unitPrice = (float) ($newItem['price'] ?? 0);
 
             if (! isset($oldItemsLookup[$productId])) {
                 // New item added
@@ -292,6 +382,7 @@ class ShiftLoggingService
                     'product_id' => $productId,
                     'product_name' => $productName,
                     'quantity' => $newItem['quantity'],
+                    'unit_price' => $unitPrice,
                     'description' => "تم إضافة {$newItem['quantity']} من {$productName}",
                 ];
             } else {
@@ -307,6 +398,7 @@ class ShiftLoggingService
                         'old_quantity' => $oldQuantity,
                         'new_quantity' => $newQuantity,
                         'difference' => $newQuantity - $oldQuantity,
+                        'unit_price' => $unitPrice > 0 ? $unitPrice : (float) ($oldItemsLookup[$productId]['price'] ?? 0),
                         'description' => "تم تغيير كمية {$productName} من {$oldQuantity} إلى {$newQuantity}",
                     ];
                 }
@@ -333,11 +425,13 @@ class ShiftLoggingService
             $productId = $oldItem['product_id'];
             if (! isset($newItemsLookup[$productId])) {
                 $productName = $oldItem['product_name'] ?? "المنتج رقم {$productId}";
+                $unitPrice = (float) ($oldItem['price'] ?? 0);
                 $differences[] = [
                     'type' => 'removed',
                     'product_id' => $productId,
                     'product_name' => $productName,
                     'quantity' => $oldItem['quantity'],
+                    'unit_price' => $unitPrice,
                     'description' => "تم حذف {$oldItem['quantity']} من {$productName}",
                 ];
             }

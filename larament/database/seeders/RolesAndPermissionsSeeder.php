@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Orders\TabPermissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
@@ -164,6 +165,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_channel_performance_report' => 'تقرير أداء قنوات البيع',
                 'view_customers_performance_report' => 'تقرير أداء العملاء',
                 'view_driver_performance_report' => 'تقرير أداء السائقين',
+                'view_cashier_commission_report' => 'تقرير عمولات الكاشير',
                 'view_expenses_report' => 'تقرير المصروفات',
                 'view_peak_hours_performance_report' => 'تقرير ساعات الذروة',
                 'view_products_sales_performance_report' => 'تقرير مبيعات المنتجات',
@@ -201,88 +203,132 @@ class RolesAndPermissionsSeeder extends Seeder
             'شاشة المطبخ' => [
                 'kitchen.access' => 'الدخول والتفاعل مع شاشة المطبخ',
             ],
+            TabPermissions::GROUP => app(TabPermissions::class)->catalog(),
         ];
     }
 
+    /**
+     * Legacy "صلاحيات الكاشير" settings => the Spatie permission they used to drive.
+     *
+     * @var array<string, string>
+     */
+    private const LEGACY_CASHIER_TOGGLES = [
+        'allow_cashier_discounts' => 'order.apply_discount',
+        'allow_cashier_cancel_orders' => 'order.cancel',
+        'allow_cashier_item_changes' => 'order.change_items',
+    ];
+
+    /**
+     * Additive and re-runnable: permissions and roles are created when missing, role
+     * defaults are applied only to roles created now or to permissions created now, and
+     * nothing is ever revoked from a non-admin role (the roles screen is the source of truth).
+     */
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $registrar = app()[PermissionRegistrar::class];
+        $registrar->forgetCachedPermissions();
 
-        // 1. Create all permissions
+        $tabPermissions = app(TabPermissions::class);
+
+        // 1. Create all catalog permissions, remembering which ones are new
         $allPermissionNames = [];
-        foreach (self::permissionsCatalog() as $group => $permissions) {
-            foreach ($permissions as $name => $label) {
-                Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+        $created = [];
+        foreach (self::permissionsCatalog() as $permissions) {
+            foreach (array_keys($permissions) as $name) {
+                $permission = Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
                 $allPermissionNames[] = $name;
+
+                if ($permission->wasRecentlyCreated) {
+                    $created[] = $name;
+                }
             }
         }
 
-        // 2. Create Roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $cashierRole = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
-        $kitchenRole = Role::firstOrCreate(['name' => 'kitchen', 'guard_name' => 'web']);
-        $viewerRole = Role::firstOrCreate(['name' => 'viewer', 'guard_name' => 'web']);
-        $watcherRole = Role::firstOrCreate(['name' => 'watcher', 'guard_name' => 'web']);
+        // 2. Tab permissions: create missing ones, delete orphaned order-type ones
+        $tabCatalog = array_keys($tabPermissions->catalog());
+        $created = array_values(array_unique([...$created, ...$tabPermissions->sync()]));
 
-        // 3. Assign all permissions to Admin
-        $adminRole->syncPermissions($allPermissionNames);
+        // 3. Create roles
+        $roles = [];
+        $newRoles = [];
+        foreach (['admin', 'cashier', 'kitchen', 'viewer', 'watcher'] as $name) {
+            $role = Role::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+            $roles[$name] = $role;
+            $newRoles[$name] = $role->wasRecentlyCreated;
+        }
 
-        // 4. Assign permissions to Cashier
-        $cashierPermissions = [
-            'pos.access',
-            'shift.start',
-            'shift.end',
-            'order.create',
-            'order.complete',
-            'customer.manage',
-            'driver.manage',
-            'cashier.open_drawer',
-            'web_order.manage',
-            'expense.create',
-            'invoice.print',
+        // 4. Carry the retired cashier settings over to permissions (never revokes)
+        $this->migrateLegacyCashierToggles($roles['cashier']);
+
+        // 5. Admin holds every permission
+        $roles['admin']->syncPermissions($allPermissionNames);
+
+        // 6. Role defaults: full list for new roles, only newly introduced permissions otherwise
+        $defaults = [
+            'cashier' => [
+                'pos.access',
+                'shift.start',
+                'shift.end',
+                'order.create',
+                'order.complete',
+                'customer.manage',
+                'driver.manage',
+                'cashier.open_drawer',
+                'web_order.manage',
+                'expense.create',
+                'invoice.print',
+                ...$tabCatalog,
+            ],
+            'kitchen' => ['kitchen.access'],
+            'viewer' => ['access_admin_panel', ...array_keys(self::permissionsCatalog()['التقارير'])],
+            'watcher' => [
+                'access_admin_panel',
+                'view_orders',
+                'view_customers',
+                'view_inventory_items',
+                'view_reports',
+                'view_current_shift_report',
+                'view_period_shift_report',
+                'view_daily_comparison_report',
+                'view_products_sales_performance_report',
+                'view_stock_report',
+            ],
         ];
 
-        // Check dynamic cashier settings if settings table exists
-        if (Schema::hasTable('settings')) {
-            $allowDiscounts = Setting::where('key', 'allow_cashier_discounts')->value('value');
-            if ($allowDiscounts === '1' || $allowDiscounts === true || $allowDiscounts === 'true') {
-                $cashierPermissions[] = 'order.apply_discount';
-            }
+        foreach ($defaults as $name => $permissions) {
+            $grant = $newRoles[$name] ? $permissions : array_values(array_intersect($permissions, $created));
 
-            $allowCancel = Setting::where('key', 'allow_cashier_cancel_orders')->value('value');
-            if ($allowCancel === '1' || $allowCancel === true || $allowCancel === 'true') {
-                $cashierPermissions[] = 'order.cancel';
-            }
-
-            $allowItemChanges = Setting::where('key', 'allow_cashier_item_changes')->value('value');
-            if ($allowItemChanges === '1' || $allowItemChanges === true || $allowItemChanges === 'true') {
-                $cashierPermissions[] = 'order.change_items';
+            if ($grant !== []) {
+                $roles[$name]->givePermissionTo($grant);
             }
         }
 
-        $cashierRole->syncPermissions($cashierPermissions);
+        // 7. Newly created tab permissions go to every role that can use the POS
+        $tabPermissions->grantToPosRoles(array_values(array_intersect($created, $tabCatalog)));
 
-        // 5. Assign permissions to Kitchen
-        $kitchenRole->syncPermissions(['kitchen.access']);
+        $registrar->forgetCachedPermissions();
+    }
 
-        // 6. Assign permissions to Viewer
-        $reportPermissions = array_keys(self::permissionsCatalog()['التقارير']);
-        $viewerRole->syncPermissions(array_merge(['access_admin_panel'], $reportPermissions));
+    /**
+     * Grant the permission behind each enabled legacy toggle to the cashier role, then drop
+     * the settings rows. Disabled toggles change nothing. Deleting the rows makes this one-shot.
+     */
+    private function migrateLegacyCashierToggles(Role $cashier): void
+    {
+        if (! Schema::hasTable('settings')) {
+            return;
+        }
 
-        // 7. Assign permissions to Watcher
-        $watcherPermissions = [
-            'access_admin_panel',
-            'view_orders',
-            'view_customers',
-            'view_inventory_items',
-            'view_reports',
-            'view_current_shift_report',
-            'view_period_shift_report',
-            'view_daily_comparison_report',
-            'view_products_sales_performance_report',
-            'view_stock_report',
-        ];
-        $watcherRole->syncPermissions($watcherPermissions);
+        $settings = Setting::query()
+            ->whereIn('key', array_keys(self::LEGACY_CASHIER_TOGGLES))
+            ->get();
+
+        foreach ($settings as $setting) {
+            if (filter_var($setting->value, FILTER_VALIDATE_BOOLEAN)) {
+                $cashier->givePermissionTo(self::LEGACY_CASHIER_TOGGLES[$setting->key]);
+            }
+
+            $setting->delete();
+        }
     }
 }

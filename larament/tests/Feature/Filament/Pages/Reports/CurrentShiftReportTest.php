@@ -3,6 +3,7 @@
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Pages\Reports\CurrentShiftReport;
+use App\Filament\Widgets\CurrentShiftCreditCollectionsTable;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
 use App\Filament\Widgets\CurrentShiftExpensesDetailsTable;
 use App\Filament\Widgets\CurrentShiftExpensesTable;
@@ -99,6 +100,7 @@ it('displays all current shift widgets when there is an active shift', function 
         CurrentShiftOrdersStats::class,
         CurrentShiftDoneOrdersStats::class,
         CurrentShiftOrdersTable::class,
+        CurrentShiftCreditCollectionsTable::class,
         CurrentShiftExpensesDetailsTable::class,
         CurrentShiftExpensesTable::class,
     ]);

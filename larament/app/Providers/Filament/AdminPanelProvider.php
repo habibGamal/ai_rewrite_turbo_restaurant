@@ -21,6 +21,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Kisame76\FilamentTreeTable\FilamentTreeTablePlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -45,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->plugin(FilamentTreeTablePlugin::make())
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->globalSearchFieldKeyBindingSuffix()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

@@ -138,6 +138,78 @@ class KitchenPerformanceReportService
     }
 
     /**
+     * Slowest orders first, based on total kitchen time (sum of closed rounds).
+     *
+     * @return array<int, array{
+     *     ticket_id: int,
+     *     order_id: int|null,
+     *     order_number: string|int|null,
+     *     order_type: string,
+     *     order_type_label: string,
+     *     customer_name: string|null,
+     *     items_count: int,
+     *     rounds_count: int,
+     *     kitchen_seconds: float,
+     *     late_rounds: int,
+     *     is_late: bool,
+     *     first_sent_at: string
+     * }>
+     */
+    public function getSlowestOrders(
+        string|DateTimeInterface|null $startDate = null,
+        string|DateTimeInterface|null $endDate = null,
+        ?int $stationId = null
+    ): array {
+        $tickets = $this->getTickets($startDate, $endDate, $stationId);
+
+        $rows = [];
+
+        foreach ($tickets as $ticket) {
+            $stats = $this->summarizeTicket($ticket, $stationId);
+
+            if ($stats['closed_rounds'] === 0 && $stats['seconds'] <= 0) {
+                continue;
+            }
+
+            $order = $ticket->order;
+            $type = $order instanceof Order ? (string) $order->type : 'unknown';
+
+            $activeItems = $ticket->rounds
+                ->flatMap(fn ($r) => $r instanceof \App\Models\KitchenTicketRound ? $r->items : collect())
+                ->filter(fn ($item): bool => $item instanceof KitchenTicketItem && $item->status !== KitchenItemStatus::VOIDED);
+
+            if ($stationId !== null) {
+                $activeItems = $activeItems->filter(fn (KitchenTicketItem $i): bool => (int) $i->kitchen_station_id === $stationId);
+            }
+
+            $orderId = $order instanceof Order ? $order->id : null;
+            $orderNumber = $order instanceof Order ? $order->order_number : (string) $ticket->order_id;
+            $customer = $order instanceof Order ? $order->customer : null;
+            $customerName = $customer instanceof \App\Models\Customer ? $customer->name : null;
+
+            $rows[] = [
+                'ticket_id' => $ticket->id,
+                'order_id' => $orderId,
+                'order_number' => $orderNumber,
+                'order_type' => $type,
+                'order_type_label' => $this->orderTypeLabel($type),
+                'customer_name' => $customerName,
+                'items_count' => $activeItems->count(),
+                'rounds_count' => $stats['closed_rounds'],
+                'kitchen_seconds' => $stats['seconds'],
+                'late_rounds' => $stats['late_rounds'],
+                'is_late' => $stats['late_rounds'] > 0,
+                'first_sent_at' => $ticket->first_sent_at->format('Y-m-d H:i'),
+            ];
+        }
+
+        /** @var array<int, array{ticket_id: int, order_id: int|null, order_number: string|int|null, order_type: string, order_type_label: string, customer_name: string|null, items_count: int, rounds_count: int, kitchen_seconds: float, late_rounds: int, is_late: bool, first_sent_at: string}> $rows */
+        usort($rows, fn (array $a, array $b): int => $b['kitchen_seconds'] <=> $a['kitchen_seconds']);
+
+        return $rows;
+    }
+
+    /**
      * Slowest products first, based on item prep time.
      *
      * @return array<int, array{product_id: int|null, product_name: string, count: int, avg_prep_seconds: float, max_prep_seconds: float, late_items_percent: float}>
@@ -312,7 +384,8 @@ class KitchenPerformanceReportService
                     ->where('status', '!=', KitchenItemStatus::VOIDED->value)
             ))
             ->with([
-                'order:id,type,order_number',
+                'order:id,type,order_number,customer_id',
+                'order.customer:id,name',
                 'rounds.items:id,kitchen_ticket_id,kitchen_ticket_round_id,kitchen_station_id,status,target_minutes',
             ])
             ->get();

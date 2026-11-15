@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('order_id')->unique()->constrained()->cascadeOnDelete();
             $table->string('status')->default('active')->index();
             $table->boolean('is_rush')->default(false);
-            $table->timestamp('first_sent_at');
+            $table->timestamp('first_sent_at')->useCurrent();
             $table->timestamp('done_at')->nullable();
             $table->timestamp('cancelled_at')->nullable();
             $table->timestamp('seen_at')->nullable();

@@ -62,6 +62,12 @@ export interface OrderItem {
   item_discount: number;
   item_discount_type?: string;
   item_discount_percent?: number;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
   product: Product;
 }
 
@@ -208,6 +214,12 @@ export interface Order {
   payments: Payment[];
   user?: User;
   display?: OrderDisplay;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
   receiptPayment?: ReceiptPayment;
   receiptView?: ReceiptView;
 }
@@ -261,6 +273,12 @@ export interface OrderItemData {
   item_discount?: number;
   item_discount_type?: string;
   item_discount_percent?: number;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
   product: Product;
 }
 
@@ -303,6 +321,7 @@ export type PageProps<T = {}> = T & {
   };
   receiptFooter?: string;
   scaleBarcodePrefix?: string;
+  tabsOrientation?: 'horizontal' | 'vertical';
   [key: string]: unknown;
 };
 

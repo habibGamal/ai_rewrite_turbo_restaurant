@@ -8,7 +8,7 @@ Successfully created a comprehensive FilamentPHP 4.x planning skill using the Ag
 
 ### 📁 Directory Structure
 ```
-.github/skills/filamentphp-planning/
+.claude/skills/filamentphp-planning/
 ├── SKILL.md                    # Main skill entry point with frontmatter
 ├── EXECUTIVE_PLAN.md           # Detailed implementation roadmap
 ├── README.md                   # Quick start guide

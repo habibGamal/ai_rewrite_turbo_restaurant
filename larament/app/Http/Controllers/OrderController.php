@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\Orders\CreateOrderDTO;
+use App\Enums\OrderStatus;
 use App\Enums\ProductType;
+use App\Enums\SettingKey;
 use App\Http\Requests\CompleteOrderRequest;
 use App\Http\Requests\SaveOrderRequest;
 use App\Models\Category;
@@ -18,6 +20,7 @@ use App\Models\Product;
 use App\Models\Region;
 use App\Models\Shift;
 use App\Models\TableType;
+use App\Models\User;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
@@ -61,38 +64,86 @@ class OrderController extends Controller
             return redirect()->route('shifts.start');
         }
 
+        $user = $this->deskUser();
+
         $orders = [];
         foreach ($this->orderService->getShiftOrders($currentShift->id) as $order) {
-            if (! $order instanceof Order) {
+            if (! $order instanceof Order || ! $this->orderVisibleOnDesk($order, $user)) {
                 continue;
             }
 
             $orders[] = $this->orderPayload($order);
         }
 
-        $receivableCodes = $this->catalog->creditCodes();
         $receivables = [];
-        foreach ($this->orderRepository->receivablesForTypes($receivableCodes) as $order) {
-            $receivables[] = $this->receivablePayload($order);
+        if ($user->canSeeTab('system:receivables')) {
+            foreach ($this->orderRepository->receivablesForTypes($this->catalog->creditCodes()) as $order) {
+                $receivables[] = $this->receivablePayload($order);
+            }
         }
 
-        // Get current shift expenses
-        $expenses = Expense::with('expenceType')
-            ->where('shift_id', $currentShift->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $expenses = [];
+        $expenseTypes = [];
+        if ($user->canSeeTab('system:expenses')) {
+            $expenses = Expense::with('expenceType')
+                ->where('shift_id', $currentShift->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        // Get expense types
-        $expenseTypes = ExpenceType::all();
+            $expenseTypes = ExpenceType::all();
+        }
 
         return Inertia::render('Orders/Index', [
             'orders' => $orders,
             'tabs' => $this->tabsPayload($currentShift),
+            'tabsOrientation' => app(\App\Services\SettingsService::class)->getCashierTabsOrientation(),
             'receivables' => $receivables,
             'currentShift' => $currentShift,
             'expenses' => $expenses,
             'expenseTypes' => $expenseTypes,
+            'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
         ]);
+    }
+
+    private function deskUser(): User
+    {
+        $user = auth()->user();
+
+        abort_unless($user instanceof User, 403);
+
+        return $user;
+    }
+
+    /**
+     * An order is sent to the desk when the user can see its type tab and the order is open
+     * or in one of that tab's statuses, or when it is completed / cancelled and the user can
+     * see the matching system tab.
+     */
+    private function orderVisibleOnDesk(Order $order, User $user): bool
+    {
+        $status = $order->status->value;
+
+        if ($status === OrderStatus::COMPLETED->value && $user->canSeeTab('system:completed')) {
+            return true;
+        }
+
+        if ($status === OrderStatus::CANCELLED->value && $user->canSeeTab('system:cancelled')) {
+            return true;
+        }
+
+        $code = (string) $order->type;
+
+        if (! $user->canSeeTab('type:'.$code)) {
+            return false;
+        }
+
+        if (in_array($order->status, [OrderStatus::PROCESSING, OrderStatus::PENDING, OrderStatus::OUT_FOR_DELIVERY], true)) {
+            return true;
+        }
+
+        $statuses = $this->catalog->behaviorFor($code)->presentation($this->catalog->find($code))->statuses;
+
+        return in_array($status, $statuses, true);
     }
 
     /**
@@ -102,7 +153,7 @@ class OrderController extends Controller
     {
         $tabs = [];
 
-        foreach ($this->cashierTabs->resolve($shift) as $tab) {
+        foreach ($this->cashierTabs->resolveFor($shift, $this->deskUser()) as $tab) {
             if (! $tab['visible'] && ! $tab['forcedVisible']) {
                 continue;
             }
@@ -130,12 +181,24 @@ class OrderController extends Controller
         $payload = array_merge($order->toArray(), [
             'display' => $order->display()->toArray(),
             'receiptPayment' => ReceiptPayment::forOrder($order)->toArray(),
+            'kitchen_status' => $order->getKitchenStatus(),
+            'kitchen_progress' => $order->getKitchenProgress(),
             'credit' => [
                 'allow_partial_payment' => (bool) $order->typeRow()->allow_partial_payment,
                 'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
                 'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
             ],
         ]);
+
+        if ($order->relationLoaded('items')) {
+            $payload['items'] = $order->items->map(function ($item) use ($order) {
+                $productId = (int) $item->getAttribute('product_id');
+                $itemArray = $item->toArray();
+                $itemArray['kitchen_status'] = $order->getItemKitchenStatus($productId);
+
+                return $itemArray;
+            })->all();
+        }
 
         if ($withReceiptView) {
             $payload['receiptView'] = \App\Orders\ReceiptView::forOrder($order);
@@ -207,6 +270,7 @@ class OrderController extends Controller
                 : [],
             'canAddExternalOrder' => $outsourcedEnabled && ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
+            'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
         ]);
     }
 
@@ -270,8 +334,10 @@ class OrderController extends Controller
         $creatable = $this->catalog->cashierCreatableCodes();
         $options = [];
 
+        $user = $this->deskUser();
+
         foreach ($this->cashierTabs->visibleTypeCodes() as $code) {
-            if (! in_array($code, $creatable, true)) {
+            if (! in_array($code, $creatable, true) || ! $user->canSeeTab('type:'.$code)) {
                 continue;
             }
 
@@ -343,8 +409,31 @@ class OrderController extends Controller
     {
         try {
             $paymentsData = collect($request->validated())->except('print')->toArray();
+            $paidBefore = (float) $order->payments()->sum('amount');
 
-            $this->orderService->collectRemaining($order->id, Tenders::fromArray($paymentsData));
+            $collected = $this->orderService->collectRemaining($order->id, Tenders::fromArray($paymentsData));
+            $paidAfter = (float) $collected->payments()->sum('amount');
+
+            $this->loggingService->logAction("تحصيل آجل للطلب رقم #{$collected->id}", [
+                'order_id' => $collected->id,
+                'order_shift_id' => $collected->shift_id,
+                'collected_in_shift_id' => $this->shiftService->getCurrentShift()?->id,
+                'payments' => $paymentsData,
+                'collected_amount' => round($paidAfter - $paidBefore, 2),
+                'remaining' => round(max(0, (float) $collected->total - $paidAfter), 2),
+            ]);
+
+            if ($request->boolean('print')) {
+                try {
+                    $this->printService->printOrderReceipt($collected->fresh(['payments', 'items', 'customer']));
+                } catch (Exception $printError) {
+                    // The money is already recorded; a printer problem must not undo or hide that.
+                    $this->loggingService->logAction('فشل في طباعة إيصال التحصيل', [
+                        'order_id' => $collected->id,
+                        'error' => $printError->getMessage(),
+                    ], 'warning');
+                }
+            }
 
             return redirect()->to(route('orders.index').'#receivables')
                 ->with('success', 'تم تحصيل المتبقي بنجاح');
@@ -692,6 +781,10 @@ class OrderController extends Controller
             'table_number' => 'nullable|string|max:50',
         ]);
 
+        if (! $this->deskUser()->canSeeTab('type:'.$validated['type'])) {
+            return back()->withErrors(['error' => 'غير مسموح لك بهذا النوع من الطلبات']);
+        }
+
         if (! in_array($validated['type'], $this->cashierTabs->visibleTypeCodes(), true)) {
             return back()->withErrors(['error' => 'نوع الطلب غير ظاهر في تبويبات الكاشير']);
         }
@@ -869,6 +962,8 @@ class OrderController extends Controller
             'type' => ['required', 'string', Rule::in($this->catalog->cashierCreatableCodes())],
             'table_number' => 'nullable|string|max:50',
         ]);
+
+        abort_unless($this->deskUser()->canSeeTab('type:'.$validated['type']), 403, 'غير مسموح لك بهذا النوع من الطلبات');
 
         try {
             $currentShift = $this->shiftService->getCurrentShift();

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { Button, InputNumber, Tag, Typography, Modal, Input, Radio, Form } from "antd";
+import { Button, InputNumber, Tag, Typography, Modal, Input, Radio, Form, Tooltip } from "antd";
 import {
+    CheckCircleOutlined,
+    ClockCircleOutlined,
     MinusCircleOutlined,
     PlusCircleOutlined,
     DeleteOutlined,
@@ -150,9 +152,21 @@ export default function OrderItem({
             <div className="isolate-3 flex flex-col gap-4 my-4">
                 <div className="flex justify-between items-center">
                     <div className="flex flex-col gap-1">
-                        <Typography.Paragraph className="!my-0">
-                            {orderItem.name}
-                        </Typography.Paragraph>
+                        <div className="flex items-center gap-2">
+                            <Typography.Paragraph className="!my-0">
+                                {orderItem.name}
+                            </Typography.Paragraph>
+                            {orderItem.kitchen_status === 'ready' && (
+                                <Tooltip title="جاهز">
+                                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '15px' }} />
+                                </Tooltip>
+                            )}
+                            {orderItem.kitchen_status === 'in_progress' && (
+                                <Tooltip title="قيد التحضير">
+                                    <ClockCircleOutlined style={{ color: '#1677ff', fontSize: '15px' }} />
+                                </Tooltip>
+                            )}
+                        </div>
                         {parsedNotes && (
                             <div className="flex flex-wrap gap-1">
                                 {Object.entries(parsedNotes).map(([key, value]) => (

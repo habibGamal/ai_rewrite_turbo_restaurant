@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\KitchenStation;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Warehouse;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Str;
 
@@ -290,4 +291,188 @@ it('shows the kitchen station name in the table', function () {
 
     livewire(ListCategories::class)
         ->assertSee('شواية');
+});
+
+// ===== Assign Parent Bulk Action =====
+it('has assign parent bulk action in table', function () {
+    livewire(ListCategories::class)
+        ->assertTableBulkActionExists('assignParent');
+});
+
+it('can bulk assign a parent category to selected categories', function () {
+    $parent = Category::factory()->create(['name' => 'المشروبات']);
+    $categories = Category::factory()->count(3)->create();
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', $categories, [
+            'parent_id' => $parent->id,
+        ])
+        ->assertHasNoTableBulkActionErrors();
+
+    foreach ($categories as $category) {
+        expect($category->refresh()->parent_id)->toBe($parent->id);
+    }
+});
+
+it('can reassign existing subcategories to a new parent', function () {
+    $oldParent = Category::factory()->create(['name' => 'قديم']);
+    $newParent = Category::factory()->create(['name' => 'جديد']);
+    $sub1 = Category::factory()->create(['parent_id' => $oldParent->id]);
+    $sub2 = Category::factory()->create(['parent_id' => $oldParent->id]);
+
+    livewire(ListCategories::class)
+        ->call('toggleRowExpansion', $oldParent->id)
+        ->callTableBulkAction('assignParent', [$sub1, $sub2], [
+            'parent_id' => $newParent->id,
+        ])
+        ->assertHasNoTableBulkActionErrors();
+
+    expect($sub1->refresh()->parent_id)->toBe($newParent->id)
+        ->and($sub2->refresh()->parent_id)->toBe($newParent->id);
+});
+
+it('can bulk remove parent category from selected categories', function () {
+    $parent = Category::factory()->create(['name' => 'رئيسي']);
+    $sub1 = Category::factory()->create(['name' => 'فرعي 1', 'parent_id' => $parent->id]);
+    $sub2 = Category::factory()->create(['name' => 'فرعي 2', 'parent_id' => $parent->id]);
+
+    livewire(ListCategories::class)
+        ->call('toggleRowExpansion', $parent->id)
+        ->callTableBulkAction('assignParent', [$sub1, $sub2], [
+            'remove_parent' => true,
+        ])
+        ->assertHasNoTableBulkActionErrors();
+
+    expect($sub1->refresh()->parent_id)->toBeNull()
+        ->and($sub2->refresh()->parent_id)->toBeNull();
+});
+
+it('fails validation if remove_parent is false and parent_id is missing', function () {
+    $target = Category::factory()->create();
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', [$target], [
+            'remove_parent' => false,
+            'parent_id' => null,
+        ])
+        ->assertHasTableBulkActionErrors(['parent_id']);
+});
+
+it('clears warehouse_id on assigned subcategories', function () {
+    $warehouse = Warehouse::factory()->create();
+    $parent = Category::factory()->create(['name' => 'رئيسي']);
+    $category = Category::factory()->create([
+        'parent_id' => null,
+        'warehouse_id' => $warehouse->id,
+    ]);
+
+    expect($category->warehouse_id)->toBe($warehouse->id);
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', [$category], [
+            'parent_id' => $parent->id,
+        ])
+        ->assertHasNoTableBulkActionErrors();
+
+    expect($category->refresh()->warehouse_id)->toBeNull()
+        ->and($category->parent_id)->toBe($parent->id);
+});
+
+it('cannot assign a subcategory as parent to enforce max 2 levels', function () {
+    $root = Category::factory()->create(['name' => 'جذر']);
+    $subCategory = Category::factory()->create([
+        'name' => 'فرعي',
+        'parent_id' => $root->id,
+    ]);
+    $targets = Category::factory()->count(2)->create();
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', $targets, [
+            'parent_id' => $subCategory->id,
+        ])
+        ->assertHasTableBulkActionErrors(['parent_id']);
+
+    foreach ($targets as $target) {
+        expect($target->refresh()->parent_id)->toBeNull();
+    }
+});
+
+it('cannot assign a parent if any selected category already has children', function () {
+    $parent = Category::factory()->create(['name' => 'رئيسي جديد']);
+    $hasChildren = Category::factory()->create(['name' => 'له أبناء']);
+    $child = Category::factory()->create([
+        'name' => 'ابن',
+        'parent_id' => $hasChildren->id,
+    ]);
+    $other = Category::factory()->create(['name' => 'بدون أبناء']);
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', [$hasChildren, $other], [
+            'parent_id' => $parent->id,
+        ])
+        ->assertHasTableBulkActionErrors(['parent_id']);
+
+    expect($hasChildren->refresh()->parent_id)->toBeNull()
+        ->and($other->refresh()->parent_id)->toBeNull();
+});
+
+it('cannot assign a selected category as parent to prevent cyclic dependencies', function () {
+    $cat1 = Category::factory()->create(['name' => 'فئة 1']);
+    $cat2 = Category::factory()->create(['name' => 'فئة 2']);
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', [$cat1, $cat2], [
+            'parent_id' => $cat1->id,
+        ])
+        ->assertHasTableBulkActionErrors(['parent_id']);
+
+    expect($cat1->refresh()->parent_id)->toBeNull()
+        ->and($cat2->refresh()->parent_id)->toBeNull();
+});
+
+it('cannot assign a non-existent category as parent', function () {
+    $target = Category::factory()->create();
+
+    livewire(ListCategories::class)
+        ->callTableBulkAction('assignParent', [$target], [
+            'parent_id' => 999999,
+        ])
+        ->assertHasTableBulkActionErrors(['parent_id']);
+
+    expect($target->refresh()->parent_id)->toBeNull();
+});
+
+// ===== Tree Table Plugin Tests =====
+it('renders category tree with collapsed subcategories by default and expands them on toggle', function () {
+    $parent = Category::factory()->create(['name' => 'المشروبات']);
+    $child = Category::factory()->create([
+        'name' => 'عصائر طبيعية',
+        'parent_id' => $parent->id,
+    ]);
+
+    livewire(ListCategories::class)
+        ->assertSee('المشروبات')
+        ->assertDontSee('عصائر طبيعية')
+        ->call('toggleRowExpansion', $parent->id)
+        ->assertSee('عصائر طبيعية')
+        ->call('toggleRowExpansion', $parent->id)
+        ->assertDontSee('عصائر طبيعية');
+});
+
+it('can expand all and collapse all category tree rows', function () {
+    $parent1 = Category::factory()->create(['name' => 'مأكولات']);
+    $child1 = Category::factory()->create(['name' => 'ساندوتشات', 'parent_id' => $parent1->id]);
+
+    $parent2 = Category::factory()->create(['name' => 'حلويات']);
+    $child2 = Category::factory()->create(['name' => 'كيك', 'parent_id' => $parent2->id]);
+
+    livewire(ListCategories::class)
+        ->assertDontSee('ساندوتشات')
+        ->assertDontSee('كيك')
+        ->call('expandAllRows')
+        ->assertSee('ساندوتشات')
+        ->assertSee('كيك')
+        ->call('collapseAllRows')
+        ->assertDontSee('ساندوتشات')
+        ->assertDontSee('كيك');
 });

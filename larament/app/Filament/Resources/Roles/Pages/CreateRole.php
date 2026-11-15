@@ -25,6 +25,7 @@ class CreateRole extends CreateRecord
             is_array($data['permissions_reports'] ?? null) ? $data['permissions_reports'] : [],
             is_array($data['permissions_pos'] ?? null) ? $data['permissions_pos'] : [],
             is_array($data['permissions_kitchen'] ?? null) ? $data['permissions_kitchen'] : [],
+            is_array($data['permissions_pos_tabs'] ?? null) ? $data['permissions_pos_tabs'] : [],
         )));
 
         $visiblePermissions = array_values(array_diff(

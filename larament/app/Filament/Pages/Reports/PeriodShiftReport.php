@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Reports;
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
 use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftExpensesTable;
@@ -55,17 +56,9 @@ class PeriodShiftReport extends BaseDashboard
 
     public function getWidgets(): array
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
-        $shiftsCount = 0;
-
-        if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
-            $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod(null, null, $shiftIds);
-        } else {
-            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString();
-            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-            $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod($startDate, $endDate, null);
-        }
+        $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod(
+            ...$this->shiftsReportService->scopeFromFilters($this->filters)
+        );
 
         if ($shiftsCount === 0) {
             return [
@@ -79,6 +72,7 @@ class PeriodShiftReport extends BaseDashboard
             PeriodShiftOrdersStats::class,
             PeriodShiftDoneOrdersStats::class,
             PeriodShiftOrdersTable::class,
+            PeriodShiftCreditCollectionsTable::class,
             PeriodShiftExpensesDetailsTable::class,
             PeriodShiftExpensesTable::class,
         ];

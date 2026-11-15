@@ -62,6 +62,7 @@ class HandleInertiaRequests extends Middleware
             'features' => $features,
             'receiptFooter' => $settingsService->getReceiptFooter(),
             'scaleBarcodePrefix' => $settingsService->getScaleBarcodePrefix(),
+            'tabsOrientation' => $settingsService->getCashierTabsOrientation(),
         ];
     }
 }

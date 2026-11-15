@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('kind');
             $table->string('status')->default('pending')->index();
             $table->unsignedSmallInteger('target_minutes');
-            $table->timestamp('sent_at');
+            $table->timestamp('sent_at')->useCurrent();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('done_at')->nullable();
             $table->timestamp('voided_at')->nullable();

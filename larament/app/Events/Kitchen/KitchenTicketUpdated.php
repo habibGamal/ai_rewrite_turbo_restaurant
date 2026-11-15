@@ -30,6 +30,7 @@ class KitchenTicketUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
         public readonly int $orderNumber,
         public readonly string $reason,
         public readonly array $stationIds,
+        public readonly ?int $shiftId = null,
     ) {}
 
     /**
@@ -37,9 +38,15 @@ class KitchenTicketUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('kitchen'),
         ];
+
+        if ($this->shiftId !== null) {
+            $channels[] = new PrivateChannel('shift.'.$this->shiftId);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string

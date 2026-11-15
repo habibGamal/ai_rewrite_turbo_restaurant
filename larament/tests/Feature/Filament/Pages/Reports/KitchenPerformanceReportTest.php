@@ -4,6 +4,7 @@ use App\Enums\KitchenItemStatus;
 use App\Enums\KitchenTicketStatus;
 use App\Filament\Pages\Reports\KitchenPerformanceReport;
 use App\Filament\Widgets\KitchenPerformanceOrderTypesWidget;
+use App\Filament\Widgets\KitchenPerformanceSlowestOrdersWidget;
 use App\Filament\Widgets\KitchenPerformanceSlowestProductsWidget;
 use App\Filament\Widgets\KitchenPerformanceStationsWidget;
 use App\Filament\Widgets\KitchenPerformanceStatsWidget;
@@ -94,6 +95,7 @@ it('shows all kitchen widgets', function () {
         ->assertSuccessful()
         ->assertSeeLivewire(KitchenPerformanceStatsWidget::class)
         ->assertSeeLivewire(KitchenPerformanceOrderTypesWidget::class)
+        ->assertSeeLivewire(KitchenPerformanceSlowestOrdersWidget::class)
         ->assertSeeLivewire(KitchenPerformanceSlowestProductsWidget::class)
         ->assertSeeLivewire(KitchenPerformanceStationsWidget::class)
         ->assertSeeLivewire(KitchenPerformanceWasteCandidatesWidget::class)
@@ -125,7 +127,42 @@ it('renders each kitchen widget directly', function () {
 
     livewire(KitchenPerformanceStatsWidget::class)->assertSuccessful();
     livewire(KitchenPerformanceOrderTypesWidget::class)->assertSuccessful();
+    livewire(KitchenPerformanceSlowestOrdersWidget::class)->assertSuccessful();
     livewire(KitchenPerformanceSlowestProductsWidget::class)->assertSuccessful();
     livewire(KitchenPerformanceStationsWidget::class)->assertSuccessful();
     livewire(KitchenPerformanceWasteCandidatesWidget::class)->assertSuccessful();
+});
+
+it('supports search, sort, and filters on slowest orders widget', function () {
+    kdsReportPageTicket();
+
+    livewire(KitchenPerformanceSlowestOrdersWidget::class)
+        ->searchTable('شاورما')
+        ->assertSuccessful()
+        ->sortTable('kitchen_seconds', 'asc')
+        ->assertSuccessful()
+        ->filterTable('late_only', true)
+        ->assertSuccessful();
+});
+
+it('supports search, sort, and filters on slowest products widget', function () {
+    kdsReportPageTicket();
+
+    livewire(KitchenPerformanceSlowestProductsWidget::class)
+        ->searchTable('شاورما')
+        ->assertSuccessful()
+        ->sortTable('avg_prep_seconds', 'asc')
+        ->assertSuccessful()
+        ->filterTable('late_only', true)
+        ->assertSuccessful();
+});
+
+it('supports search and sort on waste candidates widget', function () {
+    kdsReportPageTicket();
+
+    livewire(KitchenPerformanceWasteCandidatesWidget::class)
+        ->searchTable('شاورما')
+        ->assertSuccessful()
+        ->sortTable('voided_at', 'asc')
+        ->assertSuccessful();
 });

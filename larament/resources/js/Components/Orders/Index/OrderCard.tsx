@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 import { Link } from "@inertiajs/react";
-import { Col, Typography, Badge } from "antd";
-import { ShoppingCartOutlined } from "@ant-design/icons";
+import { Col, Typography, Badge, Tag, Tooltip } from "antd";
+import { CheckCircleOutlined, ClockCircleOutlined, ShoppingCartOutlined } from "@ant-design/icons";
 import { OrderTimer } from "./OrderTimer";
 import { formatCurrency } from "@/utils/orderCalculations";
 import type { Order } from "@/types";
@@ -58,13 +58,26 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
                         {children}
 
-                        <div className="border-t pt-3 flex items-center justify-between">
+                        <div className="border-t pt-3 flex items-center justify-between gap-1">
                             <span className="flex items-center gap-1 text-sm text-gray-600">
                                 <ShoppingCartOutlined />
                                 {order.items?.length || 0} أصناف
                             </span>
                             {showFooterTimer && (
                                 <OrderTimer createdAt={order.created_at} />
+                            )}
+                            {order.kitchen_status && (
+                                <Tooltip
+                                    title={order.kitchen_status === 'ready' ? 'جاهز' : 'قيد التحضير'}
+                                >
+                                    <Tag
+                                        color={order.kitchen_status === 'ready' ? 'success' : 'processing'}
+                                        icon={order.kitchen_status === 'ready' ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+                                        className="!m-0 text-xs px-1.5 py-0 leading-none inline-flex items-center gap-1 font-normal cursor-pointer"
+                                    >
+                                        {order.kitchen_progress ? `(${order.kitchen_progress.done} من ${order.kitchen_progress.total})` : ''}
+                                    </Tag>
+                                </Tooltip>
                             )}
                             <Typography.Text strong>
                                 {formatCurrency(Number(order.total))}

@@ -73,9 +73,18 @@ class OrderStockConversionService
 
     /**
      * Get components of a manufactured product with their required quantities
+     *
+     * @param  array<int, int>  $visited
      */
-    private function getManufacturedProductComponents(Product $manufacturedProduct, float $orderQuantity, int $warehouseId): array
+    private function getManufacturedProductComponents(Product $manufacturedProduct, float $orderQuantity, int $warehouseId, array $visited = []): array
     {
+        if (in_array($manufacturedProduct->id, $visited, true)) {
+            Log::warning("Cyclic component dependency detected for manufactured product {$manufacturedProduct->id}");
+
+            return [];
+        }
+
+        $visited[] = $manufacturedProduct->id;
         $components = [];
 
         // Get all components for this manufactured product
@@ -85,6 +94,10 @@ class OrderStockConversionService
 
         foreach ($productComponents as $productComponent) {
             $component = $productComponent->component;
+            if (! $component instanceof Product) {
+                continue;
+            }
+
             $requiredQuantity = $productComponent->quantity * $orderQuantity;
 
             // Only include raw materials and consumables (not other manufactured products)
@@ -96,7 +109,7 @@ class OrderStockConversionService
                 ];
             } elseif ($component->type === ProductType::Manufactured) {
                 // Nested components stay on the warehouse of the item that was sold
-                $nestedComponents = $this->getManufacturedProductComponents($component, $requiredQuantity, $warehouseId);
+                $nestedComponents = $this->getManufacturedProductComponents($component, $requiredQuantity, $warehouseId, $visited);
                 $components = array_merge($components, $nestedComponents);
             }
         }

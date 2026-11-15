@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\CreditReconciliationStats;
 use App\Models\Shift;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -10,6 +11,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CurrentShiftMoneyInfoStats extends BaseWidget
 {
+    use CreditReconciliationStats;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -52,10 +55,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-arrow-down-circle')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch()
-                        document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
+                    'x-on:click' => "document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })",
                 ])
                 ->color('danger'),
 
@@ -106,6 +106,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     JS
                 ])
                 ->color('warning'),
+
+            ...$this->creditReconciliationStats($stats, 'الشفت'),
 
             Stat::make('متوسط قيمة الاوردر', number_format($stats['avgReceiptValue'], 2).' جنيه')
                 ->description('متوسط قيمة الطلب الواحد')

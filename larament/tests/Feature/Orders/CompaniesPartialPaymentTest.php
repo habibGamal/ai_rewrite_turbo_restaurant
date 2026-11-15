@@ -196,15 +196,32 @@ describe('companies partial payment', function () {
             ->and(Payment::query()->where('order_id', $order->id)->count())->toBe(2);
     });
 
-    it('still cancels a fully paid takeaway order from a closed shift', function () {
+    it('refuses to cancel a fully paid takeaway order from a closed shift', function () {
         openInventoryDay();
         $order = companiesOrder($this->shift, $this->user, null, 'takeaway');
         $this->orders->completeOrder($order->id, ['cash' => 100]);
         $this->shift->update(['closed' => true, 'end_at' => now()]);
 
-        $this->orders->cancelOrder($order->id);
+        expect(fn () => $this->orders->cancelOrder($order->id))
+            ->toThrow(OrderException::class, 'لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
 
-        expect($order->fresh()->status)->toBe(OrderStatus::CANCELLED);
+        expect($order->fresh()->status)->toBe(OrderStatus::COMPLETED)
+            ->and(Payment::query()->where('order_id', $order->id)->sum('amount'))->toEqual(100);
+    });
+
+    it('refuses to cancel a closed-shift order after its type stops allowing credit', function () {
+        $order = companiesOrder($this->shift, $this->user, $this->customer);
+        $this->orders->completeOrder($order->id, ['cash' => 60]);
+        $this->shift->update(['closed' => true, 'end_at' => now()]);
+
+        \App\Models\OrderTypeRow::query()->where('code', 'companies')->update([
+            'allow_partial_payment' => false,
+            'allow_pay_later' => false,
+        ]);
+        app()->forgetInstance(\App\Orders\OrderTypeCatalog::class);
+
+        expect(fn () => $this->orders->cancelOrder($order->id))
+            ->toThrow(OrderException::class, 'لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
     });
 
     it('sends receivables for partly paid companies orders and omits the old prop', function () {

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
@@ -17,6 +16,7 @@ class ShiftService
     public function __construct(
         private readonly SettingsService $settingsService,
         private readonly OrderTypeCatalog $catalog,
+        private readonly ShiftsReportService $shiftsReportService,
     ) {}
 
     /**
@@ -127,25 +127,20 @@ class ShiftService
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {
-            // Calculate end cash from shift orders
-            $totalCash = $currentShift->orders()
-                ->where('status', OrderStatus::COMPLETED)
-                ->whereHas('payments', function ($query) {
-                    $query->where('method', PaymentMethod::CASH);
-                })
-                ->sum('total');
+            // Expected drawer cash is the report's "النقدية المتاحة": opening cash + cash payments
+            // received in this shift + external cash − seller settlements − expenses. Payments count
+            // in the shift that received them, so a pay-later order adds only what was actually paid
+            // here, and a later collection adds to the shift that collected it.
+            $endCash = round((float) $this->shiftsReportService->calculateShiftStats($currentShift)['availableCash'], 2);
 
-            $endCash = $currentShift->start_cash + $totalCash;
-
-            // Calculate if there's a deficit
-            $deficit = $endCash - $realCash;
-            $hasDeficit = $deficit > 0;
+            // Positive = shortage, negative = surplus (same sign as Shift::deficit).
+            $difference = round($endCash - $realCash, 2);
 
             $currentShift->update([
                 'end_cash' => $endCash,
                 'real_cash' => $realCash,
-                'losses_amount' => $lossesAmount ?? 0,
-                'has_deficit' => $hasDeficit,
+                'losses_amount' => $difference,
+                'has_deficit' => $difference > 0,
                 'end_at' => now(),
                 'closed' => true,
             ]);

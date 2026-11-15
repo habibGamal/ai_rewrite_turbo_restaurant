@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('kitchen_ticket_id')->constrained()->cascadeOnDelete();
             $table->unsignedSmallInteger('number');
-            $table->timestamp('started_at');
+            $table->timestamp('started_at')->useCurrent();
             $table->timestamp('ended_at')->nullable();
             $table->timestamps();
 

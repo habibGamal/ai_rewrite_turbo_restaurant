@@ -63,6 +63,7 @@ export interface OrderItem {
     price: number;
     notes?: string;
     product: Product;
+    kitchen_status?: 'ready' | 'in_progress' | null;
 }
 
 export interface Payment {
@@ -105,6 +106,13 @@ export interface Order {
     table?: Table;
     payments?: Payment[];
     display?: OrderDisplay;
+    kitchen_status?: 'ready' | 'in_progress' | null;
+    kitchen_progress?: {
+        done: number;
+        total: number;
+        status: 'ready' | 'in_progress';
+    } | null;
+    shift_id?: number;
     credit?: {
         allow_partial_payment: boolean;
         allow_pay_later: boolean;
@@ -169,6 +177,7 @@ export interface OrderItemData {
     quantity: number;
     notes?: string;
     initial_quantity?: number;
+    kitchen_status?: 'ready' | 'in_progress' | null;
 }
 
 export type OrderItemAction =
@@ -185,6 +194,7 @@ export interface ManageOrderProps {
     order: Order;
     categories: Category[];
     receiptFooter?: string;
+    kdsCashierStatusEnabled?: boolean;
 }
 
 export interface FeatureFlags {
@@ -201,6 +211,7 @@ export interface PageProps {
     features?: FeatureFlags;
     receiptFooter: string;
     scaleBarcodePrefix?: string;
+    tabsOrientation?: 'horizontal' | 'vertical';
     [key: string]: unknown;
 }
 

@@ -19,17 +19,16 @@ enum SettingKey: string
     case NODE_TYPE = 'node_type';
     case MASTER_NODE_LINK = 'master_node_link';
     case SCALE_BARCODE_PREFIX = 'scale_barcode_prefix';
-    case ALLOW_CASHIER_DISCOUNTS = 'allow_cashier_discounts';
-    case ALLOW_CASHIER_CANCEL_ORDERS = 'allow_cashier_cancel_orders';
-    case ALLOW_CASHIER_ITEM_CHANGES = 'allow_cashier_item_changes';
     case ALLOW_WEB_ORDERS_SHIFT_TRANSFER = 'allow_web_orders_shift_transfer';
     case CASHIER_TABS = 'cashier_tabs';
+    case CASHIER_TABS_ORIENTATION = 'cashier_tabs_orientation';
     case COSTING_METHOD = 'costing_method';
     case KDS_ITEM_TRACKING = 'kds_item_tracking';
     case KDS_DEFAULT_PREP_MINUTES = 'kds_default_prep_minutes';
     case KDS_ORDER_TYPE_TARGETS = 'kds_order_type_targets';
     case KDS_WARNING_PERCENT = 'kds_warning_percent';
     case KDS_AUTO_FINISH_ON_COMPLETE = 'kds_auto_finish_on_complete';
+    case KDS_CASHIER_STATUS_ENABLED = 'kds_cashier_status_enabled';
     case KDS_RECALL_MINUTES = 'kds_recall_minutes';
     case KDS_NEW_ORDER_SOUND = 'kds_new_order_sound';
     case KDS_CHANGE_SOUND = 'kds_change_sound';
@@ -58,17 +57,16 @@ enum SettingKey: string
             self::NODE_TYPE => 'independent',
             self::MASTER_NODE_LINK => 'http://127.0.0.1:38794',
             self::SCALE_BARCODE_PREFIX => '23',
-            self::ALLOW_CASHIER_DISCOUNTS => 'false',
-            self::ALLOW_CASHIER_CANCEL_ORDERS => 'false',
-            self::ALLOW_CASHIER_ITEM_CHANGES => 'false',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'false',
             self::CASHIER_TABS => self::cashierTabsDefault(),
+            self::CASHIER_TABS_ORIENTATION => 'horizontal',
             self::COSTING_METHOD => 'immediate',
             self::KDS_ITEM_TRACKING => 'true',
             self::KDS_DEFAULT_PREP_MINUTES => '10',
             self::KDS_ORDER_TYPE_TARGETS => '{}',
             self::KDS_WARNING_PERCENT => '75',
             self::KDS_AUTO_FINISH_ON_COMPLETE => 'true',
+            self::KDS_CASHIER_STATUS_ENABLED => 'true',
             self::KDS_RECALL_MINUTES => '15',
             self::KDS_NEW_ORDER_SOUND => 'chime',
             self::KDS_CHANGE_SOUND => 'bell',
@@ -99,11 +97,9 @@ enum SettingKey: string
             self::NODE_TYPE => ['required', 'in:master,slave,independent'],
             self::MASTER_NODE_LINK => ['nullable', 'url', 'max:255'],
             self::SCALE_BARCODE_PREFIX => ['required', 'string', 'regex:/^\d{1,4}$/', 'max:4'],
-            self::ALLOW_CASHIER_DISCOUNTS => ['required', 'boolean'],
-            self::ALLOW_CASHIER_CANCEL_ORDERS => ['required', 'boolean'],
-            self::ALLOW_CASHIER_ITEM_CHANGES => ['required', 'boolean'],
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => ['required', 'boolean'],
             self::CASHIER_TABS => ['nullable', 'json'],
+            self::CASHIER_TABS_ORIENTATION => ['required', 'string', 'in:horizontal,vertical'],
             self::COSTING_METHOD => ['required', 'in:off,immediate,weighted_average'],
             // Settings are stored as strings. Laravel's `boolean` rule rejects
             // "true"/"false", so these accept the stored form and real booleans.
@@ -112,6 +108,7 @@ enum SettingKey: string
             self::KDS_ORDER_TYPE_TARGETS => ['nullable', 'json'],
             self::KDS_WARNING_PERCENT => ['required', 'integer', 'min:1', 'max:100'],
             self::KDS_AUTO_FINISH_ON_COMPLETE => self::storedBooleanRules(),
+            self::KDS_CASHIER_STATUS_ENABLED => self::storedBooleanRules(),
             self::KDS_RECALL_MINUTES => ['required', 'integer', 'min:1', 'max:240'],
             self::KDS_NEW_ORDER_SOUND => self::kdsSoundRules(),
             self::KDS_CHANGE_SOUND => self::kdsSoundRules(),
@@ -142,17 +139,16 @@ enum SettingKey: string
             self::NODE_TYPE => 'نوع النقطة الحالية',
             self::MASTER_NODE_LINK => 'رابط النقطة الرئيسية',
             self::SCALE_BARCODE_PREFIX => 'بادئة باركود الميزان',
-            self::ALLOW_CASHIER_DISCOUNTS => 'السماح للكاشير بتطبيق الخصومات',
-            self::ALLOW_CASHIER_CANCEL_ORDERS => 'السماح للكاشير بإلغاء الطلبات',
-            self::ALLOW_CASHIER_ITEM_CHANGES => 'السماح للكاشير بتعديل الطلبات المحفوظة',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'نقل طلبات الويب المفتوحة إلى الوردية التالية',
             self::CASHIER_TABS => 'تبويبات الكاشير',
+            self::CASHIER_TABS_ORIENTATION => 'طريقة عرض تبويبات الكاشير',
             self::COSTING_METHOD => 'طريقة تقييم التكلفة',
             self::KDS_ITEM_TRACKING => 'تتبع الأصناف بشكل منفصل',
             self::KDS_DEFAULT_PREP_MINUTES => 'وقت التحضير الافتراضي (دقائق)',
             self::KDS_ORDER_TYPE_TARGETS => 'الوقت المستهدف لكل نوع طلب',
             self::KDS_WARNING_PERCENT => 'نسبة التحذير من الوقت المستهدف',
             self::KDS_AUTO_FINISH_ON_COMPLETE => 'إنهاء تذكرة المطبخ عند إنهاء الطلب',
+            self::KDS_CASHIER_STATUS_ENABLED => 'عرض حالة المطبخ للكاشير',
             self::KDS_RECALL_MINUTES => 'مدة استرجاع التذاكر المنتهية',
             self::KDS_NEW_ORDER_SOUND => 'صوت الطلب الجديد',
             self::KDS_CHANGE_SOUND => 'صوت تعديل الطلب',
@@ -183,17 +179,16 @@ enum SettingKey: string
             self::NODE_TYPE => 'تحديد نوع النقطة الحالية في شبكة الفروع',
             self::MASTER_NODE_LINK => 'رابط النقطة الرئيسية (مطلوب فقط إذا كان النوع عبارة عن فرع)',
             self::SCALE_BARCODE_PREFIX => 'البادئة المستخدمة لتحديد باركود المنتجات الموزونة (مثال: 23)',
-            self::ALLOW_CASHIER_DISCOUNTS => 'يسمح للكاشير بتطبيق خصومات على الطلبات',
-            self::ALLOW_CASHIER_CANCEL_ORDERS => 'يسمح للكاشير بإلغاء الطلبات المكتملة',
-            self::ALLOW_CASHIER_ITEM_CHANGES => 'يسمح للكاشير بتعديل عناصر الطلبات المحفوظة مسبقاً',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'عند تفعيل هذا الخيار، طلبات الويب (دليفري وتيك أواي) المفتوحة سيتم نقلها تلقائياً للوردية الجديدة عند إغلاق الوردية الحالية',
             self::CASHIER_TABS => 'اسحب التبويبات لإعادة ترتيبها، واستخدم مفتاح «مرئي» لإظهار التبويب أو إخفائه في شاشة الكاشير.',
+            self::CASHIER_TABS_ORIENTATION => 'اختر ظهور تبويبات شاشة الكاشير بشكل أفقي (في الأعلى) أو عمودي (على الجانب).',
             self::COSTING_METHOD => 'اختر طريقة تحديث تكلفة المنتجات عند استلام المخزون. يمكن تغيير الطريقة عند إغلاق جميع الورديات.',
             self::KDS_ITEM_TRACKING => 'عند التفعيل يستطيع الطاهي تعليم كل صنف كمنتهٍ بمفرده. عند الإيقاف يُنهى الطلب كاملاً فقط، وتأخذ الأصناف وقت التذكرة.',
             self::KDS_DEFAULT_PREP_MINUTES => 'الوقت المستهدف المستخدم إذا لم يُحدد وقت للصنف أو للتصنيف أو لنوع الطلب.',
             self::KDS_ORDER_TYPE_TARGETS => 'كائن JSON يربط نوع الطلب بالدقائق المستهدفة، ويُستخدم عندما لا يحدد الصنف أو التصنيف وقتاً. اتركه {} إذا لم ترد تخصيصاً.',
             self::KDS_WARNING_PERCENT => 'تتحول بطاقة الطلب إلى حالة تحذير عند بلوغ هذه النسبة من الوقت المستهدف، وإلى متأخر بعد تجاوز الوقت.',
             self::KDS_AUTO_FINISH_ON_COMPLETE => 'عند إكمال الطلب أو تحصيله تُنهى تذكرة المطبخ تلقائياً، وتُعلَّم الأصناف بأنها أُنهيت تلقائياً ولا تُحتسب في إحصاءات وقت التحضير.',
+            self::KDS_CASHIER_STATUS_ENABLED => 'عرض حالة الطلب في المطبخ (جاهز أو قيد التحضير) للكاشير عند متابعة الطلبات وإشعاره عند اكتمال الطلب.',
             self::KDS_RECALL_MINUTES => 'عدد الدقائق التي تبقى فيها التذاكر المنتهية ظاهرة وقابلة للاسترجاع أو للتراجع عن إنهاء صنف.',
             self::KDS_NEW_ORDER_SOUND => 'النغمة التي تُشغَّل عند وصول طلب جديد إلى شاشة المطبخ. تُولَّد النغمات في المتصفح دون ملفات صوت.',
             self::KDS_CHANGE_SOUND => 'النغمة التي تُشغَّل عند تعديل أصناف طلب موجود على شاشة المطبخ.',
@@ -224,17 +219,16 @@ enum SettingKey: string
             self::NODE_TYPE => 'اختر نوع النقطة',
             self::MASTER_NODE_LINK => 'http://127.0.0.1:38794',
             self::SCALE_BARCODE_PREFIX => '23',
-            self::ALLOW_CASHIER_DISCOUNTS => 'تفعيل',
-            self::ALLOW_CASHIER_CANCEL_ORDERS => 'تفعيل',
-            self::ALLOW_CASHIER_ITEM_CHANGES => 'تفعيل',
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => 'تفعيل',
             self::CASHIER_TABS => self::cashierTabsDefault(),
+            self::CASHIER_TABS_ORIENTATION => 'اختر طريقة العرض',
             self::COSTING_METHOD => 'اختر طريقة تقييم التكلفة',
             self::KDS_ITEM_TRACKING => 'تفعيل',
             self::KDS_DEFAULT_PREP_MINUTES => '10',
             self::KDS_ORDER_TYPE_TARGETS => '{}',
             self::KDS_WARNING_PERCENT => '75',
             self::KDS_AUTO_FINISH_ON_COMPLETE => 'تفعيل',
+            self::KDS_CASHIER_STATUS_ENABLED => 'تفعيل',
             self::KDS_RECALL_MINUTES => '15',
             self::KDS_NEW_ORDER_SOUND => 'chime',
             self::KDS_CHANGE_SOUND => 'bell',
@@ -265,14 +259,13 @@ enum SettingKey: string
             self::NODE_TYPE => in_array($value, ['master', 'slave', 'independent']),
             self::MASTER_NODE_LINK => ! $value || filter_var($value, FILTER_VALIDATE_URL) !== false,
             self::SCALE_BARCODE_PREFIX => is_string($value) && preg_match('/^\d{1,4}$/', $value),
-            self::ALLOW_CASHIER_DISCOUNTS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
-            self::ALLOW_CASHIER_CANCEL_ORDERS => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
-            self::ALLOW_CASHIER_ITEM_CHANGES => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER => is_bool($value) || in_array($value, ['true', 'false', '1', '0', 1, 0]),
             self::CASHIER_TABS => self::isJsonValue($value),
+            self::CASHIER_TABS_ORIENTATION => in_array($value, ['horizontal', 'vertical'], true),
             self::COSTING_METHOD => is_string($value) && CostingMethod::tryFrom($value) !== null,
             self::KDS_ITEM_TRACKING,
             self::KDS_AUTO_FINISH_ON_COMPLETE,
+            self::KDS_CASHIER_STATUS_ENABLED,
             self::FEATURE_REVENUES_ENABLED,
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
@@ -289,12 +282,10 @@ enum SettingKey: string
     public function isBooleanSetting(): bool
     {
         return match ($this) {
-            self::ALLOW_CASHIER_DISCOUNTS,
-            self::ALLOW_CASHIER_CANCEL_ORDERS,
-            self::ALLOW_CASHIER_ITEM_CHANGES,
             self::ALLOW_WEB_ORDERS_SHIFT_TRANSFER,
             self::KDS_ITEM_TRACKING,
             self::KDS_AUTO_FINISH_ON_COMPLETE,
+            self::KDS_CASHIER_STATUS_ENABLED,
             self::FEATURE_REVENUES_ENABLED,
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,

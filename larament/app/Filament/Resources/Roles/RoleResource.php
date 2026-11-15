@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Roles;
 use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
+use App\Orders\TabPermissions;
 use App\Services\FeatureService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\BulkActionGroup;
@@ -148,6 +149,21 @@ class RoleResource extends Resource
                                         CheckboxList::make('permissions_kitchen')
                                             ->hiddenLabel()
                                             ->options($catalog['شاشة المطبخ'] ?? [])
+                                            ->columns(2)
+                                            ->bulkToggleable()
+                                            ->dehydrated(false),
+                                    ]),
+                            ]),
+
+                        Tab::make(TabPermissions::GROUP)
+                            ->icon('heroicon-o-squares-2x2')
+                            ->schema([
+                                Section::make('التبويبات التي يراها هذا الدور في شاشة الكاشير')
+                                    ->description('يتم إضافة أنواع الطلبات الجديدة هنا تلقائيًا. يحتاج الدور أيضًا إلى صلاحية الدخول لنقطة البيع.')
+                                    ->schema([
+                                        CheckboxList::make('permissions_pos_tabs')
+                                            ->hiddenLabel()
+                                            ->options($catalog[TabPermissions::GROUP] ?? [])
                                             ->columns(2)
                                             ->bulkToggleable()
                                             ->dehydrated(false),

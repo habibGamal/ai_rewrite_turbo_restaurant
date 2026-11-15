@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Categories;
 
+use App\Filament\Actions\AssignCategoryParentBulkAction;
 use App\Filament\Resources\Categories\Pages\CreateCategory;
 use App\Filament\Resources\Categories\Pages\EditCategory;
 use App\Filament\Resources\Categories\Pages\ListCategories;
@@ -24,6 +25,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Kisame76\FilamentTreeTable\ExpandableRows;
 
 class CategoryResource extends Resource
 {
@@ -142,51 +144,58 @@ class CategoryResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('name')
-                    ->label('اسم الفئة')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('parent.name')
-                    ->label('التصنيف الرئيسي')
-                    ->placeholder('رئيسي'),
-                TextColumn::make('blockedOrderTypes.label')
-                    ->label('أنواع محظورة')
-                    ->badge()
-                    ->placeholder('—'),
-                TextColumn::make('products_count')
-                    ->label('عدد المنتجات')
-                    ->counts('products')
-                    ->sortable(),
-                TextColumn::make('kitchenStation.name')
-                    ->label('محطة المطبخ')
-                    ->searchable()
-                    ->placeholder('عام'),
-                TextColumn::make('created_at')
-                    ->label('تاريخ الإنشاء')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->label('تاريخ التحديث')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return ExpandableRows::make()
+            ->parentKey('parent_id')
+            ->childrenRelationship('children')
+            ->paginateByRoot()
+            ->applyTo(
+                $table
+                    ->columns([
+                        TextColumn::make('name')
+                            ->label('اسم الفئة')
+                            ->searchable()
+                            ->sortable(),
+                        TextColumn::make('parent.name')
+                            ->label('التصنيف الرئيسي')
+                            ->placeholder('رئيسي'),
+                        TextColumn::make('blockedOrderTypes.label')
+                            ->label('أنواع محظورة')
+                            ->badge()
+                            ->placeholder('—'),
+                        TextColumn::make('products_count')
+                            ->label('عدد المنتجات')
+                            ->counts('products')
+                            ->sortable(),
+                        TextColumn::make('kitchenStation.name')
+                            ->label('محطة المطبخ')
+                            ->searchable()
+                            ->placeholder('عام'),
+                        TextColumn::make('created_at')
+                            ->label('تاريخ الإنشاء')
+                            ->dateTime()
+                            ->sortable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+                        TextColumn::make('updated_at')
+                            ->label('تاريخ التحديث')
+                            ->dateTime()
+                            ->sortable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+                    ])
+                    ->filters([
+                        //
+                    ])
+                    ->recordActions([
+                        ViewAction::make(),
+                        EditAction::make(),
+                        DeleteAction::make(),
+                    ])
+                    ->toolbarActions([
+                        BulkActionGroup::make([
+                            AssignCategoryParentBulkAction::make(),
+                            DeleteBulkAction::make(),
+                        ]),
+                    ])
+            );
     }
 
     public static function getEloquentQuery(): Builder

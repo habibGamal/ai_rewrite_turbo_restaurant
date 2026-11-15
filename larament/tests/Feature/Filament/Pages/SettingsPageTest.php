@@ -45,7 +45,6 @@ it('renders all settings tabs', function () {
             'الإعدادات العامة',
             'إعدادات المطعم',
             'إدارة الفروع',
-            'صلاحيات الكاشير',
             'إدارة الورديات',
             'تبويبات الكاشير',
             'إدارة المشتريات',
@@ -113,11 +112,12 @@ it('has all branch management fields', function () {
         ->assertSchemaComponentExists(SettingKey::MASTER_NODE_LINK->value);
 });
 
-it('has all cashier permission fields', function () {
+it('no longer has the legacy cashier permission toggles', function () {
     livewire(Settings::class)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value);
+        ->assertSchemaComponentDoesNotExist('allow_cashier_discounts')
+        ->assertSchemaComponentDoesNotExist('allow_cashier_cancel_orders')
+        ->assertSchemaComponentDoesNotExist('allow_cashier_item_changes')
+        ->assertDontSee('صلاحيات الكاشير');
 });
 
 it('has shift management fields', function () {
@@ -147,9 +147,6 @@ it('loads default settings correctly', function () {
 it('loads boolean settings correctly', function () {
     livewire(Settings::class)
         ->assertSchemaStateSet([
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => false,
-            SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
-            SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
             SettingKey::COSTING_METHOD->value => 'immediate',
         ]);
@@ -160,14 +157,13 @@ it('loads existing settings from database', function () {
         ->update(['value' => 'https://example.com']);
     Setting::where('key', SettingKey::RESTAURANT_NAME->value)
         ->update(['value' => 'Test Restaurant']);
-    Setting::where('key', SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
+    Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)
         ->update(['value' => 'true']);
 
     livewire(Settings::class)
         ->assertSchemaStateSet([
             SettingKey::WEBSITE_URL->value => 'https://example.com',
             SettingKey::RESTAURANT_NAME->value => 'Test Restaurant',
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
         ]);
 });
 
@@ -211,21 +207,12 @@ it('can save restaurant settings', function () {
 it('can save boolean settings', function () {
     livewire(Settings::class)
         ->fillForm([
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
-            SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => true,
-            SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => true,
             SettingKey::COSTING_METHOD->value => 'off',
         ])
         ->call('save')
         ->assertNotified();
 
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_DISCOUNTS->value)->first()->value)
-        ->toBe('true');
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)->first()->value)
-        ->toBe('true');
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)->first()->value)
-        ->toBe('false');
     expect(Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)->first()->value)
         ->toBe('true');
     expect(Setting::where('key', SettingKey::COSTING_METHOD->value)->first()->value)
@@ -372,9 +359,6 @@ it('persists all settings after save', function () {
         SettingKey::RESTAURANT_NAME->value => 'مطعم جديد',
         SettingKey::NODE_TYPE->value => 'master',
         SettingKey::SCALE_BARCODE_PREFIX->value => '25',
-        SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
-        SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
-        SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => true,
         SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
     ];
 
@@ -401,7 +385,6 @@ it('settings service can retrieve saved settings', function () {
         ->fillForm([
             SettingKey::WEBSITE_URL->value => 'https://example.com',
             SettingKey::CASHIER_PRINTER_IP->value => '192.168.1.101',
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
         ])
         ->call('save');
 
@@ -409,7 +392,6 @@ it('settings service can retrieve saved settings', function () {
 
     expect($settingsService->getWebsiteLink())->toBe('https://example.com');
     expect($settingsService->getCashierPrinterIp())->toBe('192.168.1.101');
-    expect($settingsService->isCashierDiscountsAllowed())->toBeTrue();
 });
 
 // ===== KDS (شاشة المطبخ) Settings Tests =====

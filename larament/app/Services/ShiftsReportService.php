@@ -10,6 +10,7 @@ use App\Models\Shift;
 use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 class ShiftsReportService
@@ -26,25 +27,67 @@ class ShiftsReportService
     }
 
     /**
+     * The one rule every period widget uses to pick its shifts: the selected shift IDs when
+     * there are any, otherwise shifts that started between the two dates (whole days), otherwise all.
+     *
+     * @param  array<int|string>|null  $shiftIds
+     */
+    public function shiftIdsQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): QueryBuilder
+    {
+        $query = DB::table('shifts')->select('shifts.id');
+
+        if ($shiftIds !== null && $shiftIds !== []) {
+            return $query->whereIn('shifts.id', $shiftIds);
+        }
+
+        if ($startDate) {
+            $query->where('shifts.start_at', '>=', Carbon::parse($startDate)->startOfDay());
+        }
+
+        if ($endDate) {
+            $query->where('shifts.start_at', '<=', Carbon::parse($endDate)->endOfDay());
+        }
+
+        return $query;
+    }
+
+    /**
+     * Normalises a period page's filters into [startDate, endDate, shiftIds].
+     *
+     * @param  array<string, mixed>|null  $filters
+     * @return array{0: ?string, 1: ?string, 2: ?array<int|string>}
+     */
+    public function scopeFromFilters(?array $filters): array
+    {
+        $filters ??= [];
+
+        if (($filters['filterType'] ?? 'period') === 'shifts') {
+            return [null, null, array_values((array) ($filters['shifts'] ?? []))];
+        }
+
+        return [
+            $filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString(),
+            $filters['endDate'] ?? now()->endOfDay()->toDateString(),
+            null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $filters
+     */
+    public function shiftIdsQueryFromFilters(?array $filters): QueryBuilder
+    {
+        return $this->shiftIdsQuery(...$this->scopeFromFilters($filters));
+    }
+
+    /**
      * Get shifts within a date range or specific shift IDs
      */
     public function getShiftsInPeriodQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $query = Shift::query()->with(['orders', 'expenses', 'user']);
-
-        if ($shiftIds && ! empty($shiftIds)) {
-            $query->whereIn('id', $shiftIds);
-        } else {
-            if ($startDate) {
-                $query->where('start_at', '>=', Carbon::parse($startDate)->startOfDay());
-            }
-
-            if ($endDate) {
-                $query->where('start_at', '<=', Carbon::parse($endDate)->endOfDay());
-            }
-        }
-
-        return $query;
+        return Shift::query()
+            ->with(['orders', 'expenses', 'user'])
+            ->whereIn('id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds));
     }
 
     /**
@@ -70,23 +113,14 @@ class ShiftsReportService
             $minutesExpression = 'SUM(TIMESTAMPDIFF(MINUTE, start_at, end_at))';
         }
 
-        $query = DB::table('shifts')
+        return DB::table('shifts')
             ->select([
                 DB::raw('COUNT(*) as total_shifts'),
                 DB::raw('COUNT(DISTINCT user_id) as distinct_users'),
                 DB::raw("{$minutesExpression} as total_minutes"),
-            ]);
-
-        if ($shiftIds && ! empty($shiftIds)) {
-            $query->whereIn('id', $shiftIds);
-        } else {
-            $query->whereBetween('created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
-            ]);
-        }
-
-        return $query->first();
+            ])
+            ->whereIn('id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds))
+            ->first();
     }
 
     /**
@@ -152,7 +186,57 @@ class ShiftsReportService
             'talabatCardPayments' => $talabatCardPayments,
             'avgReceiptValue' => $avgReceiptValue,
             'profitPercent' => $profitPercent,
+        ] + $this->creditReconciliation([$shift->id]);
+    }
+
+    /**
+     * Pay-later reconciliation for a set of shifts, so that
+     *   sales − uncollectedCredit + previousCollections = money received (cash + card + talabat card).
+     *
+     * - uncollectedCredit: for completed orders of these shifts, total minus what was paid in these shifts.
+     * - previousCollections: payments taken in these shifts for orders that belong to other shifts.
+     *
+     * @param  QueryBuilder|array<int|string>  $shiftIds
+     * @return array{uncollectedCredit: float, uncollectedCreditCount: int, previousCollections: float, previousCollectionsCount: int}
+     */
+    public function creditReconciliation(QueryBuilder|array $shiftIds): array
+    {
+        $paidInScope = DB::table('payments')
+            ->select('order_id')
+            ->selectRaw('SUM(amount) as paid')
+            ->whereIn('shift_id', $this->cloneScope($shiftIds))
+            ->groupBy('order_id');
+
+        $uncollected = DB::table('orders')
+            ->leftJoinSub($paidInScope, 'scope_payments', 'scope_payments.order_id', '=', 'orders.id')
+            ->whereIn('orders.shift_id', $this->cloneScope($shiftIds))
+            ->where('orders.status', OrderStatus::COMPLETED->value)
+            ->whereRaw('orders.total - COALESCE(scope_payments.paid, 0) > 0.005')
+            ->selectRaw('COUNT(*) as orders_count, COALESCE(SUM(orders.total - COALESCE(scope_payments.paid, 0)), 0) as amount')
+            ->first();
+
+        $collections = DB::table('payments')
+            ->join('orders', 'orders.id', '=', 'payments.order_id')
+            ->whereIn('payments.shift_id', $this->cloneScope($shiftIds))
+            ->whereNotIn('orders.shift_id', $this->cloneScope($shiftIds))
+            ->selectRaw('COUNT(DISTINCT payments.order_id) as orders_count, COALESCE(SUM(payments.amount), 0) as amount')
+            ->first();
+
+        return [
+            'uncollectedCredit' => round((float) ($uncollected->amount ?? 0), 2),
+            'uncollectedCreditCount' => (int) ($uncollected->orders_count ?? 0),
+            'previousCollections' => round((float) ($collections->amount ?? 0), 2),
+            'previousCollectionsCount' => (int) ($collections->orders_count ?? 0),
         ];
+    }
+
+    /**
+     * @param  QueryBuilder|array<int|string>  $shiftIds
+     * @return QueryBuilder|array<int|string>
+     */
+    private function cloneScope(QueryBuilder|array $shiftIds): QueryBuilder|array
+    {
+        return $shiftIds instanceof QueryBuilder ? clone $shiftIds : $shiftIds;
     }
 
     /**
@@ -160,16 +244,8 @@ class ShiftsReportService
      */
     public function calculatePeriodStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $shiftsQuery = DB::table('shifts');
-
-        if ($shiftIds && ! empty($shiftIds)) {
-            $shiftsQuery->whereIn('shifts.id', $shiftIds);
-        } else {
-            $shiftsQuery->whereBetween('shifts.created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
-            ]);
-        }
+        $scope = $this->shiftIdsQuery($startDate, $endDate, $shiftIds);
+        $shiftsQuery = DB::table('shifts')->whereIn('shifts.id', $scope);
 
         $ordersData = (clone $shiftsQuery)
             ->select([
@@ -186,9 +262,9 @@ class ShiftsReportService
 
         $paymentsData = (clone $shiftsQuery)
             ->select([
-                DB::raw('SUM(CASE WHEN payments.method = "cash" THEN payments.amount ELSE 0 END) as cash_payments'),
-                DB::raw('SUM(CASE WHEN payments.method = "card" THEN payments.amount ELSE 0 END) as card_payments'),
-                DB::raw('SUM(CASE WHEN payments.method = "talabat_card" THEN payments.amount ELSE 0 END) as talabat_card_payments'),
+                DB::raw("SUM(CASE WHEN payments.method = 'cash' THEN payments.amount ELSE 0 END) as cash_payments"),
+                DB::raw("SUM(CASE WHEN payments.method = 'card' THEN payments.amount ELSE 0 END) as card_payments"),
+                DB::raw("SUM(CASE WHEN payments.method = 'talabat_card' THEN payments.amount ELSE 0 END) as talabat_card_payments"),
             ])
             ->leftJoin(
                 'payments',
@@ -208,9 +284,8 @@ class ShiftsReportService
                 'expenses.shift_id'
             )->first();
 
-        $selectedShiftIds = (clone $shiftsQuery)->select('shifts.id');
-        $externalCash = (float) DB::table('external_order_collections')->whereIn('shift_id', $selectedShiftIds)->where('method', 'cash')->sum('amount');
-        $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', $selectedShiftIds)->sum('amount');
+        $externalCash = (float) DB::table('external_order_collections')->whereIn('shift_id', clone $scope)->where('method', 'cash')->sum('amount');
+        $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', clone $scope)->sum('amount');
         $startCash = (float) (clone $shiftsQuery)->sum('shifts.start_cash');
         $totalStats = [
             'sales' => $ordersData->sales ?? 0,
@@ -230,7 +305,7 @@ class ShiftsReportService
             'totalOrders' => $ordersData->total_orders ?? 0,
         ];
 
-        return $totalStats;
+        return $totalStats + $this->creditReconciliation($scope);
     }
 
     /**
@@ -280,18 +355,8 @@ class ShiftsReportService
      */
     public function calculatePeriodOrderStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $shiftsQuery = DB::table('shifts');
-
-        if ($shiftIds && ! empty($shiftIds)) {
-            $shiftsQuery->whereIn('shifts.id', $shiftIds);
-        } else {
-            $shiftsQuery->whereBetween('shifts.created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
-            ]);
-        }
-
-        $ordersData = $shiftsQuery
+        $ordersData = DB::table('shifts')
+            ->whereIn('shifts.id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds))
             ->select([
                 'orders.status',
                 DB::raw('COUNT(orders.id) as total_orders'),
@@ -324,12 +389,9 @@ class ShiftsReportService
      */
     public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $query = Order::query()->where('orders.status', OrderStatus::COMPLETED);
-        if ($shiftIds !== null) {
-            $query->whereIn('orders.shift_id', $shiftIds);
-        } else {
-            $query->whereIn('orders.shift_id', Shift::query()->select('id')->whereBetween('created_at', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()]));
-        }
+        $query = Order::query()
+            ->where('orders.status', OrderStatus::COMPLETED)
+            ->whereIn('orders.shift_id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds));
 
         return $this->typeStats($query);
     }

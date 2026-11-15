@@ -55,7 +55,10 @@ class KitchenPerformanceStatsWidget extends BaseWidget
             Stat::make('نسبة الجولات المتأخرة', number_format($summary['late_rounds_percent'], 1).'%')
                 ->description('الجولات التي تجاوزت أكبر وقت مستهدف لبنودها')
                 ->descriptionIcon('heroicon-m-exclamation-triangle', IconPosition::Before)
-                ->color($this->lateColor($summary['late_rounds_percent'])),
+                ->color($this->lateColor($summary['late_rounds_percent']))
+                ->extraAttributes([
+                    'title' => 'الجولات التي استغرقت وقتاً أطول من أقصى وقت تحضير مستهدف لبنودها غير الملغاة',
+                ]),
 
             Stat::make(
                 'متوسط وقت تحضير البند',

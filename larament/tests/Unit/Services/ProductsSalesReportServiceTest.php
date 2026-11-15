@@ -389,3 +389,96 @@ it('filters by main and sub category', function () {
         ->and($summary->pluck('id'))->not->toContain($other->id)
         ->and((float) $summary->firstWhere('id', $main->id)->total_sales)->toBe(25.0);
 });
+
+it('summarizes main categories sales correctly without querying unneeded products', function () {
+    $main = Category::factory()->create(['name' => 'Main Cat']);
+    $sub = Category::factory()->create(['name' => 'Sub Cat', 'parent_id' => $main->id]);
+    $other = Category::factory()->create(['name' => 'Other Main']);
+
+    $p1 = Product::factory()->create(['category_id' => $main->id, 'type' => ProductType::Consumable]);
+    $p2 = Product::factory()->create(['category_id' => $sub->id, 'type' => ProductType::Consumable]);
+    $p3 = Product::factory()->create(['category_id' => $other->id, 'type' => ProductType::Consumable]);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'shift_id' => $this->shift->id,
+        'status' => OrderStatus::COMPLETED,
+        'type' => 'takeaway',
+        'created_at' => Carbon::parse('2026-10-12 12:00:00'),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $p1->id,
+        'quantity' => 2,
+        'price' => 50,
+        'cost' => 20,
+        'total' => 100,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $p2->id,
+        'quantity' => 1,
+        'price' => 30,
+        'cost' => 10,
+        'total' => 30,
+    ]);
+
+    $summary = $this->service->getMainCategoriesSalesSummary(null, null, [$this->shift->id]);
+
+    expect($summary)->toHaveCount(1)
+        ->and($summary[0]['main_category_id'])->toBe($main->id)
+        ->and($summary[0]['main_category_name'])->toBe('Main Cat')
+        ->and($summary[0]['total_quantity'])->toBe(3.0)
+        ->and($summary[0]['total_sales'])->toBe(130.0)
+        ->and($summary[0]['total_profit'])->toBe(80.0)
+        ->and($summary[0]['products_count'])->toBe(2);
+});
+
+it('supports secondary categories mode in category performance query', function () {
+    $main = Category::factory()->create(['name' => 'المشويات']);
+    $sub = Category::factory()->create(['name' => 'مشويات لحوم', 'parent_id' => $main->id]);
+
+    $pMain = Product::factory()->create(['category_id' => $main->id, 'type' => ProductType::Consumable]);
+    $pSub = Product::factory()->create(['category_id' => $sub->id, 'type' => ProductType::Consumable]);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'shift_id' => $this->shift->id,
+        'status' => OrderStatus::COMPLETED,
+        'type' => 'takeaway',
+        'created_at' => Carbon::parse('2026-10-12 12:00:00'),
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $pMain->id,
+        'quantity' => 1,
+        'price' => 100,
+        'cost' => 40,
+        'total' => 100,
+    ]);
+
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $pSub->id,
+        'quantity' => 2,
+        'price' => 50,
+        'cost' => 20,
+        'total' => 100,
+    ]);
+
+    // Mode: main
+    $mainReport = $this->service->getCategoryPerformance(null, null, [$this->shift->id], mode: 'main')->get();
+    expect($mainReport->pluck('id'))->toContain($main->id)
+        ->and($mainReport->pluck('id'))->not->toContain($sub->id)
+        ->and((float) $mainReport->firstWhere('id', $main->id)->total_sales)->toBe(200.0);
+
+    // Mode: secondary
+    $secondaryReport = $this->service->getCategoryPerformance(null, null, [$this->shift->id], mode: 'secondary')->get();
+    expect($secondaryReport->pluck('id'))->toContain($sub->id)
+        ->and($secondaryReport->pluck('id'))->not->toContain($main->id)
+        ->and((float) $secondaryReport->firstWhere('id', $sub->id)->total_sales)->toBe(100.0)
+        ->and($secondaryReport->firstWhere('id', $sub->id)->parent_category_name)->toBe('المشويات');
+});

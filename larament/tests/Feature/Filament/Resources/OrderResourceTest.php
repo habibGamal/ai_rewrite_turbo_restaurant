@@ -1,11 +1,17 @@
 <?php
 
+use App\Enums\KitchenItemStatus;
+use App\Enums\KitchenTicketStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
+use App\Filament\Resources\Orders\RelationManagers\KitchenItemsRelationManager;
 use App\Models\Customer;
+use App\Models\KitchenTicket;
+use App\Models\KitchenTicketItem;
+use App\Models\KitchenTicketRound;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
@@ -289,4 +295,87 @@ it('calculates total paid correctly', function () {
 
     $order->refresh();
     expect($order->total_paid)->toBe(100.0);
+});
+
+// Kitchen Inspection Tests
+it('displays kitchen performance section in view order when order has kitchen ticket', function () {
+    $order = Order::factory()->create();
+    $base = now()->subMinutes(20);
+
+    $ticket = KitchenTicket::factory()->create([
+        'order_id' => $order->id,
+        'status' => KitchenTicketStatus::DONE,
+        'first_sent_at' => $base,
+        'done_at' => $base->copy()->addMinutes(15),
+    ]);
+
+    $round = KitchenTicketRound::factory()->create([
+        'kitchen_ticket_id' => $ticket->id,
+        'number' => 1,
+        'started_at' => $base,
+        'ended_at' => $base->copy()->addMinutes(15),
+    ]);
+
+    KitchenTicketItem::factory()->create([
+        'kitchen_ticket_id' => $ticket->id,
+        'kitchen_ticket_round_id' => $round->id,
+        'product_name' => 'برجر دجاج',
+        'status' => KitchenItemStatus::DONE,
+        'target_minutes' => 10,
+        'sent_at' => $base,
+        'done_at' => $base->copy()->addMinutes(15),
+    ]);
+
+    livewire(ViewOrder::class, ['record' => $order->getRouteKey()])
+        ->assertSuccessful()
+        ->assertSee('أداء المطبخ وأوقات التحضير')
+        ->assertSee('جاهز')
+        ->assertSee('15:00');
+});
+
+it('renders kitchen items relation manager with prep time and delay status', function () {
+    $order = Order::factory()->create();
+    $base = now()->subMinutes(25);
+
+    $ticket = KitchenTicket::factory()->create([
+        'order_id' => $order->id,
+        'status' => KitchenTicketStatus::DONE,
+        'first_sent_at' => $base,
+        'done_at' => $base->copy()->addMinutes(20),
+    ]);
+
+    $round = KitchenTicketRound::factory()->create([
+        'kitchen_ticket_id' => $ticket->id,
+        'number' => 1,
+        'started_at' => $base,
+        'ended_at' => $base->copy()->addMinutes(20),
+    ]);
+
+    // Late item (target: 10, took: 20 min -> 10 min late)
+    KitchenTicketItem::factory()->create([
+        'kitchen_ticket_id' => $ticket->id,
+        'kitchen_ticket_round_id' => $round->id,
+        'product_name' => 'بيتزا مشكل',
+        'status' => KitchenItemStatus::DONE,
+        'target_minutes' => 10,
+        'sent_at' => $base,
+        'done_at' => $base->copy()->addMinutes(20),
+    ]);
+
+    livewire(KitchenItemsRelationManager::class, [
+        'ownerRecord' => $order,
+        'pageClass' => ViewOrder::class,
+    ])
+        ->assertSuccessful()
+        ->assertSee('بيتزا مشكل')
+        ->assertSee('20:00')
+        ->assertSee('متأخر بـ 10 دقيقة')
+        ->searchTable('بيتزا')
+        ->assertSuccessful()
+        ->sortTable('sent_at', 'asc')
+        ->assertSuccessful()
+        ->filterTable('status', KitchenItemStatus::DONE->value)
+        ->assertSuccessful()
+        ->filterTable('late_only', true)
+        ->assertSuccessful();
 });

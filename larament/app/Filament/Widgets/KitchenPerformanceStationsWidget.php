@@ -39,20 +39,24 @@ class KitchenPerformanceStationsWidget extends BaseWidget
                     ->label('المحطة')
                     ->weight('bold')
                     ->badge()
+                    ->sortable()
                     ->color(fn (string $state): string => $state === 'عام' ? 'gray' : 'primary'),
 
                 TextColumn::make('count')
                     ->label('عدد البنود')
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => number_format((int) $state).' بند')
                     ->badge()
                     ->color('info'),
 
                 TextColumn::make('avg_prep_seconds')
                     ->label('متوسط وقت التحضير')
+                    ->sortable()
                     ->formatStateUsing(fn ($state): string => KitchenPerformanceReportService::formatDuration((float) $state))
                     ->color('success')
                     ->weight('semibold'),
             ])
+            ->defaultSort('avg_prep_seconds', 'desc')
             ->paginated(false);
     }
 
@@ -63,6 +67,24 @@ class KitchenPerformanceStationsWidget extends BaseWidget
             $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString(),
             $this->stationId(),
         );
+
+        $sortColumn = $this->getTableSortColumn() ?: 'avg_prep_seconds';
+        $sortDirection = strtolower((string) ($this->getTableSortDirection() ?: 'desc'));
+
+        usort($rows, function (array $a, array $b) use ($sortColumn, $sortDirection): int {
+            $valA = $a[$sortColumn] ?? null;
+            $valB = $b[$sortColumn] ?? null;
+
+            if ($valA === $valB) {
+                return 0;
+            }
+
+            $cmp = is_numeric($valA) && is_numeric($valB)
+                ? ((float) $valA <=> (float) $valB)
+                : strcmp((string) $valA, (string) $valB);
+
+            return $sortDirection === 'desc' ? -$cmp : $cmp;
+        });
 
         $arrayKeyName = ArrayRecord::getKeyName();
 

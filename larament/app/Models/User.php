@@ -3,10 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\OrderStatus;
 use App\Models\Concerns\HasSyncUuid;
+use App\Orders\TabPermissions;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -102,6 +105,31 @@ class User extends Authenticatable implements FilamentUser
         return $this->can('order.change_items');
     }
 
+    /**
+     * Whether this user may use a cashier-desk tab (`type:{code}` or `system:{name}`).
+     */
+    public function canSeeTab(string $tabKey): bool
+    {
+        return $this->can(TabPermissions::forKey($tabKey));
+    }
+
+    /**
+     * Whether this user may open an order: its type tab is allowed, or it is a
+     * completed / cancelled order and the matching system tab is allowed.
+     */
+    public function canAccessOrder(Order $order): bool
+    {
+        if ($this->canSeeTab('type:'.$order->type)) {
+            return true;
+        }
+
+        return match ($order->status) {
+            OrderStatus::COMPLETED => $this->canSeeTab('system:completed'),
+            OrderStatus::CANCELLED => $this->canSeeTab('system:cancelled'),
+            default => false,
+        };
+    }
+
     public function canAccessKitchen(): bool
     {
         return $this->can('kitchen.access');
@@ -130,5 +158,15 @@ class User extends Authenticatable implements FilamentUser
     public function stocktaking()
     {
         return $this->hasMany(Stocktaking::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'user_id');
+    }
+
+    public function itemChanges(): HasMany
+    {
+        return $this->hasMany(OrderItemChange::class, 'user_id');
     }
 }

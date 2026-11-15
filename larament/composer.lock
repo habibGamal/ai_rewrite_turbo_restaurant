@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "71fdcfdbd2dbfd843784f25e9ecb0b1c",
+    "content-hash": "32d4ab9f49a02ec57502a2efaa640998",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2748,6 +2748,81 @@
                 "source": "https://github.com/kirschbaum-development/eloquent-power-joins/tree/4.2.11"
             },
             "time": "2025-12-17T00:37:48+00:00"
+        },
+        {
+            "name": "kisame76/filament-tree-table",
+            "version": "v1.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Kisame76/filament-tree-table.git",
+                "reference": "bee0b0a59b4c14a25b6e84d55d4a4ce8121bb379"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Kisame76/filament-tree-table/zipball/bee0b0a59b4c14a25b6e84d55d4a4ce8121bb379",
+                "reference": "bee0b0a59b4c14a25b6e84d55d4a4ce8121bb379",
+                "shasum": ""
+            },
+            "require": {
+                "filament/actions": "^4.3||^5.0",
+                "filament/support": "^4.3||^5.0",
+                "filament/tables": "^4.3||^5.0",
+                "illuminate/contracts": "^11.0||^12.0||^13.0",
+                "illuminate/database": "^11.0||^12.0||^13.0",
+                "illuminate/support": "^11.0||^12.0||^13.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "filament/filament": "^4.3||^5.0",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^9.0||^10.0||^11.0",
+                "pestphp/pest": "^3.0||^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0||^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Kisame76\\FilamentTreeTable\\FilamentTreeTableServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kisame76\\FilamentTreeTable\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Kiyan Doguc",
+                    "email": "k.doguc@kisame-labs.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Expandable parent/child tree rows for Filament v4.3+ & v5 tables — inline sub-rows, search/filter aware, expand & collapse all.",
+            "homepage": "https://github.com/Kisame76/filament-tree-table",
+            "keywords": [
+                "expandable",
+                "filament",
+                "filamentphp",
+                "hierarchy",
+                "laravel",
+                "nested",
+                "table",
+                "tree"
+            ],
+            "support": {
+                "issues": "https://github.com/Kisame76/filament-tree-table/issues",
+                "security": "https://github.com/Kisame76/filament-tree-table/blob/main/SECURITY.md",
+                "source": "https://github.com/Kisame76/filament-tree-table"
+            },
+            "time": "2026-10-01T17:06:16+00:00"
         },
         {
             "name": "laravel/framework",
