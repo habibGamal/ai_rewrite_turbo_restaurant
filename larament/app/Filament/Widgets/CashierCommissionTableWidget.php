@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CashierCommissionTableExporter;
+use App\Filament\Pages\Reports\CashierPerformanceDetails;
 use App\Models\OrderItemChange;
 use App\Models\User;
 use App\Services\CashierCommissionReportService;
@@ -180,7 +181,7 @@ class CashierCommissionTableWidget extends BaseWidget
                     ->label('تفاصيل الأداء')
                     ->icon('heroicon-o-chart-bar')
                     ->color('primary')
-                    ->url(fn (User $record): string => url("/admin/users/{$record->id}"))
+                    ->url(fn (User $record): string => CashierPerformanceDetails::getUrl(['record' => $record->id]))
                     ->openUrlInNewTab(false),
 
                 Action::make('view_changes')

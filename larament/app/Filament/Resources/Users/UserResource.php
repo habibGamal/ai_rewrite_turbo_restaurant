@@ -6,18 +6,13 @@ use App\Filament\Actions\GeneratePasswordAction;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\Pages\ViewUser;
-use App\Filament\Resources\Users\RelationManagers\CashierItemChangesRelationManager;
-use App\Filament\Resources\Users\RelationManagers\CashierOrdersRelationManager;
 use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -142,7 +137,6 @@ class UserResource extends Resource
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -150,28 +144,6 @@ class UserResource extends Resource
                     DeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
-            ]);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return $schema
-            ->components([
-                Section::make('بيانات المستخدم')
-                    ->schema([
-                        TextEntry::make('name')
-                            ->label('الاسم'),
-                        TextEntry::make('email')
-                            ->label('البريد الإلكتروني'),
-                        TextEntry::make('roles.name')
-                            ->label('الأدوار والصلاحيات')
-                            ->badge()
-                            ->color('info'),
-                        TextEntry::make('created_at')
-                            ->label('تاريخ التسجيل')
-                            ->dateTime('Y-m-d H:i'),
-                    ])
-                    ->columns(4),
             ]);
     }
 
@@ -186,8 +158,7 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            CashierOrdersRelationManager::class,
-            CashierItemChangesRelationManager::class,
+            //
         ];
     }
 
@@ -196,7 +167,6 @@ class UserResource extends Resource
         return [
             'index' => ListUsers::route('/'),
             'create' => CreateUser::route('/create'),
-            'view' => ViewUser::route('/{record}'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }

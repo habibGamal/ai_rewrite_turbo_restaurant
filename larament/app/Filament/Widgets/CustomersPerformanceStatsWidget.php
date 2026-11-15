@@ -34,7 +34,7 @@ class CustomersPerformanceStatsWidget extends BaseWidget
                 ->icon('heroicon-o-user-plus'),
 
             $this->stat('مبيعات العملاء (صافي)', $this->money($current['sales']), $current['sales'], $previous['sales'],
-                sprintf('%s%% من إجمالي مبيعات المحل', number_format($current['sales_share'], 1)))
+                sprintf('%s%% من إجمالي المبيعات', number_format($current['sales_share'], 1)))
                 ->icon('heroicon-o-banknotes'),
 
             $this->stat('صافي الربح', $this->money($current['profit']), $current['profit'], $previous['profit'],

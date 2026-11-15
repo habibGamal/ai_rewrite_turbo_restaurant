@@ -1,39 +1,48 @@
 <?php
 
-namespace App\Filament\Resources\Users\RelationManagers;
+namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Models\User;
 use App\Orders\OrderTypeCatalog;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
-class CashierOrdersRelationManager extends RelationManager
+class CashierOrdersTableWidget extends BaseWidget
 {
-    protected static string $relationship = 'orders';
+    protected static bool $isLazy = false;
 
-    protected static ?string $title = 'الطلبات المنشأة بواسطة الكاشير';
+    protected ?string $pollingInterval = null;
 
-    protected static ?string $modelLabel = 'طلب';
+    protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $pluralModelLabel = 'الطلبات';
+    protected static ?string $heading = 'الطلبات المنشأة بواسطة الكاشير';
 
-    public function form(Schema $schema): Schema
+    public ?int $userId = null;
+
+    public ?User $record = null;
+
+    public function mount(?int $userId = null, ?User $record = null): void
     {
-        return $schema->components([]);
+        $this->userId = $userId ?? $record?->id;
     }
 
     public function table(Table $table): Table
     {
+        $query = Order::query()
+            ->where('user_id', $this->userId ?? 0)
+            ->with(['customer']);
+
         return $table
+            ->query($query)
             ->recordTitleAttribute('order_number')
             ->columns([
                 TextColumn::make('order_number')
@@ -136,10 +145,5 @@ class CashierOrdersRelationManager extends RelationManager
             ->toolbarActions([])
             ->defaultSort('created_at', 'desc')
             ->striped();
-    }
-
-    public function isReadOnly(): bool
-    {
-        return true;
     }
 }

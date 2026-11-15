@@ -1,36 +1,45 @@
 <?php
 
-namespace App\Filament\Resources\Users\RelationManagers;
+namespace App\Filament\Widgets;
 
 use App\Models\OrderItemChange;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
-class CashierItemChangesRelationManager extends RelationManager
+class CashierItemChangesTableWidget extends BaseWidget
 {
-    protected static string $relationship = 'itemChanges';
+    protected static bool $isLazy = false;
 
-    protected static ?string $title = 'تعديلات وحركات الأصناف للكاشير';
+    protected ?string $pollingInterval = null;
 
-    protected static ?string $modelLabel = 'تعديل صنف';
+    protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $pluralModelLabel = 'تعديلات الأصناف';
+    protected static ?string $heading = 'تعديلات وحركات الأصناف للكاشير';
 
-    public function form(Schema $schema): Schema
+    public ?int $userId = null;
+
+    public ?User $record = null;
+
+    public function mount(?int $userId = null, ?User $record = null): void
     {
-        return $schema->components([]);
+        $this->userId = $userId ?? $record?->id;
     }
 
     public function table(Table $table): Table
     {
+        $query = OrderItemChange::query()
+            ->where('user_id', $this->userId ?? 0)
+            ->with(['order']);
+
         return $table
+            ->query($query)
             ->recordTitleAttribute('product_name')
             ->columns([
                 TextColumn::make('order.order_number')
@@ -126,10 +135,5 @@ class CashierItemChangesRelationManager extends RelationManager
             ->toolbarActions([])
             ->defaultSort('created_at', 'desc')
             ->striped();
-    }
-
-    public function isReadOnly(): bool
-    {
-        return true;
     }
 }

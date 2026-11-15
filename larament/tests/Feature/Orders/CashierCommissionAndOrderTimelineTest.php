@@ -2,13 +2,14 @@
 
 use App\Filament\Exports\CashierCommissionTableExporter;
 use App\Filament\Pages\Reports\CashierCommissionReport;
+use App\Filament\Pages\Reports\CashierPerformanceDetails;
+use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\OrderTimelineRelationManager;
-use App\Filament\Resources\Users\Pages\ViewUser;
-use App\Filament\Resources\Users\RelationManagers\CashierItemChangesRelationManager;
-use App\Filament\Resources\Users\RelationManagers\CashierOrdersRelationManager;
 use App\Filament\Widgets\CashierCommissionStatsWidget;
 use App\Filament\Widgets\CashierCommissionTableWidget;
 use App\Filament\Widgets\CashierDetailStatsWidget;
+use App\Filament\Widgets\CashierItemChangesTableWidget;
+use App\Filament\Widgets\CashierOrdersTableWidget;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderHistory;
@@ -474,7 +475,7 @@ test('CashierCommissionTableExporter correctly formats and exports cashier perfo
     expect($notification)->toContain('تم إكمال تصدير تقرير عمولات وأداء الكاشير');
 });
 
-test('ViewUser cashier performance page and widgets render successfully', function () {
+test('CashierPerformanceDetails page and widgets render successfully', function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
     $order = Order::factory()->create([
@@ -496,22 +497,26 @@ test('ViewUser cashier performance page and widgets render successfully', functi
         'total_price' => 200,
     ]);
 
-    // Test ViewUser page
-    livewire(ViewUser::class, ['record' => $this->user1->getRouteKey()])
-        ->assertOk();
+    // Test CashierPerformanceDetails custom report page
+    livewire(CashierPerformanceDetails::class, ['record' => $this->user1->id])
+        ->assertOk()
+        ->assertSee($this->user1->name)
+        ->assertSee('الطلبات المنشأة')
+        ->assertSee('سجل تعديلات الأصناف');
 
     // Test CashierDetailStatsWidget
     livewire(CashierDetailStatsWidget::class, ['record' => $this->user1])
         ->assertOk();
 
-    // Test CashierOrdersRelationManager
-    livewire(CashierOrdersRelationManager::class, ['ownerRecord' => $this->user1, 'pageClass' => ViewUser::class])
+    // Test CashierOrdersTableWidget
+    livewire(CashierOrdersTableWidget::class, ['userId' => $this->user1->id])
         ->assertOk()
         ->assertCanSeeTableRecords([$order]);
 
-    // Test CashierItemChangesRelationManager
-    livewire(CashierItemChangesRelationManager::class, ['ownerRecord' => $this->user1, 'pageClass' => ViewUser::class])
-        ->assertOk();
+    // Test CashierItemChangesTableWidget
+    livewire(CashierItemChangesTableWidget::class, ['userId' => $this->user1->id])
+        ->assertOk()
+        ->assertSee('Burger');
 });
 
 test('OrderTimelineRelationManager displays order history timeline', function () {
@@ -533,7 +538,7 @@ test('OrderTimelineRelationManager displays order history timeline', function ()
 
     livewire(OrderTimelineRelationManager::class, [
         'ownerRecord' => $order,
-        'pageClass' => \App\Filament\Resources\Orders\Pages\ViewOrder::class,
+        'pageClass' => ViewOrder::class,
     ])
         ->assertOk()
         ->assertSee('إنشاء الطلب')
