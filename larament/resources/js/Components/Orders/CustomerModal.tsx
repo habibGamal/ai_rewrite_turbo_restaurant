@@ -2,19 +2,27 @@ import { router, usePage } from '@inertiajs/react'
 import { Button, Form, Input, InputNumber, Modal, Radio, Select, message } from 'antd'
 import axios from 'axios'
 import React, { useState } from 'react'
-import { Customer, Order, Region } from '@/types'
+import { Customer, InstantCartCustomer, Order, Region } from '@/types'
 
 interface CustomerModalProps {
   open: boolean
   onCancel: () => void
-  order: Order
+  order?: Order
+  /** Cart mode (instant sale): no order is linked; the chosen customer is handed back. */
+  cartCustomer?: InstantCartCustomer | null
+  onSelectCustomer?: (customer: InstantCartCustomer | null) => void
 }
 
 export default function CustomerModal({
   open,
   onCancel,
   order,
+  cartCustomer,
+  onSelectCustomer,
 }: CustomerModalProps) {
+  const cartMode = Boolean(onSelectCustomer)
+  // Id of a customer found by phone or picked by name, so cart mode reuses it instead of creating one.
+  const [knownCustomer, setKnownCustomer] = useState<Customer | null>(null)
   const [form] = Form.useForm()
   const pageProps = usePage().props as any
   const regions = pageProps.regions as Region[] || []
@@ -22,13 +30,33 @@ export default function CustomerModal({
   const [searchingCustomers, setSearchingCustomers] = useState(false)
 
   const saveCustomer = async (values: any) => {
+    if (cartMode) {
+      try {
+        let customer: Customer
+        if (knownCustomer && knownCustomer.phone === values.phone) {
+          customer = knownCustomer
+        } else if (cartCustomer && cartCustomer.phone === values.phone && cartCustomer.name === values.name) {
+          customer = cartCustomer as Customer
+        } else {
+          customer = (await axios.post<Customer>('/quick-customer', values)).data
+        }
+        onSelectCustomer!({ id: customer.id, name: customer.name, phone: customer.phone })
+        message.success('تم حفظ العميل')
+        form.resetFields()
+        setKnownCustomer(null)
+        onCancel()
+      } catch (e: any) {
+        message.error(e?.response?.data?.message || 'حدث خطأ أثناء حفظ العميل')
+      }
+      return
+    }
     try {
       const createCustomerRes = await axios.post<Customer>('/quick-customer', values)
       message.success('تم حفظ العميل')
       form.resetFields()
       onCancel()
       router.post(
-        `/orders/link-customer/${order.id}`,
+        `/orders/link-customer/${order!.id}`,
         {
           customerId: createCustomerRes.data.id,
         },
@@ -60,6 +88,7 @@ export default function CustomerModal({
         phone: form.getFieldValue('phone'),
       })
       const data = response.data
+      setKnownCustomer(data)
 
       form.setFieldsValue({
         name: data.name,
@@ -97,6 +126,7 @@ export default function CustomerModal({
   const handleCustomerSelect = (customerId: number) => {
     const selectedCustomer = customerOptions.find((c) => c.id === customerId)
     if (selectedCustomer) {
+      setKnownCustomer(selectedCustomer)
       form.setFieldsValue({
         phone: selectedCustomer.phone,
         name: selectedCustomer.name,
@@ -110,7 +140,12 @@ export default function CustomerModal({
 
 
   const initialValues = () => {
-    if (order.customer) {
+    if (cartMode) {
+      return cartCustomer
+        ? { phone: cartCustomer.phone, name: cartCustomer.name, hasWhatsapp: '0' }
+        : { hasWhatsapp: '0' }
+    }
+    if (order?.customer) {
       return {
         phone: order.customer.phone,
         name: order.customer.name,
@@ -192,6 +227,18 @@ export default function CustomerModal({
           <Button htmlType="submit" type="primary">
             حفط
           </Button>
+          {cartMode && cartCustomer && (
+            <Button
+              danger
+              onClick={() => {
+                onSelectCustomer!(null)
+                form.resetFields()
+                onCancel()
+              }}
+            >
+              إزالة العميل
+            </Button>
+          )}
         </div>
       </Form>
     </Modal>
