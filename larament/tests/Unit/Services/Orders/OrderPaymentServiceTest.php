@@ -3,7 +3,7 @@
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\PaymentProcessed;
+use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -13,12 +13,13 @@ use App\Models\Shift;
 use App\Orders\Tenders;
 use App\Services\Orders\OrderPaymentService;
 use Illuminate\Support\Facades\Event;
+use Tests\Unit\TestCase;
 
-uses(Tests\Unit\TestCase::class);
+uses(TestCase::class);
 
 describe('OrderPaymentService', function () {
     beforeEach(function () {
-        Event::fake();
+        Event::fake([PaymentProcessedBroadcast::class]);
 
         $this->service = app(OrderPaymentService::class);
         $this->order = Order::factory()->create([
@@ -35,7 +36,7 @@ describe('OrderPaymentService', function () {
         expect($result->payment_status)->toBe(PaymentStatus::FULL_PAID)
             ->and(Payment::where('order_id', $this->order->id)->count())->toBe(1);
 
-        Event::assertDispatched(PaymentProcessed::class);
+        Event::assertDispatched(PaymentProcessedBroadcast::class);
     });
 
     it('sets partial paid status when payment is less than total', function () {
@@ -57,7 +58,7 @@ describe('OrderPaymentService', function () {
             ->and(Payment::where('order_id', $this->order->id)->first()->amount)->toBe('100.00')
             ->and(Payment::where('order_id', $this->order->id)->first()->method)->toBe(PaymentMethod::CASH);
 
-        Event::assertDispatched(PaymentProcessed::class);
+        Event::assertDispatched(PaymentProcessedBroadcast::class);
     });
 
     it('caps a single tender at the unpaid balance when the order is already partly paid', function () {
@@ -131,7 +132,7 @@ describe('OrderPaymentService', function () {
         expect($result->payment_status)->toBe(PaymentStatus::PENDING)
             ->and(Payment::where('order_id', $this->order->id)->count())->toBe(0);
 
-        Event::assertNotDispatched(PaymentProcessed::class);
+        Event::assertNotDispatched(PaymentProcessedBroadcast::class);
     });
 
     it('marks a zero-total order full paid when no tender is given', function () {

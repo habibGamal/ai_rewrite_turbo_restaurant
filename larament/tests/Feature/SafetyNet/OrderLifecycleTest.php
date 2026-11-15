@@ -14,11 +14,11 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
 use App\Events\Kitchen\KitchenTicketUpdated;
-use App\Events\Orders\OrderCancelled;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
-use App\Events\Orders\OrderTypeChanged;
-use App\Events\Orders\PaymentProcessed;
+use App\Events\Orders\OrderCancelledBroadcast;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
+use App\Events\Orders\OrderTypeChangedBroadcast;
+use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Exceptions\OrderException;
 use App\Models\Customer;
 use App\Models\DineTable;
@@ -38,8 +38,8 @@ beforeEach(function () {
 });
 
 describe('opening an order', function () {
-    it('opens a dine-in order, reserves its table and broadcasts OrderCreated', function () {
-        Event::fake([OrderCreated::class]);
+    it('opens a dine-in order, reserves its table and broadcasts OrderCreatedBroadcast', function () {
+        Event::fake([OrderCreatedBroadcast::class]);
 
         $order = SafetyNet::open($this->shift, $this->user, 'dine_in', 'T1');
 
@@ -52,8 +52,8 @@ describe('opening an order', function () {
             ->and(DineTable::where('table_number', 'T1')->value('order_id'))->toBe($order->id)
             ->and(KitchenTicket::count())->toBe(0);
 
-        Event::assertDispatchedTimes(OrderCreated::class, 1);
-        Event::assertDispatched(OrderCreated::class, fn (OrderCreated $e): bool => $e->order->is($order));
+        Event::assertDispatchedTimes(OrderCreatedBroadcast::class, 1);
+        Event::assertDispatched(OrderCreatedBroadcast::class, fn (OrderCreatedBroadcast $e): bool => $e->order->is($order));
     });
 
     it('numbers cashier orders per shift in sequence', function () {
@@ -142,7 +142,7 @@ describe('saving items', function () {
 
 describe('completing an order', function () {
     it('records payments, removes stock, frees the table, finishes the kitchen ticket and broadcasts', function () {
-        Event::fake([OrderCompleted::class, PaymentProcessed::class, KitchenTicketUpdated::class]);
+        Event::fake([OrderCompletedBroadcast::class, PaymentProcessedBroadcast::class, KitchenTicketUpdated::class]);
         $burger = SafetyNet::product(price: 100, cost: 40, stock: 10);
         $order = SafetyNet::open($this->shift, $this->user, 'dine_in', 'T1');
         SafetyNet::save($order, [[$burger, 2]]);
@@ -163,8 +163,8 @@ describe('completing an order', function () {
             ->and($ticket->auto_finished)->toBeTrue()
             ->and($ticket->items->every(fn ($line) => $line->status === KitchenItemStatus::DONE))->toBeTrue();
 
-        Event::assertDispatchedTimes(OrderCompleted::class, 1);
-        Event::assertDispatchedTimes(PaymentProcessed::class, 2);
+        Event::assertDispatchedTimes(OrderCompletedBroadcast::class, 1);
+        Event::assertDispatchedTimes(PaymentProcessedBroadcast::class, 2);
     });
 
     it('caps a single overpaying tender at the order total', function () {
@@ -219,7 +219,7 @@ describe('completing an order', function () {
     });
 
     it('lets a company order close unpaid and collect the rest later', function () {
-        Event::fake([PaymentProcessed::class]);
+        Event::fake([PaymentProcessedBroadcast::class]);
         $order = SafetyNet::open($this->shift, $this->user, 'companies');
         SafetyNet::save($order, [[SafetyNet::product(price: 100), 1]]);
 
@@ -235,7 +235,7 @@ describe('completing an order', function () {
         $collected = $this->orders->collectRemaining($order->id, Tenders::fromArray(['cash' => 100]));
         expect($collected->payment_status)->toBe(PaymentStatus::FULL_PAID)
             ->and((float) $collected->payments()->sum('amount'))->toBe(100.0);
-        Event::assertDispatchedTimes(PaymentProcessed::class, 1);
+        Event::assertDispatchedTimes(PaymentProcessedBroadcast::class, 1);
     });
 
     it('refuses to collect a remaining amount on a takeaway order', function () {
@@ -250,7 +250,7 @@ describe('completing an order', function () {
 
 describe('cancelling an order', function () {
     it('cancels an open order: frees the table, cancels the ticket, leaves stock and broadcasts', function () {
-        Event::fake([OrderCancelled::class, KitchenTicketUpdated::class]);
+        Event::fake([OrderCancelledBroadcast::class, KitchenTicketUpdated::class]);
         $burger = SafetyNet::product(stock: 10);
         $order = SafetyNet::open($this->shift, $this->user, 'dine_in', 'T1');
         SafetyNet::save($order, [[$burger, 2]]);
@@ -263,8 +263,8 @@ describe('cancelling an order', function () {
             ->and(DineTable::where('table_number', 'T1')->value('order_id'))->toBeNull()
             ->and($cancelled->kitchenTicket->status)->toBe(KitchenTicketStatus::CANCELLED);
 
-        Event::assertDispatchedTimes(OrderCancelled::class, 1);
-        Event::assertDispatched(OrderCancelled::class, fn (OrderCancelled $e): bool => $e->reason === 'customer left');
+        Event::assertDispatchedTimes(OrderCancelledBroadcast::class, 1);
+        Event::assertDispatched(OrderCancelledBroadcast::class, fn (OrderCancelledBroadcast $e): bool => $e->reason === 'customer left');
         Event::assertDispatched(KitchenTicketUpdated::class, fn ($e): bool => $e->reason === KitchenTicketUpdated::REASON_CANCELLED);
     });
 
@@ -296,7 +296,7 @@ describe('cancelling an order', function () {
 
 describe('changing the order type', function () {
     it('moves dine-in to takeaway: frees the table, drops service, re-broadcasts the ticket', function () {
-        Event::fake([OrderTypeChanged::class, KitchenTicketUpdated::class]);
+        Event::fake([OrderTypeChangedBroadcast::class, KitchenTicketUpdated::class]);
         $order = SafetyNet::open($this->shift, $this->user, 'dine_in', 'T1');
         SafetyNet::save($order, [[SafetyNet::product(price: 100), 1]]);
         expect((float) $order->fresh()->total)->toBe(110.0);
@@ -310,7 +310,7 @@ describe('changing the order type', function () {
             ->and(DineTable::where('table_number', 'T1')->value('order_id'))->toBeNull()
             ->and(KitchenTicket::count())->toBe(1);
 
-        Event::assertDispatchedTimes(OrderTypeChanged::class, 1);
+        Event::assertDispatchedTimes(OrderTypeChangedBroadcast::class, 1);
         Event::assertDispatched(KitchenTicketUpdated::class, fn ($e): bool => $e->reason === KitchenTicketUpdated::REASON_CHANGED);
     });
 

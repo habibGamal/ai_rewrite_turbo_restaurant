@@ -2,11 +2,11 @@
 
 use App\Enums\OrderStatus;
 use App\Events\Kitchen\KitchenTicketUpdated;
-use App\Events\Orders\OrderCancelled;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
-use App\Events\Orders\OrderTypeChanged;
-use App\Events\Orders\PaymentProcessed;
+use App\Events\Orders\OrderCancelledBroadcast;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
+use App\Events\Orders\OrderTypeChangedBroadcast;
+use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Events\Orders\WebOrderReceived;
 use App\Models\Order;
 use App\Services\Orders\OrderService;
@@ -23,25 +23,25 @@ beforeEach(function () {
 it('defers every order broadcast event until the transaction commits', function (string $event) {
     expect(is_subclass_of($event, ShouldDispatchAfterCommit::class))->toBeTrue();
 })->with([
-    OrderCreated::class,
-    OrderCompleted::class,
-    OrderCancelled::class,
-    PaymentProcessed::class,
+    OrderCreatedBroadcast::class,
+    OrderCompletedBroadcast::class,
+    OrderCancelledBroadcast::class,
+    PaymentProcessedBroadcast::class,
     WebOrderReceived::class,
-    OrderTypeChanged::class,
+    OrderTypeChangedBroadcast::class,
     KitchenTicketUpdated::class,
 ]);
 
-it('delivers OrderCreated only after commit and never after a rollback', function () {
+it('delivers OrderCreatedBroadcast only after commit and never after a rollback', function () {
     $delivered = [];
-    Event::listen(OrderCreated::class, function (OrderCreated $event) use (&$delivered): void {
+    Event::listen(OrderCreatedBroadcast::class, function (OrderCreatedBroadcast $event) use (&$delivered): void {
         $delivered[] = $event->order->id;
     });
 
     $order = Order::factory()->create();
 
     DB::transaction(function () use ($order, &$delivered): void {
-        OrderCreated::dispatch($order);
+        OrderCreatedBroadcast::dispatch($order);
         expect($delivered)->toBe([]);
     });
     expect($delivered)->toBe([$order->id]);
@@ -49,7 +49,7 @@ it('delivers OrderCreated only after commit and never after a rollback', functio
     $delivered = [];
     try {
         DB::transaction(function () use ($order): void {
-            OrderCreated::dispatch($order);
+            OrderCreatedBroadcast::dispatch($order);
             throw new RuntimeException('boom');
         });
     } catch (RuntimeException) {
@@ -61,7 +61,7 @@ it('delivers OrderCreated only after commit and never after a rollback', functio
 it('does not announce a cancellation that is rolled back by the caller', function () {
     Http::fake();
     $delivered = 0;
-    Event::listen(OrderCancelled::class, function () use (&$delivered): void {
+    Event::listen(OrderCancelledBroadcast::class, function () use (&$delivered): void {
         $delivered++;
     });
 

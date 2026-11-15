@@ -2,14 +2,15 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\PaymentRecorded;
 use App\DTOs\Orders\PaymentDTO;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\PaymentProcessed;
 use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Orders\Tenders;
 use App\Repositories\PaymentRepository;
+use App\Services\OrderHistoryService;
 
 class OrderPaymentService
 {
@@ -68,9 +69,9 @@ class OrderPaymentService
             shiftId: $shiftId,
         ));
 
-        PaymentProcessed::dispatch($payment, $order);
+        PaymentRecorded::dispatch($payment, $order);
 
-        app(\App\Services\OrderHistoryService::class)->record(
+        app(OrderHistoryService::class)->record(
             orderId: $order->id,
             action: 'payment_added',
             actionName: 'سداد دفعة',

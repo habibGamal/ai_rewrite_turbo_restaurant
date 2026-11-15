@@ -1,23 +1,24 @@
 <?php
 
 use App\Enums\PaymentMethod;
-use App\Events\Orders\OrderCancelled;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
-use App\Events\Orders\PaymentProcessed;
+use App\Events\Orders\OrderCancelledBroadcast;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
+use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
 use Illuminate\Broadcasting\PrivateChannel;
+use Tests\Unit\TestCase;
 
-uses(Tests\Unit\TestCase::class);
+uses(TestCase::class);
 
 describe('Order Events', function () {
-    describe('OrderCreated Event', function () {
+    describe('OrderCreatedBroadcast Event', function () {
         it('broadcasts on correct channels', function () {
             $shift = Shift::factory()->create();
             $order = Order::factory()->create(['shift_id' => $shift->id]);
-            $event = new OrderCreated($order);
+            $event = new OrderCreatedBroadcast($order);
 
             $channels = $event->broadcastOn();
 
@@ -34,7 +35,7 @@ describe('Order Events', function () {
                 'type' => 'dine_in',
             ]);
 
-            $event = new OrderCreated($order);
+            $event = new OrderCreatedBroadcast($order);
             $data = $event->broadcastWith();
 
             expect($data['order']['id'])->toBe($order->id);
@@ -46,17 +47,17 @@ describe('Order Events', function () {
 
         it('broadcasts with correct event name', function () {
             $order = Order::factory()->create();
-            $event = new OrderCreated($order);
+            $event = new OrderCreatedBroadcast($order);
 
             expect($event->broadcastAs())->toBe('order.created');
         });
     });
 
-    describe('OrderCompleted Event', function () {
+    describe('OrderCompletedBroadcast Event', function () {
         it('broadcasts on correct channels', function () {
             $shift = Shift::factory()->create();
             $order = Order::factory()->create(['shift_id' => $shift->id]);
-            $event = new OrderCompleted($order);
+            $event = new OrderCompletedBroadcast($order);
 
             $channels = $event->broadcastOn();
 
@@ -71,7 +72,7 @@ describe('Order Events', function () {
                 'total' => 75.50,
             ]);
 
-            $event = new OrderCompleted($order);
+            $event = new OrderCompletedBroadcast($order);
             $data = $event->broadcastWith();
 
             expect($data['order']['id'])->toBe($order->id);
@@ -82,17 +83,17 @@ describe('Order Events', function () {
 
         it('broadcasts with correct event name', function () {
             $order = Order::factory()->create();
-            $event = new OrderCompleted($order);
+            $event = new OrderCompletedBroadcast($order);
 
             expect($event->broadcastAs())->toBe('order.completed');
         });
     });
 
-    describe('OrderCancelled Event', function () {
+    describe('OrderCancelledBroadcast Event', function () {
         it('broadcasts on correct channels', function () {
             $shift = Shift::factory()->create();
             $order = Order::factory()->create(['shift_id' => $shift->id]);
-            $event = new OrderCancelled($order, 'Customer changed mind');
+            $event = new OrderCancelledBroadcast($order, 'Customer changed mind');
 
             $channels = $event->broadcastOn();
 
@@ -105,7 +106,7 @@ describe('Order Events', function () {
             $order = Order::factory()->create(['order_number' => 789]);
             $reason = 'Customer changed mind';
 
-            $event = new OrderCancelled($order, $reason);
+            $event = new OrderCancelledBroadcast($order, $reason);
             $data = $event->broadcastWith();
 
             expect($data['order']['id'])->toBe($order->id);
@@ -116,7 +117,7 @@ describe('Order Events', function () {
 
         it('broadcasts with empty reason when not provided', function () {
             $order = Order::factory()->create();
-            $event = new OrderCancelled($order);
+            $event = new OrderCancelledBroadcast($order);
 
             $data = $event->broadcastWith();
 
@@ -125,19 +126,19 @@ describe('Order Events', function () {
 
         it('broadcasts with correct event name', function () {
             $order = Order::factory()->create();
-            $event = new OrderCancelled($order);
+            $event = new OrderCancelledBroadcast($order);
 
             expect($event->broadcastAs())->toBe('order.cancelled');
         });
     });
 
-    describe('PaymentProcessed Event', function () {
+    describe('PaymentProcessedBroadcast Event', function () {
         it('broadcasts on correct channels', function () {
             $shift = Shift::factory()->create();
             $order = Order::factory()->create(['shift_id' => $shift->id]);
             $payment = Payment::factory()->create(['order_id' => $order->id]);
 
-            $event = new PaymentProcessed($payment, $order);
+            $event = new PaymentProcessedBroadcast($payment, $order);
 
             $channels = $event->broadcastOn();
 
@@ -153,7 +154,7 @@ describe('Order Events', function () {
                 'method' => PaymentMethod::CASH,
             ]);
 
-            $event = new PaymentProcessed($payment, $order);
+            $event = new PaymentProcessedBroadcast($payment, $order);
             $data = $event->broadcastWith();
 
             expect($data['payment']['id'])->toBe($payment->id);
@@ -167,7 +168,7 @@ describe('Order Events', function () {
             $order = Order::factory()->create();
             $payment = Payment::factory()->create(['order_id' => $order->id]);
 
-            $event = new PaymentProcessed($payment, $order);
+            $event = new PaymentProcessedBroadcast($payment, $order);
 
             expect($event->broadcastAs())->toBe('payment.processed');
         });
@@ -185,8 +186,8 @@ describe('Order Events', function () {
                 'method' => PaymentMethod::CARD,
             ]);
 
-            $cashEvent = new PaymentProcessed($cashPayment, $order);
-            $cardEvent = new PaymentProcessed($cardPayment, $order);
+            $cashEvent = new PaymentProcessedBroadcast($cashPayment, $order);
+            $cardEvent = new PaymentProcessedBroadcast($cardPayment, $order);
 
             expect($cashEvent->broadcastWith()['payment']['method'])->toBe('نقدي');
             expect($cardEvent->broadcastWith()['payment']['method'])->toBe('بطاقة');
