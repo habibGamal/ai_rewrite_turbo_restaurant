@@ -263,6 +263,8 @@ export interface Order {
   type: string;
   status: 'pending' | 'processing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
   sub_total: number;
+  fees_total?: number | string;
+  equipment_total?: number | string;
   tax: number;
   service: number;
   discount: number;
@@ -300,6 +302,7 @@ export interface Order {
 }
 
 export interface ReceiptView {
+  equipment_lines?: { name: string; quantity: number; price: number; total: number }[];
   restaurant_total: number;
   external_total: number;
   guest_total: number;
@@ -431,6 +434,23 @@ export interface ManageOrderProps extends PageProps {
   guestDue: number;
   canAddExternalOrder: boolean;
   credit?: OrderCreditFlags;
+  equipmentLines?: OrderEquipmentLine[];
+  equipmentOptions?: EquipmentOption[];
+}
+
+export interface OrderEquipmentLine {
+  id: number;
+  equipment_id: number | null;
+  name: string;
+  quantity: number;
+  unit_price: number | string;
+  total: number | string;
+}
+
+export interface EquipmentOption {
+  id: number;
+  name: string;
+  price: number;
 }
 
 export interface ExpenseType {

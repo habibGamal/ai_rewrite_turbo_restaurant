@@ -2,6 +2,7 @@ import { Order, OrderItemData } from '@/types';
 
 export interface OrderTotals {
   subTotal: number;
+  equipment: number;
   tax: number;
   service: number;
   discount: number;
@@ -57,10 +58,16 @@ export const calculateOrderTotals = (
     }
   }
 
-  const total = Math.ceil(subTotal + tax + service - discount);
+  // Custom fees and equipment are saved on the server as soon as they are
+  // added; service and discount never apply to them.
+  const fees = Number(order.fees_total ?? 0) || 0;
+  const equipment = Number(order.equipment_total ?? 0) || 0;
+
+  const total = Math.ceil(subTotal + tax + service - discount + fees + equipment);
 
   return {
     subTotal,
+    equipment,
     tax,
     service,
     discount,

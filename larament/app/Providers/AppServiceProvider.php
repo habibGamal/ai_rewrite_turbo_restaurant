@@ -12,6 +12,7 @@ use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
 use App\Models\AuditLog;
 use App\Models\Category;
+use App\Models\Equipment;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Models\ExternalSeller;
@@ -154,6 +155,9 @@ class AppServiceProvider extends ServiceProvider
             foreach ($arguments as $argument) {
                 $class = is_object($argument) ? $argument::class : (is_string($argument) ? $argument : null);
                 if ($class === ExternalSeller::class && ! $featureService->outsourcedOrdersEnabled()) {
+                    return false;
+                }
+                if ($class === Equipment::class && ! $featureService->equipmentEnabled()) {
                     return false;
                 }
             }

@@ -85,6 +85,22 @@ export default function ReceiptTemplate({
                             </td>
                         </tr>
                     ))}
+                    {(order.receiptView?.equipment_lines ?? []).map((line, index) => (
+                        <tr key={`equipment-${index}`}>
+                            <td className="px-2 py-4 border border-solid border-black">
+                                {line.name}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {line.quantity}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {Number(line.price).toFixed(2)}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {Number(line.total).toFixed(2)}
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
             <table className="mt-4 w-full table-fixed border-collapse border-solid border border-black">
@@ -113,6 +129,16 @@ export default function ReceiptTemplate({
                             {Number(order.service).toFixed(2)}
                         </td>
                     </tr>
+                    {Number(order.equipment_total ?? 0) > 0 && (
+                        <tr>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                المعدات
+                            </td>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {Number(order.equipment_total).toFixed(2)}
+                            </td>
+                        </tr>
+                    )}
                     <tr>
                         <td className="p-2 py-4 border border-solid border-black">
                             الضريبة

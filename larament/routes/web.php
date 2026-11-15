@@ -5,6 +5,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderEquipmentController;
 use App\Http\Controllers\Pos\CustomerDisplayController;
 use App\Http\Controllers\Pos\HeldSaleController;
 use App\Http\Controllers\Pos\InstantReturnController;
@@ -59,6 +60,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/update-guests/{order}', [OrderController::class, 'updateGuestsCount'])->name('updateGuests');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
+        Route::post('/{order}/equipment', [OrderEquipmentController::class, 'save'])->name('equipment.save');
+        Route::delete('/{order}/equipment/{line}', [OrderEquipmentController::class, 'remove'])->name('equipment.remove');
     });
 
     // Quick operations routes

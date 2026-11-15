@@ -3,6 +3,8 @@
 namespace App\Modules;
 
 use App\Enums\OptionalFeature;
+use App\Filament\Pages\Reports\EquipmentReport;
+use App\Filament\Resources\Equipment\EquipmentResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RevenueTypes\RevenueTypeResource;
 use App\Services\FeatureService;
@@ -29,6 +31,8 @@ final class ModuleScreens
         return [
             ProductGroupResource::class => OptionalFeature::VARIANTS,
             RevenueTypeResource::class => OptionalFeature::REVENUES,
+            EquipmentResource::class => OptionalFeature::EQUIPMENT,
+            EquipmentReport::class => OptionalFeature::EQUIPMENT,
         ];
     }
 

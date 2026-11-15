@@ -25,7 +25,7 @@ class OrderBuilder implements DocumentBuilder
     {
         /** @var Order|null $order */
         $order = Order::query()
-            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift', 'externalOrders.items', 'externalOrders.collections'])
+            ->with(['shift', 'user', 'customer', 'driver', 'items.product', 'payments.shift', 'externalOrders.items', 'externalOrders.collections', 'equipmentLines'])
             ->where('uuid', $uuid)
             ->first();
 
@@ -100,6 +100,15 @@ class OrderBuilder implements DocumentBuilder
             'equipment_cost' => Payload::money($order->equipment_cost),
             'guests_count' => $order->guests_count,
             'items' => $items,
+            'equipment' => $order->equipmentLines->map(fn ($line) => [
+                'uuid' => (string) $line->getAttribute('uuid'),
+                'name' => $line->getAttribute('name'),
+                'quantity' => (int) $line->getAttribute('quantity'),
+                'unit_price' => Payload::money($line->getAttribute('unit_price')),
+                'unit_cost' => Payload::money($line->getAttribute('unit_cost')),
+                'total' => Payload::money($line->getAttribute('total')),
+                'cost_total' => Payload::money($line->getAttribute('cost_total')),
+            ])->values()->all(),
             'payments' => $payments,
             'external_orders' => $order->externalOrders->map(fn ($external) => [
                 'seller_name' => $external->getAttribute('seller_name'),

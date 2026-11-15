@@ -10,9 +10,11 @@ use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderBehaviorRegistry;
+use App\Services\FeatureService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -135,6 +137,18 @@ class OrderTypeRowResource extends Resource
                             ->helperText('يسأل الكاشير عن عدد الأفراد عند فتح الطلب، والإجباري يمنع إنهاء الطلب بدونه. التقارير تعرض متوسط الفرد.'),
                     ])
                     ->visible(fn (Get $get): bool => OrderTypeRow::supportsGuests($get('behavior')))
+                    ->columnSpanFull(),
+
+                Section::make('المعدات')
+                    ->description('المعدات التي يمكن للكاشير إضافتها لطلبات هذا النوع. لو لم تختر شيئاً لا يظهر زر «إضافة معدات».')
+                    ->schema([
+                        CheckboxList::make('equipment')
+                            ->hiddenLabel()
+                            ->relationship('equipment', 'name', fn (Builder $query) => $query->orderBy('sort_order')->orderBy('name'))
+                            ->columns(3),
+                    ])
+                    ->visible(fn (?OrderTypeRow $record): bool => app(FeatureService::class)->equipmentEnabled()
+                        && $record?->behavior !== OrderBehavior::INSTANT)
                     ->columnSpanFull(),
             ]);
     }

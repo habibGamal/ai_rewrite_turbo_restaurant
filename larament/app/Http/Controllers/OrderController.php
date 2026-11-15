@@ -33,6 +33,7 @@ use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderCompletionService;
+use App\Services\Orders\OrderEquipmentService;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\ReturnRules;
 use App\Services\PrintService;
@@ -355,8 +356,31 @@ class OrderController extends Controller
                 : [],
             'canAddExternalOrder' => $outsourcedEnabled && ! $order->typeRow()->allowsCredit(),
             'guestDue' => app(GuestBill::class)->due($order),
+            ...$this->equipmentProps($order),
             'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
         ]);
+    }
+
+    /**
+     * Equipment lines on the order and the equipment its type allows. Lines
+     * are always sent (the money is on the bill even after the vendor turns
+     * the feature off); the options only while it is on.
+     *
+     * @return array<string, mixed>
+     */
+    private function equipmentProps(Order $order): array
+    {
+        $enabled = app(FeatureService::class)->equipmentEnabled();
+        $options = $enabled ? app(OrderEquipmentService::class)->allowedFor($order) : collect();
+
+        return [
+            'equipmentLines' => $order->equipmentLines()->get(['id', 'equipment_id', 'name', 'quantity', 'unit_price', 'total']),
+            'equipmentOptions' => $options->map(fn ($equipment): array => [
+                'id' => $equipment->getKey(),
+                'name' => $equipment->getAttribute('name'),
+                'price' => (float) $equipment->getAttribute('usage_price'),
+            ])->values()->all(),
+        ];
     }
 
     /**

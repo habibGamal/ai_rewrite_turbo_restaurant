@@ -26,6 +26,7 @@ import {
     SaveOutlined,
     ShopOutlined,
     TeamOutlined,
+    ToolOutlined,
     UserAddOutlined,
 } from "@ant-design/icons";
 
@@ -50,6 +51,7 @@ import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
 import GuestsCountModal from "@/Components/Orders/GuestsCountModal";
 import ExternalOrders from "@/Components/Orders/ExternalOrders";
+import OrderEquipment from "@/Components/Orders/OrderEquipment";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
 import CanAccess from "@/Components/CanAccess";
@@ -77,6 +79,8 @@ export default function ManageOrder({
     guestDue,
     canAddExternalOrder: typeAllowsExternalOrder,
     credit,
+    equipmentLines = [],
+    equipmentOptions = [],
 }: ManageOrderProps) {
     const { auth, features, receiptFooter } =
         usePage<ManageOrderProps>().props;
@@ -85,7 +89,14 @@ export default function ManageOrder({
     const externalSellersEnabled = useModule("external_sellers");
     const terms = useTerms();
     const outsourcedFeatureEnabled = externalSellersEnabled && Boolean(features?.outsourced_orders);
+    const equipmentFeatureEnabled = Boolean(features?.equipment);
     const user = auth.user;
+    const hasPermission = (permission: string) =>
+        Boolean(
+            user?.isAdmin ||
+                user?.roles?.includes("admin") ||
+                user?.permissions?.includes(permission)
+        );
     const { modal } = App.useApp();
     // The server resolves the code (extra barcodes, pack sizes, scale labels);
     // the item is only added if it is on this order type's menu.
@@ -167,6 +178,7 @@ export default function ManageOrder({
         useState(false);
     const [isExternalOrderModalOpen, setIsExternalOrderModalOpen] =
         useState(false);
+    const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
     const [payAfterGuests, setPayAfterGuests] = useState(false);
@@ -211,6 +223,12 @@ export default function ManageOrder({
         outsourcedFeatureEnabled &&
         !disableAllControls &&
         typeAllowsExternalOrder;
+    const canEditEquipment =
+        equipmentFeatureEnabled && hasPermission("order.add_equipment");
+    const canAddEquipment =
+        canEditEquipment &&
+        !disableAllControls &&
+        (equipmentOptions.length > 0 || equipmentLines.length > 0);
     const showDriver = deliveryEnabled && (orderDisplay?.showDriver ?? false);
     const orderWithDisplay = {
         ...order,
@@ -430,6 +448,15 @@ export default function ManageOrder({
             label: "الخصم",
             children: formatCurrency(Number(totals.discount)),
         },
+        ...(totals.equipment > 0 || equipmentLines.length > 0
+            ? [
+                  {
+                      key: "equipment",
+                      label: "المعدات",
+                      children: formatCurrency(totals.equipment),
+                  },
+              ]
+            : []),
         {
             key: "5",
             label: "الاجمالي",
@@ -555,6 +582,17 @@ export default function ManageOrder({
                                     إضافة طلب خارجي
                                 </Button>
                             )}
+                            {canAddEquipment && (
+                                <Button
+                                    disabled={disableAllControls}
+                                    onClick={() => setIsEquipmentModalOpen(true)}
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<ToolOutlined />}
+                                >
+                                    إضافة معدات
+                                </Button>
+                            )}
                             <CanAccess permission="order.apply_discount">
                                 <LoadingButton
                                     disabled={disableAllControls || hasItemDiscounts}
@@ -661,6 +699,17 @@ export default function ManageOrder({
                                 beforeAction={(action) => save(action, () => {})}
                             />
                             )}
+                            <OrderEquipment
+                                orderId={order.id}
+                                lines={equipmentLines}
+                                options={equipmentOptions}
+                                disabled={disableAllControls}
+                                canEdit={canEditEquipment && !disableAllControls}
+                                canRemove={hasPermission("order.remove_equipment")}
+                                open={isEquipmentModalOpen}
+                                onClose={() => setIsEquipmentModalOpen(false)}
+                                beforeAction={(action) => save(action, () => {})}
+                            />
                             <Descriptions
                                 bordered
                                 title="الحساب"
