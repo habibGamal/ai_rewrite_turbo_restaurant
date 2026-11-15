@@ -34,7 +34,7 @@ All commands for larament must use: `cd D:/ai_rewrite_turbo_restaurant/larament;
 A fresh cloud container has no `vendor/`. The SessionStart hook (`.claude/hooks/session-start.js`) runs `larament/scripts/cloud-setup.sh` automatically once this lands on the branch the session starts from. If `larament/vendor` is missing (e.g. after checking out a branch), run it yourself:
 
 ```bash
-bash larament/scripts/cloud-setup.sh   # ~1 min fresh, instant when vendor/ is current
+bash larament/scripts/cloud-setup.sh   # ~30 s fresh, instant when vendor/ is current
 cd larament && php vendor/bin/pest --parallel
 ```
 
