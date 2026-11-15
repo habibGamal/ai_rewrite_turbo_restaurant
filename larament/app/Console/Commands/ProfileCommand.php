@@ -5,13 +5,15 @@ namespace App\Console\Commands;
 use App\Exceptions\BusinessTypeLockedException;
 use App\Modules\BusinessType;
 use App\Services\FeatureService;
+use App\Services\Setup\BusinessProfileService;
 use Illuminate\Console\Command;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Fallback for the vendor console: sets the business type of the install
- * and switches its modules to that type's defaults. Refuses once an order
- * exists. Customers never see this.
+ * Fallback for the setup wizard: sets the business type of the install,
+ * switches its modules to that type's defaults, applies the type's starting
+ * data (active order types, a table type for restaurants) and marks setup
+ * as done. Refuses once an order exists. Customers never see this.
  */
 class ProfileCommand extends Command
 {
@@ -21,7 +23,7 @@ class ProfileCommand extends Command
 
     protected $description = 'Show or set the business type (locked after the first order)';
 
-    public function handle(FeatureService $features): int
+    public function handle(FeatureService $features, BusinessProfileService $profile): int
     {
         $value = $this->argument('type');
 
@@ -40,7 +42,7 @@ class ProfileCommand extends Command
         }
 
         try {
-            $features->setBusinessType($type, applyDefaultModules: ! $this->option('keep-modules'));
+            $profile->setUp($type, $this->option('keep-modules') ? $features->enabledModules() : null);
         } catch (BusinessTypeLockedException $e) {
             $this->error('The business type is locked: this install already has orders.');
 

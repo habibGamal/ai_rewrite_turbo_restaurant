@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Filament\Pages\SetupWizard;
 use App\Filament\Pages\VendorConsole;
 use App\Models\Category;
 use App\Models\Customer;
@@ -136,8 +137,8 @@ it('shows no restaurant or terminal words in the admin panel of a shop', functio
     foreach (adminScreenUrls() as $key => ['class' => $class, 'url' => $url]) {
         $response = get($url);
 
-        if ($class === VendorConsole::class) {
-            continue; // vendor-only screen, 403 for the customer's admin
+        if (in_array($class, [VendorConsole::class, SetupWizard::class], true)) {
+            continue; // vendor-only screens, 403 for the customer's admin
         }
 
         if (! ModuleScreens::allows($class)) {

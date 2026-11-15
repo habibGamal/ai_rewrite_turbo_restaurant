@@ -46,6 +46,7 @@ enum SettingKey: string
     case FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
     case BUSINESS_TYPE = 'business_type';
     case ENABLED_MODULES = 'enabled_modules';
+    case SETUP_COMPLETED = 'setup_completed';
 
     /**
      * Get default value for this setting
@@ -87,6 +88,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'false',
             self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
             self::ENABLED_MODULES => self::enabledModulesDefault(),
+            self::SETUP_COMPLETED => 'false',
         };
     }
 
@@ -132,6 +134,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => self::storedBooleanRules(),
             self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
             self::ENABLED_MODULES => ['nullable', 'json'],
+            self::SETUP_COMPLETED => self::storedBooleanRules(),
         };
     }
 
@@ -176,6 +179,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل المقاسات والألوان (متغيرات المنتجات)',
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
+            self::SETUP_COMPLETED => 'اكتمل الإعداد الأولي',
         });
     }
 
@@ -220,6 +224,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تجميع المنتجات في موديلات لها خيارات (مقاس، لون، ...) لكل تركيبة منها مخزون وباركود وسعر.',
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
+            self::SETUP_COMPLETED => 'يتم ضبطه عند إنهاء معالج الإعداد الأولي.',
         });
     }
 
@@ -264,6 +269,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل',
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
+            self::SETUP_COMPLETED => 'false',
         });
     }
 
@@ -298,6 +304,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => self::isStoredBoolean($value),
             self::BUSINESS_TYPE => is_string($value) && BusinessType::tryFrom($value) !== null,
             self::ENABLED_MODULES => self::isModuleList($value),
+            self::SETUP_COMPLETED => self::isStoredBoolean($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
             self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
@@ -318,7 +325,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
-            self::FEATURE_VARIANTS_ENABLED => true,
+            self::FEATURE_VARIANTS_ENABLED,
+            self::SETUP_COMPLETED => true,
             default => false,
         };
     }
@@ -344,7 +352,8 @@ enum SettingKey: string
     {
         return $this->isFeatureFlag() || match ($this) {
             self::BUSINESS_TYPE,
-            self::ENABLED_MODULES => true,
+            self::ENABLED_MODULES,
+            self::SETUP_COMPLETED => true,
             default => false,
         };
     }
