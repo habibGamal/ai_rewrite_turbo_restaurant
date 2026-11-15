@@ -1,6 +1,7 @@
 import { Order, OrderItemData } from "@/types";
 import { usePage } from "@inertiajs/react";
 import ExternalReceipt from "./ExternalReceipt";
+import { useTerms } from "@/lib/wording";
 
 export enum PartType {
     Header,
@@ -21,6 +22,7 @@ export default function PartialReceiptTemplate({
     partType: PartType;
     index: number;
 }) {
+    const terms = useTerms();
     return (
         <div
             id={`receipt_${index}`}
@@ -49,7 +51,7 @@ export default function PartialReceiptTemplate({
                     </p>
                     <p>نوع الطلب : {order.display?.label ?? order.type}</p>
                     {order.display?.showTable && (
-                        <p>طاولة رقم {order.dine_table_number}</p>
+                        <p>{terms.tableNumber} : {order.dine_table_number}</p>
                     )}
                     {order.display?.showCustomer && (
                         <>

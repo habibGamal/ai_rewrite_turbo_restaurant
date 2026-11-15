@@ -6,6 +6,7 @@ use App\Filament\Resources\Drivers\Pages\CreateDriver;
 use App\Filament\Resources\Drivers\Pages\EditDriver;
 use App\Filament\Resources\Drivers\Pages\ListDrivers;
 use App\Filament\Resources\Drivers\Pages\ViewDriver;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\Driver;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -20,11 +21,13 @@ use Filament\Tables\Table;
 
 class DriverResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = Driver::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 3;
 

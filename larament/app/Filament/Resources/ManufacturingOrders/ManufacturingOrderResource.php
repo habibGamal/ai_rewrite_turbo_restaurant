@@ -8,6 +8,7 @@ use App\Filament\Resources\ManufacturingOrders\Pages\CreateManufacturingOrder;
 use App\Filament\Resources\ManufacturingOrders\Pages\EditManufacturingOrder;
 use App\Filament\Resources\ManufacturingOrders\Pages\ListManufacturingOrders;
 use App\Filament\Resources\ManufacturingOrders\Pages\ViewManufacturingOrder;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\ManufacturingOrder;
 use App\Models\ManufacturingRecipe;
 use App\Models\Product;
@@ -41,6 +42,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ManufacturingOrderResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = ManufacturingOrder::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';

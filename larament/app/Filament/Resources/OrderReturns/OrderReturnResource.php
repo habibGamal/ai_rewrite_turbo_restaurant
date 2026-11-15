@@ -49,7 +49,7 @@ class OrderReturnResource extends Resource
 
     protected static ?string $pluralModelLabel = 'مرتجعات الطلبات';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 2;
 

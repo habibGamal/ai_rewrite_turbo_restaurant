@@ -7,6 +7,7 @@ use App\Filament\Resources\ManufacturingRecipes\Pages\CreateManufacturingRecipe;
 use App\Filament\Resources\ManufacturingRecipes\Pages\EditManufacturingRecipe;
 use App\Filament\Resources\ManufacturingRecipes\Pages\ListManufacturingRecipes;
 use App\Filament\Resources\ManufacturingRecipes\Pages\ViewManufacturingRecipe;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\ManufacturingRecipe;
 use App\Models\Product;
 use App\Services\Manufacturing\ManufacturingCostPreviewService;
@@ -38,6 +39,8 @@ use Filament\Tables\Table;
 
 class ManufacturingRecipeResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = ManufacturingRecipe::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-beaker';

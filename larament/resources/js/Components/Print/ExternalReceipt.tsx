@@ -1,6 +1,8 @@
 import { ReceiptView } from "@/types";
+import { useTerms } from "@/lib/wording";
 
 export default function ExternalReceipt({ receipt }: { receipt?: ReceiptView }) {
+    const terms = useTerms();
     if (!receipt || receipt.external_orders.length === 0) return null;
 
     return (
@@ -20,7 +22,7 @@ export default function ExternalReceipt({ receipt }: { receipt?: ReceiptView }) 
                     </table>
                 </section>
             ))}
-            <p>إجمالي المطعم: {Number(receipt.restaurant_total).toFixed(2)}</p>
+            <p>{terms.hostTotal}: {Number(receipt.restaurant_total).toFixed(2)}</p>
             <p>إجمالي الطلبات الخارجية: {Number(receipt.external_total).toFixed(2)}</p>
             <p>المطلوب من العميل: {Number(receipt.guest_total).toFixed(2)}</p>
         </div>

@@ -8,6 +8,7 @@ use App\Models\OrderTypeRow;
 use App\Models\Shift;
 use App\Models\User;
 use App\Services\SettingsService;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 final class CashierTabLayout
@@ -56,7 +57,7 @@ final class CashierTabLayout
      */
     public function resolve(?Shift $shift): array
     {
-        $typeRows = $this->catalog->all()->keyBy('code');
+        $typeRows = $this->catalog->available()->keyBy('code');
         $tabs = [];
         $seen = [];
 
@@ -193,7 +194,9 @@ final class CashierTabLayout
             }
 
             $row = $typeRows->get($entry['name']);
-            if ($row instanceof OrderTypeRow && ! $row->is_active) {
+            // Inactive types and types of a switched-off module are not in
+            // the editor; keep their stored place.
+            if ($row instanceof OrderTypeRow && (! $row->is_active || ! $this->catalog->isAvailable($row))) {
                 $inactive[] = $entry;
             }
         }
@@ -224,7 +227,7 @@ final class CashierTabLayout
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, OrderTypeRow>  $typeRows
+     * @param  Collection<string, OrderTypeRow>  $typeRows
      * @return array{
      *     key: string,
      *     kind: 'type'|'system',
@@ -241,7 +244,7 @@ final class CashierTabLayout
         string $kind,
         string $name,
         bool $visible,
-        \Illuminate\Support\Collection $typeRows,
+        Collection $typeRows,
         ?Shift $shift,
     ): ?array {
         if ($kind === 'system') {

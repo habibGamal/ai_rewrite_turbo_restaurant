@@ -1,6 +1,7 @@
 import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import { User } from "@/types";
+import { useModule } from "@/hooks/useModule";
 import {
     DollarCircleOutlined,
     LogoutOutlined,
@@ -47,6 +48,8 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         window.location.href = "/admin";
     };
 
+    const webOrdersEnabled = useModule("web_orders");
+
     const page = usePage();
     useLayoutEffect(() => {
         if (Object.values(page.props.errors).length > 0) {
@@ -62,6 +65,10 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         // Request notification permission
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
+        }
+
+        if (!webOrdersEnabled) {
+            return;
         }
 
         if (!window.Echo) {
@@ -167,7 +174,7 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                 window.Echo.leave("web-orders");
             }
         };
-    }, []);
+    }, [webOrdersEnabled]);
 
     useEffect(() => {
         // refetch the page when the user clicks the back button

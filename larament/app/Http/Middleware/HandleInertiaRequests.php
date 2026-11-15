@@ -49,11 +49,7 @@ class HandleInertiaRequests extends Middleware
 
             $visiblePermissions = array_values(array_filter(
                 $grantedPermissions,
-                function (string $permission) use ($featureService, $features): bool {
-                    $feature = $featureService->featureForPermission($permission);
-
-                    return $feature === null || ($features[$feature->shortKey()] ?? false);
-                },
+                fn (string $permission): bool => ! $featureService->isPermissionDisabled($permission),
             ));
 
             $authData['user'] = array_merge($user->toArray(), [

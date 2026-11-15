@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Orders\RelationManagers;
 
 use App\Enums\KitchenItemStatus;
 use App\Models\KitchenTicketItem;
+use App\Modules\Module;
+use App\Services\FeatureService;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -11,10 +13,17 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class KitchenItemsRelationManager extends RelationManager
 {
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return app(FeatureService::class)->moduleEnabled(Module::RESTAURANT)
+            && parent::canViewForRecord($ownerRecord, $pageClass);
+    }
+
     protected static string $relationship = 'kitchenItems';
 
     protected static ?string $title = 'بنود المطبخ وأوقات التحضير';

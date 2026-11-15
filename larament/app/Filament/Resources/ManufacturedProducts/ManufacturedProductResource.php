@@ -7,6 +7,7 @@ use App\Filament\Actions\Forms\ProductComponentsImporterAction;
 use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Components\Forms\ProductComponentSelector;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\Products\RecipeCycleDetectionService;
@@ -35,6 +36,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ManufacturedProductResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = Product::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
