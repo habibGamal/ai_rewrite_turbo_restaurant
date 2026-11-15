@@ -3,7 +3,7 @@
 namespace App\Modules\Restaurant\Listeners;
 
 use App\Core\Events\OrderItemsChanged;
-use App\Services\Kitchen\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 
 /**
  * In transaction: the kitchen ticket must match the saved items, and

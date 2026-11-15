@@ -3,11 +3,11 @@
 use App\Costing\CostingMethod;
 use App\Costing\CostingStrategy;
 use App\Enums\SettingKey;
-use App\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
 use App\Models\Product;
 use App\Models\ProductCostHistory;
 use App\Models\Setting;
 use App\Models\User;
+use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;

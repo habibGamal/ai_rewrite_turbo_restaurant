@@ -54,7 +54,7 @@
         </div>
 
         <div x-show="activeTab === 'settlements'">
-            @livewire(\App\Filament\Pages\ExternalSellerAccount\SettlementsTable::class, ['sellerId' => $this->seller->id])
+            @livewire(\App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount\SettlementsTable::class, ['sellerId' => $this->seller->id])
         </div>
     </div>
 </x-filament-panels::page>

@@ -2,9 +2,10 @@
 
 use App\Exceptions\OrderException;
 use App\Models\DineTable;
-use App\Services\Orders\TableManagementService;
+use App\Modules\Restaurant\Services\TableManagementService;
+use Tests\Unit\TestCase;
 
-uses(Tests\Unit\TestCase::class);
+uses(TestCase::class);
 
 describe('TableManagementService', function () {
     beforeEach(function () {

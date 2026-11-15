@@ -5,11 +5,12 @@ use App\Models\KitchenStation;
 use App\Models\OrderTypeRow;
 use App\Models\Product;
 use App\Models\Warehouse;
-use App\Services\Kitchen\KitchenRoutingService;
+use App\Modules\Restaurant\Services\KitchenRoutingService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 it('allows only two levels', function () {
     $main = Category::factory()->create(['name' => 'مشروبات']);

@@ -1,15 +1,15 @@
 <?php
 
-use App\Filament\Pages\Reports\KitchenPerformanceReport;
-use App\Filament\Resources\Drivers\DriverResource;
-use App\Filament\Resources\KitchenStations\KitchenStationResource;
-use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
 use App\Filament\Resources\Roles\RoleResource;
-use App\Filament\Resources\TableTypes\TableTypeResource;
 use App\Models\User;
 use App\Modules\BusinessType;
+use App\Modules\Delivery\Filament\Resources\Drivers\DriverResource;
+use App\Modules\Manufacturing\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Modules\Module;
+use App\Modules\Restaurant\Filament\Pages\Reports\KitchenPerformanceReport;
+use App\Modules\Restaurant\Filament\Resources\KitchenStations\KitchenStationResource;
+use App\Modules\Restaurant\Filament\Resources\TableTypes\TableTypeResource;
 use App\Orders\OrderBehaviorRegistry;
 use App\Orders\OrderTypeCatalog;
 use App\Orders\TabPermissions;

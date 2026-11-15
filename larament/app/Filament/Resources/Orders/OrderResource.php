@@ -21,7 +21,6 @@ use App\Models\Order;
 use App\Modules\Module;
 use App\Orders\OrderTypeCatalog;
 use App\Services\FeatureService;
-use App\Services\KitchenPerformanceReportService;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\IconEntry;
@@ -449,7 +448,7 @@ class OrderResource extends Resource
                                     }
                                 }
 
-                                return KitchenPerformanceReportService::formatDuration($seconds);
+                                return sprintf('%02d:%02d', intdiv(max(0, (int) round((float) $seconds)), 60), max(0, (int) round((float) $seconds)) % 60);
                             })
                             ->color('info')
                             ->weight('semibold'),

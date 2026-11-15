@@ -18,7 +18,7 @@ use InvalidArgumentException;
  */
 final class OrderBehaviorRegistry
 {
-    /** @var array<string, array{class: class-string<OrderTypeBehavior>, label: string, selectable: bool, module: ?Module}> */
+    /** @var array<string, array{class: class-string<OrderTypeBehavior>, label: string, selectable: bool, module: ?Module, sort: int}> */
     private array $behaviors = [];
 
     public function __construct(
@@ -30,14 +30,19 @@ final class OrderBehaviorRegistry
      * @param  bool  $selectable  whether an admin may pick it for a new order type
      * @param  Module|null  $module  the module that owns it; while that module is
      *                               off, order types with this behaviour are hidden
+     * @param  int  $sort  position in lists (lower first), so a behaviour a module
+     *                      adds later still shows where admins expect it
      */
-    public function register(string $code, string $class, string $label, bool $selectable = true, ?Module $module = null): void
+    public function register(string $code, string $class, string $label, bool $selectable = true, ?Module $module = null, int $sort = 100): void
     {
         if (! is_subclass_of($class, OrderTypeBehavior::class)) {
             throw new InvalidArgumentException("[{$class}] must implement ".OrderTypeBehavior::class.'.');
         }
 
-        $this->behaviors[$code] = ['class' => $class, 'label' => $label, 'selectable' => $selectable, 'module' => $module];
+        $this->behaviors[$code] = ['class' => $class, 'label' => $label, 'selectable' => $selectable, 'module' => $module, 'sort' => $sort];
+
+        // Stable sort: equal positions keep their registration order.
+        uasort($this->behaviors, fn (array $a, array $b): int => $a['sort'] <=> $b['sort']);
     }
 
     public function has(OrderBehavior|string $code): bool

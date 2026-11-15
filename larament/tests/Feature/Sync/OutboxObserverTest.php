@@ -19,10 +19,10 @@ use App\Models\Supplier;
 use App\Models\SyncOutbox;
 use App\Models\User;
 use App\Models\Waste;
+use App\Modules\WebOrders\Services\WebApiService;
 use App\Services\Orders\OrderService;
 use App\Services\SettingsService;
 use App\Services\ShiftService;
-use App\Services\WebApiService;
 use App\Sync\DocumentType;
 use Illuminate\Support\Facades\Http;
 

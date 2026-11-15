@@ -90,7 +90,7 @@ it('handles free purchases without dividing by zero', function () {
 dataset('inventory service reports', ['PurchasesReport', 'WasteReport', 'StocktakingReport', 'StockIssuesReport', 'ManufacturingYieldReport', 'CostHistoryReport']);
 
 it('applies every shared filter and includes main category products as well as children', function (string $report) {
-    $service = 'App\\Services\\Reports\\Inventory\\'.$report.'Service';
+    $service = ($report === 'ManufacturingYieldReport' ? 'App\\Modules\\Manufacturing\\Services\\' : 'App\\Services\\Reports\\Inventory\\').$report.'Service';
     $main = Category::factory()->create();
     $sub = Category::factory()->create(['parent_id' => $main->id]);
     $this->product->update(['category_id' => $sub->id]);
@@ -107,7 +107,7 @@ it('applies every shared filter and includes main category products as well as c
 })->with('inventory service reports');
 
 it('includes the last business date regardless of the posting timestamp', function (string $report) {
-    $service = 'App\\Services\\Reports\\Inventory\\'.$report.'Service';
+    $service = ($report === 'ManufacturingYieldReport' ? 'App\\Modules\\Manufacturing\\Services\\' : 'App\\Services\\Reports\\Inventory\\').$report.'Service';
     reportFixture($report, $this->product, ['business_date' => '2026-11-30']);
     reportFixture($report, $this->product, ['business_date' => '2026-12-01']);
     expect($service::query('2026-11-30', '2026-11-30')->get())->toHaveCount(1);

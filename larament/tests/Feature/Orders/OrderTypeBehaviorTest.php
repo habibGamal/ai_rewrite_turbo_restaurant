@@ -12,7 +12,7 @@ use App\Models\OrderTypeRow;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\User;
-use App\Orders\Behaviors\DineInBehavior;
+use App\Modules\Restaurant\Behaviors\DineInBehavior;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
 use App\Services\Orders\OrderCalculationService;

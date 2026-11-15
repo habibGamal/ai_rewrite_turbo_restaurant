@@ -1,13 +1,14 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Events\Orders\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Modules\WebOrders\Events\WebOrderReceived;
 use Illuminate\Broadcasting\PrivateChannel;
+use Tests\Unit\TestCase;
 
-uses(Tests\Unit\TestCase::class);
+uses(TestCase::class);
 
 describe('WebOrderReceived Event', function () {
     it('broadcasts on correct channel', function () {

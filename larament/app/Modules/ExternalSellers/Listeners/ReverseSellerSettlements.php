@@ -6,7 +6,7 @@ use App\Core\Events\OrderCancelled;
 use App\Exceptions\OrderException;
 use App\Models\ExternalSeller;
 use App\Models\Shift;
-use App\Services\Orders\ExternalSellerSettlementService;
+use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
 
 /**
  * In transaction: cancelling an order cancels its external orders, drops what

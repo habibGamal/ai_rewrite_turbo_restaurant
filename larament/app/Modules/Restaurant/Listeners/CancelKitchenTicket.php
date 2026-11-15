@@ -3,7 +3,7 @@
 namespace App\Modules\Restaurant\Listeners;
 
 use App\Core\Events\OrderCancelled;
-use App\Services\Kitchen\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 
 /**
  * In transaction: a cancelled order must never leave a live ticket.

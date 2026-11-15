@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\Manufacturing\ManufacturingRecipeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -47,19 +46,5 @@ class ManufacturingRecipe extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
-    }
-
-    public function validate(): void
-    {
-        app(ManufacturingRecipeService::class)->validate($this);
-    }
-
-    /**
-     * @param  array<int|string, array<string, mixed>>  $inputs
-     * @param  array<int|string, array<string, mixed>>  $outputs
-     */
-    public static function validateData(array $inputs, array $outputs): void
-    {
-        app(ManufacturingRecipeService::class)->validateData($inputs, $outputs);
     }
 }

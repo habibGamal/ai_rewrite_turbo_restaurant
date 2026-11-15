@@ -3,12 +3,9 @@
 namespace App\Services;
 
 use App\Enums\OptionalFeature;
-use App\Enums\OrderStatus;
 use App\Enums\SettingKey;
 use App\Exceptions\BusinessTypeLockedException;
 use App\Exceptions\OrderException;
-use App\Models\ExternalOrder;
-use App\Models\ExternalSeller;
 use App\Models\FeatureFlagAudit;
 use App\Models\OrderTypeRow;
 use App\Models\Setting;
@@ -16,7 +13,6 @@ use App\Modules\BusinessType;
 use App\Modules\Module;
 use App\Orders\OrderTypeCatalog;
 use App\Orders\TabPermissions;
-use App\Services\Orders\ExternalSellerSettlementService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -51,7 +47,6 @@ class FeatureService
 
     public function __construct(
         private readonly SettingsService $settingsService,
-        private readonly ExternalSellerSettlementService $settlementService,
     ) {}
 
     public function isEnabled(OptionalFeature|SettingKey|string $feature): bool
@@ -296,9 +291,7 @@ class FeatureService
      */
     public function checkDisableBlockers(OptionalFeature $feature): array
     {
-        $blockers = $feature === OptionalFeature::OUTSOURCED_ORDERS
-            ? $this->checkOutsourcedOrdersDisableBlockers()
-            : [];
+        $blockers = [];
 
         foreach ($this->disableBlockers[$feature->value] ?? [] as $checker) {
             $result = $checker();
@@ -470,44 +463,6 @@ class FeatureService
         return array_values(array_unique(array_merge($selectedPermissions, $preservedHidden)));
     }
 
-    /**
-     * @return array<int, string>
-     */
-    protected function checkOutsourcedOrdersDisableBlockers(): array
-    {
-        $blockers = [];
-
-        if (Schema::hasTable('external_orders') && Schema::hasTable('orders')) {
-            $openExternalOrdersCount = ExternalOrder::query()
-                ->where('status', '!=', 'cancelled')
-                ->whereHas('host', fn ($query) => $query->whereIn('status', [
-                    OrderStatus::PENDING,
-                    OrderStatus::PROCESSING,
-                    OrderStatus::OUT_FOR_DELIVERY,
-                ]))
-                ->lockForUpdate()
-                ->count();
-
-            if ($openExternalOrdersCount > 0) {
-                $blockers[] = "لا يمكن إيقاف ميزة الطلبات الخارجية لوجود {$openExternalOrdersCount} طلب خارجي قيد التشغيل على طلبات مفتوحة.";
-            }
-        }
-
-        if (Schema::hasTable('external_sellers')) {
-            $sellers = ExternalSeller::query()->lockForUpdate()->get();
-            $unsettledSellers = $sellers->filter(
-                fn (ExternalSeller $seller): bool => abs($this->settlementService->payable($seller)) > 0.0001
-            );
-
-            if ($unsettledSellers->isNotEmpty()) {
-                $names = $unsettledSellers->pluck('name')->implode('، ');
-                $blockers[] = "لا يمكن إيقاف ميزة الطلبات الخارجية لوجود مستحقات غير مسواة للمتاجر المتعاونة ({$names}).";
-            }
-        }
-
-        return $blockers;
-    }
-
     // ---------------------------------------------------------------------
     // Business type and modules (vendor-owned)
     // ---------------------------------------------------------------------
@@ -552,7 +507,14 @@ class FeatureService
             }
 
             if ($applyDefaultModules) {
-                $this->setModules($type->defaultModules(), $actorId);
+                // External sellers is never a default; the profile does not
+                // switch off sellers the vendor already turned on.
+                $modules = $type->defaultModules();
+                if ($this->outsourcedOrdersEnabled()) {
+                    $modules[] = Module::EXTERNAL_SELLERS;
+                }
+
+                $this->setModules($modules, $actorId);
             }
 
             // Instant sale is the default counter for every business except
@@ -574,7 +536,26 @@ class FeatureService
     {
         $stored = $this->settingsService->get(SettingKey::ENABLED_MODULES->value);
 
-        return $this->decodeModules($stored);
+        return $this->withExternalSellers($this->decodeModules($stored), $this->outsourcedOrdersEnabled());
+    }
+
+    /**
+     * The External sellers module is switched by the outsourced-orders flag
+     * that installs already had before modules existed: one switch, kept in
+     * its original setting, with its own disable blockers (unsettled seller
+     * money) and audit rows. Its entry in the module list is ignored.
+     *
+     * @param  list<Module>  $modules
+     * @return list<Module>
+     */
+    private function withExternalSellers(array $modules, bool $enabled): array
+    {
+        return array_values(array_filter(
+            Module::cases(),
+            fn (Module $module): bool => $module === Module::EXTERNAL_SELLERS
+                ? $enabled
+                : in_array($module, $modules, true),
+        ));
     }
 
     public function moduleEnabled(Module $module): bool
@@ -616,11 +597,25 @@ class FeatureService
         return DB::transaction(function () use ($target, $actorId): array {
             $key = SettingKey::ENABLED_MODULES->value;
             $row = Setting::query()->where('key', $key)->lockForUpdate()->first();
-            $current = $this->decodeModules($row?->value);
+            $current = $this->withExternalSellers($this->decodeModules($row?->value), $this->outsourcedOrdersEnabled());
+
+            // External sellers is stored as the outsourced-orders flag; that
+            // switch runs its own blockers and writes its own audit row.
+            $sellersOld = in_array(Module::EXTERNAL_SELLERS, $current, true);
+            $sellersNew = isset($target[Module::EXTERNAL_SELLERS->value]);
+            if ($sellersOld !== $sellersNew) {
+                $this->updateFeatures([OptionalFeature::OUTSOURCED_ORDERS->value => $sellersNew], $actorId);
+            }
 
             $errors = [];
-            $changes = [];
+            $changes = $sellersOld !== $sellersNew
+                ? [Module::EXTERNAL_SELLERS->value => ['old' => $sellersOld, 'new' => $sellersNew]]
+                : [];
             foreach (Module::cases() as $module) {
+                if ($module === Module::EXTERNAL_SELLERS) {
+                    continue;
+                }
+
                 $old = in_array($module, $current, true);
                 $new = isset($target[$module->value]);
 
@@ -644,13 +639,17 @@ class FeatureService
 
             $ordered = array_values(array_filter(
                 array_map(fn (Module $module): string => $module->value, Module::cases()),
-                fn (string $value): bool => isset($target[$value]),
+                fn (string $value): bool => isset($target[$value]) && $value !== Module::EXTERNAL_SELLERS->value,
             ));
 
             Setting::query()->updateOrCreate(['key' => $key], ['value' => json_encode($ordered)]);
             Setting::invalidateCache($key);
 
             foreach ($changes as $moduleValue => $change) {
+                if ($moduleValue === Module::EXTERNAL_SELLERS->value) {
+                    continue;
+                }
+
                 $this->audit(Module::from($moduleValue)->auditKey(), $change['old'], $change['new'], $actorId);
             }
 

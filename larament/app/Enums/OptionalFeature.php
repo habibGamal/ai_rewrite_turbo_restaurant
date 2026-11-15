@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Modules\Module;
+
 enum OptionalFeature: string
 {
     case REVENUES = 'feature_revenues_enabled';
@@ -19,6 +21,30 @@ enum OptionalFeature: string
             self::EQUIPMENT => SettingKey::FEATURE_EQUIPMENT_ENABLED,
             self::VARIANTS => SettingKey::FEATURE_VARIANTS_ENABLED,
         };
+    }
+
+    /**
+     * The module this flag switches, when it is a module's on/off switch
+     * rather than a feature of its own. Outsourced orders is how the
+     * External sellers module is stored; the vendor console shows it as a
+     * module, not as a feature toggle.
+     */
+    public function module(): ?Module
+    {
+        return match ($this) {
+            self::OUTSOURCED_ORDERS => Module::EXTERNAL_SELLERS,
+            default => null,
+        };
+    }
+
+    /**
+     * Features switched on their own, not through a module.
+     *
+     * @return list<self>
+     */
+    public static function standalone(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $feature): bool => $feature->module() === null));
     }
 
     public function shortKey(): string

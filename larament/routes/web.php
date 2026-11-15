@@ -1,18 +1,18 @@
 <?php
 
+use App\Events\TestEvent;
 use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\FloorLayoutController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
-use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Pos\HeldSaleController;
 use App\Http\Controllers\Pos\InstantReturnController;
 use App\Http\Controllers\Pos\InstantSaleController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShiftController;
-use App\Http\Controllers\WebOrderController;
+use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,31 +24,6 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/floor/designer/{code}', [FloorLayoutController::class, 'show'])->middleware(['module:restaurant', 'permission:update_order_types'])->name('floor.designer');
-    Route::put('/floor/save/{code}', [FloorLayoutController::class, 'save'])->middleware(['module:restaurant', 'permission:update_order_types'])->name('floor.save');
-    // Kitchen Display Screen
-    Route::prefix('kitchen')->name('kitchen.')->middleware('module:restaurant')->group(function () {
-        Route::get('/', [KitchenController::class, 'index'])
-            ->name('index')
-            ->middleware('permission:kitchen.access');
-
-        Route::post('/items/{item}/done', [KitchenController::class, 'finishItem'])
-            ->name('items.done')
-            ->middleware('permission:kitchen.access');
-        Route::post('/items/{item}/undo', [KitchenController::class, 'undoItem'])
-            ->name('items.undo')
-            ->middleware('permission:kitchen.access');
-        Route::post('/tickets/{ticket}/done', [KitchenController::class, 'finishTicket'])
-            ->name('tickets.done')
-            ->middleware('permission:kitchen.access');
-        Route::post('/tickets/{ticket}/acknowledge', [KitchenController::class, 'acknowledge'])
-            ->name('tickets.acknowledge')
-            ->middleware('permission:kitchen.access');
-        Route::post('/tickets/{ticket}/rush', [KitchenController::class, 'rush'])
-            ->name('tickets.rush')
-            ->middleware('permission:kitchen.access|pos.access');
-    });
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -70,31 +45,23 @@ Route::middleware('auth')->group(function () {
     Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access', 'order.tab'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
-        Route::post('/{order}/external', [\App\Http\Controllers\ExternalOrderController::class, 'save'])->name('external.save');
-        Route::delete('/{order}/external/{external}/items/{item}', [\App\Http\Controllers\ExternalOrderController::class, 'removeLine'])->name('external.removeLine');
-        Route::post('/{order}/external/{external}/fulfill', [\App\Http\Controllers\ExternalOrderController::class, 'fulfill'])->name('external.fulfill');
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
         Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
         Route::post('/complete-order/{order}', [OrderController::class, 'completeOrder'])->name('complete');
         Route::post('/collect-remaining/{order}', [OrderController::class, 'collectRemaining'])->name('collectRemaining');
         Route::post('/cancel-order/{order}', [OrderController::class, 'cancelOrder'])->name('cancel');
         Route::post('/update-customer/{order}', [OrderController::class, 'updateCustomer'])->name('updateCustomer');
-        Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver')->middleware('module:delivery');
         Route::post('/update-type/{order}', [OrderController::class, 'updateOrderType'])->name('updateType');
         Route::post('/update-notes/{order}', [OrderController::class, 'updateOrderNotes'])->name('updateNotes');
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
-        Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver')->middleware('module:delivery');
     });
 
     // Quick operations routes
     Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
     Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
-    Route::get('/products/lookup', \App\Http\Controllers\ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
-    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['module:restaurant', 'shift', 'permission:pos.access']);
+    Route::get('/products/lookup', ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
 
     // Instant sale (Phase 6c): one request per sale, held carts, returns and exchanges
     Route::prefix('pos')->name('pos.')->middleware(['shift', 'permission:pos.access'])->group(function () {
@@ -106,21 +73,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/instant-returns', [InstantReturnController::class, 'store'])->name('instant-returns.store');
     });
 
-    // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->middleware(['module:web_orders', 'permission:web_order.manage', 'order.tab'])->group(function () {
-        Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
-        Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
-        Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
-        Route::post('/complete-order/{order}', [WebOrderController::class, 'completeOrder'])->name('complete');
-        Route::post('/out-for-delivery/{order}', [WebOrderController::class, 'outForDelivery'])->name('outForDelivery');
-        Route::post('/apply-discount/{order}', [WebOrderController::class, 'applyDiscount'])->name('applyDiscount');
-        Route::post('/save-order/{order}', [WebOrderController::class, 'saveOrder'])->name('saveOrder');
-    });
-
     // Printer Management Routes
     Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware(['permission:pos.access', 'order.tab']);
     Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
-    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen')->middleware(['module:restaurant', 'permission:pos.access']);
     Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
 
     // Admin Printer Management Routes
@@ -152,48 +107,14 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-// Test route for broadcasting
-Route::get('/test-broadcast', function () {
-    // Get the latest order or create a dummy one for testing
-    $order = \App\Models\Order::with(['customer', 'items'])->latest()->first();
-
-    if (! $order) {
-        return response()->json(['error' => 'No orders found. Create an order first.']);
-    }
-
-    // Log for debugging
-    \Log::info('Broadcasting test event for order: '.$order->id);
-    \Log::info('Broadcasting connection: '.config('broadcasting.default'));
-    \Log::info('Reverb config: ', config('broadcasting.connections.reverb'));
-
-    // Dispatch the event
-    $event = new \App\Events\Orders\WebOrderReceived($order);
-    \Log::info('Event created: '.get_class($event));
-    \Log::info('Broadcast channels: ', $event->broadcastOn());
-    \Log::info('Broadcast as: '.$event->broadcastAs());
-    \Log::info('Broadcast with: ', $event->broadcastWith());
-
-    event($event);
-
-    \Log::info('Event dispatched');
-
-    return response()->json([
-        'message' => 'Event dispatched successfully',
-        'order_id' => $order->id,
-        'order_number' => $order->order_number,
-        'broadcast_connection' => config('broadcasting.default'),
-        'reverb_config' => config('broadcasting.connections.reverb'),
-    ]);
-});
-
 // Simple test event
 Route::get('/test-simple', function () {
-    \Log::info('Dispatching simple test event');
+    Log::info('Dispatching simple test event');
 
-    $event = new \App\Events\TestEvent('This is a test message');
+    $event = new TestEvent('This is a test message');
     event($event);
 
-    \Log::info('Simple test event dispatched');
+    Log::info('Simple test event dispatched');
 
     return response()->json([
         'message' => 'Simple test event dispatched',

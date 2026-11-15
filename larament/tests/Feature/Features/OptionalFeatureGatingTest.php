@@ -4,16 +4,8 @@ use App\Enums\OptionalFeature;
 use App\Enums\OrderStatus;
 use App\Enums\SettingKey;
 use App\Exceptions\OrderException;
-use App\Filament\Pages\ExternalSellerAccount;
-use App\Filament\Pages\ExternalSellerAccount\SettlementsTable;
-use App\Filament\Pages\ExternalSellerAccounts;
 use App\Filament\Pages\Settings;
 use App\Filament\Pages\VendorConsole;
-use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
-use App\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
-use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
-use App\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
-use App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\RoleResource;
@@ -26,10 +18,18 @@ use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\User;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount\SettlementsTable;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\ExternalSellerResource;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
+use App\Modules\ExternalSellers\Services\ExternalOrderService;
+use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
 use App\Orders\ReceiptView;
 use App\Services\FeatureService;
-use App\Services\Orders\ExternalOrderService;
-use App\Services\Orders\ExternalSellerSettlementService;
 use App\Services\Orders\OrderCompletionService;
 use App\Services\SettingsService;
 use App\Services\ShiftsReportService;
@@ -112,11 +112,12 @@ it('renders the feature toggles on the vendor console and audits flag transition
         ->assertSee('المميزات')
         ->assertFormFieldExists('features.'.SettingKey::FEATURE_REVENUES_ENABLED->value)
         ->assertFormFieldExists('features.'.SettingKey::FEATURE_CUSTOM_FEES_ENABLED->value)
-        ->assertFormFieldExists('features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
+        // Outsourced orders is the External sellers module's switch now.
+        ->assertFormFieldDoesNotExist('features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
         ->assertFormFieldExists('features.'.SettingKey::FEATURE_EQUIPMENT_ENABLED->value)
         ->fillForm([
             'features.'.SettingKey::FEATURE_REVENUES_ENABLED->value => true,
-            'features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => true,
+            'modules' => ['restaurant', 'delivery', 'manufacturing', 'external_sellers'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -165,10 +166,10 @@ it('blocks disabling outsourced orders when an open order has external orders or
     actingAs(User::factory()->vendor()->create());
     livewire(VendorConsole::class)
         ->fillForm([
-            'features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => false,
+            'modules' => ['restaurant', 'delivery', 'manufacturing'],
         ])
         ->call('save')
-        ->assertHasErrors(['data.features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value]);
+        ->assertHasErrors(['data.modules']);
 
     expect($featureService->outsourcedOrdersEnabled())->toBeTrue();
 

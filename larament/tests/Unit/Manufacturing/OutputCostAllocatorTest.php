@@ -1,7 +1,7 @@
 <?php
 
 use App\Exceptions\ManufacturingException;
-use App\Services\Manufacturing\OutputCostAllocationService;
+use App\Modules\Manufacturing\Services\OutputCostAllocationService;
 
 it('splits pot 780: bones 10, thighs 270, skin 20, breast 480 → unit 10 / 60 / 40 / 120', function () {
     $result = OutputCostAllocationService::allocate(780.0, [

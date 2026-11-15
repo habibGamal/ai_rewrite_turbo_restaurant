@@ -75,8 +75,8 @@ enum Module: string
                 ...self::crud('manufacturing_orders'),
                 'view_manufacturing_yield_report',
             ],
-            // Still gated by OptionalFeature::OUTSOURCED_ORDERS, the switch
-            // installs already use; Phase 4 folds that flag into this module.
+            // Gated by OptionalFeature::OUTSOURCED_ORDERS, which is where this
+            // module's switch is stored (see FeatureService::enabledModules()).
             self::EXTERNAL_SELLERS => [],
             self::RETAIL => [],
         };

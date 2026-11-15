@@ -3,22 +3,7 @@
 namespace App\Modules;
 
 use App\Enums\OptionalFeature;
-use App\Filament\Pages\ExternalSellerAccount;
-use App\Filament\Pages\ExternalSellerAccounts;
-use App\Filament\Pages\Reports\DriverPerformanceReport;
-use App\Filament\Pages\Reports\KitchenPerformanceReport;
-use App\Filament\Pages\Reports\ManufacturingYieldReport;
-use App\Filament\Pages\Reports\WebOrdersReport;
-use App\Filament\Resources\Drivers\DriverResource;
-use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
-use App\Filament\Resources\KitchenStations\KitchenStationResource;
-use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
-use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
-use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
-use App\Filament\Resources\RawMaterialProducts\RawMaterialProductResource;
-use App\Filament\Resources\Regions\RegionResource;
-use App\Filament\Resources\TableTypes\TableTypeResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -27,49 +12,20 @@ use Filament\Resources\Pages\Page as ResourcePage;
  * out of the navigation and answers 404 on a direct URL (see
  * EnsureModuleScreenEnabled), never a "feature disabled" message.
  *
- * Phase 4 moves these screens into their module's Filament plugin; until
- * then this map is the single place that ties a screen to its module.
+ * A screen belongs to a module by its namespace: everything under
+ * app/Modules/<Module>/ is that module's. Screens of core stay visible.
  */
 final class ModuleScreens
 {
     /**
-     * @return array<class-string, Module>
-     */
-    public static function map(): array
-    {
-        return [
-            KitchenStationResource::class => Module::RESTAURANT,
-            TableTypeResource::class => Module::RESTAURANT,
-            KitchenPerformanceReport::class => Module::RESTAURANT,
-
-            DriverResource::class => Module::DELIVERY,
-            RegionResource::class => Module::DELIVERY,
-            DriverPerformanceReport::class => Module::DELIVERY,
-
-            WebOrdersReport::class => Module::WEB_ORDERS,
-
-            ManufacturedProductResource::class => Module::MANUFACTURING,
-            RawMaterialProductResource::class => Module::MANUFACTURING,
-            ManufacturingRecipeResource::class => Module::MANUFACTURING,
-            ManufacturingOrderResource::class => Module::MANUFACTURING,
-            ManufacturingYieldReport::class => Module::MANUFACTURING,
-        ];
-    }
-
-    /**
      * Screens switched by a vendor-owned optional feature rather than (or
      * on top of) a module; they also answer 404 while the feature is off.
-     * External sellers keep OUTSOURCED_ORDERS (vendor-owned) until Phase 4
-     * folds that flag into Module::EXTERNAL_SELLERS.
      *
      * @return array<class-string, OptionalFeature>
      */
     public static function featureMap(): array
     {
         return [
-            ExternalSellerResource::class => OptionalFeature::OUTSOURCED_ORDERS,
-            ExternalSellerAccounts::class => OptionalFeature::OUTSOURCED_ORDERS,
-            ExternalSellerAccount::class => OptionalFeature::OUTSOURCED_ORDERS,
             ProductGroupResource::class => OptionalFeature::VARIANTS,
         ];
     }
@@ -79,14 +35,29 @@ final class ModuleScreens
      */
     public static function moduleFor(string $class): ?Module
     {
-        $map = self::map();
-
-        if (isset($map[$class])) {
-            return $map[$class];
+        if (is_subclass_of($class, ResourcePage::class)) {
+            $class = $class::getResource();
         }
 
-        if (is_subclass_of($class, ResourcePage::class)) {
-            return $map[$class::getResource()] ?? null;
+        return self::moduleOfNamespace($class);
+    }
+
+    /**
+     * Screens that live in a module (app/Modules/<Module>/...) belong to it
+     * without being listed in map().
+     */
+    private static function moduleOfNamespace(string $class): ?Module
+    {
+        if (! str_starts_with($class, 'App\\Modules\\')) {
+            return null;
+        }
+
+        $directory = explode('\\', $class)[2] ?? '';
+
+        foreach (Module::cases() as $module) {
+            if (ModuleFilament::directory($module) === $directory) {
+                return $module;
+            }
         }
 
         return null;
