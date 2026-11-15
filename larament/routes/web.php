@@ -11,6 +11,7 @@ use App\Http\Controllers\Pos\InstantReturnController;
 use App\Http\Controllers\Pos\InstantSaleController;
 use App\Http\Controllers\Pos\PosProductController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ProductLabelController;
 use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShiftController;
@@ -104,6 +105,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/day-status', [InventoryController::class, 'dayStatus'])->name('dayStatus');
         Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay')->middleware('permission:inventory.toggle_day');
     });
+
+    // Barcode labels for a product group's variants
+    Route::get('/print/labels/group/{group}', [ProductLabelController::class, 'group'])->name('labels.group');
 
     // Invoice Print Routes
     Route::get('/print/invoice/{type}/{id}', [InvoicePrintController::class, 'show'])

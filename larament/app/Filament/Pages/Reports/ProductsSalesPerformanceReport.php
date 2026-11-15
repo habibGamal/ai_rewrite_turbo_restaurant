@@ -7,6 +7,7 @@ use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\CategoryPerformanceWidget;
 use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
 use App\Filament\Widgets\OrderTypePerformanceWidget;
+use App\Filament\Widgets\ProductGroupSalesWidget;
 use App\Filament\Widgets\ProductsSalesGroupedWidget;
 use App\Filament\Widgets\ProductsSalesStatsWidget;
 use App\Filament\Widgets\ProductsSalesTableWidget;
@@ -115,6 +116,7 @@ class ProductsSalesPerformanceReport extends BaseDashboard
             TopProductsByProfitWidget::class,
             OrderTypePerformanceWidget::class,
             CategoryPerformanceWidget::class,
+            ProductGroupSalesWidget::class,
             ProductsSalesGroupedWidget::class,
             ProductsSalesTableWidget::class,
         ];

@@ -37,11 +37,14 @@ import type {
     OrderItemAction,
     OrderItemData,
     Product,
+    ProductGroupTile,
     User,
+    VariantSku,
 } from "@/types";
 import { orderItemsReducer } from "@/utils/orderItemsReducer";
 import { formatCurrency } from "@/utils/orderCalculations";
 import Categories, { productsForOrder } from "@/Components/Orders/Categories";
+import VariantPickerModal from "@/Components/Orders/VariantPickerModal";
 import OrderItem from "@/Components/Orders/OrderItem";
 import CustomerModal from "@/Components/Orders/CustomerModal";
 import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
@@ -236,6 +239,30 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         },
         [addProductToCart]
     );
+
+    // ---- Swap a variant on a cart line (other size or colour, same quantity) ----
+    const groupTiles = useMemo<ProductGroupTile[]>(
+        () => categories.flatMap((category) => [
+            ...(category.groups ?? []),
+            ...(category.children ?? []).flatMap((child) => child.groups ?? []),
+        ]),
+        [categories]
+    );
+    const groupOf = useCallback(
+        (productId: number) => groupTiles.find((group) => group.skus.some((sku) => sku.id === productId)) ?? null,
+        [groupTiles]
+    );
+    const [swapLine, setSwapLine] = useState<OrderItemData | null>(null);
+    const swapVariant = (sku: VariantSku) => {
+        if (!swapLine) return;
+        const quantity = Number(swapLine.quantity) || 1;
+        if (sku.id !== swapLine.product_id) {
+            dispatch({ type: "delete", id: swapLine.product_id, user });
+            addProductToCart(sku, quantity);
+        }
+        setSwapLine(null);
+        focusScan();
+    };
 
     const submitScan = async () => {
         const { quantity, code } = parseScan(scan);
@@ -795,6 +822,18 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                                     }
                                 >
                                     <OrderItem orderItem={item} dispatch={dispatch} user={user} />
+                                    {groupOf(item.product_id) && (
+                                        <Button
+                                            type="link"
+                                            size="small"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSwapLine(item);
+                                            }}
+                                        >
+                                            تغيير المقاس / اللون
+                                        </Button>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -821,6 +860,14 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 </Col>
             </Row>
 
+            <VariantPickerModal
+                group={swapLine ? groupOf(swapLine.product_id) : null}
+                onClose={() => {
+                    setSwapLine(null);
+                    focusScan();
+                }}
+                onPick={swapVariant}
+            />
             <CustomerModal
                 open={customerOpen}
                 onCancel={() => {
