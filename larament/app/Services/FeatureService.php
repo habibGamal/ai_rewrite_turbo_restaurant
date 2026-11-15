@@ -76,6 +76,11 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::EQUIPMENT);
     }
 
+    public function variantsEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::VARIANTS);
+    }
+
     /**
      * @return array<string, bool>
      */
@@ -92,7 +97,7 @@ class FeatureService
     /**
      * Shared Inertia props for optional features using typed short keys.
      *
-     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool}
+     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool}
      */
     public function toInertiaProps(): array
     {
@@ -101,6 +106,7 @@ class FeatureService
             'custom_fees' => $this->customFeesEnabled(),
             'outsourced_orders' => $this->outsourcedOrdersEnabled(),
             'equipment' => $this->equipmentEnabled(),
+            'variants' => $this->variantsEnabled(),
         ];
     }
 

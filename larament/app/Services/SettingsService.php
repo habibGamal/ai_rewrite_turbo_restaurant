@@ -42,6 +42,8 @@ class SettingsService
 
     public const FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
 
+    public const FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
+
     /**
      * Get website link from settings
      */
