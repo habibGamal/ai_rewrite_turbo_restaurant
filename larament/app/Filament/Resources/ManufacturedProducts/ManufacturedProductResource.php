@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ManufacturedProducts;
 use App\Enums\ProductType;
 use App\Filament\Actions\Forms\ProductComponentsImporterAction;
 use App\Filament\Components\Forms\KitchenDisplayFields;
+use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Components\Forms\ProductComponentSelector;
 use App\Models\Category;
 use App\Models\Product;
@@ -67,10 +68,8 @@ class ManufacturedProductResource extends Resource
                             ->label('اسم المنتج')
                             ->required()
                             ->maxLength(255),
-                        TextInput::make('barcode')
-                            ->label('الباركود')
-                            ->maxLength(255)
-                            ->placeholder('اختياري'),
+                        ProductBarcodeFields::primary(),
+                        ProductBarcodeFields::extra(),
                         Select::make('category_id')
                             ->label('الفئة')
                             ->options(Category::query()->pluck('name', 'id'))

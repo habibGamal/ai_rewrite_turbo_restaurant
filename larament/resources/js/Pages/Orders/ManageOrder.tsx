@@ -73,22 +73,42 @@ export default function ManageOrder({
     canAddExternalOrder: typeAllowsExternalOrder,
     credit,
 }: ManageOrderProps) {
-    const { auth, features, receiptFooter, scaleBarcodePrefix } =
+    const { auth, features, receiptFooter } =
         usePage<ManageOrderProps>().props;
     const outsourcedFeatureEnabled = Boolean(features?.outsourced_orders);
     const user = auth.user;
     const { modal } = App.useApp();
-    const barcodeScanner = (symbol: string, type: any) => {
-        const barcode = symbol;
-        console.log("Scanned barcode:", barcode, type);
-        // Use dispatch to add item by barcode
-        dispatch({
-            type: "addByBarcode",
-            barcode: barcode,
-            products: scannableProducts,
-            scalePrefix: scaleBarcodePrefix as string,
-            user: user,
-        });
+    // The server resolves the code (extra barcodes, pack sizes, scale labels);
+    // the item is only added if it is on this order type's menu.
+    const barcodeScanner = async (symbol: string) => {
+        const code = symbol.trim();
+        if (!code) return;
+        try {
+            const { data } = await axios.get<{
+                found: boolean;
+                product_id: number;
+                quantity: number;
+            }>(route("products.lookup"), { params: { code } });
+            const product = scannableProducts.find(
+                (p) => p.id === data.product_id
+            );
+            if (!product) {
+                message.warning("هذا المنتج غير متاح لهذا النوع من الطلبات");
+                return;
+            }
+            dispatch({
+                type: "addScanned",
+                product,
+                quantity: Number(data.quantity) || 1,
+                user,
+            });
+        } catch (error: any) {
+            if (error?.response?.status === 404) {
+                message.warning(`لا يوجد منتج بالباركود ${code}`);
+            } else {
+                message.error("تعذر البحث عن الباركود");
+            }
+        }
     };
     const symbologies = ["EAN 13"] as StandardSymbologyKey[];
     useSymbologyScanner(barcodeScanner, {

@@ -90,6 +90,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
     Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
     Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift', 'permission:pos.access']);
+    Route::get('/products/lookup', \App\Http\Controllers\ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
     Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift', 'permission:pos.access']);
 
     // Web Order Management Routes

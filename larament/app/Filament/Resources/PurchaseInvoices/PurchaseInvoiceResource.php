@@ -6,6 +6,7 @@ use App\Filament\Actions\ClosePurchaseInvoiceAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintPurchaseInvoiceAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\EditPurchaseInvoice;
@@ -15,6 +16,7 @@ use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -122,6 +124,9 @@ class PurchaseInvoiceResource extends Resource
                             LowStockImporterAction::make('importLowStock'),
                         ])
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, $set, $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
 
