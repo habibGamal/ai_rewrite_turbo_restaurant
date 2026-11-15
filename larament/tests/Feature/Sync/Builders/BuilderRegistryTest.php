@@ -13,6 +13,8 @@ use App\Sync\Builders\ProductBuilder;
 use App\Sync\Builders\ProductGroupBuilder;
 use App\Sync\Builders\PurchaseBuilder;
 use App\Sync\Builders\RecipeBuilder;
+use App\Sync\Builders\RevenueBuilder;
+use App\Sync\Builders\RevenueTypeBuilder;
 use App\Sync\Builders\ShiftBuilder;
 use App\Sync\Builders\StaffBuilder;
 use App\Sync\Builders\StocktakingBuilder;
@@ -44,4 +46,6 @@ it('resolves builders for all supported document types', function (DocumentType 
     [DocumentType::InventoryDay, InventoryDayBuilder::class],
     [DocumentType::DaySummary, DaySummaryBuilder::class],
     [DocumentType::AuditLog, AuditLogBuilder::class],
+    [DocumentType::Revenue, RevenueBuilder::class],
+    [DocumentType::RevenueType, RevenueTypeBuilder::class],
 ]);

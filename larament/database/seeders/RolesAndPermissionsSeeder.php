@@ -147,6 +147,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'update_expense_types' => 'تعديل بند مصروف',
                 'delete_expense_types' => 'حذف بند مصروف',
 
+                'view_revenue_types' => 'عرض بنود الإيرادات',
+                'create_revenue_types' => 'إضافة بند إيراد',
+                'update_revenue_types' => 'تعديل بند إيراد',
+                'delete_revenue_types' => 'حذف بند إيراد',
+
                 'view_orders' => 'عرض الطلبات في الإدارة',
                 'create_orders' => 'إضافة طلب في الإدارة',
                 'update_orders' => 'تعديل طلب في الإدارة',

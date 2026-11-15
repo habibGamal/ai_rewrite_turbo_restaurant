@@ -27,6 +27,8 @@ use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
+use App\Models\Revenue;
+use App\Models\RevenueType;
 use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\Stocktaking;
@@ -107,6 +109,7 @@ class AppServiceProvider extends ServiceProvider
         OrderReturn::observe(SyncOutboxObserver::class);
         Shift::observe(SyncOutboxObserver::class);
         Expense::observe(SyncOutboxObserver::class);
+        Revenue::observe(SyncOutboxObserver::class);
         PurchaseInvoice::observe(SyncOutboxObserver::class);
         ReturnPurchaseInvoice::observe(SyncOutboxObserver::class);
         Waste::observe(SyncOutboxObserver::class);
@@ -115,6 +118,7 @@ class AppServiceProvider extends ServiceProvider
         Category::observe(SyncOutboxObserver::class);
         Supplier::observe(SyncOutboxObserver::class);
         ExpenceType::observe(SyncOutboxObserver::class);
+        RevenueType::observe(SyncOutboxObserver::class);
         User::observe(SyncOutboxObserver::class);
         ProductComponent::observe(SyncOutboxObserver::class);
         ProductGroup::observe(SyncOutboxObserver::class);
