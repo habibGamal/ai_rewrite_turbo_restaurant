@@ -275,7 +275,7 @@
             </tbody>
         </table>
 
-        <p class="reference">الرقم المرجعي - {{ $order->id }}</p>
+        @include('print.receipt-reference')
         @include('print.receipt-external')
         @if ($order->order_notes)
             <p>{{ $order->order_notes }}</p>

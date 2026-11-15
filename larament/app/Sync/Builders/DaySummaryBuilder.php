@@ -9,8 +9,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Shift;
 use App\Models\Waste;
+use App\Services\Reports\ReturnsAggregates;
 use App\Sync\DocumentType;
 use App\Sync\Payload;
+use Illuminate\Database\Eloquent\Collection;
 
 class DaySummaryBuilder implements DocumentBuilder
 {
@@ -55,7 +57,7 @@ class DaySummaryBuilder implements DocumentBuilder
             return null;
         }
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Shift> $shifts */
+        /** @var Collection<int, Shift> $shifts */
         $shifts = Shift::query()
             ->whereDate('business_date', $date)
             ->get();
@@ -66,7 +68,7 @@ class DaySummaryBuilder implements DocumentBuilder
             ->whereIn('shift_id', $shiftIds)
             ->count();
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Order> $completedOrders */
+        /** @var Collection<int, Order> $completedOrders */
         $completedOrders = Order::query()
             ->with('items')
             ->whereIn('shift_id', $shiftIds)
@@ -94,6 +96,9 @@ class DaySummaryBuilder implements DocumentBuilder
             ->whereIn('shift_id', $shiftIds)
             ->sum('amount');
 
+        // Refunds paid by the day's shifts, whatever day sold the order.
+        $returns = app(ReturnsAggregates::class)->forShifts($shiftIds->all());
+
         $wasteTotal = (float) Waste::query()
             ->whereDate('business_date', $date)
             ->whereNotNull('closed_at')
@@ -108,6 +113,8 @@ class DaySummaryBuilder implements DocumentBuilder
             'cogs_total' => Payload::money($cogsTotal),
             'expenses_total' => Payload::money($expensesTotal),
             'waste_total' => Payload::money($wasteTotal),
+            'refunds_total' => Payload::money($returns['returnsAmount']),
+            'refunds_cash' => Payload::money($returns['cashRefunds']),
         ];
     }
 }

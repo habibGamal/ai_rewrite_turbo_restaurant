@@ -47,7 +47,7 @@ class CustomersPerformanceReportService
             ->select('orr.order_id')
             ->selectRaw('SUM(ori.refund_amount) as refund')
             ->selectRaw('SUM(ori.quantity) as qty')
-            ->selectRaw('SUM(CASE WHEN orr.reverse_stock = 1 THEN ori.quantity * roi.cost ELSE 0 END) as cost_back')
+            ->selectRaw('SUM(CASE WHEN ori.restocked = 1 THEN ori.quantity * roi.cost ELSE 0 END) as cost_back')
             ->groupBy('orr.order_id');
 
         return DB::table('orders')

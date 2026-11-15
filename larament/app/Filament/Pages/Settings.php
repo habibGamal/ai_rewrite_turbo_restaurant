@@ -182,6 +182,14 @@ class Settings extends Page implements HasForms
                                                     ->required()
                                                     ->maxLength(4)
                                                     ->placeholder(SettingKey::SCALE_BARCODE_PREFIX->placeholder()),
+
+                                                TextInput::make(SettingKey::RETURNS_MAX_DAYS->value)
+                                                    ->label(SettingKey::RETURNS_MAX_DAYS->label())
+                                                    ->helperText(SettingKey::RETURNS_MAX_DAYS->helperText())
+                                                    ->numeric()
+                                                    ->required()
+                                                    ->rules(SettingKey::RETURNS_MAX_DAYS->validationRules())
+                                                    ->placeholder(SettingKey::RETURNS_MAX_DAYS->placeholder()),
                                             ]),
 
                                         Textarea::make(SettingKey::RECEIPT_FOOTER->value)

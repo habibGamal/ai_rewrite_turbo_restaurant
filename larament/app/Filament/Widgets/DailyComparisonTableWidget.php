@@ -52,6 +52,16 @@ class DailyComparisonTableWidget extends BaseWidget
                     ->color('success')
                     ->weight('semibold'),
 
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray'),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP')
+                    ->weight('semibold'),
+
                 TextColumn::make('total_profit')
                     ->label('إجمالي الأرباح')
                     ->money('EGP')
@@ -120,6 +130,8 @@ class DailyComparisonTableWidget extends BaseWidget
                 'total_orders' => $item->total_orders,
                 'total_sales' => $item->total_sales,
                 'total_profit' => $item->total_profit,
+                'total_refunds' => $item->total_refunds,
+                'net_sales' => $item->net_sales,
                 'profit_margin' => $item->profit_margin,
                 'avg_order_value' => $item->avg_order_value,
                 'sales_share' => $salesShare,

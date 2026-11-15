@@ -219,7 +219,7 @@ export interface InstantTabPayload {
     allow_pay_later: boolean;
     require_customer_for_credit: boolean;
   };
-  can: { discount: boolean; changeItems: boolean; returns?: boolean };
+  can: { discount: boolean; changeItems: boolean; returns?: boolean; returnWithoutRestock?: boolean };
 }
 
 export interface CashierTab {

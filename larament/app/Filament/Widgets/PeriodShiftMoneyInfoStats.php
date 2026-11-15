@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -17,6 +18,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     use CreditReconciliationStats;
     use InteractsWithPageFilters;
+    use ReturnsStats;
 
     protected ShiftsReportService $shiftsReportService;
 
@@ -44,6 +46,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ->description(number_format($stats['profitPercent'], 2).'% من المبيعات')
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('success'),
+
+            ...$this->returnsStats($stats),
 
             Stat::make('المصروفات', number_format($stats['expenses'], 2).' جنيه')
                 ->description('إجمالي مصروفات الفترة')
@@ -116,10 +120,10 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ? [Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه')]
                 : []),
             Stat::make('النقدية المتاحة', number_format($stats['availableCash'], 2).' جنيه'),
-            Stat::make('صافي الربح', number_format($stats['profit'] - $stats['expenses'], 2).' جنيه')
-                ->description('الربح بعد خصم المصروفات')
+            Stat::make('صافي الربح', number_format($stats['netProfit'] - $stats['expenses'], 2).' جنيه')
+                ->description('الربح بعد المرتجعات والمصروفات')
                 ->descriptionIcon('heroicon-m-currency-dollar')
-                ->color($stats['profit'] - $stats['expenses'] >= 0 ? 'success' : 'danger'),
+                ->color($stats['netProfit'] - $stats['expenses'] >= 0 ? 'success' : 'danger'),
         ];
     }
 

@@ -8,7 +8,9 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\Reports\ReportOrderTypesService;
+use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -57,8 +59,16 @@ class ProductsSalesReportService
                 DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
                 DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
                 DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
-
+                // Returns paid in the same scope (restocked vs damaged), and the net figures.
+                DB::raw('MAX(COALESCE(prt.returned_quantity, 0)) as returned_quantity'),
+                DB::raw('MAX(COALESCE(prt.restocked_quantity, 0)) as restocked_quantity'),
+                DB::raw('MAX(COALESCE(prt.damaged_quantity, 0)) as damaged_quantity'),
+                DB::raw('MAX(COALESCE(prt.refund_amount, 0)) as total_refunds'),
+                DB::raw('COALESCE(SUM(order_items.quantity), 0) - MAX(COALESCE(prt.returned_quantity, 0)) as net_quantity'),
+                DB::raw('COALESCE(SUM(order_items.total), 0) - MAX(COALESCE(prt.refund_amount, 0)) as net_sales'),
+                DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) - MAX(COALESCE(prt.profit_impact, 0)) as net_profit'),
             ])
+            ->leftJoinSub($this->productReturnsQuery($startDate, $endDate, $shiftIds), 'prt', 'prt.product_id', '=', 'products.id')
             ->selectRaw("{$subCategoryIdSql} as sub_category_id")
             ->selectRaw("{$subCategoryNameSql} as sub_category_name")
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
@@ -124,6 +134,33 @@ class ProductsSalesReportService
         }
 
         return $query;
+    }
+
+    /**
+     * Returned quantities and refunds per product, for returns paid in the
+     * report's scope (its shifts, or its dates by when the refund was paid).
+     */
+    public function productReturnsQuery(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): QueryBuilder
+    {
+        $aggregates = app(ReturnsAggregates::class);
+
+        if ($shiftIds !== null) {
+            $returns = DB::table('order_returns')->whereIn('order_returns.shift_id', $shiftIds === [] ? [0] : $shiftIds);
+        } else {
+            $returns = $aggregates->periodQuery(
+                $startDate ?? now()->subDays(30)->toDateString(),
+                $endDate ?? now()->toDateString(),
+            );
+        }
+
+        return $aggregates->linesQuery($returns)
+            ->select('roi.product_id')
+            ->selectRaw('SUM(ori.quantity) as returned_quantity')
+            ->selectRaw('SUM(CASE WHEN ori.restocked = 1 THEN ori.quantity ELSE 0 END) as restocked_quantity')
+            ->selectRaw('SUM(CASE WHEN ori.restocked = 1 THEN 0 ELSE ori.quantity END) as damaged_quantity')
+            ->selectRaw('SUM(ori.refund_amount) as refund_amount')
+            ->selectRaw('SUM('.ReturnsAggregates::profitImpactSql().') as profit_impact')
+            ->groupBy('roi.product_id');
     }
 
     public function getReportOrderTypes(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null): array

@@ -33,6 +33,7 @@ use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderService;
+use App\Services\Orders\ReturnRules;
 use App\Services\PrintService;
 use App\Services\Products\PosProductSearchService;
 use App\Services\Products\PosVariantCatalogService;
@@ -225,7 +226,8 @@ class OrderController extends Controller
             'can' => [
                 'discount' => $user->can('order.apply_discount'),
                 'changeItems' => $user->can('order.change_items'),
-                'returns' => $user->can('create_order_returns'),
+                'returns' => $user->can(ReturnRules::PERMISSION),
+                'returnWithoutRestock' => $user->can(ReturnRules::WITHOUT_RESTOCK),
             ],
         ];
     }

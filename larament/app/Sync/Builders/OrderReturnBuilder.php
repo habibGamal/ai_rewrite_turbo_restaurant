@@ -41,6 +41,7 @@ class OrderReturnBuilder implements DocumentBuilder
                 'order_item_uuid' => $orderItem ? $orderItem->getAttribute('uuid') : null,
                 'quantity' => Payload::qty($item->quantity),
                 'refund_amount' => Payload::money($item->refund_amount),
+                'restocked' => (bool) $item->restocked,
             ];
         }
 
@@ -63,6 +64,7 @@ class OrderReturnBuilder implements DocumentBuilder
             'total_refund' => Payload::money($orderReturn->total_refund),
             'reason' => $orderReturn->reason,
             'reverse_stock' => (bool) $orderReturn->reverse_stock,
+            'is_exchange' => $orderReturn->exchange_order_id !== null,
             'items' => $items,
             'refunds' => $refunds,
         ];

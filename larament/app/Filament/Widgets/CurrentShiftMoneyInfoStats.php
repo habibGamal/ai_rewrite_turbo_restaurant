@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Models\Shift;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -12,6 +13,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class CurrentShiftMoneyInfoStats extends BaseWidget
 {
     use CreditReconciliationStats;
+    use ReturnsStats;
 
     protected static bool $isLazy = false;
 
@@ -49,6 +51,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->description(number_format($stats['profitPercent'], 2).'% من المبيعات')
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('success'),
+
+            ...$this->returnsStats($stats),
 
             Stat::make('المصروفات', number_format($stats['expenses'], 2).' جنيه')
                 ->description('إجمالي مصروفات الشفت')

@@ -116,6 +116,30 @@ class ProductsSalesTableWidget extends BaseWidget
                     ->money('EGP')
                     ->sortable(),
 
+                TextColumn::make('returned_quantity')
+                    ->label('الكمية المرتجعة')
+                    ->numeric()
+                    ->description(fn ($record) => (float) $record->damaged_quantity > 0
+                        ? 'للمخزن '.(float) $record->restocked_quantity.' · تالف '.(float) $record->damaged_quantity
+                        : null)
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : null)
+                    ->sortable(),
+
+                TextColumn::make('net_quantity')
+                    ->label('صافي الكمية')
+                    ->numeric()
+                    ->sortable(),
+
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->sortable(),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP')
+                    ->sortable(),
+
                 TextColumn::make('profit_margin')
                     ->label('هامش الربح %')
                     ->state(

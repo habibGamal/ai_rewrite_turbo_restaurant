@@ -64,6 +64,17 @@ class ChannelPerformanceTableWidget extends BaseWidget
                     ->money('EGP')
                     ->color('success'),
 
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->sortable()
+                    ->money('EGP')
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray'),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->sortable()
+                    ->money('EGP'),
+
                 TextColumn::make('total_profit')
                     ->label('إجمالي الأرباح')
                     ->sortable()

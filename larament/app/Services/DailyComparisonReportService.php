@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -64,6 +65,12 @@ class DailyComparisonReportService
             ->get()
             ->keyBy('order_date');
 
+        // Refunds count on the day they were paid, not the day of the sale.
+        $returnsByDate = app(ReturnsAggregates::class)->groupedBy(
+            app(ReturnsAggregates::class)->periodQuery($startDate, $endDate),
+            'DATE(orr.created_at)',
+        );
+
         $result = collect();
         $current = $start->copy();
 
@@ -74,6 +81,7 @@ class DailyComparisonReportService
             $ordersCount = (int) data_get($existing, 'total_orders', 0);
             $sales = (float) data_get($existing, 'total_sales', 0.0);
             $profit = (float) data_get($existing, 'total_profit', 0.0);
+            $returns = $returnsByDate[$dateString] ?? ['amount' => 0.0, 'profit_impact' => 0.0, 'count' => 0];
             $avgOrderValue = $ordersCount > 0 ? round($sales / $ordersCount, 2) : 0.0;
             $profitMargin = $sales > 0 ? round(($profit / $sales) * 100, 1) : 0.0;
 
@@ -89,6 +97,10 @@ class DailyComparisonReportService
                 'total_orders' => $ordersCount,
                 'total_sales' => round($sales, 2),
                 'total_profit' => round($profit, 2),
+                'total_refunds' => round((float) $returns['amount'], 2),
+                'returns_count' => (int) $returns['count'],
+                'net_sales' => round($sales - (float) $returns['amount'], 2),
+                'net_profit' => round($profit - (float) $returns['profit_impact'], 2),
                 'profit_margin' => $profitMargin,
                 'avg_order_value' => $avgOrderValue,
             ]);
@@ -145,6 +157,7 @@ class DailyComparisonReportService
                 'total_orders' => $totalOrders,
                 'total_sales' => round($totalSales, 2),
                 'total_profit' => round($totalProfit, 2),
+                ...$this->returnsTotals($dayRecords),
                 'profit_margin' => $profitMargin,
                 'avg_order_value' => $avgOrderValue,
             ]);
@@ -198,6 +211,7 @@ class DailyComparisonReportService
                 'total_orders' => $totalOrders,
                 'total_sales' => round($totalSales, 2),
                 'total_profit' => round($totalProfit, 2),
+                ...$this->returnsTotals($monthRecords),
                 'profit_margin' => $profitMargin,
                 'avg_order_value' => $avgOrderValue,
             ]);
@@ -236,6 +250,7 @@ class DailyComparisonReportService
             'total_orders' => $totalOrders,
             'total_sales' => $totalSales,
             'total_profit' => $totalProfit,
+            ...$this->returnsTotals($performanceData),
             'avg_order_value' => $avgOrderValue,
             'profit_margin' => $profitMargin,
             'best_sales_period' => $bestSalesPeriod,
@@ -245,6 +260,20 @@ class DailyComparisonReportService
             'avg_daily_orders' => $avgDailyOrders,
             'active_periods_count' => $activePeriodsCount,
             'total_periods_count' => $totalPeriodsCount,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, object>  $records
+     * @return array{total_refunds: float, returns_count: int, net_sales: float, net_profit: float}
+     */
+    private function returnsTotals(Collection $records): array
+    {
+        return [
+            'total_refunds' => round((float) $records->sum('total_refunds'), 2),
+            'returns_count' => (int) $records->sum('returns_count'),
+            'net_sales' => round((float) $records->sum('net_sales'), 2),
+            'net_profit' => round((float) $records->sum('net_profit'), 2),
         ];
     }
 }

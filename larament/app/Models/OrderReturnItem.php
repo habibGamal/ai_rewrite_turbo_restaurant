@@ -15,11 +15,13 @@ class OrderReturnItem extends Model
         'order_item_id',
         'quantity',
         'refund_amount',
+        'restocked',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
         'refund_amount' => 'decimal:2',
+        'restocked' => 'boolean',
     ];
 
     public function orderReturn(): BelongsTo

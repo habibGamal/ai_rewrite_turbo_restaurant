@@ -45,8 +45,13 @@ class DailyComparisonStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
                 ->color('success'),
 
+            Stat::make('المرتجعات', number_format($summary['total_refunds'], 2).' ج.م')
+                ->description($summary['returns_count'].' مرتجع · صافي المبيعات '.number_format($summary['net_sales'], 2).' ج.م')
+                ->descriptionIcon('heroicon-m-arrow-uturn-left', IconPosition::Before)
+                ->color($summary['total_refunds'] > 0 ? 'danger' : 'gray'),
+
             Stat::make('إجمالي الأرباح', number_format($summary['total_profit'], 2).' ج.م')
-                ->description('هامش الربح: '.number_format($summary['profit_margin'], 1).'%')
+                ->description('هامش الربح: '.number_format($summary['profit_margin'], 1).'% · بعد المرتجعات '.number_format($summary['net_profit'], 2))
                 ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
                 ->color('warning'),
 
