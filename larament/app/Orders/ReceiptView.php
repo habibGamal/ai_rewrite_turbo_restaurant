@@ -36,7 +36,15 @@ final class ReceiptView
         ])->all();
         $total = round((float) $external->sum('total'), 2);
 
+        $equipment = $order->equipmentLines()->get()->map(fn ($line) => [
+            'name' => $line->getAttribute('name'),
+            'quantity' => (int) $line->getAttribute('quantity'),
+            'price' => (float) $line->getAttribute('unit_price'),
+            'total' => (float) $line->getAttribute('total'),
+        ])->all();
+
         return [
+            'equipment_lines' => $equipment,
             'restaurant_total' => (float) $order->total,
             'restaurant_lines' => $restaurantLines,
             'external_orders' => $blocks,

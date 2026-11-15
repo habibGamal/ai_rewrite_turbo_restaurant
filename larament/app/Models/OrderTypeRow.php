@@ -7,6 +7,7 @@ use App\Enums\OrderBehavior;
 use App\Observers\OrderTypeRowObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[ObservedBy(OrderTypeRowObserver::class)]
 class OrderTypeRow extends Model
@@ -36,6 +37,16 @@ class OrderTypeRow extends Model
         'require_customer_for_credit' => 'boolean',
         'guests_mode' => GuestsMode::class,
     ];
+
+    /**
+     * Equipment the cashier may add to orders of this type.
+     *
+     * @return BelongsToMany<Equipment, $this>
+     */
+    public function equipment(): BelongsToMany
+    {
+        return $this->belongsToMany(Equipment::class, 'equipment_order_type', 'order_type_id', 'equipment_id');
+    }
 
     public function allowsCredit(): bool
     {

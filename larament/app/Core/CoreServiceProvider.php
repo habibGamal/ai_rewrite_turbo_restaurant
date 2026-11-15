@@ -2,6 +2,8 @@
 
 namespace App\Core;
 
+use App\Core\Equipment\EquipmentDisableBlocker;
+use App\Core\Equipment\EquipmentTypeChangeGuard;
 use App\Core\Events\OrderCancelled;
 use App\Core\Events\OrderChargesChanged;
 use App\Core\Events\OrderCompleted;
@@ -14,6 +16,8 @@ use App\Core\Listeners\BroadcastOrderCompleted;
 use App\Core\Listeners\BroadcastOrderCreated;
 use App\Core\Listeners\BroadcastOrderTypeChanged;
 use App\Core\Listeners\BroadcastPaymentProcessed;
+use App\Enums\OptionalFeature;
+use App\Services\FeatureService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,10 +41,22 @@ class CoreServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(OrderExtensions::class);
+
+        // Equipment cannot be switched off while an open order carries it.
+        $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
+            $features->registerDisableBlocker(
+                OptionalFeature::EQUIPMENT,
+                fn (): array => $this->app->make(EquipmentDisableBlocker::class)(),
+            );
+        });
     }
 
     public function boot(): void
     {
+        // Equipment lines follow the rows, not the switch: an order that
+        // already holds equipment keeps the type guard after the flag is off.
+        $this->app->make(OrderExtensions::class)->addTypeChangeGuard(EquipmentTypeChangeGuard::class);
+
         foreach (self::LISTENERS as $event => $listeners) {
             foreach ($listeners as $listener) {
                 Event::listen($event, $listener);

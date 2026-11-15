@@ -69,6 +69,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_external_sellers' => 'إضافة متجر متعاون',
                 'update_external_sellers' => 'تعديل متجر متعاون وتسوية الحسابات',
                 'delete_external_sellers' => 'حذف متجر متعاون',
+
+                'view_equipment' => 'عرض المعدات',
+                'create_equipment' => 'إضافة معدة',
+                'update_equipment' => 'تعديل معدة',
+                'delete_equipment' => 'حذف معدة',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',
@@ -188,6 +193,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_item_ledger_report' => 'كشف حركة صنف',
                 'view_movement_summary_report' => 'ملخص حركة المخزون',
                 'view_web_orders_report' => 'تقرير طلبات الويب',
+                'view_equipment_report' => 'تقرير المعدات',
             ],
             'نقطة البيع والعمليات (POS)' => [
                 'pos.access' => 'الدخول لنقطة البيع (POS)',
@@ -209,6 +215,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'expense.delete' => 'حذف مصروف بالوردية',
                 'inventory.toggle_day' => 'فتح وإغلاق يوم المخزون',
                 'invoice.print' => 'طباعة الفواتير',
+                'order.add_equipment' => 'إضافة معدات للطلب',
+                'order.remove_equipment' => 'حذف أو تقليل معدات من الطلب',
             ],
             'شاشة المطبخ' => [
                 'kitchen.access' => 'الدخول والتفاعل مع شاشة المطبخ',
@@ -288,6 +296,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'web_order.manage',
                 'expense.create',
                 'invoice.print',
+                'order.add_equipment',
                 ...$tabCatalog,
             ],
             'kitchen' => ['kitchen.access'],

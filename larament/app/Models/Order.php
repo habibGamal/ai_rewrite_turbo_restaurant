@@ -146,6 +146,14 @@ class Order extends Model
         return $this->hasMany(ExternalOrder::class, 'host_order_id');
     }
 
+    /**
+     * @return HasMany<OrderEquipment, $this>
+     */
+    public function equipmentLines(): HasMany
+    {
+        return $this->hasMany(OrderEquipment::class)->orderBy('id');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

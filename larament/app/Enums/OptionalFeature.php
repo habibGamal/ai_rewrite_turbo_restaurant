@@ -88,8 +88,16 @@ enum OptionalFeature: string
                 'update_revenue_types',
                 'delete_revenue_types',
             ],
+            self::EQUIPMENT => [
+                'view_equipment',
+                'create_equipment',
+                'update_equipment',
+                'delete_equipment',
+                'order.add_equipment',
+                'order.remove_equipment',
+                'view_equipment_report',
+            ],
             self::CUSTOM_FEES,
-            self::EQUIPMENT,
             self::VARIANTS => [],
         };
     }

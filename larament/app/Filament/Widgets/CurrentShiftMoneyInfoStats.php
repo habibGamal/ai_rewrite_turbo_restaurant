@@ -7,6 +7,7 @@ use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Models\Shift;
 use App\Services\FeatureService;
+use App\Services\Reports\EquipmentReportService;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -121,7 +122,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->color('primary'),
 
             ...$this->otherRevenuesStats($stats),
-
+            ...app(EquipmentReportService::class)->shiftStats([$currentShift->id]),
             ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['externalCash'] ?? 0)) > 0.0001
                 ? [Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه')]
                 : []),

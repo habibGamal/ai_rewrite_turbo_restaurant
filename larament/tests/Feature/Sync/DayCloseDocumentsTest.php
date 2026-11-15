@@ -237,6 +237,7 @@ it('computes day_summary totals from completed orders of shifts with that busine
         'refunds_total' => '0.00',
         'refunds_cash' => '0.00',
         'guests_total' => 0,
+        'equipment_total' => '0.00',
     ]);
 });
 

@@ -126,9 +126,11 @@ it('builds a completed order snapshot with items and payments', function () {
             'equipment_cost',
             'guests_count',
             'items',
+            'equipment',
             'payments',
             'external_orders',
         ])
+        ->and($data['equipment'])->toBe([])
         ->and($data['external_orders'])->toBe([])
         ->and($data['items'][0])->toEqual([
             'uuid' => $orderItem->uuid,
