@@ -5,16 +5,21 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\OrderStatus;
 use App\Models\Concerns\HasSyncUuid;
+use App\Models\Scopes\HidesVendorScope;
 use App\Orders\TabPermissions;
+use App\Services\FeatureService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Traits\HasRoles;
 
+#[ScopedBy(HidesVendorScope::class)]
 class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, HasSyncUuid, Notifiable, SoftDeletes;
@@ -22,17 +27,32 @@ class User extends Authenticatable implements FilamentUser
         hasPermissionTo as spatieHasPermissionTo;
     }
 
+    /**
+     * Name shown to the customer for the vendor account and anything it
+     * creates (orders, shifts, invoices, audit rows).
+     */
+    public const VENDOR_DISPLAY_NAME = 'الدعم الفني';
+
     public function hasPermissionTo($permission, $guardName = null): bool
     {
         $permissionName = is_string($permission)
             ? $permission
-            : ($permission instanceof \Spatie\Permission\Contracts\Permission ? $permission->name : null);
+            : ($permission instanceof Permission ? $permission->name : null);
 
-        if ($permissionName !== null && app(\App\Services\FeatureService::class)->isPermissionDisabled($permissionName)) {
+        if ($permissionName !== null && app(FeatureService::class)->isPermissionDisabled($permissionName)) {
             return false;
         }
 
+        if ($this->isVendor()) {
+            return true;
+        }
+
         return $this->spatieHasPermissionTo($permission, $guardName);
+    }
+
+    public function isVendor(): bool
+    {
+        return (bool) $this->is_vendor;
     }
 
     /**
@@ -67,6 +87,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_vendor' => 'boolean',
         ];
     }
 
@@ -77,7 +98,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('admin');
+        return $this->isVendor() || $this->hasRole('admin');
     }
 
     public function isViewer(): bool

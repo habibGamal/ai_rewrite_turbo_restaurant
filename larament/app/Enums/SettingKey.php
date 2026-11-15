@@ -3,7 +3,10 @@
 namespace App\Enums;
 
 use App\Costing\CostingMethod;
+use App\Modules\BusinessType;
+use App\Modules\Module;
 use Closure;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 enum SettingKey: string
@@ -39,6 +42,8 @@ enum SettingKey: string
     case FEATURE_CUSTOM_FEES_ENABLED = 'feature_custom_fees_enabled';
     case FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
     case FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
+    case BUSINESS_TYPE = 'business_type';
+    case ENABLED_MODULES = 'enabled_modules';
 
     /**
      * Get default value for this setting
@@ -77,6 +82,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'false',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'false',
             self::FEATURE_EQUIPMENT_ENABLED => 'false',
+            self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
+            self::ENABLED_MODULES => self::enabledModulesDefault(),
         };
     }
 
@@ -119,6 +126,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => self::storedBooleanRules(),
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_EQUIPMENT_ENABLED => self::storedBooleanRules(),
+            self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
+            self::ENABLED_MODULES => ['nullable', 'json'],
         };
     }
 
@@ -159,6 +168,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل الرسوم الإضافية المخصصة على الطلبات',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل الطلبات الخارجية والمتاجر المتعاونة',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
+            self::BUSINESS_TYPE => 'نوع النشاط',
+            self::ENABLED_MODULES => 'الوحدات المفعلة',
         };
     }
 
@@ -199,6 +210,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'السماح بإضافة رسوم مخصصة (نسبة أو مبلغ ثابت) على الطلبات وربطها بأنواع الطلبات.',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'إدارة المتاجر المتعاونة، أصنافها، إضافة الطلبات الخارجية في الكاشير، وتسوية حسابات الموردين.',
             self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
+            self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
+            self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
         };
     }
 
@@ -239,6 +252,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
+            self::BUSINESS_TYPE => 'restaurant',
+            self::ENABLED_MODULES => '[]',
         };
     }
 
@@ -270,6 +285,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED => self::isStoredBoolean($value),
+            self::BUSINESS_TYPE => is_string($value) && BusinessType::tryFrom($value) !== null,
+            self::ENABLED_MODULES => self::isModuleList($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
             self::KDS_WARNING_PERCENT => self::isIntInRange($value, 1, 100),
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
@@ -305,6 +322,20 @@ enum SettingKey: string
         };
     }
 
+    /**
+     * Settings only the vendor account may change (vendor console or
+     * artisan commands). The customer Settings page never reads, saves
+     * or resets them.
+     */
+    public function isVendorOwned(): bool
+    {
+        return $this->isFeatureFlag() || match ($this) {
+            self::BUSINESS_TYPE,
+            self::ENABLED_MODULES => true,
+            default => false,
+        };
+    }
+
     public static function parseStoredBoolean(string $key, mixed $value): bool
     {
         if ($value === true || $value === 1 || $value === '1' || $value === 'true') {
@@ -321,6 +352,30 @@ enum SettingKey: string
             'data.'.$key => $message,
             $key => $message,
         ]);
+    }
+
+    private static function enabledModulesDefault(): string
+    {
+        return json_encode(array_map(
+            fn (Module $module): string => $module->value,
+            BusinessType::RESTAURANT->defaultModules(),
+        ));
+    }
+
+    private static function isModuleList(mixed $value): bool
+    {
+        $decoded = is_string($value) ? json_decode($value, true) : $value;
+        if (! is_array($decoded) || ! array_is_list($decoded)) {
+            return false;
+        }
+
+        foreach ($decoded as $item) {
+            if (! is_string($item) || Module::tryFrom($item) === null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function cashierTabsDefault(): string

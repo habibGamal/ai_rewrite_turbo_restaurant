@@ -5,11 +5,14 @@ namespace App\Services;
 use App\Enums\OptionalFeature;
 use App\Enums\OrderStatus;
 use App\Enums\SettingKey;
+use App\Exceptions\BusinessTypeLockedException;
 use App\Exceptions\OrderException;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\FeatureFlagAudit;
 use App\Models\Setting;
+use App\Modules\BusinessType;
+use App\Modules\Module;
 use App\Services\Orders\ExternalSellerSettlementService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +36,13 @@ class FeatureService
      * @var array<string, array<int, string>>
      */
     private array $extraPermissions = [];
+
+    /**
+     * Disable blocker callbacks for modules, keyed by module value.
+     *
+     * @var array<string, array<int, callable(): (array<int, string>|string|null)>>
+     */
+    private array $moduleDisableBlockers = [];
 
     public function __construct(
         private readonly SettingsService $settingsService,
@@ -446,6 +456,244 @@ class FeatureService
         }
 
         return $blockers;
+    }
+
+    // ---------------------------------------------------------------------
+    // Business type and modules (vendor-owned)
+    // ---------------------------------------------------------------------
+
+    public function businessType(): BusinessType
+    {
+        $stored = $this->settingsService->get(SettingKey::BUSINESS_TYPE->value);
+
+        return BusinessType::tryFrom((string) $stored) ?? BusinessType::RESTAURANT;
+    }
+
+    /**
+     * The business type is fixed once the install has taken its first order.
+     */
+    public function businessTypeLocked(): bool
+    {
+        return Schema::hasTable('orders') && DB::table('orders')->exists();
+    }
+
+    /**
+     * Set the business type and, by default, switch the modules to the
+     * type's defaults. Refuses once any order exists.
+     *
+     * @throws BusinessTypeLockedException
+     */
+    public function setBusinessType(BusinessType $type, ?int $actorId = null, bool $applyDefaultModules = true): void
+    {
+        DB::transaction(function () use ($type, $actorId, $applyDefaultModules): void {
+            $key = SettingKey::BUSINESS_TYPE->value;
+            $row = Setting::query()->where('key', $key)->lockForUpdate()->first();
+            $old = BusinessType::tryFrom((string) $row?->value) ?? BusinessType::RESTAURANT;
+
+            if ($this->businessTypeLocked()) {
+                throw new BusinessTypeLockedException;
+            }
+
+            Setting::query()->updateOrCreate(['key' => $key], ['value' => $type->value]);
+            Setting::invalidateCache($key);
+
+            if ($old !== $type || $row === null) {
+                $this->audit($key, null, null, $actorId, $old->value, $type->value);
+            }
+
+            if ($applyDefaultModules) {
+                $this->setModules($type->defaultModules(), $actorId);
+            }
+
+            Setting::invalidateCache();
+        });
+    }
+
+    /**
+     * @return list<Module>
+     */
+    public function enabledModules(): array
+    {
+        $stored = $this->settingsService->get(SettingKey::ENABLED_MODULES->value);
+
+        return $this->decodeModules($stored);
+    }
+
+    public function moduleEnabled(Module $module): bool
+    {
+        return in_array($module, $this->enabledModules(), true);
+    }
+
+    public function enableModule(Module $module, ?int $actorId = null): void
+    {
+        $this->setModules([...$this->enabledModules(), $module], $actorId);
+    }
+
+    public function disableModule(Module $module, ?int $actorId = null): void
+    {
+        $this->setModules(
+            array_values(array_filter($this->enabledModules(), fn (Module $m): bool => $m !== $module)),
+            $actorId,
+        );
+    }
+
+    /**
+     * Replace the enabled module list. Runs the disable blockers of every
+     * module being switched off and writes one audit row per change.
+     *
+     * @param  array<int, Module|string>  $modules
+     * @return array<string, array{old: bool, new: bool}>
+     */
+    public function setModules(array $modules, ?int $actorId = null): array
+    {
+        $target = [];
+        foreach ($modules as $module) {
+            $resolved = $module instanceof Module ? $module : Module::tryFrom((string) $module);
+            if ($resolved === null) {
+                throw ValidationException::withMessages(['modules' => 'وحدة غير معروفة: '.$module]);
+            }
+            $target[$resolved->value] = $resolved;
+        }
+
+        return DB::transaction(function () use ($target, $actorId): array {
+            $key = SettingKey::ENABLED_MODULES->value;
+            $row = Setting::query()->where('key', $key)->lockForUpdate()->first();
+            $current = $this->decodeModules($row?->value);
+
+            $errors = [];
+            $changes = [];
+            foreach (Module::cases() as $module) {
+                $old = in_array($module, $current, true);
+                $new = isset($target[$module->value]);
+
+                if ($old && ! $new) {
+                    $blockers = $this->checkModuleDisableBlockers($module);
+                    if ($blockers !== []) {
+                        $errors['modules.'.$module->value] = implode(' ', $blockers);
+
+                        continue;
+                    }
+                }
+
+                if ($old !== $new) {
+                    $changes[$module->value] = ['old' => $old, 'new' => $new];
+                }
+            }
+
+            if ($errors !== []) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            $ordered = array_values(array_filter(
+                array_map(fn (Module $module): string => $module->value, Module::cases()),
+                fn (string $value): bool => isset($target[$value]),
+            ));
+
+            Setting::query()->updateOrCreate(['key' => $key], ['value' => json_encode($ordered)]);
+            Setting::invalidateCache($key);
+
+            foreach ($changes as $moduleValue => $change) {
+                $this->audit(Module::from($moduleValue)->auditKey(), $change['old'], $change['new'], $actorId);
+            }
+
+            Setting::invalidateCache();
+
+            return $changes;
+        });
+    }
+
+    /**
+     * @param  callable(): (array<int, string>|string|null)  $checker
+     */
+    public function registerModuleDisableBlocker(Module $module, callable $checker): void
+    {
+        $this->moduleDisableBlockers[$module->value][] = $checker;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function checkModuleDisableBlockers(Module $module): array
+    {
+        $blockers = [];
+        foreach ($this->moduleDisableBlockers[$module->value] ?? [] as $checker) {
+            $result = $checker();
+            foreach ((array) $result as $message) {
+                if (is_string($message) && $message !== '') {
+                    $blockers[] = $message;
+                }
+            }
+        }
+
+        return array_values(array_unique($blockers));
+    }
+
+    /**
+     * Shared Inertia props for modules and the business type.
+     *
+     * @return array{modules: list<string>, business_type: string}
+     */
+    public function moduleInertiaProps(): array
+    {
+        return [
+            'modules' => array_map(fn (Module $module): string => $module->value, $this->enabledModules()),
+            'business_type' => $this->businessType()->value,
+        ];
+    }
+
+    /**
+     * @return list<Module>
+     */
+    private function decodeModules(mixed $stored): array
+    {
+        if ($stored === null || $stored === '') {
+            $stored = SettingKey::ENABLED_MODULES->defaultValue();
+        }
+
+        $decoded = is_array($stored) ? $stored : json_decode((string) $stored, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $modules = [];
+        foreach ($decoded as $value) {
+            $module = is_string($value) ? Module::tryFrom($value) : null;
+            if ($module !== null && ! in_array($module, $modules, true)) {
+                $modules[] = $module;
+            }
+        }
+
+        return $modules;
+    }
+
+    private function audit(
+        string $key,
+        ?bool $old,
+        ?bool $new,
+        ?int $actorId,
+        ?string $oldText = null,
+        ?string $newText = null,
+    ): void {
+        $resolvedActorId = $actorId ?? Auth::id();
+        $now = now();
+
+        FeatureFlagAudit::create([
+            'feature_key' => $key,
+            'old_value' => $old,
+            'new_value' => $new,
+            'old_text' => $oldText,
+            'new_text' => $newText,
+            'user_id' => $resolvedActorId,
+            'changed_at' => $now,
+        ]);
+
+        Log::info('Vendor setting changed', [
+            'key' => $key,
+            'old' => $oldText ?? $old,
+            'new' => $newText ?? $new,
+            'user_id' => $resolvedActorId,
+            'changed_at' => $now->toIso8601String(),
+        ]);
     }
 
     private function resolveFeature(OptionalFeature|SettingKey|string $feature): OptionalFeature

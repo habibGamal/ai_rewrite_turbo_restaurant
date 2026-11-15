@@ -149,10 +149,13 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        // Explicit is_vendor filter: the HidesVendor scope lets primary-key
+        // lookups through, which would expose /users/{vendor}/edit.
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ]);
+            ])
+            ->where('users.is_vendor', false);
     }
 
     public static function getRelations(): array

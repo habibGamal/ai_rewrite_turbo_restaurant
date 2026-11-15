@@ -53,7 +53,7 @@ class CashierPerformanceDetails extends Page
         if ($record instanceof User) {
             $this->cashier = $record;
         } else {
-            $this->cashier = User::query()->findOrFail((int) $record);
+            $this->cashier = User::query()->where('is_vendor', false)->findOrFail((int) $record);
         }
     }
 

@@ -76,7 +76,8 @@ class SyncOutboxObserver
             Category::class => Outbox::record(DocumentType::Category, $this->getModelUuid($model)),
             Supplier::class => Outbox::record(DocumentType::Supplier, $this->getModelUuid($model)),
             ExpenceType::class => Outbox::record(DocumentType::ExpenseType, $this->getModelUuid($model)),
-            User::class => Outbox::record(DocumentType::Staff, $this->getModelUuid($model)),
+            // The vendor account never leaves the install.
+            User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model)),
             ProductComponent::class => $this->handleProductComponentSaved($model),
             default => null,
         };
@@ -111,7 +112,7 @@ class SyncOutboxObserver
             Category::class => Outbox::record(DocumentType::Category, $this->getModelUuid($model), 'delete'),
             Supplier::class => Outbox::record(DocumentType::Supplier, $this->getModelUuid($model), 'delete'),
             ExpenceType::class => Outbox::record(DocumentType::ExpenseType, $this->getModelUuid($model), 'delete'),
-            User::class => Outbox::record(DocumentType::Staff, $this->getModelUuid($model), 'delete'),
+            User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model), 'delete'),
             ProductComponent::class => $this->handleProductComponentDeleted($model),
             default => null,
         };

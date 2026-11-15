@@ -8,6 +8,7 @@ use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
 use App\Models\OrderTypeRow;
+use App\Orders\OrderBehaviorRegistry;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -183,31 +184,17 @@ class OrderTypeRowResource extends Resource
     }
 
     /**
+     * Behaviours an admin may pick for an order type.
+     *
      * @return array<string, string>
      */
     public static function behaviorOptions(): array
     {
-        return [
-            OrderBehavior::DINE_IN->value => 'صالة',
-            OrderBehavior::DELIVERY->value => 'دليفري',
-            OrderBehavior::COUNTER->value => 'كاونتر',
-            OrderBehavior::COMPANIES->value => 'شركات',
-        ];
+        return app(OrderBehaviorRegistry::class)->selectableLabels();
     }
 
     public static function behaviorLabel(OrderBehavior|string|null $state): string
     {
-        $behavior = $state instanceof OrderBehavior ? $state : OrderBehavior::tryFrom((string) $state);
-
-        if ($behavior === null) {
-            return '';
-        }
-
-        $labels = self::behaviorOptions() + [
-            OrderBehavior::WEB_DELIVERY->value => 'اونلاين دليفري',
-            OrderBehavior::WEB_TAKEAWAY->value => 'اونلاين تيك أواي',
-        ];
-
-        return $labels[$behavior->value] ?? $behavior->value;
+        return app(OrderBehaviorRegistry::class)->label($state);
     }
 }

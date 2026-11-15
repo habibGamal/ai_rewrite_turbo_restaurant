@@ -36,6 +36,17 @@ class UserFactory extends Factory
         return $this->afterCreating(fn (User $user) => $user->syncRoles(['admin']));
     }
 
+    /**
+     * The hidden vendor ("god mode") account; it holds no role.
+     */
+    public function vendor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => User::VENDOR_DISPLAY_NAME,
+            'is_vendor' => true,
+        ])->afterCreating(fn (User $user) => $user->syncRoles([]));
+    }
+
     public function cashier(): static
     {
         return $this->afterCreating(fn (User $user) => $user->syncRoles(['cashier']));
