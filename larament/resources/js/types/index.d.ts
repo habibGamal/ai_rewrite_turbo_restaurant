@@ -134,8 +134,8 @@ export interface OrderDisplay {
 }
 
 export interface TabPresentation {
-    body: 'cards' | 'inbox' | 'floor';
-    creation: 'immediate' | 'choose_table' | 'none';
+    body: 'cards' | 'inbox' | 'floor' | 'instant';
+    creation: 'immediate' | 'choose_table' | 'none' | 'instant';
     statuses: string[];
     cardTitle: 'table' | 'order_number';
 }
@@ -144,6 +144,36 @@ export interface FloorRect { col: number; row: number; colSpan: number; rowSpan:
 export interface FloorTable extends FloorRect { number: string; capacity: number; zone: string; active: boolean }
 export interface FloorSection extends FloorRect { name: string; zone: string; color: string }
 export interface FloorLayout { version: number; enabled: boolean; columns: number; rows: number; tables: FloorTable[]; sections: FloorSection[]; [key: string]: any }
+export interface InstantCartCustomer {
+  id: number;
+  name: string;
+  phone: string;
+}
+
+export interface InstantCartDiscount {
+  value: number;
+  type: 'percent' | 'value';
+}
+
+export interface InstantLastSale {
+  id: number;
+  order_number: string | number;
+  total: number;
+  change: number;
+}
+
+export interface InstantTabPayload {
+  categories: Category[];
+  lastSale: InstantLastSale | null;
+  heldCount: number;
+  credit: {
+    allow_partial_payment: boolean;
+    allow_pay_later: boolean;
+    require_customer_for_credit: boolean;
+  };
+  can: { discount: boolean; changeItems: boolean };
+}
+
 export interface CashierTab {
     key: string;
     kind: 'type' | 'system';
@@ -156,6 +186,7 @@ export interface CashierTab {
     layout?: FloorLayout;
   occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
   presentation?: TabPresentation;
+  instant?: InstantTabPayload;
     display?: OrderDisplay;
     credit?: {
         allow_partial_payment: boolean;

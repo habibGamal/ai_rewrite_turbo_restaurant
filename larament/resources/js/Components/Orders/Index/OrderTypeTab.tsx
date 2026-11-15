@@ -15,6 +15,7 @@ import {
 } from "@/Components/Floor/floorLayout";
 import { OrderCard } from "./OrderCard";
 import { OrderTimer } from "./OrderTimer";
+import { InstantSaleTab } from "./InstantSaleTab";
 import type { CashierTab, Order, OrderDisplay } from "@/types";
 
 const webOrderStatus = (status: string) => {
@@ -32,9 +33,28 @@ const webOrderStatus = (status: string) => {
 interface OrderTypeTabProps {
     tab: CashierTab;
     orders: Order[];
+    shiftId?: number;
+    active?: boolean;
 }
 
-export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
+export const OrderTypeTab: React.FC<OrderTypeTabProps> = ({ tab, orders, shiftId, active }) => {
+    if (tab.presentation?.body === "instant") {
+        if (!tab.instant) {
+            return (
+                <Empty
+                    className="mt-8"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="البيع المباشر غير متاح"
+                />
+            );
+        }
+        return <InstantSaleTab tab={tab} shiftId={shiftId} active={active} />;
+    }
+
+    return <OrderTypeTabBody tab={tab} orders={orders} />;
+};
+
+const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
     const tableModal = useModal();
 
     const presentation = tab.presentation!;
