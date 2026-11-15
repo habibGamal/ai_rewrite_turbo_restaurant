@@ -8,11 +8,11 @@
  * so the name, channels and payload keys of each one are pinned here.
  */
 
-use App\Events\Orders\OrderCancelled;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
-use App\Events\Orders\OrderTypeChanged;
-use App\Events\Orders\PaymentProcessed;
+use App\Events\Orders\OrderCancelledBroadcast;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
+use App\Events\Orders\OrderTypeChangedBroadcast;
+use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Events\Orders\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\Order;
@@ -27,7 +27,7 @@ function safetyNetChannels(object $event): array
 
 it('broadcasts the cashier lifecycle on the shift and kitchen channels', function () {
     ['user' => $user, 'shift' => $shift] = SafetyNet::till();
-    Event::fake([OrderCreated::class, OrderCompleted::class, OrderCancelled::class, PaymentProcessed::class, OrderTypeChanged::class]);
+    Event::fake([OrderCreatedBroadcast::class, OrderCompletedBroadcast::class, OrderCancelledBroadcast::class, PaymentProcessedBroadcast::class, OrderTypeChangedBroadcast::class]);
     $orders = app(OrderService::class);
 
     $order = SafetyNet::open($shift, $user);
@@ -38,11 +38,11 @@ it('broadcasts the cashier lifecycle on the shift and kitchen channels', functio
 
     $shiftChannel = 'private-shift.'.$shift->id;
     $expected = [
-        OrderCreated::class => ['order.created', [$shiftChannel, 'private-kitchen'], ['order']],
-        OrderTypeChanged::class => ['order.type_changed', [$shiftChannel], null],
-        PaymentProcessed::class => ['payment.processed', [$shiftChannel], ['payment']],
-        OrderCompleted::class => ['order.completed', [$shiftChannel, 'private-kitchen'], ['order']],
-        OrderCancelled::class => ['order.cancelled', [$shiftChannel, 'private-kitchen'], ['order']],
+        OrderCreatedBroadcast::class => ['order.created', [$shiftChannel, 'private-kitchen'], ['order']],
+        OrderTypeChangedBroadcast::class => ['order.type_changed', [$shiftChannel], null],
+        PaymentProcessedBroadcast::class => ['payment.processed', [$shiftChannel], ['payment']],
+        OrderCompletedBroadcast::class => ['order.completed', [$shiftChannel, 'private-kitchen'], ['order']],
+        OrderCancelledBroadcast::class => ['order.cancelled', [$shiftChannel, 'private-kitchen'], ['order']],
     ];
 
     foreach ($expected as $class => [$name, $channels, $keys]) {
@@ -55,10 +55,10 @@ it('broadcasts the cashier lifecycle on the shift and kitchen channels', functio
         }
     }
 
-    $created = Event::dispatched(OrderCreated::class)->first()[0]->broadcastWith()['order'];
+    $created = Event::dispatched(OrderCreatedBroadcast::class)->first()[0]->broadcastWith()['order'];
     expect($created['id'])->toBe($order->id)
         ->and($created['order_number'])->toEqual($order->order_number);
-    expect(Event::dispatched(OrderCancelled::class)->first()[0]->broadcastWith()['order']['reason'])->toBe('mistake');
+    expect(Event::dispatched(OrderCancelledBroadcast::class)->first()[0]->broadcastWith()['order']['reason'])->toBe('mistake');
 });
 
 it('broadcasts a received web order on the web-orders channel', function () {

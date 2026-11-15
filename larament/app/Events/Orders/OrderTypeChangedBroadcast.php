@@ -9,7 +9,7 @@ use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class OrderTypeChanged implements ShouldBroadcast, ShouldDispatchAfterCommit
+class OrderTypeChangedBroadcast implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, SerializesModels;
 

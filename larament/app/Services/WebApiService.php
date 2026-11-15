@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderCompleted;
+use App\Core\Events\OrderItemsChanged;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
@@ -12,7 +15,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shift;
-use App\Services\Kitchen\KitchenTicketService;
 use App\Services\Orders\OrderCategoryBlockService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
@@ -28,7 +30,6 @@ class WebApiService
 
     public function __construct(
         SettingsService $settingsService,
-        protected KitchenTicketService $kitchenTicketService,
         protected OrderCategoryBlockService $categoryBlock,
     ) {
         $this->settingsService = $settingsService;
@@ -244,8 +245,9 @@ class WebApiService
             $order->status = OrderStatus::PROCESSING;
             $order->save();
 
-            // Web orders are placed as pending and reach the kitchen only once accepted.
-            $this->kitchenTicketService->syncOrder($order);
+            // Web orders are placed as pending; their items go live (and reach
+            // the kitchen when the Restaurant module is on) only once accepted.
+            OrderItemsChanged::dispatch($order);
         });
     }
 
@@ -262,7 +264,7 @@ class WebApiService
             $order->payments()->delete();
             Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
-            $this->kitchenTicketService->cancelForOrder($order);
+            OrderCancelled::dispatch($order, false, 'رفض طلب الموقع');
         });
     }
 
@@ -286,7 +288,7 @@ class WebApiService
             $order->status = OrderStatus::COMPLETED;
             $order->save();
 
-            $this->kitchenTicketService->autoFinishForOrder($order);
+            OrderCompleted::dispatch($order);
         });
     }
 
@@ -334,7 +336,9 @@ class WebApiService
         try {
             $websiteUrl = setting(SettingKey::WEBSITE_URL);
 
-            $response = Http::post($websiteUrl.'/api/order-status', [
+            // Runs inside the order row lock: keep the wait short so a slow
+            // website cannot hold the order (and the cashier) for long.
+            $response = Http::connectTimeout(3)->timeout(5)->post($websiteUrl.'/api/order-status', [
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);

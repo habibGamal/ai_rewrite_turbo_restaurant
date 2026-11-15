@@ -2,6 +2,7 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\OrderReturned;
 use App\Enums\ReturnStatus;
 use App\Models\Order;
 use App\Models\OrderReturn;
@@ -86,6 +87,8 @@ class OrderReturnService
 
             // Update order return status
             $this->updateOrderReturnStatus($order);
+
+            OrderReturned::dispatch($orderReturn, $order);
 
             DB::commit();
 

@@ -19,11 +19,37 @@ abstract class ModuleServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->bootAlways();
+
         if (! $this->moduleIsEnabled()) {
             return;
         }
 
         $this->bootModule();
+    }
+
+    /**
+     * Wiring that follows the data rather than the switch: it must keep
+     * working for rows the module wrote before it was switched off (money
+     * owed to an external seller, for example). Keep it to checks that are
+     * no-ops when the module has no rows.
+     */
+    protected function bootAlways(): void
+    {
+        //
+    }
+
+    /**
+     * Whether the module is on right now. Listeners call this at handle time
+     * so a vendor switch takes effect without a restart (queue workers, tests).
+     */
+    public static function enabledNow(Module $module): bool
+    {
+        try {
+            return app(FeatureService::class)->moduleEnabled($module);
+        } catch (Throwable) {
+            return in_array($module, BusinessType::RESTAURANT->defaultModules(), true);
+        }
     }
 
     protected function moduleIsEnabled(): bool
