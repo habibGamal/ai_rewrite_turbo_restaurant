@@ -55,13 +55,14 @@ return [
     | providers to represent the model / table. These providers may then
     | be assigned to any extra authentication guards you have defined.
     |
-    | Supported: "database", "eloquent"
+    | Supported: "database", "eloquent", "vendor-aware"
     |
     */
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
+            // Eloquent without the HidesVendor scope (see App\Auth\VendorAwareUserProvider).
+            'driver' => 'vendor-aware',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 

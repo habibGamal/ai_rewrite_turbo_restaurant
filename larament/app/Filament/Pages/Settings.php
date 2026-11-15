@@ -5,14 +5,12 @@ namespace App\Filament\Pages;
 use App\Costing\CostingMethod;
 use App\Costing\CostingMethodSwitcher;
 use App\Enums\KdsSound;
-use App\Enums\OptionalFeature;
 use App\Enums\ProductType;
 use App\Enums\SettingKey;
 use App\Models\OrderTypeRow;
 use App\Models\Product;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderTypeCatalog;
-use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\Products\RecipeCycleDetectionService;
 use App\Services\SettingsService;
@@ -45,7 +43,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 class Settings extends Page implements HasForms
 {
@@ -77,6 +75,14 @@ class Settings extends Page implements HasForms
         $settingsService = app(SettingsService::class);
         $settings = $settingsService->all();
         $defaults = $settingsService->getDefaults();
+
+        // Business type, modules and feature flags belong to the vendor
+        // console; this page never shows, saves or resets them.
+        $defaults = array_filter(
+            $defaults,
+            fn (string $key): bool => ! (SettingKey::tryFrom($key)?->isVendorOwned() ?? false),
+            ARRAY_FILTER_USE_KEY,
+        );
 
         // Initialize data with defaults first
         $this->data = $defaults;
@@ -470,39 +476,6 @@ class Settings extends Page implements HasForms
                                     ]),
                             ]),
 
-                        Tabs\Tab::make('المميزات')
-                            ->icon('heroicon-m-sparkles')
-                            ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
-                            ->badgeColor('danger')
-                            ->schema([
-                                Section::make()
-                                    ->description('تفعيل أو إيقاف المميزات الاختيارية للنظام. عند إيقاف ميزة يتم إخفاء شاشاتها مع الاحتفاظ بالسجلات التاريخية.')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Toggle::make(SettingKey::FEATURE_REVENUES_ENABLED->value)
-                                                    ->label(SettingKey::FEATURE_REVENUES_ENABLED->label())
-                                                    ->helperText(SettingKey::FEATURE_REVENUES_ENABLED->helperText())
-                                                    ->inline(false),
-
-                                                Toggle::make(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->value)
-                                                    ->label(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->label())
-                                                    ->helperText(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->helperText())
-                                                    ->inline(false),
-
-                                                Toggle::make(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
-                                                    ->label(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->label())
-                                                    ->helperText(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->helperText())
-                                                    ->inline(false),
-
-                                                Toggle::make(SettingKey::FEATURE_EQUIPMENT_ENABLED->value)
-                                                    ->label(SettingKey::FEATURE_EQUIPMENT_ENABLED->label())
-                                                    ->helperText(SettingKey::FEATURE_EQUIPMENT_ENABLED->helperText())
-                                                    ->inline(false),
-                                            ]),
-                                    ]),
-                            ]),
-
                         Tabs\Tab::make('التشخيص والصيانة')
                             ->icon('heroicon-m-wrench-screwdriver')
                             ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
@@ -586,12 +559,9 @@ class Settings extends Page implements HasForms
 
             // Ensure all values are strings before saving
             $cleanData = [];
-            $featureStates = [];
             foreach ($data as $key => $value) {
                 $settingKey = SettingKey::tryFrom($key);
-                if ($settingKey?->isFeatureFlag()) {
-                    $featureStates[$key] = (bool) $value;
-
+                if ($settingKey?->isVendorOwned()) {
                     continue;
                 }
 
@@ -606,7 +576,7 @@ class Settings extends Page implements HasForms
                 ? json_encode($targets)
                 : '{}';
 
-            DB::transaction(function () use ($cashierTabs, $cleanData, $featureStates) {
+            DB::transaction(function () use ($cashierTabs, $cleanData) {
                 try {
                     app(CashierTabLayout::class)->save($cashierTabs);
                 } catch (ValidationException $e) {
@@ -617,7 +587,6 @@ class Settings extends Page implements HasForms
 
                 app(CostingMethodSwitcher::class)->switchTo(CostingMethod::from($cleanData[SettingKey::COSTING_METHOD->value]));
                 unset($cleanData[SettingKey::COSTING_METHOD->value]);
-                app(FeatureService::class)->updateFeatures($featureStates, auth()->id());
                 app(SettingsService::class)->setMultiple($cleanData);
             });
 
@@ -653,16 +622,12 @@ class Settings extends Page implements HasForms
                 $remainingDefaults = $defaults;
                 unset($remainingDefaults[SettingKey::COSTING_METHOD->value]);
 
-                $featureDefaults = [];
-                foreach (OptionalFeature::cases() as $feature) {
-                    $key = $feature->value;
-                    if (array_key_exists($key, $remainingDefaults)) {
-                        $featureDefaults[$key] = filter_var($remainingDefaults[$key], FILTER_VALIDATE_BOOLEAN);
-                        unset($remainingDefaults[$key]);
-                    }
-                }
+                $remainingDefaults = array_filter(
+                    $remainingDefaults,
+                    fn (string $key): bool => ! (SettingKey::tryFrom($key)?->isVendorOwned() ?? false),
+                    ARRAY_FILTER_USE_KEY,
+                );
 
-                app(FeatureService::class)->updateFeatures($featureDefaults, auth()->id());
                 $settingsService->setMultiple($remainingDefaults);
             });
 

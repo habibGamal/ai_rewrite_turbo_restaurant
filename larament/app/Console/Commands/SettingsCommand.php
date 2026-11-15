@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\SettingKey;
 use App\Services\SettingsService;
 use Illuminate\Console\Command;
 
@@ -51,6 +52,12 @@ class SettingsCommand extends Command
                     return self::FAILURE;
                 }
 
+                if (in_array($key, [SettingKey::BUSINESS_TYPE->value, SettingKey::ENABLED_MODULES->value], true)) {
+                    $this->error("'{$key}' is set with `php artisan pos:profile` or the vendor console.");
+
+                    return self::FAILURE;
+                }
+
                 $settingsService->set($key, $value);
                 $this->info("Setting '{$key}' has been set to '{$value}'.");
                 break;
@@ -70,6 +77,8 @@ class SettingsCommand extends Command
 
             case 'reset':
                 $defaults = $settingsService->getDefaults();
+                // The business type and modules belong to the vendor; a reset never touches them.
+                unset($defaults[SettingKey::BUSINESS_TYPE->value], $defaults[SettingKey::ENABLED_MODULES->value]);
                 $settingsService->setMultiple($defaults);
                 $this->info('Settings have been reset to default values.');
                 break;

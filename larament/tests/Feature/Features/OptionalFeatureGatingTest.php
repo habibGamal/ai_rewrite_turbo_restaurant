@@ -8,6 +8,7 @@ use App\Filament\Pages\ExternalSellerAccount;
 use App\Filament\Pages\ExternalSellerAccount\SettlementsTable;
 use App\Filament\Pages\ExternalSellerAccounts;
 use App\Filament\Pages\Settings;
+use App\Filament\Pages\VendorConsole;
 use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Filament\Resources\ExternalSellers\Pages\CreateExternalSeller;
 use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
@@ -21,6 +22,7 @@ use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Models\ExternalSeller;
 use App\Models\FeatureFlagAudit;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\User;
@@ -32,7 +34,6 @@ use App\Services\Orders\OrderCompletionService;
 use App\Services\SettingsService;
 use App\Services\ShiftsReportService;
 use App\Sync\Builders\OrderBuilder;
-use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -88,24 +89,37 @@ it('normalizes boolean settings and invalidates settings.all cache on mutations'
         ->and($settingsService->all()[SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value])->toBe('false');
 });
 
-it('renders the Features tab on Settings page and audits flag transitions on save', function () {
-    $admin = User::factory()->admin()->create();
-    actingAs($admin);
+it('keeps feature toggles off the customer Settings page', function () {
+    actingAs(User::factory()->admin()->create());
 
     livewire(Settings::class)
         ->assertSuccessful()
-        ->assertSee('المميزات')
-        ->assertFormFieldExists(SettingKey::FEATURE_REVENUES_ENABLED->value)
-        ->assertFormFieldExists(SettingKey::FEATURE_CUSTOM_FEES_ENABLED->value)
-        ->assertFormFieldExists(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
-        ->assertFormFieldExists(SettingKey::FEATURE_EQUIPMENT_ENABLED->value)
-        ->fillForm([
-            SettingKey::RESTAURANT_NAME->value => 'مطعم الاختبار',
-            SettingKey::FEATURE_REVENUES_ENABLED->value => true,
-            SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => true,
-        ])
+        ->assertFormFieldDoesNotExist(SettingKey::FEATURE_REVENUES_ENABLED->value)
+        ->assertFormFieldDoesNotExist(SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
+        ->fillForm([SettingKey::RESTAURANT_NAME->value => 'مطعم الاختبار'])
         ->call('save')
         ->assertHasNoFormErrors();
+
+    expect(FeatureFlagAudit::query()->count())->toBe(0);
+});
+
+it('renders the feature toggles on the vendor console and audits flag transitions on save', function () {
+    $vendor = User::factory()->vendor()->create();
+    actingAs($vendor);
+
+    livewire(VendorConsole::class)
+        ->assertSuccessful()
+        ->assertSee('المميزات')
+        ->assertFormFieldExists('features.'.SettingKey::FEATURE_REVENUES_ENABLED->value)
+        ->assertFormFieldExists('features.'.SettingKey::FEATURE_CUSTOM_FEES_ENABLED->value)
+        ->assertFormFieldExists('features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value)
+        ->assertFormFieldExists('features.'.SettingKey::FEATURE_EQUIPMENT_ENABLED->value)
+        ->fillForm([
+            'features.'.SettingKey::FEATURE_REVENUES_ENABLED->value => true,
+            'features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => true,
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
 
     $featureService = app(FeatureService::class);
     expect($featureService->revenuesEnabled())->toBeTrue()
@@ -113,13 +127,13 @@ it('renders the Features tab on Settings page and audits flag transitions on sav
         ->and($featureService->customFeesEnabled())->toBeFalse()
         ->and($featureService->equipmentEnabled())->toBeFalse();
 
-    $audits = FeatureFlagAudit::query()->orderBy('feature_key')->get();
+    $audits = FeatureFlagAudit::query()->where('feature_key', 'like', 'feature_%')->orderBy('feature_key')->get();
     expect($audits)->toHaveCount(2)
         ->and($audits->pluck('feature_key')->all())->toBe([
             SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value,
             SettingKey::FEATURE_REVENUES_ENABLED->value,
         ])
-        ->and($audits->first()->user_id)->toBe($admin->id)
+        ->and($audits->first()->user_id)->toBe($vendor->id)
         ->and($audits->first()->old_value)->toBeFalse()
         ->and($audits->first()->new_value)->toBeTrue();
 });
@@ -147,23 +161,23 @@ it('blocks disabling outsourced orders when an open order has external orders or
         ['product_id' => $product->id, 'quantity' => 1],
     ]);
 
-    // 1. Blocked by open order on Settings save
-    livewire(Settings::class)
+    // 1. Blocked by open order on vendor console save
+    actingAs(User::factory()->vendor()->create());
+    livewire(VendorConsole::class)
         ->fillForm([
-            SettingKey::RESTAURANT_NAME->value => 'مطعم الاختبار',
-            SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => false,
+            'features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value => false,
         ])
         ->call('save')
-        ->assertHasFormErrors([SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value]);
+        ->assertHasErrors(['data.features.'.SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED->value]);
 
     expect($featureService->outsourcedOrdersEnabled())->toBeTrue();
 
-    // 2. Blocked by open order on Settings resetToDefaults
+    // 2. The customer's Settings reset never touches vendor-owned feature flags
+    actingAs($admin);
     livewire(Settings::class)
         ->call('resetToDefaults');
 
     expect($featureService->outsourcedOrdersEnabled())->toBeTrue();
-    Notification::assertNotified('خطأ في إعادة تعيين الإعدادات');
 
     // 3. Complete the open order -> now seller has payable balance (60 EGP), so disabling is STILL blocked!
     app(OrderCompletionService::class)->complete($openOrder, ['cash' => 160]);
@@ -271,7 +285,7 @@ it('retains historical external order details, accounting, receipts, and sync pa
     $seller = ExternalSeller::create(['name' => 'محمصة البن', 'is_active' => true]);
     $product = $seller->products()->create(['name' => 'قهوة تركي', 'price' => 45, 'is_active' => true]);
 
-    $inHouseProduct = \App\Models\Product::factory()->create(['price' => 100, 'cost' => 60]);
+    $inHouseProduct = Product::factory()->create(['price' => 100, 'cost' => 60]);
 
     $order = Order::factory()->create([
         'user_id' => $admin->id,

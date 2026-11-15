@@ -11,6 +11,8 @@ class FeatureFlagAudit extends Model
         'feature_key',
         'old_value',
         'new_value',
+        'old_text',
+        'new_text',
         'user_id',
         'changed_at',
     ];

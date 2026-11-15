@@ -117,6 +117,7 @@ class BackfillService
                 SELECT 'staff', u.uuid, NULL, 'upsert', 1, ?
                 FROM users u
                 WHERE u.uuid IS NOT NULL
+                  AND u.is_vendor = ?
                   AND NOT EXISTS (
                     SELECT 1 FROM sync_outbox o
                     WHERE o.doc_type = 'staff'
@@ -124,7 +125,7 @@ class BackfillService
                       AND o.sent_at IS NULL
                       AND o.failed_at IS NULL
                   )",
-                [$now]
+                [$now, false]
             );
         });
 

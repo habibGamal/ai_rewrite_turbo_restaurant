@@ -310,11 +310,29 @@ export interface FeatureFlags {
   equipment: boolean;
 }
 
+export type ModuleKey =
+  | 'restaurant'
+  | 'delivery'
+  | 'web_orders'
+  | 'manufacturing'
+  | 'external_sellers'
+  | 'retail';
+
+export type BusinessType =
+  | 'restaurant'
+  | 'cafe'
+  | 'bakery'
+  | 'fashion'
+  | 'grocery'
+  | 'general_retail';
+
 export type PageProps<T = {}> = T & {
   auth: {
     user: User;
   };
   features?: FeatureFlags;
+  modules?: ModuleKey[];
+  businessType?: BusinessType;
   flash?: {
     success?: string;
     error?: string;

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Auth\VendorAwareUserProvider;
 use App\Costing\CostHistoryRecorder;
 use App\Costing\CostingStrategy;
 use App\Costing\CostingStrategyResolver;
+use App\Enums\OrderBehavior;
 use App\Http\Responses\CustomLoginResponse;
 use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
@@ -27,7 +29,15 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Waste;
 use App\Observers\ProductObserver;
+use App\Orders\Behaviors\CompaniesBehavior;
+use App\Orders\Behaviors\CounterBehavior;
+use App\Orders\Behaviors\DeliveryBehavior;
+use App\Orders\Behaviors\DineInBehavior;
+use App\Orders\Behaviors\WebDeliveryBehavior;
+use App\Orders\Behaviors\WebTakeawayBehavior;
+use App\Orders\OrderBehaviorRegistry;
 use App\Orders\OrderTypeCatalog;
+use App\Policies\RolePolicy;
 use App\Services\FeatureService;
 use App\Sync\SyncOutboxObserver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
@@ -38,11 +48,13 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,6 +67,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
         $this->app->singleton(FeatureService::class);
+        $this->app->singleton(OrderBehaviorRegistry::class, function ($app): OrderBehaviorRegistry {
+            $registry = new OrderBehaviorRegistry($app);
+
+            // Core behaviours. Phase 4 moves dine_in, delivery and the web
+            // behaviours into the Restaurant, Delivery and Web orders modules.
+            $registry->register(OrderBehavior::DINE_IN->value, DineInBehavior::class, 'صالة');
+            $registry->register(OrderBehavior::DELIVERY->value, DeliveryBehavior::class, 'دليفري');
+            $registry->register(OrderBehavior::COUNTER->value, CounterBehavior::class, 'كاونتر');
+            $registry->register(OrderBehavior::COMPANIES->value, CompaniesBehavior::class, 'شركات');
+            $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false);
+            $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false);
+
+            return $registry;
+        });
         $this->app->scoped(OrderTypeCatalog::class);
         $this->app->scoped(CostHistoryRecorder::class);
         $this->app->bind(CostingStrategyResolver::class);
@@ -67,6 +93,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        Auth::provider('vendor-aware', fn ($app, array $config): VendorAwareUserProvider => new VendorAwareUserProvider($app['hash'], $config['model']));
 
         // Register model observers
         Product::observe(ProductObserver::class);
@@ -102,6 +130,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Enforce optional feature gates before granting admin role authorization bypass
         Gate::before(function ($user, $ability, array $arguments = []) {
+            // vendor.* abilities belong to the vendor account alone; the
+            // customer's admin role does not bypass them.
+            if (is_string($ability) && str_starts_with($ability, 'vendor.')) {
+                return $user instanceof User && $user->isVendor();
+            }
+
             $featureService = app(FeatureService::class);
 
             if (is_string($ability) && $featureService->isPermissionDisabled($ability)) {
@@ -115,10 +149,14 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            if ($user instanceof User && $user->isVendor()) {
+                return true;
+            }
+
             return $user->hasRole('admin') ? true : null;
         });
 
-        Gate::policy(\Spatie\Permission\Models\Role::class, \App\Policies\RolePolicy::class);
+        Gate::policy(Role::class, RolePolicy::class);
 
         if (request()->isSecure() || request()->header('X-Forwarded-Proto') === 'https') {
             URL::forceScheme('https');

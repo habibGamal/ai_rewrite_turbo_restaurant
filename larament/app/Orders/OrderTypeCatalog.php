@@ -14,7 +14,7 @@ final class OrderTypeCatalog
     private ?Collection $rows = null;
 
     public function __construct(
-        private readonly OrderBehaviorResolver $resolver,
+        private readonly OrderBehaviorRegistry $behaviors,
     ) {}
 
     /**
@@ -38,14 +38,14 @@ final class OrderTypeCatalog
 
     public function behaviorFor(string $code): OrderTypeBehavior
     {
-        return $this->resolver->resolve($this->find($code)->behavior);
+        return $this->behaviors->resolve($this->find($code)->behavior);
     }
 
     public function display(string $code): OrderDisplay
     {
         $row = $this->find($code);
 
-        return $this->resolver->resolve($row->behavior)->display($row);
+        return $this->behaviors->resolve($row->behavior)->display($row);
     }
 
     /**
@@ -82,7 +82,7 @@ final class OrderTypeCatalog
                 continue;
             }
 
-            if ($this->resolver->resolve($row->behavior)->cashierCanCreate()) {
+            if ($this->behaviors->resolve($row->behavior)->cashierCanCreate()) {
                 $codes[] = $row->code;
             }
         }
@@ -116,7 +116,7 @@ final class OrderTypeCatalog
         $codes = [];
 
         foreach ($this->all() as $row) {
-            if ($predicate($this->resolver->resolve($row->behavior))) {
+            if ($predicate($this->behaviors->resolve($row->behavior))) {
                 $codes[] = $row->code;
             }
         }
