@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PurchaseInvoices;
 
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
+use App\Filament\Actions\Forms\GroupQuantityGridAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintPurchaseInvoiceAction;
@@ -122,7 +123,9 @@ class PurchaseInvoiceResource extends Resource
                         Actions::make([
                             ProductImporterAction::make('importProducts'),
                             LowStockImporterAction::make('importLowStock'),
+                            GroupQuantityGridAction::make('groupQuantityGrid'),
                         ])
+                            ->key('purchaseImportActions')
                             ->alignStart(),
                         BarcodeScanInput::make()
                             ->onScanned(fn (ProductLookupResult $result, $set, $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
