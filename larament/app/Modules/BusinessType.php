@@ -47,6 +47,39 @@ enum BusinessType: string
     }
 
     /**
+     * The built-in order types a new install of this type starts with
+     * active; the other built-in types start inactive. Web order types are
+     * left to the Web orders module, and custom types are never touched.
+     *
+     * @return list<string>
+     */
+    public function defaultOrderTypes(): array
+    {
+        return match ($this) {
+            self::RESTAURANT => ['dine_in', 'takeaway', 'delivery', 'companies', 'talabat'],
+            self::CAFE => ['dine_in', 'takeaway', 'companies', 'instant_sale'],
+            self::BAKERY => ['takeaway', 'companies', 'instant_sale'],
+            self::FASHION, self::GENERAL_RETAIL => ['companies', 'instant_sale'],
+            self::GROCERY => ['delivery', 'companies', 'instant_sale'],
+        };
+    }
+
+    /**
+     * Short description shown when choosing the type in the setup wizard.
+     */
+    public function description(): string
+    {
+        return match ($this) {
+            self::RESTAURANT => 'صالة وطاولات، شاشة مطبخ، توصيل وتصنيع.',
+            self::CAFE => 'صالة وطاولات وبيع سريع على الكاونتر.',
+            self::BAKERY => 'بيع سريع على الكاونتر، تصنيع، ومقاسات وأوزان.',
+            self::FASHION => 'بيع سريع بالباركود، مقاسات وألوان، ومرتجعات واستبدال.',
+            self::GROCERY => 'بيع سريع بالباركود وأصناف بالوزن وتوصيل للمنازل.',
+            self::GENERAL_RETAIL => 'بيع سريع بالباركود لأي متجر تجزئة.',
+        };
+    }
+
+    /**
      * @return array<string, string>
      */
     public static function options(): array
