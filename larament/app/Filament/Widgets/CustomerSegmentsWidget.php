@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\CustomersPerformanceReportService;
+use App\Services\Reports\CustomerReportThresholds;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
@@ -29,8 +30,9 @@ class CustomerSegmentsWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $startDate = $this->pageFilters['startDate'] ?? $defaultStart;
+        $endDate = $this->pageFilters['endDate'] ?? $defaultEnd;
 
         $segments = $this->customersReportService->getCustomerSegments($startDate, $endDate);
 
@@ -39,14 +41,7 @@ class CustomerSegmentsWidget extends ChartWidget
         $sales = [];
 
         foreach ($segments as $segmentKey => $segmentData) {
-            $segmentLabels = [
-                'vip' => 'عملاء VIP',
-                'loyal' => 'عملاء مخلصين',
-                'regular' => 'عملاء عاديين',
-                'new' => 'عملاء جدد',
-            ];
-
-            $labels[] = $segmentLabels[$segmentKey] ?? $segmentKey;
+            $labels[] = sprintf('%s (%s ج.م)', $segmentKey, number_format($segmentData['total_sales']));
             $counts[] = $segmentData['count'];
             $sales[] = $segmentData['total_sales'];
         }
@@ -96,6 +91,6 @@ class CustomerSegmentsWidget extends ChartWidget
 
     public function getDescription(): ?string
     {
-        return 'توزيع العملاء حسب مستوى نشاطهم: VIP (5000+ ج.م، 20+ طلب)، مخلصين (2000+ ج.م، 10+ طلب)، عاديين (5+ طلبات)، جدد (أقل من 5 طلبات)';
+        return app(CustomerReportThresholds::class)->describeSegments().' — يمكن تعديل الحدود من زر «إعدادات التقرير» أعلى الصفحة';
     }
 }

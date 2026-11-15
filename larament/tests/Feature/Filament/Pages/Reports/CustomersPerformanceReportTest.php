@@ -2,11 +2,21 @@
 
 use App\Enums\OrderStatus;
 use App\Filament\Pages\Reports\CustomersPerformanceReport;
+use App\Filament\Widgets\CustomerActivityTrendWidget;
+use App\Filament\Widgets\CustomerOrderTypePerformanceWidget;
+use App\Filament\Widgets\CustomersAtRiskTableWidget;
+use App\Filament\Widgets\CustomerSegmentsWidget;
+use App\Filament\Widgets\CustomersPerformanceStatsWidget;
+use App\Filament\Widgets\CustomersPerformanceTableWidget;
+use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
+use App\Filament\Widgets\TopCustomersByProfitWidget;
+use App\Filament\Widgets\TopCustomersBySalesWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\CustomersPerformanceReportService;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -50,7 +60,7 @@ it('cannot be accessed by cashier user', function () {
 it('displays no sales widget when no orders exist', function () {
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\NoCustomersSalesInPeriodWidget::class);
+        ->assertSeeLivewire(NoCustomersSalesInPeriodWidget::class);
 });
 
 it('displays performance widgets when orders exist', function () {
@@ -76,15 +86,15 @@ it('displays performance widgets when orders exist', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomerLoyaltyInsightsWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\TopCustomersBySalesWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\TopCustomersByProfitWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomerSegmentsWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomerOrderTypePerformanceWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomerActivityTrendWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceTableWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSeeLivewire(CustomersPerformanceStatsWidget::class)
+        ->assertSeeLivewire(CustomersAtRiskTableWidget::class)
+        ->assertSeeLivewire(TopCustomersBySalesWidget::class)
+        ->assertSeeLivewire(TopCustomersByProfitWidget::class)
+        ->assertSeeLivewire(CustomerSegmentsWidget::class)
+        ->assertSeeLivewire(CustomerOrderTypePerformanceWidget::class)
+        ->assertSeeLivewire(CustomerActivityTrendWidget::class)
+        ->assertSeeLivewire(CustomersPerformanceTableWidget::class);
+});
 
 // Filter Tests
 it('has period filter form', function () {
@@ -121,7 +131,7 @@ it('can filter by last 7 days', function () {
             'presetPeriod' => 'last_7_days',
         ])
         ->assertSuccessful();
-})->skip('SQLite COALESCE compatibility issue with service layer');
+});
 
 it('can filter by last 30 days', function () {
     livewire(CustomersPerformanceReport::class)
@@ -191,8 +201,8 @@ it('only shows completed orders', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSeeLivewire(CustomersPerformanceStatsWidget::class);
+});
 
 it('only shows orders with customers', function () {
     $customer = Customer::factory()->create();
@@ -232,8 +242,8 @@ it('only shows orders with customers', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSeeLivewire(CustomersPerformanceStatsWidget::class);
+});
 
 // Navigation Tests
 it('has correct navigation label', function () {
@@ -263,7 +273,7 @@ it('has correct title', function () {
 });
 
 it('has correct route path', function () {
-    $reflection = new \ReflectionClass(CustomersPerformanceReport::class);
+    $reflection = new ReflectionClass(CustomersPerformanceReport::class);
     $property = $reflection->getProperty('routePath');
     $property->setAccessible(true);
 
@@ -301,10 +311,14 @@ it('updates widgets when filters change', function () {
     $component
         ->fillForm([
             'presetPeriod' => 'last_7_days',
-        ])
+        ], 'filtersForm')
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSet('filters.startDate', now()->subDays(6)->toDateString());
+
+    // Child widgets are not re-rendered by the test harness, so check the list.
+    expect($component->instance()->getWidgets())
+        ->toContain(CustomersPerformanceStatsWidget::class);
+});
 
 // Multiple Customers Test
 it('shows multiple customers in report', function () {
@@ -331,8 +345,8 @@ it('shows multiple customers in report', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceTableWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSeeLivewire(CustomersPerformanceTableWidget::class);
+});
 
 // Different Order Types Test
 it('shows orders of different types', function () {
@@ -360,8 +374,8 @@ it('shows orders of different types', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomerOrderTypePerformanceWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertSeeLivewire(CustomerOrderTypePerformanceWidget::class);
+});
 
 // Date Range Filter Test
 it('filters orders by date range', function () {
@@ -402,20 +416,29 @@ it('filters orders by date range', function () {
         'total' => 100,
     ]);
 
-    livewire(CustomersPerformanceReport::class)
+    $component = livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
         ->fillForm([
             'presetPeriod' => 'last_7_days',
-        ])
-        ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ], 'filtersForm')
+        ->assertSuccessful();
+
+    expect($component->instance()->getWidgets())
+        ->toContain(CustomersPerformanceStatsWidget::class);
+
+    $rows = app(CustomersPerformanceReportService::class)
+        ->getCustomersPerformanceQuery(now()->subDays(6)->toDateString(), now()->toDateString())
+        ->get();
+
+    expect($rows)->toHaveCount(1)
+        ->and((int) $rows->first()->total_orders)->toBe(1);
+});
 
 // Empty State Tests
 it('shows appropriate message when no data available', function () {
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\NoCustomersSalesInPeriodWidget::class);
+        ->assertSeeLivewire(NoCustomersSalesInPeriodWidget::class);
 });
 
 it('shows performance widgets when data is available', function () {
@@ -439,9 +462,9 @@ it('shows performance widgets when data is available', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertDontSeeLivewire(\App\Filament\Widgets\NoCustomersSalesInPeriodWidget::class)
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceStatsWidget::class);
-})->skip('SQLite COALESCE compatibility issue with service layer');
+        ->assertDontSeeLivewire(NoCustomersSalesInPeriodWidget::class)
+        ->assertSeeLivewire(CustomersPerformanceStatsWidget::class);
+});
 
 // Service Integration Test
 it('uses CustomersPerformanceReportService correctly', function () {
@@ -463,7 +486,7 @@ it('uses CustomersPerformanceReportService correctly', function () {
         'total' => 100,
     ]);
 
-    $service = app(\App\Services\CustomersPerformanceReportService::class);
+    $service = app(CustomersPerformanceReportService::class);
 
     $startDate = now()->subDays(29)->startOfDay()->toDateString();
     $endDate = now()->endOfDay()->toDateString();
@@ -501,5 +524,5 @@ it('handles large number of customers efficiently', function () {
 
     livewire(CustomersPerformanceReport::class)
         ->assertSuccessful()
-        ->assertSeeLivewire(\App\Filament\Widgets\CustomersPerformanceTableWidget::class);
+        ->assertSeeLivewire(CustomersPerformanceTableWidget::class);
 })->skip('Performance test - run manually');

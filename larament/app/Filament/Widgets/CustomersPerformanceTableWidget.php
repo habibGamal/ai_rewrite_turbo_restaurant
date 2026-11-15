@@ -4,10 +4,12 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CustomersPerformanceTableExporter;
 use App\Services\CustomersPerformanceReportService;
+use App\Services\Reports\CustomerReportThresholds;
+use Carbon\Carbon;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -23,25 +25,17 @@ class CustomersPerformanceTableWidget extends BaseWidget
 
     protected static ?string $heading = 'تفاصيل أداء العملاء';
 
-    protected CustomersPerformanceReportService $customersReportService;
-
-    public function boot(): void
-    {
-        $this->customersReportService = app(CustomersPerformanceReportService::class);
-    }
-
     public function table(Table $table): Table
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $startDate = $this->pageFilters['startDate'] ?? $defaultStart;
+        $endDate = $this->pageFilters['endDate'] ?? $defaultEnd;
+        $service = app(CustomersPerformanceReportService::class);
+        $segments = array_keys(CustomerReportThresholds::segmentColors());
 
         return $table
-            ->query(
-                $this->customersReportService->getCustomersPerformanceQuery(
-                    $startDate,
-                    $endDate
-                )
-            )
+            ->query($service->getCustomersPerformanceQuery($startDate, $endDate))
+            ->description('المبالغ صافية بعد الخصومات والمرتجعات')
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تقرير أداء العملاء')
@@ -53,72 +47,72 @@ class CustomersPerformanceTableWidget extends BaseWidget
             ->columns([
                 TextColumn::make('name')
                     ->label('اسم العميل')
-                    ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->where('customers.name', 'like', "%{$search}%");
-                    })
-                    ->sortable(query: function (Builder $query, string $direction): Builder {
-                        return $query->orderBy('customers.name', $direction);
-                    }),
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('customers.name', 'like', "%{$search}%"))
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('customers.name', $direction)),
 
                 TextColumn::make('phone')
                     ->label('رقم الهاتف')
-                    ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->where('customers.phone', 'like', "%{$search}%");
-                    })
-                    ->sortable(query: function (Builder $query, string $direction): Builder {
-                        return $query->orderBy('customers.phone', $direction);
-                    }),
+                    ->copyable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where('customers.phone', 'like', "%{$search}%")),
 
                 TextColumn::make('region')
                     ->label('المنطقة')
-                    ->sortable(query: function (Builder $query, string $direction): Builder {
-                        return $query->orderBy('customers.region', $direction);
-                    })
-                    ->default('غير محدد'),
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('customers.region', $direction))
+                    ->default('غير محدد')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('customer_segment')
+                    ->label('التصنيف')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => CustomerReportThresholds::segmentColors()[$state] ?? 'gray'),
 
                 TextColumn::make('total_orders')
                     ->label('عدد الطلبات')
                     ->numeric()
                     ->sortable(),
 
-                TextColumn::make('total_quantity')
-                    ->label('إجمالي الكمية')
-                    ->numeric()
-                    ->sortable(),
-
                 TextColumn::make('total_sales')
-                    ->label('إجمالي المبيعات')
+                    ->label('صافي المبيعات')
                     ->money('EGP')
                     ->sortable(),
 
                 TextColumn::make('total_profit')
-                    ->label('إجمالي الربح')
+                    ->label('صافي الربح')
                     ->money('EGP')
                     ->sortable(),
+
+                TextColumn::make('profit_margin')
+                    ->label('هامش الربح')
+                    ->state(fn ($record) => $record->total_sales > 0
+                        ? number_format(($record->total_profit / $record->total_sales) * 100, 1).'%'
+                        : '0%'),
 
                 TextColumn::make('avg_order_value')
                     ->label('متوسط قيمة الطلب')
                     ->money('EGP')
                     ->sortable(),
 
-                TextColumn::make('profit_margin')
-                    ->label('هامش الربح %')
-                    ->state(
-                        fn ($record) => $record->total_sales > 0
-                        ? number_format(($record->total_profit / $record->total_sales) * 100, 1).'%'
-                        : '0%'
-                    ),
+                TextColumn::make('total_discount')
+                    ->label('الخصومات')
+                    ->money('EGP')
+                    ->sortable(),
 
-                TextColumn::make('customer_segment')
-                    ->label('تصنيف العميل')
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->sortable(),
+
+                TextColumn::make('avg_days_between_orders')
+                    ->label('متوسط الأيام بين الطلبات')
+                    ->state(fn ($record) => self::avgDaysBetweenOrders($record))
+                    ->placeholder('—'),
+
+                TextColumn::make('total_quantity')
+                    ->label('إجمالي الكمية')
+                    ->numeric()
                     ->sortable()
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'VIP' => 'warning',
-                        'مخلص' => 'success',
-                        'عادي' => 'info',
-                        'جديد' => 'gray',
-                    }),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('last_order_date')
                     ->label('آخر طلب')
@@ -126,13 +120,23 @@ class CustomersPerformanceTableWidget extends BaseWidget
                     ->sortable(),
 
                 TextColumn::make('first_order_date')
-                    ->label('أول طلب')
+                    ->label('أول طلب في الفترة')
                     ->date('Y-m-d')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 ...array_map(fn (array $type) => TextColumn::make('type_'.$type['code'].'_sales')
-                    ->label($type['label'])->money('EGP')->sortable(),
-                    $this->customersReportService->getReportOrderTypes($startDate, $endDate)),
+                    ->label($type['label'])->money('EGP')->sortable()->toggleable(),
+                    $service->getReportOrderTypes($startDate, $endDate)),
+            ])
+            ->filters([
+                SelectFilter::make('customer_segment')
+                    ->label('التصنيف')
+                    ->options(array_combine($segments, $segments))
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $query, string $segment): Builder => $query->having('customer_segment', '=', $segment),
+                    )),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])
@@ -144,35 +148,17 @@ class CustomersPerformanceTableWidget extends BaseWidget
                     ->url(fn ($record): string => route('filament.admin.resources.customers.view', $record->id))
                     ->openUrlInNewTab(),
             ])
-            ->recordAction(ViewAction::class)
-            ->recordUrl(fn ($record): string => route('filament.admin.resources.customers.view', $record->id))
-            ->filters(
-                [
-                    // Tables\Filters\SelectFilter::make('customer_segment')
-                    //     ->label('تصنيف العميل')
-                    //     ->options([
-                    //         'VIP' => 'VIP',
-                    //         'مخلص' => 'مخلص',
-                    //         'عادي' => 'عادي',
-                    //         'جديد' => 'جديد',
-                    //     ])
-                    //     ->modifyBaseQueryUsing(function (Builder $query, array $data): Builder {
-                    //         return $query->when(
-                    //             $data['value'],
-                    //             function (Builder $query, $segment): Builder {
-                    //                 return $query->havingRaw(
-                    //                     'CASE
-                    //                         WHEN COALESCE(SUM(order_items.total), 0) >= 5000 AND COALESCE(COUNT(DISTINCT orders.id), 0) >= 20 THEN "VIP"
-                    //                         WHEN COALESCE(SUM(order_items.total), 0) >= 2000 AND COALESCE(COUNT(DISTINCT orders.id), 0) >= 10 THEN "مخلص"
-                    //                         WHEN COALESCE(COUNT(DISTINCT orders.id), 0) >= 5 THEN "عادي"
-                    //                         ELSE "جديد"
-                    //                     END = ?',
-                    //                     [$segment]
-                    //                 );
-                    //             }
-                    //         );
-                    //     }),
-                ]
-            );
+            ->recordUrl(fn ($record): string => route('filament.admin.resources.customers.view', $record->id));
+    }
+
+    public static function avgDaysBetweenOrders($record): ?string
+    {
+        if ($record->total_orders < 2 || ! $record->first_order_date || ! $record->last_order_date) {
+            return null;
+        }
+
+        $days = Carbon::parse($record->first_order_date)->diffInDays(Carbon::parse($record->last_order_date));
+
+        return number_format($days / ($record->total_orders - 1), 1, '.', '');
     }
 }

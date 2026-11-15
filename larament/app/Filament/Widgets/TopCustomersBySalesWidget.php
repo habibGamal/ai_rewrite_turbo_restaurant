@@ -29,8 +29,9 @@ class TopCustomersBySalesWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $startDate = $this->pageFilters['startDate'] ?? $defaultStart;
+        $endDate = $this->pageFilters['endDate'] ?? $defaultEnd;
 
         $topCustomers = $this->customersReportService->getCustomersPerformanceQuery($startDate, $endDate)
             ->orderByDesc('total_sales')
