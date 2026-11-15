@@ -19,6 +19,7 @@ import {
     BarcodeOutlined,
     CheckCircleOutlined,
     ClearOutlined,
+    DesktopOutlined,
     FolderOpenOutlined,
     PauseCircleOutlined,
     PercentageOutlined,
@@ -67,6 +68,7 @@ import {
     saveCart,
 } from "@/Components/Orders/Instant/instantCart";
 import { fetchProductsByIds, mergeProducts } from "@/Components/Orders/Instant/remoteCatalog";
+import { publishCustomerDisplay } from "@/lib/customerDisplay";
 
 interface InstantSaleTabProps {
     tab: CashierTab;
@@ -600,6 +602,40 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         return () => window.removeEventListener("keydown", listener);
     }, [active]);
 
+    // ---- Customer display (second monitor): what the customer sees right now ----
+    useEffect(() => {
+        if (!active) return;
+        if (items.length > 0) {
+            publishCustomerDisplay({
+                status: "cart",
+                lines: items.map((item) => ({
+                    name: item.name,
+                    quantity: Number(item.quantity),
+                    price: Number(item.price),
+                    total: Number(item.price) * Number(item.quantity) - Number(item.item_discount ?? 0),
+                })),
+                subTotal: Number(totals.subTotal),
+                discount: Number(totals.discount),
+                total: Number(totals.total),
+            });
+        } else if (lastResult) {
+            publishCustomerDisplay({
+                status: "paid",
+                orderNumber: Number(lastResult.order_number),
+                total: lastResult.total,
+                paid: lastResult.paid,
+                change: lastResult.change,
+            });
+        } else {
+            publishCustomerDisplay({ status: "idle" });
+        }
+    }, [active, items, totals.subTotal, totals.discount, totals.total, lastResult]);
+
+    const openCustomerDisplay = () => {
+        window.open(route("pos.customer-display"), "pos-customer-display", "popup,width=1024,height=768");
+        focusScan();
+    };
+
     // ---- Render ----
     const showLastResult = items.length === 0 && lastResult !== null;
     const paymentItems = showLastResult
@@ -659,6 +695,9 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                         </Tag>
                     )}
                     {heldSaleId && <Tag color="orange">فاتورة معلقة مستكملة</Tag>}
+                    <Button type="link" icon={<DesktopOutlined />} onClick={openCustomerDisplay}>
+                        شاشة العميل
+                    </Button>
                 </div>
             </Badge.Ribbon>
 

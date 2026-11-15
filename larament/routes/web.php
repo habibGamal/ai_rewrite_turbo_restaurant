@@ -5,6 +5,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Pos\CustomerDisplayController;
 use App\Http\Controllers\Pos\HeldSaleController;
 use App\Http\Controllers\Pos\InstantReturnController;
 use App\Http\Controllers\Pos\InstantSaleController;
@@ -63,6 +64,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
     Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
     Route::get('/products/lookup', ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
+
+    // Customer-facing monitor (fed by the cashier screen in the same browser)
+    Route::get('/pos/customer-display', CustomerDisplayController::class)->name('pos.customer-display')->middleware('permission:pos.access');
 
     // Instant sale (Phase 6c): one request per sale, held carts, returns and exchanges
     Route::prefix('pos')->name('pos.')->middleware(['shift', 'permission:pos.access'])->group(function () {
