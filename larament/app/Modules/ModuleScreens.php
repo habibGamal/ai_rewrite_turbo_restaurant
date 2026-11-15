@@ -6,7 +6,6 @@ use App\Enums\OptionalFeature;
 use App\Filament\Pages\ExternalSellerAccount;
 use App\Filament\Pages\ExternalSellerAccounts;
 use App\Filament\Pages\Reports\ManufacturingYieldReport;
-use App\Filament\Pages\Reports\WebOrdersReport;
 use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
 use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
@@ -33,8 +32,6 @@ final class ModuleScreens
     public static function map(): array
     {
         return [
-            WebOrdersReport::class => Module::WEB_ORDERS,
-
             ManufacturedProductResource::class => Module::MANUFACTURING,
             RawMaterialProductResource::class => Module::MANUFACTURING,
             ManufacturingRecipeResource::class => Module::MANUFACTURING,

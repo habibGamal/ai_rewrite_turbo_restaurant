@@ -1,14 +1,17 @@
 <?php
 
-namespace App\Orders\Behaviors;
+namespace App\Modules\WebOrders\Behaviors;
 
+use App\Orders\Behaviors\OrderTypeBehavior;
+
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 use App\Orders\TabPresentation;
 
-final class WebTakeawayBehavior implements OrderTypeBehavior
+final class WebDeliveryBehavior implements OrderTypeBehavior
 {
     public function cashierCanCreate(): bool
     {
@@ -22,7 +25,14 @@ final class WebTakeawayBehavior implements OrderTypeBehavior
 
     public function serviceAmount(Order $order, float $subtotal): float
     {
-        return 0;
+        $order->loadMissing('customer');
+        $customer = $order->customer;
+
+        if (! $customer instanceof Customer) {
+            return 0.0;
+        }
+
+        return (float) $customer->delivery_cost;
     }
 
     public function onOpened(Order $order, OrderOpening $opening): void {}
@@ -41,11 +51,17 @@ final class WebTakeawayBehavior implements OrderTypeBehavior
 
     public function display(OrderTypeRow $type): OrderDisplay
     {
-        return OrderDisplay::forRow($type, showCustomer: true);
+        return OrderDisplay::forRow(
+            $type,
+            showCustomer: true,
+            showAddress: true,
+            showDriver: true,
+            chargesDeliveryFee: true,
+        );
     }
 
     public function presentation(OrderTypeRow $type): TabPresentation
     {
-        return new TabPresentation('inbox', 'none', ['pending', 'processing'], 'order_number');
+        return new TabPresentation('inbox', 'none', ['pending', 'processing', 'out_for_delivery'], 'order_number');
     }
 }

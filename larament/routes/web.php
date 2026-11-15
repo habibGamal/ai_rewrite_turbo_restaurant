@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\Orders\WebOrderReceived;
 use App\Events\TestEvent;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExternalOrderController;
@@ -14,7 +13,6 @@ use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShiftController;
-use App\Http\Controllers\WebOrderController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -79,17 +77,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/instant-returns', [InstantReturnController::class, 'store'])->name('instant-returns.store');
     });
 
-    // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->middleware(['module:web_orders', 'permission:web_order.manage', 'order.tab'])->group(function () {
-        Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
-        Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
-        Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
-        Route::post('/complete-order/{order}', [WebOrderController::class, 'completeOrder'])->name('complete');
-        Route::post('/out-for-delivery/{order}', [WebOrderController::class, 'outForDelivery'])->name('outForDelivery');
-        Route::post('/apply-discount/{order}', [WebOrderController::class, 'applyDiscount'])->name('applyDiscount');
-        Route::post('/save-order/{order}', [WebOrderController::class, 'saveOrder'])->name('saveOrder');
-    });
-
     // Printer Management Routes
     Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware(['permission:pos.access', 'order.tab']);
     Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
@@ -123,40 +110,6 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-// Test route for broadcasting
-Route::get('/test-broadcast', function () {
-    // Get the latest order or create a dummy one for testing
-    $order = Order::with(['customer', 'items'])->latest()->first();
-
-    if (! $order) {
-        return response()->json(['error' => 'No orders found. Create an order first.']);
-    }
-
-    // Log for debugging
-    Log::info('Broadcasting test event for order: '.$order->id);
-    Log::info('Broadcasting connection: '.config('broadcasting.default'));
-    Log::info('Reverb config: ', config('broadcasting.connections.reverb'));
-
-    // Dispatch the event
-    $event = new WebOrderReceived($order);
-    Log::info('Event created: '.get_class($event));
-    Log::info('Broadcast channels: ', $event->broadcastOn());
-    Log::info('Broadcast as: '.$event->broadcastAs());
-    Log::info('Broadcast with: ', $event->broadcastWith());
-
-    event($event);
-
-    Log::info('Event dispatched');
-
-    return response()->json([
-        'message' => 'Event dispatched successfully',
-        'order_id' => $order->id,
-        'order_number' => $order->order_number,
-        'broadcast_connection' => config('broadcasting.default'),
-        'reverb_config' => config('broadcasting.connections.reverb'),
-    ]);
-});
 
 // Simple test event
 Route::get('/test-simple', function () {

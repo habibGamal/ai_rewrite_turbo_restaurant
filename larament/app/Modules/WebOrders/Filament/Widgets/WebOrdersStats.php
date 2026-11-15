@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Modules\WebOrders\Filament\Widgets;
 
 use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;

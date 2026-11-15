@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\ManagementController;
-use App\Http\Controllers\Api\WebOrdersController;
 use App\Http\Controllers\OrderController;
 use App\Http\Middleware\VerifyApiKey;
 use Illuminate\Support\Facades\Route;
@@ -43,11 +42,6 @@ Route::middleware(VerifyApiKey::class)->group(function () {
     Route::get('/get-products-master', [ApiController::class, 'getProductsMaster']);
     Route::get('/get-products-master-by-refs', [ApiController::class, 'getProductsMasterByRefs']);
     Route::get('/get-products-prices-master', [ApiController::class, 'getProductsPricesMaster']);
-
-    // Web order endpoints
-    Route::post('/web-orders/place-order', [WebOrdersController::class, 'createOrder']);
-    Route::get('/can-accept-order', [WebOrdersController::class, 'canAcceptOrder']);
-    Route::get('/get-shift-id', [WebOrdersController::class, 'getShiftId']);
 
     Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
 });

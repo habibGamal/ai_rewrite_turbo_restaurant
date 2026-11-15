@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events\Orders;
+namespace App\Modules\WebOrders\Events;
 
 use App\Models\Order;
 use Illuminate\Broadcasting\InteractsWithSockets;

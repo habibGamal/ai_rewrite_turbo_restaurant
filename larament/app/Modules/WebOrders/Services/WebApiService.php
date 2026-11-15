@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Modules\WebOrders\Services;
+
+use App\Services\SettingsService;
 
 use App\Core\Events\OrderCancelled;
 use App\Core\Events\OrderCompleted;
@@ -8,7 +10,7 @@ use App\Core\Events\OrderItemsChanged;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
-use App\Events\Orders\WebOrderReceived;
+use App\Modules\WebOrders\Events\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\DailySnapshot;
 use App\Models\Order;

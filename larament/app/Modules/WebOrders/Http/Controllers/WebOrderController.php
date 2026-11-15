@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\WebOrders\Http\Controllers;
+
+use App\Http\Controllers\Controller;
 
 use App\Models\Category;
 use App\Models\Driver;
@@ -8,7 +10,7 @@ use App\Models\Order;
 use App\Models\Region;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftLoggingService;
-use App\Services\WebApiService;
+use App\Modules\WebOrders\Services\WebApiService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

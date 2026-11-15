@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Exports;
+namespace App\Modules\WebOrders\Filament\Exports;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;

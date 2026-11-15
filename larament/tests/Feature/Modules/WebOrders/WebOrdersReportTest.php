@@ -2,9 +2,9 @@
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
-use App\Filament\Pages\Reports\WebOrdersReport;
-use App\Filament\Widgets\WebOrdersStats;
-use App\Filament\Widgets\WebOrdersTable;
+use App\Modules\WebOrders\Filament\Pages\Reports\WebOrdersReport;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersStats;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersTable;
 use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\Order;

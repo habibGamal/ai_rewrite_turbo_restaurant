@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Modules\WebOrders\Filament\Widgets;
 
 use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
-use App\Filament\Exports\WebOrdersExporter;
+use App\Modules\WebOrders\Filament\Exports\WebOrdersExporter;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
 use App\Services\PrintService;

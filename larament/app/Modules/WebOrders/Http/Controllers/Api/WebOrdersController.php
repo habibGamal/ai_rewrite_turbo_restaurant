@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Modules\WebOrders\Http\Controllers\Api;
 
 use App\Enums\OrderBehavior;
 use App\Http\Controllers\Controller;
 use App\Orders\OrderTypeCatalog;
-use App\Services\WebApiService;
+use App\Modules\WebOrders\Services\WebApiService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

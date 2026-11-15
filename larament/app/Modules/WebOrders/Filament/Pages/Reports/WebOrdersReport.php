@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Pages\Reports;
+namespace App\Modules\WebOrders\Filament\Pages\Reports;
 
 use App\Filament\Traits\ViewerAccess;
-use App\Filament\Widgets\WebOrdersStats;
-use App\Filament\Widgets\WebOrdersTable;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersStats;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersTable;
 use Filament\Pages\Dashboard as BaseDashboard;
 
 class WebOrdersReport extends BaseDashboard
