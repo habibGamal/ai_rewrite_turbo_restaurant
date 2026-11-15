@@ -29,8 +29,13 @@ class OrderCalculationService
         // Apply discount if set
         $discount = $this->calculateDiscount($order, $subtotal);
 
+        // Fees and equipment are added after service and discount, which
+        // stay on the item subtotal only. Their columns are kept up to date
+        // by the fees and equipment services before they call this.
+        $charges = (float) $order->fees_total + (float) $order->equipment_total;
+
         // Calculate total
-        $total = ceil($subtotal + $serviceCharge + $tax - $discount);
+        $total = ceil($subtotal + $serviceCharge + $tax - $discount + $charges);
 
         // Calculate profit
         $profit = $this->calculateProfit($order, $total);
@@ -117,10 +122,13 @@ class OrderCalculationService
         return $order->discount ?? 0;
     }
 
+    /**
+     * Total minus the items' cost and the equipment cost. Fees have no cost.
+     */
     public function calculateProfit(Order $order, float $total): float
     {
         $totalCost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
 
-        return $total - $totalCost;
+        return $total - $totalCost - (float) $order->equipment_cost;
     }
 }

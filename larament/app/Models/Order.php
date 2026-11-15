@@ -12,6 +12,7 @@ use App\Models\Concerns\HasSyncUuid;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderTypeCatalog;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +40,10 @@ class Order extends Model
         'total',
         'profit',
         'web_pos_diff',
+        'fees_total',
+        'equipment_total',
+        'equipment_cost',
+        'guests_count',
         'payment_status',
         'return_status',
         'dine_table_number',
@@ -63,6 +68,10 @@ class Order extends Model
         'temp_discount_percent' => 'decimal:2',
         'total' => 'decimal:2',
         'profit' => 'decimal:2',
+        'fees_total' => 'decimal:2',
+        'equipment_total' => 'decimal:2',
+        'equipment_cost' => 'decimal:2',
+        'guests_count' => 'integer',
         'web_preferences' => 'array',
     ];
 
@@ -250,7 +259,7 @@ class Order extends Model
             return null;
         }
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, KitchenTicketItem> $items */
+        /** @var Collection<int, KitchenTicketItem> $items */
         $items = $ticket->relationLoaded('items')
             ? $ticket->items
             : $ticket->items()->get();
@@ -286,7 +295,7 @@ class Order extends Model
             return null;
         }
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, KitchenTicketItem> $items */
+        /** @var Collection<int, KitchenTicketItem> $items */
         $items = $ticket->relationLoaded('items')
             ? $ticket->items
             : $ticket->items()->get();

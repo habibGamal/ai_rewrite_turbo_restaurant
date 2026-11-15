@@ -2,6 +2,7 @@
 
 namespace App\Sync;
 
+use App\Sync\Builders\AuditLogBuilder;
 use App\Sync\Builders\CategoryBuilder;
 use App\Sync\Builders\DaySummaryBuilder;
 use App\Sync\Builders\DocumentBuilder;
@@ -45,6 +46,7 @@ class BuilderRegistry
             DocumentType::Staff => app(StaffBuilder::class),
             DocumentType::InventoryDay => app(InventoryDayBuilder::class),
             DocumentType::DaySummary => app(DaySummaryBuilder::class),
+            DocumentType::AuditLog => app(AuditLogBuilder::class),
         };
     }
 }

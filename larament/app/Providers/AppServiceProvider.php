@@ -10,6 +10,7 @@ use App\Enums\OrderBehavior;
 use App\Http\Responses\CustomLoginResponse;
 use App\Jobs\ExporterCsv;
 use App\Jobs\ImportCsv;
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -100,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Platform connector sync outbox observer
         Order::observe(SyncOutboxObserver::class);
+        AuditLog::observe(SyncOutboxObserver::class);
         OrderItem::observe(SyncOutboxObserver::class);
         Payment::observe(SyncOutboxObserver::class);
         OrderReturn::observe(SyncOutboxObserver::class);

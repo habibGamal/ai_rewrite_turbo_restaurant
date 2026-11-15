@@ -95,6 +95,10 @@ class OrderBuilder implements DocumentBuilder
             'total' => Payload::money($order->total),
             'profit' => Payload::money($order->profit),
             'web_pos_diff' => Payload::money($order->web_pos_diff),
+            'fees_total' => Payload::money($order->fees_total),
+            'equipment_total' => Payload::money($order->equipment_total),
+            'equipment_cost' => Payload::money($order->equipment_cost),
+            'guests_count' => $order->guests_count,
             'items' => $items,
             'payments' => $payments,
             'external_orders' => $order->externalOrders->map(fn ($external) => [
