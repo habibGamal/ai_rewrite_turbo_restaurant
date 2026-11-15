@@ -7,7 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property Carbon|null $business_date
+ * @property Carbon|null $start_at
+ * @property Carbon|null $end_at
+ * @property Carbon|null $money_edited_at
+ * @property int $money_edited_count
+ */
 class Shift extends Model
 {
     use HasFactory, HasSyncUuid;
@@ -24,6 +33,8 @@ class Shift extends Model
         'real_cash',
         'has_deficit',
         'closed',
+        'money_edited_at',
+        'money_edited_count',
     ];
 
     protected $casts = [
@@ -36,6 +47,8 @@ class Shift extends Model
         'business_date' => 'date',
         'has_deficit' => 'boolean',
         'closed' => 'boolean',
+        'money_edited_at' => 'datetime',
+        'money_edited_count' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -56,6 +69,14 @@ class Shift extends Model
     public function revenues(): HasMany
     {
         return $this->hasMany(Revenue::class);
+    }
+
+    /**
+     * Expenses or revenues were changed after the shift closed.
+     */
+    public function getMoneyEditedAttribute(): bool
+    {
+        return $this->money_edited_at !== null;
     }
 
     public function getIsActiveAttribute(): bool

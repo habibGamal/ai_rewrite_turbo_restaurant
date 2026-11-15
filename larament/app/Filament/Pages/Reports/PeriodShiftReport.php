@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
+use App\Filament\Pages\ShiftMoney\ShiftMoneyPage;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
@@ -14,6 +15,7 @@ use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
 use App\Services\ShiftsReportService;
+use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Schema;
@@ -39,6 +41,27 @@ class PeriodShiftReport extends BaseDashboard
     public function boot(): void
     {
         $this->shiftsReportService = app(ShiftsReportService::class);
+    }
+
+    /**
+     * With exactly one shift picked, jump to its expenses and revenues.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('editShiftMoney')
+                ->label('تعديل المصروفات والإيرادات')
+                ->icon('heroicon-o-pencil-square')
+                ->visible(fn (): bool => ShiftMoneyPage::canAccess() && $this->singleSelectedShiftId() !== null)
+                ->url(fn (): string => ShiftMoneyPage::urlForShift((int) $this->singleSelectedShiftId())),
+        ];
+    }
+
+    private function singleSelectedShiftId(): ?int
+    {
+        $shifts = array_values(array_filter((array) ($this->filters['shifts'] ?? [])));
+
+        return ($this->filters['filterType'] ?? 'period') === 'shifts' && count($shifts) === 1 ? (int) $shifts[0] : null;
     }
 
     public function filtersForm(Schema $schema): Schema

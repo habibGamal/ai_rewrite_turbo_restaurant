@@ -143,9 +143,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 'delete_drivers' => 'حذف سائق',
 
                 'view_expenses' => 'عرض المصروفات في الإدارة',
-                'create_expenses' => 'إضافة مصروف في الإدارة',
-                'update_expenses' => 'تعديل مصروف في الإدارة',
-                'delete_expenses' => 'حذف مصروف في الإدارة',
+
+                'shift_money.manage' => 'إدارة مصروفات وإيرادات الورديات',
+                'shift_money.edit_closed' => 'تعديل مصروفات وإيرادات الورديات المغلقة',
 
                 'view_expense_types' => 'عرض بنود المصروفات',
                 'create_expense_types' => 'إضافة بند مصروف',
@@ -177,7 +177,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_customers_performance_report' => 'تقرير أداء العملاء',
                 'view_driver_performance_report' => 'تقرير أداء السائقين',
                 'view_cashier_commission_report' => 'تقرير عمولات الكاشير',
-                'view_expenses_report' => 'تقرير المصروفات',
+                'view_expenses_report' => 'تقرير المصروفات والإيرادات',
                 'view_peak_hours_performance_report' => 'تقرير ساعات الذروة',
                 'view_products_sales_performance_report' => 'تقرير مبيعات المنتجات',
                 'view_products_sales_performance_shifts_report' => 'تقرير مبيعات المنتجات بالورديات',

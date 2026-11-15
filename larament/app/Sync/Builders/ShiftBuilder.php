@@ -44,6 +44,8 @@ class ShiftBuilder implements DocumentBuilder
             'losses_amount' => Payload::money($shift->losses_amount),
             'has_deficit' => (bool) $shift->has_deficit,
             'closed' => (bool) $shift->closed,
+            'money_edited_at' => Payload::ts($shift->money_edited_at),
+            'money_edited_count' => (int) $shift->money_edited_count,
         ];
     }
 }
