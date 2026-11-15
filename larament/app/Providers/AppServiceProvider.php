@@ -19,7 +19,11 @@ use App\Models\OrderItem;
 use App\Models\OrderReturn;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductComponent;
+use App\Models\ProductGroup;
+use App\Models\ProductOption;
+use App\Models\ProductOptionValue;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Setting;
@@ -116,6 +120,10 @@ class AppServiceProvider extends ServiceProvider
         ExpenceType::observe(SyncOutboxObserver::class);
         User::observe(SyncOutboxObserver::class);
         ProductComponent::observe(SyncOutboxObserver::class);
+        ProductGroup::observe(SyncOutboxObserver::class);
+        ProductOption::observe(SyncOutboxObserver::class);
+        ProductOptionValue::observe(SyncOutboxObserver::class);
+        ProductBarcode::observe(SyncOutboxObserver::class);
 
         JsonResource::withoutWrapping();
 

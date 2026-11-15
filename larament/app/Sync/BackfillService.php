@@ -14,8 +14,8 @@ use Throwable;
 class BackfillService
 {
     /**
-     * Queue all catalog documents (products, recipes, categories, suppliers, expense types, staff)
-     * with priority 1, skipping those already pending.
+     * Queue all catalog documents (product groups, products, recipes, categories, suppliers,
+     * expense types, staff) with priority 1, skipping those already pending.
      */
     public function queueCatalog(?PlatformConnection $connection = null): int
     {
@@ -28,6 +28,23 @@ class BackfillService
         $total = 0;
 
         DB::transaction(function () use ($now, &$total) {
+            // Product groups: queued before products (lower outbox ids) so the
+            // platform receives a group before the SKUs that reference it.
+            $total += DB::affectingStatement(
+                "INSERT INTO sync_outbox (doc_type, doc_uuid, doc_key, op, priority, occurred_at)
+                SELECT 'product_group', g.uuid, NULL, 'upsert', 1, ?
+                FROM product_groups g
+                WHERE g.uuid IS NOT NULL
+                  AND NOT EXISTS (
+                    SELECT 1 FROM sync_outbox o
+                    WHERE o.doc_type = 'product_group'
+                      AND o.doc_uuid = g.uuid
+                      AND o.sent_at IS NULL
+                      AND o.failed_at IS NULL
+                  )",
+                [$now]
+            );
+
             // Products
             $total += DB::affectingStatement(
                 "INSERT INTO sync_outbox (doc_type, doc_uuid, doc_key, op, priority, occurred_at)
