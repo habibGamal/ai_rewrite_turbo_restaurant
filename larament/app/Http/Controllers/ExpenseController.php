@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Core\Audit\AuditLogger;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Services\ShiftLoggingService;
@@ -74,6 +75,8 @@ class ExpenseController extends Controller
                     'notes' => $request->description,
                 ]);
 
+                AuditLogger::created($expense, context: 'pos_expense', shift: $currentShift);
+
                 // Log expense creation
                 $this->loggingService->logExpenseAction('create', [
                     'id' => $expense->id,
@@ -124,11 +127,17 @@ class ExpenseController extends Controller
                     'description' => $expense->notes,
                 ];
 
+                $original = $expense->getOriginal();
+
                 $expense->update([
                     'expence_type_id' => $request->expenseTypeId,
                     'amount' => $request->amount,
                     'notes' => $request->description,
                 ]);
+
+                if ($expense->wasChanged()) {
+                    AuditLogger::updated($expense, $original, context: 'pos_expense');
+                }
 
                 // Log expense update
                 $this->loggingService->logExpenseAction('update', [
@@ -180,6 +189,7 @@ class ExpenseController extends Controller
                     'description' => $expense->notes,
                 ];
 
+                AuditLogger::deleted($expense, context: 'pos_expense');
                 $expense->delete();
 
                 // Log expense deletion

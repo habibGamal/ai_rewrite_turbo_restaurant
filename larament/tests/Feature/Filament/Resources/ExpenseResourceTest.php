@@ -1,15 +1,10 @@
 <?php
 
-use App\Filament\Resources\Expenses\Pages\CreateExpense;
-use App\Filament\Resources\Expenses\Pages\EditExpense;
 use App\Filament\Resources\Expenses\Pages\ListExpenses;
 use App\Filament\Resources\Expenses\Pages\ViewExpense;
 use App\Models\ExpenceType;
 use App\Models\Expense;
-use App\Models\Shift;
 use App\Models\User;
-use Filament\Actions\DeleteAction;
-use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -22,19 +17,6 @@ beforeEach(function () {
 // Page Rendering Tests
 it('can render the index page', function () {
     livewire(ListExpenses::class)
-        ->assertSuccessful();
-});
-
-it('can render the create page', function () {
-    livewire(CreateExpense::class)
-        ->assertSuccessful();
-});
-
-it('can render the edit page', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(EditExpense::class, ['record' => $record->getRouteKey()])
         ->assertSuccessful();
 });
 
@@ -84,50 +66,6 @@ it('can search expenses', function () {
 });
 
 // CRUD Operations
-it('can create an expense', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $shift = Shift::factory()->create(['closed' => false, 'end_at' => null]); // Active shift
-    $record = Expense::factory()->make([
-        'expence_type_id' => $expenseType->id,
-    ]);
-
-    livewire(CreateExpense::class)
-        ->fillForm([
-            'expence_type_id' => $expenseType->id,
-            'amount' => $record->amount,
-            'notes' => $record->notes,
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
-
-    $this->assertDatabaseHas(Expense::class, [
-        'expence_type_id' => $expenseType->id,
-        'shift_id' => $shift->id,
-        'amount' => $record->amount,
-    ]);
-});
-
-it('can update an expense', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-    $newRecord = Expense::factory()->make(['expence_type_id' => $expenseType->id]);
-
-    livewire(EditExpense::class, ['record' => $record->getRouteKey()])
-        ->fillForm([
-            'expence_type_id' => $expenseType->id,
-            'amount' => $newRecord->amount,
-            'notes' => $newRecord->notes,
-        ])
-        ->call('save')
-        ->assertHasNoFormErrors();
-
-    $this->assertDatabaseHas(Expense::class, [
-        'id' => $record->id,
-        'expence_type_id' => $expenseType->id,
-        'amount' => $newRecord->amount,
-    ]);
-});
-
 it('can view an expense', function () {
     $expenseType = ExpenceType::factory()->create();
     $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
@@ -140,74 +78,7 @@ it('can view an expense', function () {
         ]);
 });
 
-it('can delete an expense', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(EditExpense::class, ['record' => $record->getRouteKey()])
-        ->assertActionExists('delete')
-        ->callAction(DeleteAction::class);
-
-    $this->assertModelMissing($record);
-});
-
-it('can bulk delete expenses', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $records = Expense::factory(5)->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(ListExpenses::class)
-        ->callTableBulkAction('delete', $records);
-
-    foreach ($records as $record) {
-        $this->assertModelMissing($record);
-    }
-});
-
 // Form Validation Tests
-it('can validate required expence_type_id', function () {
-    livewire(CreateExpense::class)
-        ->fillForm(['expence_type_id' => null])
-        ->call('create')
-        ->assertHasFormErrors(['expence_type_id' => ['required']]);
-});
-
-it('can validate required amount', function () {
-    $expenseType = ExpenceType::factory()->create();
-
-    livewire(CreateExpense::class)
-        ->fillForm([
-            'expence_type_id' => $expenseType->id,
-            'amount' => null,
-        ])
-        ->call('create')
-        ->assertHasFormErrors(['amount' => ['required']]);
-});
-
-it('can validate numeric amount', function () {
-    $expenseType = ExpenceType::factory()->create();
-
-    livewire(CreateExpense::class)
-        ->fillForm([
-            'expence_type_id' => $expenseType->id,
-            'amount' => 'not-a-number',
-        ])
-        ->call('create')
-        ->assertHasFormErrors(['amount' => ['numeric']]);
-});
-
-it('can validate max length on notes', function () {
-    $expenseType = ExpenceType::factory()->create();
-
-    livewire(CreateExpense::class)
-        ->fillForm([
-            'expence_type_id' => $expenseType->id,
-            'amount' => 100,
-            'notes' => Str::random(1001),
-        ])
-        ->call('create')
-        ->assertHasFormErrors(['notes' => ['max:1000']]);
-});
-
 // Table Actions Tests
 it('has view action on list page', function () {
     $expenseType = ExpenceType::factory()->create();
@@ -217,45 +88,26 @@ it('has view action on list page', function () {
         ->assertTableActionExists('view');
 });
 
-it('has edit action on list page', function () {
+it('is read-only: no create, edit or delete actions', function () {
     $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
+    Expense::factory()->create(['expence_type_id' => $expenseType->id]);
 
     livewire(ListExpenses::class)
-        ->assertTableActionExists('edit');
-});
-
-it('has delete action on list page', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(ListExpenses::class)
-        ->assertTableActionExists('delete');
+        ->assertTableActionDoesNotExist('edit')
+        ->assertTableActionDoesNotExist('delete')
+        ->assertTableActionExists('openShiftMoney')
+        ->assertActionDoesNotExist('create')
+        ->assertActionExists('shiftMoney');
 });
 
 // Page Actions Tests
-it('has view action on edit page header', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(EditExpense::class, ['record' => $record->getRouteKey()])
-        ->assertActionExists('view');
-});
-
-it('has delete action on edit page header', function () {
-    $expenseType = ExpenceType::factory()->create();
-    $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
-
-    livewire(EditExpense::class, ['record' => $record->getRouteKey()])
-        ->assertActionExists('delete');
-});
-
-it('has edit action on view page header', function () {
+it('links the view page to the shift money page', function () {
     $expenseType = ExpenceType::factory()->create();
     $record = Expense::factory()->create(['expence_type_id' => $expenseType->id]);
 
     livewire(ViewExpense::class, ['record' => $record->getRouteKey()])
-        ->assertActionExists('edit');
+        ->assertActionDoesNotExist('edit')
+        ->assertActionExists('openShiftMoney');
 });
 
 // Record Visibility Tests

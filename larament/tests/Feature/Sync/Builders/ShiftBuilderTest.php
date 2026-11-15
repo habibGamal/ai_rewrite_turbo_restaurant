@@ -22,6 +22,8 @@ it('builds a shift snapshot', function () {
         'losses_amount' => 20.00,
         'has_deficit' => true,
         'closed' => true,
+        'money_edited_at' => null,
+        'money_edited_count' => 0,
     ]);
 
     $data = app(ShiftBuilder::class)->build($shift->uuid);
@@ -37,6 +39,8 @@ it('builds a shift snapshot', function () {
         'losses_amount' => '20.00',
         'has_deficit' => true,
         'closed' => true,
+        'money_edited_at' => null,
+        'money_edited_count' => 0,
     ]);
 });
 
