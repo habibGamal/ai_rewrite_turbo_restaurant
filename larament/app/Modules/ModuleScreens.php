@@ -6,19 +6,16 @@ use App\Enums\OptionalFeature;
 use App\Filament\Pages\ExternalSellerAccount;
 use App\Filament\Pages\ExternalSellerAccounts;
 use App\Filament\Pages\Reports\DriverPerformanceReport;
-use App\Filament\Pages\Reports\KitchenPerformanceReport;
 use App\Filament\Pages\Reports\ManufacturingYieldReport;
 use App\Filament\Pages\Reports\WebOrdersReport;
 use App\Filament\Resources\Drivers\DriverResource;
 use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
-use App\Filament\Resources\KitchenStations\KitchenStationResource;
 use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
 use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
 use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RawMaterialProducts\RawMaterialProductResource;
 use App\Filament\Resources\Regions\RegionResource;
-use App\Filament\Resources\TableTypes\TableTypeResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -27,8 +24,9 @@ use Filament\Resources\Pages\Page as ResourcePage;
  * out of the navigation and answers 404 on a direct URL (see
  * EnsureModuleScreenEnabled), never a "feature disabled" message.
  *
- * Phase 4 moves these screens into their module's Filament plugin; until
- * then this map is the single place that ties a screen to its module.
+ * A screen under app/Modules/<Module>/ belongs to that module by its
+ * namespace. map() lists the screens still outside the modules; Phase 4
+ * empties it as each module's screens move in.
  */
 final class ModuleScreens
 {
@@ -38,10 +36,6 @@ final class ModuleScreens
     public static function map(): array
     {
         return [
-            KitchenStationResource::class => Module::RESTAURANT,
-            TableTypeResource::class => Module::RESTAURANT,
-            KitchenPerformanceReport::class => Module::RESTAURANT,
-
             DriverResource::class => Module::DELIVERY,
             RegionResource::class => Module::DELIVERY,
             DriverPerformanceReport::class => Module::DELIVERY,
@@ -86,7 +80,32 @@ final class ModuleScreens
         }
 
         if (is_subclass_of($class, ResourcePage::class)) {
-            return $map[$class::getResource()] ?? null;
+            $class = $class::getResource();
+
+            if (isset($map[$class])) {
+                return $map[$class];
+            }
+        }
+
+        return self::moduleOfNamespace($class);
+    }
+
+    /**
+     * Screens that live in a module (app/Modules/<Module>/...) belong to it
+     * without being listed in map().
+     */
+    private static function moduleOfNamespace(string $class): ?Module
+    {
+        if (! str_starts_with($class, 'App\\Modules\\')) {
+            return null;
+        }
+
+        $directory = explode('\\', $class)[2] ?? '';
+
+        foreach (Module::cases() as $module) {
+            if (ModuleFilament::directory($module) === $directory) {
+                return $module;
+            }
         }
 
         return null;

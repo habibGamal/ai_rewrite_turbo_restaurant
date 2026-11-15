@@ -10,18 +10,19 @@ use App\Http\Requests\CompleteOrderRequest;
 use App\Http\Requests\SaveOrderRequest;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\DineTable;
 use App\Models\Driver;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Models\ExternalSeller;
+use App\Models\HeldSale;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Region;
 use App\Models\Shift;
-use App\Models\TableType;
 use App\Models\User;
+use App\Modules\BusinessType;
+use App\Orders\Behaviors\ProvidesTabData;
 use App\Orders\CashierTabLayout;
 use App\Orders\GuestBill;
 use App\Orders\OrderOpening;
@@ -31,7 +32,6 @@ use App\Orders\ReceiptView;
 use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
-use App\Services\Orders\FloorLayoutService;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
 use App\Services\Products\PosVariantCatalogService;
@@ -43,8 +43,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use App\Models\HeldSale;
-use App\Modules\BusinessType;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -170,10 +168,11 @@ class OrderController extends Controller
             }
 
             if ($tab['kind'] === 'type' && $tab['code'] !== null) {
-                $tab['presentation'] = $this->catalog->behaviorFor($tab['code'])->presentation($this->catalog->find($tab['code']))->toArray();
-                if ($tab['presentation']['body'] === 'floor') {
-                    $tab['layout'] = app(FloorLayoutService::class)->read($tab['code']);
-                    $tab['occupancy'] = DineTable::query()->where('order_type_code', $tab['code'])->whereNotNull('order_id')->with('order')->get()->filter(fn (DineTable $table) => $table->order !== null)->mapWithKeys(fn (DineTable $table) => [$table->table_number => ['id' => $table->order->id, 'order_number' => $table->order->order_number, 'created_at' => $table->order->created_at]])->all();
+                $behavior = $this->catalog->behaviorFor($tab['code']);
+                $type = $this->catalog->find($tab['code']);
+                $tab['presentation'] = $behavior->presentation($type)->toArray();
+                if ($behavior instanceof ProvidesTabData) {
+                    $tab = [...$tab, ...$behavior->tabData($type)];
                 }
                 $tab['display'] = $this->catalog->display($tab['code'])->toArray();
                 if ($tab['presentation']['body'] === 'instant') {
@@ -995,45 +994,6 @@ class OrderController extends Controller
     }
 
     /**
-     * Print kitchen order with multiple printers
-     */
-    public function printInKitchen(Request $request)
-    {
-        $validated = $request->validate([
-            'orderId' => 'required|integer|exists:orders,id',
-            'type' => 'nullable|string|in:normal,changes',
-            'items' => 'nullable|array',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.name' => 'required|string',
-            'items.*.quantity' => 'nullable|numeric',
-            'items.*.old_quantity' => 'nullable|numeric',
-            'items.*.new_quantity' => 'nullable|numeric',
-            'items.*.delta' => 'nullable|numeric',
-            'items.*.notes' => 'nullable|string|max:500',
-        ]);
-
-        try {
-            $type = $validated['type'] ?? 'normal';
-
-            if ($type === 'changes') {
-                $this->printService->printKitchenChangesReceipt(
-                    $validated['orderId'],
-                    $validated['items'] ?? []
-                );
-            } else {
-                $this->printService->printKitchenReceipt(
-                    $validated['orderId'],
-                    $validated['items'] ?? []
-                );
-            }
-
-            return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
-        } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ: '.$e->getMessage()]);
-        }
-    }
-
-    /**
      * Open the cashier drawer
      */
     public function openCashierDrawer()
@@ -1087,32 +1047,6 @@ class OrderController extends Controller
             logger()->error('Error creating order: '.$e->getMessage());
 
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنشاء الطلب: '.$e->getMessage()]);
-        }
-    }
-
-    /**
-     * Get table types
-     */
-    public function getTableTypes()
-    {
-        try {
-            $tableTypes = TableType::orderBy('name')->get();
-
-            // If no table types exist, return default option
-            if ($tableTypes->isEmpty()) {
-                $tableTypes = collect([
-                    (object) [
-                        'id' => null,
-                        'name' => 'صالة',
-                        'created_at' => null,
-                        'updated_at' => null,
-                    ],
-                ]);
-            }
-
-            return response()->json($tableTypes);
-        } catch (Exception $e) {
-            return response()->json(['error' => 'حدث خطأ أثناء جلب أنواع الطاولات'], 500);
         }
     }
 }

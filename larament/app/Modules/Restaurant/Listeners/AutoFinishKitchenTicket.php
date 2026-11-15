@@ -3,7 +3,7 @@
 namespace App\Modules\Restaurant\Listeners;
 
 use App\Core\Events\OrderCompleted;
-use App\Services\Kitchen\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 
 /**
  * In transaction: writes ticket state; honours KDS_AUTO_FINISH_ON_COMPLETE.

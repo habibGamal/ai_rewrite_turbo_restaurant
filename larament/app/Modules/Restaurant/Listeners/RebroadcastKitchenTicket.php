@@ -3,7 +3,7 @@
 namespace App\Modules\Restaurant\Listeners;
 
 use App\Core\Events\OrderTypeChanged;
-use App\Services\Kitchen\KitchenTicketService;
+use App\Modules\Restaurant\Services\KitchenTicketService;
 use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 
 /**

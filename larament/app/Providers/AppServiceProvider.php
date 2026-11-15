@@ -37,7 +37,6 @@ use App\Observers\ProductObserver;
 use App\Orders\Behaviors\CompaniesBehavior;
 use App\Orders\Behaviors\CounterBehavior;
 use App\Orders\Behaviors\DeliveryBehavior;
-use App\Orders\Behaviors\DineInBehavior;
 use App\Orders\Behaviors\InstantSaleBehavior;
 use App\Orders\Behaviors\WebDeliveryBehavior;
 use App\Orders\Behaviors\WebTakeawayBehavior;
@@ -76,16 +75,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(OrderBehaviorRegistry::class, function ($app): OrderBehaviorRegistry {
             $registry = new OrderBehaviorRegistry($app);
 
-            // Core behaviours. Phase 4 moves dine_in, delivery and the web
-            // behaviours into the Restaurant, Delivery and Web orders modules;
-            // until then they name their module here so a shop never sees them.
-            $registry->register(OrderBehavior::DINE_IN->value, DineInBehavior::class, 'صالة', module: Module::RESTAURANT);
-            $registry->register(OrderBehavior::DELIVERY->value, DeliveryBehavior::class, 'دليفري', module: Module::DELIVERY);
-            $registry->register(OrderBehavior::COUNTER->value, CounterBehavior::class, 'كاونتر');
-            $registry->register(OrderBehavior::COMPANIES->value, CompaniesBehavior::class, 'شركات');
-            $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false, module: Module::WEB_ORDERS);
-            $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false, module: Module::WEB_ORDERS);
-            $registry->register(OrderBehavior::INSTANT->value, InstantSaleBehavior::class, 'بيع مباشر', selectable: false);
+            // Core behaviours. Module behaviours (dine_in from Restaurant) are
+            // added by their module's service provider; delivery and the web
+            // behaviours still name their module here until they move too.
+            $registry->register(OrderBehavior::DELIVERY->value, DeliveryBehavior::class, 'دليفري', module: Module::DELIVERY, sort: 20);
+            $registry->register(OrderBehavior::COUNTER->value, CounterBehavior::class, 'كاونتر', sort: 30);
+            $registry->register(OrderBehavior::COMPANIES->value, CompaniesBehavior::class, 'شركات', sort: 40);
+            $registry->register(OrderBehavior::WEB_DELIVERY->value, WebDeliveryBehavior::class, 'اونلاين دليفري', selectable: false, module: Module::WEB_ORDERS, sort: 50);
+            $registry->register(OrderBehavior::WEB_TAKEAWAY->value, WebTakeawayBehavior::class, 'اونلاين تيك أواي', selectable: false, module: Module::WEB_ORDERS, sort: 60);
+            $registry->register(OrderBehavior::INSTANT->value, InstantSaleBehavior::class, 'بيع مباشر', selectable: false, sort: 70);
 
             return $registry;
         });

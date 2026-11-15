@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Events\Kitchen\KitchenTicketUpdated;
 use App\Events\Orders\OrderCancelledBroadcast;
 use App\Events\Orders\OrderCompletedBroadcast;
 use App\Events\Orders\OrderCreatedBroadcast;
@@ -9,6 +8,7 @@ use App\Events\Orders\OrderTypeChangedBroadcast;
 use App\Events\Orders\PaymentProcessedBroadcast;
 use App\Events\Orders\WebOrderReceived;
 use App\Models\Order;
+use App\Modules\Restaurant\Events\KitchenTicketUpdated;
 use App\Services\Orders\OrderService;
 use App\Services\WebApiService;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
