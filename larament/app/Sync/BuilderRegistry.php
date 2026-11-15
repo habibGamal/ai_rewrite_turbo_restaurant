@@ -11,6 +11,7 @@ use App\Sync\Builders\InventoryDayBuilder;
 use App\Sync\Builders\OrderBuilder;
 use App\Sync\Builders\OrderReturnBuilder;
 use App\Sync\Builders\ProductBuilder;
+use App\Sync\Builders\ProductGroupBuilder;
 use App\Sync\Builders\PurchaseBuilder;
 use App\Sync\Builders\RecipeBuilder;
 use App\Sync\Builders\ShiftBuilder;
@@ -35,6 +36,7 @@ class BuilderRegistry
             DocumentType::PurchaseReturn => new PurchaseBuilder(DocumentType::PurchaseReturn),
             DocumentType::Waste => app(WasteBuilder::class),
             DocumentType::Stocktaking => app(StocktakingBuilder::class),
+            DocumentType::ProductGroup => app(ProductGroupBuilder::class),
             DocumentType::Product => app(ProductBuilder::class),
             DocumentType::Recipe => app(RecipeBuilder::class),
             DocumentType::Category => app(CategoryBuilder::class),

@@ -2,11 +2,14 @@
 
 use App\Sync\BuilderRegistry;
 use App\Sync\Builders\CategoryBuilder;
+use App\Sync\Builders\DaySummaryBuilder;
 use App\Sync\Builders\ExpenseBuilder;
 use App\Sync\Builders\ExpenseTypeBuilder;
+use App\Sync\Builders\InventoryDayBuilder;
 use App\Sync\Builders\OrderBuilder;
 use App\Sync\Builders\OrderReturnBuilder;
 use App\Sync\Builders\ProductBuilder;
+use App\Sync\Builders\ProductGroupBuilder;
 use App\Sync\Builders\PurchaseBuilder;
 use App\Sync\Builders\RecipeBuilder;
 use App\Sync\Builders\ShiftBuilder;
@@ -30,12 +33,13 @@ it('resolves builders for all supported document types', function (DocumentType 
     [DocumentType::PurchaseReturn, PurchaseBuilder::class],
     [DocumentType::Waste, WasteBuilder::class],
     [DocumentType::Stocktaking, StocktakingBuilder::class],
+    [DocumentType::ProductGroup, ProductGroupBuilder::class],
     [DocumentType::Product, ProductBuilder::class],
     [DocumentType::Recipe, RecipeBuilder::class],
     [DocumentType::Category, CategoryBuilder::class],
     [DocumentType::Supplier, SupplierBuilder::class],
     [DocumentType::ExpenseType, ExpenseTypeBuilder::class],
     [DocumentType::Staff, StaffBuilder::class],
-    [DocumentType::InventoryDay, \App\Sync\Builders\InventoryDayBuilder::class],
-    [DocumentType::DaySummary, \App\Sync\Builders\DaySummaryBuilder::class],
+    [DocumentType::InventoryDay, InventoryDayBuilder::class],
+    [DocumentType::DaySummary, DaySummaryBuilder::class],
 ]);

@@ -35,6 +35,51 @@ class BatchSender
     }
 
     /**
+     * Documents are sent in outbox order (priority desc, id asc). On top of
+     * that, a product_group upsert must reach the platform before any product
+     * (SKU) in the same batch that may reference it: every product_group
+     * upsert that sits after the first product document is moved to just
+     * before it. Everything else keeps its relative order. Group deletes are
+     * not moved, so variants recorded before a group delete (to drop their
+     * reference) still go first.
+     *
+     * @param  array<int, array<string, mixed>>  $documents
+     * @return array<int, array<string, mixed>>
+     */
+    public static function orderDependencies(array $documents): array
+    {
+        $firstProduct = null;
+        foreach ($documents as $i => $doc) {
+            if ($doc['type'] === DocumentType::Product->value) {
+                $firstProduct = $i;
+                break;
+            }
+        }
+
+        if ($firstProduct === null) {
+            return $documents;
+        }
+
+        $hoisted = [];
+        $rest = [];
+        foreach ($documents as $i => $doc) {
+            if ($i > $firstProduct && $doc['type'] === DocumentType::ProductGroup->value && $doc['op'] !== 'delete') {
+                $hoisted[] = $doc;
+            } else {
+                $rest[] = $doc;
+            }
+        }
+
+        if ($hoisted === []) {
+            return $documents;
+        }
+
+        array_splice($rest, $firstProduct, 0, $hoisted);
+
+        return $rest;
+    }
+
+    /**
      * Run the sync loop sending pending batches and due outbox rows.
      */
     public function run(int $maxSeconds = 50): SyncRunResult
@@ -157,6 +202,8 @@ class BatchSender
                     'data' => $data,
                 ];
             }
+
+            $documents = self::orderDependencies($documents);
 
             $seqFrom = (int) $rows->min('id');
             $seqTo = (int) $rows->max('id');

@@ -12,7 +12,11 @@ use App\Models\OrderReturn;
 use App\Models\Payment;
 use App\Models\PlatformConnection;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductComponent;
+use App\Models\ProductGroup;
+use App\Models\ProductOption;
+use App\Models\ProductOptionValue;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Shift;
@@ -79,8 +83,33 @@ class SyncOutboxObserver
             // The vendor account never leaves the install.
             User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model)),
             ProductComponent::class => $this->handleProductComponentSaved($model),
+            ProductGroup::class => Outbox::record(DocumentType::ProductGroup, $this->getModelUuid($model)),
+            ProductOption::class, ProductOptionValue::class => $this->recordParentGroup($model),
+            ProductBarcode::class => $this->recordBarcodeProduct($model),
             default => null,
         };
+    }
+
+    /**
+     * Handle the Model "deleting" event.
+     *
+     * Deleting a group nulls products.product_group_id in the database (no
+     * model events), so its variants are recorded here, before the delete,
+     * and are rebuilt at send time without the group reference.
+     */
+    public function deleting(Model $model): void
+    {
+        if (! PlatformConnection::active()) {
+            return;
+        }
+
+        if ($model instanceof ProductGroup) {
+            Product::query()
+                ->where('product_group_id', $model->id)
+                ->whereNotNull('uuid')
+                ->pluck('uuid')
+                ->each(fn ($uuid) => Outbox::record(DocumentType::Product, (string) $uuid));
+        }
     }
 
     /**
@@ -114,8 +143,43 @@ class SyncOutboxObserver
             ExpenceType::class => Outbox::record(DocumentType::ExpenseType, $this->getModelUuid($model), 'delete'),
             User::class => $model->is_vendor ? null : Outbox::record(DocumentType::Staff, $this->getModelUuid($model), 'delete'),
             ProductComponent::class => $this->handleProductComponentDeleted($model),
+            ProductGroup::class => Outbox::record(DocumentType::ProductGroup, $this->getModelUuid($model), 'delete'),
+            ProductOption::class, ProductOptionValue::class => $this->recordParentGroup($model),
+            ProductBarcode::class => $this->recordBarcodeProduct($model),
             default => null,
         };
+    }
+
+    /**
+     * An option or option value changed: the group document carries the full
+     * option tree, so re-send the group.
+     */
+    protected function recordParentGroup(ProductOption|ProductOptionValue $model): void
+    {
+        $groupId = $model instanceof ProductOption
+            ? $model->product_group_id
+            : ProductOption::query()->whereKey($model->product_option_id)->value('product_group_id');
+
+        if ($groupId === null) {
+            return;
+        }
+
+        $uuid = ProductGroup::query()->whereKey($groupId)->value('uuid');
+        if (is_string($uuid)) {
+            Outbox::record(DocumentType::ProductGroup, $uuid);
+        }
+    }
+
+    /**
+     * A barcode changed: the product document carries the barcode list.
+     * Skipped when the product itself is already gone.
+     */
+    protected function recordBarcodeProduct(ProductBarcode $barcode): void
+    {
+        $uuid = Product::query()->whereKey($barcode->product_id)->value('uuid');
+        if (is_string($uuid)) {
+            Outbox::record(DocumentType::Product, $uuid);
+        }
     }
 
     protected function handleOrderSaved(Order $order): void
