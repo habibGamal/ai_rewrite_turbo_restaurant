@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Resources\Drivers\Pages;
+namespace App\Modules\Delivery\Filament\Resources\Drivers\Pages;
 
-use App\Filament\Resources\Drivers\DriverResource;
-use App\Filament\Resources\Drivers\RelationManagers\OrdersRelationManager;
+use App\Modules\Delivery\Filament\Resources\Drivers\DriverResource;
+use App\Modules\Delivery\Filament\Resources\Drivers\RelationManagers\OrdersRelationManager;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 

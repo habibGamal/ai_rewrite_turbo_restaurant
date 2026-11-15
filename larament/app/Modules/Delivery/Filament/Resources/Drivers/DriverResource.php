@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources\Regions;
+namespace App\Modules\Delivery\Filament\Resources\Drivers;
 
-use App\Filament\Resources\Regions\Pages\CreateRegion;
-use App\Filament\Resources\Regions\Pages\EditRegion;
-use App\Filament\Resources\Regions\Pages\ListRegions;
-use App\Filament\Resources\Regions\Pages\ViewRegion;
+use App\Modules\Delivery\Filament\Resources\Drivers\Pages\CreateDriver;
+use App\Modules\Delivery\Filament\Resources\Drivers\Pages\EditDriver;
+use App\Modules\Delivery\Filament\Resources\Drivers\Pages\ListDrivers;
+use App\Modules\Delivery\Filament\Resources\Drivers\Pages\ViewDriver;
 use App\Filament\Traits\BelongsToModule;
-use App\Models\Region;
+use App\Models\Driver;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -19,26 +19,26 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class RegionResource extends Resource
+class DriverResource extends Resource
 {
     use BelongsToModule;
 
-    protected static ?string $model = Region::class;
+    protected static ?string $model = Driver::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
 
     protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     public static function getModelLabel(): string
     {
-        return 'منطقة';
+        return 'سائق';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'المناطق';
+        return 'السائقين';
     }
 
     public static function form(Schema $schema): Schema
@@ -46,14 +46,13 @@ class RegionResource extends Resource
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label('اسم المنطقة')
+                    ->label('اسم السائق')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('delivery_cost')
-                    ->label('تكلفة التوصيل')
-                    ->numeric()
-                    ->default(0)
-                    ->prefix('ج.م'),
+                TextInput::make('phone')
+                    ->label('رقم الهاتف')
+                    ->tel()
+                    ->maxLength(255),
             ]);
     }
 
@@ -62,12 +61,16 @@ class RegionResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('اسم المنطقة')
+                    ->label('اسم السائق')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('delivery_cost')
-                    ->label('تكلفة التوصيل')
-                    ->money('EGP')
+                TextColumn::make('phone')
+                    ->label('رقم الهاتف')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('orders_count')
+                    ->label('عدد الطلبات')
+                    ->counts('orders')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -98,10 +101,10 @@ class RegionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListRegions::route('/'),
-            'create' => CreateRegion::route('/create'),
-            'view' => ViewRegion::route('/{record}'),
-            'edit' => EditRegion::route('/{record}/edit'),
+            'index' => ListDrivers::route('/'),
+            'create' => CreateDriver::route('/create'),
+            'view' => ViewDriver::route('/{record}'),
+            'edit' => EditDriver::route('/{record}/edit'),
         ];
     }
 }

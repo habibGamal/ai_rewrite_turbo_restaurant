@@ -5,17 +5,14 @@ namespace App\Modules;
 use App\Enums\OptionalFeature;
 use App\Filament\Pages\ExternalSellerAccount;
 use App\Filament\Pages\ExternalSellerAccounts;
-use App\Filament\Pages\Reports\DriverPerformanceReport;
 use App\Filament\Pages\Reports\ManufacturingYieldReport;
 use App\Filament\Pages\Reports\WebOrdersReport;
-use App\Filament\Resources\Drivers\DriverResource;
 use App\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Filament\Resources\ManufacturedProducts\ManufacturedProductResource;
 use App\Filament\Resources\ManufacturingOrders\ManufacturingOrderResource;
 use App\Filament\Resources\ManufacturingRecipes\ManufacturingRecipeResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RawMaterialProducts\RawMaterialProductResource;
-use App\Filament\Resources\Regions\RegionResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -36,10 +33,6 @@ final class ModuleScreens
     public static function map(): array
     {
         return [
-            DriverResource::class => Module::DELIVERY,
-            RegionResource::class => Module::DELIVERY,
-            DriverPerformanceReport::class => Module::DELIVERY,
-
             WebOrdersReport::class => Module::WEB_ORDERS,
 
             ManufacturedProductResource::class => Module::MANUFACTURING,

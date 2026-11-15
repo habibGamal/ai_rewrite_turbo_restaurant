@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Orders\Behaviors;
+namespace App\Modules\Delivery\Behaviors;
+
+use App\Orders\Behaviors\OrderTypeBehavior;
 
 use App\Models\Customer;
 use App\Models\Order;

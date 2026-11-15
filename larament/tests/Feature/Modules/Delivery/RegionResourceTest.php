@@ -1,9 +1,9 @@
 <?php
 
-use App\Filament\Resources\Regions\Pages\CreateRegion;
-use App\Filament\Resources\Regions\Pages\EditRegion;
-use App\Filament\Resources\Regions\Pages\ListRegions;
-use App\Filament\Resources\Regions\Pages\ViewRegion;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\CreateRegion;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\EditRegion;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\ListRegions;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\ViewRegion;
 use App\Models\Region;
 use App\Models\User;
 use Filament\Actions\DeleteAction;

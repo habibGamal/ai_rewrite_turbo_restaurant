@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\Regions\Pages;
+namespace App\Modules\Delivery\Filament\Resources\Drivers\Pages;
 
-use App\Filament\Resources\Regions\RegionResource;
+use App\Modules\Delivery\Filament\Resources\Drivers\DriverResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditRegion extends EditRecord
+class EditDriver extends EditRecord
 {
-    protected static string $resource = RegionResource::class;
+    protected static string $resource = DriverResource::class;
 
     protected function getHeaderActions(): array
     {

@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Modules\Delivery\Services;
+
+use App\Services\ShiftsReportService;
 
 use App\Enums\OrderStatus;
 use App\Models\Driver;

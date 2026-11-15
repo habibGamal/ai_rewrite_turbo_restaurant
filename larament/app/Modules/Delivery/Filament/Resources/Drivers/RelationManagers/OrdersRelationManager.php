@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Drivers\RelationManagers;
+namespace App\Modules\Delivery\Filament\Resources\Drivers\RelationManagers;
 
 use App\Enums\OrderStatus;
 use App\Models\Shift;

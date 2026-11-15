@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Resources\Drivers;
+namespace App\Modules\Delivery\Filament\Resources\Regions;
 
-use App\Filament\Resources\Drivers\Pages\CreateDriver;
-use App\Filament\Resources\Drivers\Pages\EditDriver;
-use App\Filament\Resources\Drivers\Pages\ListDrivers;
-use App\Filament\Resources\Drivers\Pages\ViewDriver;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\CreateRegion;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\EditRegion;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\ListRegions;
+use App\Modules\Delivery\Filament\Resources\Regions\Pages\ViewRegion;
 use App\Filament\Traits\BelongsToModule;
-use App\Models\Driver;
+use App\Models\Region;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -19,26 +19,26 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class DriverResource extends Resource
+class RegionResource extends Resource
 {
     use BelongsToModule;
 
-    protected static ?string $model = Driver::class;
+    protected static ?string $model = Region::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map';
 
     protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     public static function getModelLabel(): string
     {
-        return 'سائق';
+        return 'منطقة';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'السائقين';
+        return 'المناطق';
     }
 
     public static function form(Schema $schema): Schema
@@ -46,13 +46,14 @@ class DriverResource extends Resource
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label('اسم السائق')
+                    ->label('اسم المنطقة')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('phone')
-                    ->label('رقم الهاتف')
-                    ->tel()
-                    ->maxLength(255),
+                TextInput::make('delivery_cost')
+                    ->label('تكلفة التوصيل')
+                    ->numeric()
+                    ->default(0)
+                    ->prefix('ج.م'),
             ]);
     }
 
@@ -61,16 +62,12 @@ class DriverResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('اسم السائق')
+                    ->label('اسم المنطقة')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('phone')
-                    ->label('رقم الهاتف')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('orders_count')
-                    ->label('عدد الطلبات')
-                    ->counts('orders')
+                TextColumn::make('delivery_cost')
+                    ->label('تكلفة التوصيل')
+                    ->money('EGP')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
@@ -101,10 +98,10 @@ class DriverResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListDrivers::route('/'),
-            'create' => CreateDriver::route('/create'),
-            'view' => ViewDriver::route('/{record}'),
-            'edit' => EditDriver::route('/{record}/edit'),
+            'index' => ListRegions::route('/'),
+            'create' => CreateRegion::route('/create'),
+            'view' => ViewRegion::route('/{record}'),
+            'edit' => EditRegion::route('/{record}/edit'),
         ];
     }
 }

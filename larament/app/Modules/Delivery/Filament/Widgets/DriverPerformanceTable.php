@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Modules\Delivery\Filament\Widgets;
 
 use App\Models\Driver;
 use App\Services\ShiftsReportService;

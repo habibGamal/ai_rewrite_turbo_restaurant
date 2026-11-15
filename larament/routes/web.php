@@ -57,20 +57,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/collect-remaining/{order}', [OrderController::class, 'collectRemaining'])->name('collectRemaining');
         Route::post('/cancel-order/{order}', [OrderController::class, 'cancelOrder'])->name('cancel');
         Route::post('/update-customer/{order}', [OrderController::class, 'updateCustomer'])->name('updateCustomer');
-        Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver')->middleware('module:delivery');
         Route::post('/update-type/{order}', [OrderController::class, 'updateOrderType'])->name('updateType');
         Route::post('/update-notes/{order}', [OrderController::class, 'updateOrderNotes'])->name('updateNotes');
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
-        Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver')->middleware('module:delivery');
     });
 
     // Quick operations routes
     Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
     Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
     Route::get('/products/lookup', ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
 
     // Instant sale (Phase 6c): one request per sale, held carts, returns and exchanges

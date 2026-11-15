@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Filament\Pages\Reports;
+namespace App\Modules\Delivery\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
-use App\Filament\Widgets\DriverPerformanceStatsWidget;
-use App\Filament\Widgets\DriverPerformanceTable;
+use App\Modules\Delivery\Filament\Widgets\DriverPerformanceStatsWidget;
+use App\Modules\Delivery\Filament\Widgets\DriverPerformanceTable;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;

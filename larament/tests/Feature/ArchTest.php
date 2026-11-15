@@ -33,3 +33,7 @@ arch('No file in the app directory uses `die`, `dd`, or `dump`.')
 arch('module internals are only used inside their module')
     ->expect('App\Modules\Restaurant')
     ->toOnlyBeUsedIn('App\Modules\Restaurant');
+
+arch('delivery module internals are only used inside their module')
+    ->expect('App\Modules\Delivery')
+    ->toOnlyBeUsedIn('App\Modules\Delivery');

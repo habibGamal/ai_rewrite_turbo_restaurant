@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Filament\Pages\Reports\DriverPerformanceReport;
-use App\Filament\Widgets\DriverPerformanceStatsWidget;
-use App\Filament\Widgets\DriverPerformanceTable;
+use App\Modules\Delivery\Filament\Pages\Reports\DriverPerformanceReport;
+use App\Modules\Delivery\Filament\Widgets\DriverPerformanceStatsWidget;
+use App\Modules\Delivery\Filament\Widgets\DriverPerformanceTable;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Models\Driver;
 use App\Models\Order;
