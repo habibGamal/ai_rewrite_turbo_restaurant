@@ -34,6 +34,7 @@ use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
+use App\Services\Products\PosProductSearchService;
 use App\Services\Products\PosVariantCatalogService;
 use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
@@ -204,8 +205,11 @@ class OrderController extends Controller
             ->latest('id')
             ->first();
 
+        $remoteCatalog = app(PosProductSearchService::class)->usesRemoteCatalog();
+
         return [
-            'categories' => $this->categoryTree(),
+            'categories' => $this->categoryTree(withProducts: ! $remoteCatalog),
+            'remoteCatalog' => $remoteCatalog,
             'lastSale' => $last instanceof Order ? [
                 'id' => $last->id,
                 'order_number' => (int) $last->order_number,
@@ -357,12 +361,17 @@ class OrderController extends Controller
      *
      * @return list<array<string, mixed>>
      */
-    private function categoryTree(): array
+    /**
+     * @param  bool  $withProducts  false sends the categories only (big catalogues
+     *                              search on the server instead)
+     */
+    private function categoryTree(bool $withProducts = true): array
     {
         $variantsEnabled = app(FeatureService::class)->variantsEnabled();
 
-        $productConstraint = function ($query) use ($variantsEnabled) {
+        $productConstraint = function ($query) use ($variantsEnabled, $withProducts) {
             $query
+                ->when(! $withProducts, fn ($query) => $query->whereRaw('1 = 0'))
                 ->whereNot('type', ProductType::RawMaterial)
                 ->where('legacy', false)
                 ->where('is_active', true)
@@ -370,7 +379,7 @@ class OrderController extends Controller
                 ->orderBy('name');
         };
 
-        $groups = $variantsEnabled ? app(PosVariantCatalogService::class)->tilesByCategory() : null;
+        $groups = $variantsEnabled && $withProducts ? app(PosVariantCatalogService::class)->tilesByCategory() : null;
 
         return Category::query()
             ->whereNull('parent_id')

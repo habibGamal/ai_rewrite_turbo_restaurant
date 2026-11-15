@@ -166,6 +166,8 @@ export interface InstantTabPayload {
   categories: Category[];
   lastSale: InstantLastSale | null;
   heldCount: number;
+  /** Catalogue too big to send: categories only, products come from the server search. */
+  remoteCatalog?: boolean;
   credit: {
     allow_partial_payment: boolean;
     allow_pay_later: boolean;

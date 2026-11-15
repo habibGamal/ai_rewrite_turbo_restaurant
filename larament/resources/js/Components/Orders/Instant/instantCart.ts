@@ -75,11 +75,14 @@ export type LookupResult =
 
 /**
  * Resolves a scanned/typed code: the server lookup first (extra barcodes, pack sizes,
- * scale labels), then the loaded menu by barcode or name.
+ * scale labels), then the loaded menu by barcode or name. With a big catalogue only part
+ * of the menu is loaded; `resolve` then fetches a product the server found but the
+ * screen has not loaded yet (null when it is not sold on this order type).
  */
 export const lookupProduct = async (
     code: string,
-    products: Product[]
+    products: Product[],
+    resolve?: (productId: number) => Promise<Product | null>
 ): Promise<LookupResult> => {
     const trimmed = code.trim();
     if (!trimmed) return { ok: false, message: "" };
@@ -91,7 +94,8 @@ export const lookupProduct = async (
             { params: { code: trimmed } }
         );
         if (data?.found !== false && data?.product_id) {
-            const product = products.find((p) => p.id === data.product_id);
+            const product = products.find((p) => p.id === data.product_id)
+                ?? (resolve ? await resolve(data.product_id).catch(() => null) : null);
             if (!product) {
                 return { ok: false, message: "هذا المنتج غير متاح لهذا النوع من الطلبات" };
             }
