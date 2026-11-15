@@ -213,9 +213,9 @@ class OrdersRelationManager extends RelationManager
     /**
      * Modify the table query to apply filters when shift_ids is provided in URL
      */
-    protected function applyFiltersToTableQuery(Builder $query): Builder
+    protected function applyFiltersToTableQuery(Builder $query, bool $isResolvingRecord = false): Builder
     {
-        $query = parent::applyFiltersToTableQuery($query);
+        $query = parent::applyFiltersToTableQuery($query, $isResolvingRecord);
 
         // Check if shift_ids is provided in URL and apply the filter
         $shiftIds = request()->get('shift_ids');

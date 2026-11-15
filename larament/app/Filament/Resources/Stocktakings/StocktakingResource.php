@@ -40,6 +40,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -352,14 +353,14 @@ class StocktakingResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array

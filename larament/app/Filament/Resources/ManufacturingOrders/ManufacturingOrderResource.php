@@ -13,6 +13,7 @@ use App\Models\ManufacturingRecipe;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Services\Manufacturing\ManufacturingCostPreviewService;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -35,6 +36,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Model;
 
 class ManufacturingOrderResource extends Resource
@@ -51,14 +53,14 @@ class ManufacturingOrderResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'إدارة المخزون';
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof ManufacturingOrder && $record->closed_at === null && parent::canEdit($record);
+        return ($record instanceof ManufacturingOrder && $record->closed_at === null && parent::getEditAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof ManufacturingOrder && $record->closed_at === null && parent::canDelete($record);
+        return ($record instanceof ManufacturingOrder && $record->closed_at === null && parent::getDeleteAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
     public static function form(Schema $schema): Schema
@@ -448,7 +450,7 @@ class ManufacturingOrderResource extends Resource
                             ->hiddenLabel()
                             ->content(fn (Get $get): string => (string) round((float) ($get('actual_quantity') ?? 0) - (float) ($get('expected_quantity') ?? 0), 3)),
                     ])
-                    ->deleteAction(function (\Filament\Actions\Action $action) {
+                    ->deleteAction(function (Action $action) {
                         $action->visible(fn (array $arguments, Repeater $component): bool => empty(($component->getRawState() ?? [])[$arguments['item'] ?? '']['is_main'] ?? false));
                         $action->action(function (array $arguments, Repeater $component): void {
                             $items = $component->getRawState() ?? [];

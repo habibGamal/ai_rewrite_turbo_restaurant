@@ -94,8 +94,7 @@ it('shows no shifts widget when no shifts in period', function () {
             'filterType' => 'period',
             'startDate' => now()->addDays(1)->toDateString(),
             'endDate' => now()->addDays(2)->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(NoShiftsInPeriodWidget::class);
 });
@@ -115,8 +114,7 @@ it('shows expense tables when shifts exist in period', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)
@@ -128,8 +126,7 @@ it('shows no shifts widget when selected shifts is empty', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(NoShiftsInPeriodWidget::class);
 });
@@ -146,8 +143,7 @@ it('shows expense tables when shifts are selected', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)
@@ -180,8 +176,7 @@ it('filters expenses by date range', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -204,8 +199,7 @@ it('filters expenses by selected shifts', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift1->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -374,8 +368,7 @@ it('passes correct filters to widgets when using period filter', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -392,8 +385,7 @@ it('passes correct filters to widgets when using shifts filter', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -425,8 +417,7 @@ it('shows correct widgets when multiple shifts are selected', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => $shifts->pluck('id')->toArray(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)

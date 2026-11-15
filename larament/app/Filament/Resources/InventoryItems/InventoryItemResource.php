@@ -18,7 +18,9 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class InventoryItemResource extends Resource
 {
@@ -162,23 +164,23 @@ class InventoryItemResource extends Resource
         ];
     }
 
-    public static function canCreate(): bool
+    public static function getCreateAuthorizationResponse(): Response
     {
-        return false;
+        return (false) ? Response::allow() : Response::deny();
     }
 
-    public static function canEdit($record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return false;
+        return (false) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete($record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return false;
+        return (false) ? Response::allow() : Response::deny();
     }
 
-    public static function canView($record): bool
+    public static function getViewAuthorizationResponse(Model $record): Response
     {
-        return true;
+        return (true) ? Response::allow() : Response::deny();
     }
 }

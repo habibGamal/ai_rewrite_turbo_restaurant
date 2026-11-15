@@ -32,6 +32,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -319,14 +320,14 @@ class StockIssueResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof StockIssue && is_null($record->closed_at) && parent::canEdit($record);
+        return ($record instanceof StockIssue && is_null($record->closed_at) && parent::getEditAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof StockIssue && is_null($record->closed_at) && parent::canDelete($record);
+        return ($record instanceof StockIssue && is_null($record->closed_at) && parent::getDeleteAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array

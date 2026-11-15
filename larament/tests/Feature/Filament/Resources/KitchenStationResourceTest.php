@@ -520,13 +520,12 @@ it('forbids associate and dissociate actions for users without update_kitchen_st
         'ownerRecord' => $station,
         'pageClass' => EditKitchenStation::class,
     ])
-        ->assertTableActionHidden('associate')
-        ->assertTableActionHidden('dissociate', $category);
+        // Filament 5 refuses to mount relation managers the user cannot view.
+        ->assertForbidden();
 
     livewire(ProductsRelationManager::class, [
         'ownerRecord' => $station,
         'pageClass' => EditKitchenStation::class,
     ])
-        ->assertTableActionHidden('associate')
-        ->assertTableActionHidden('dissociate', $product);
+        ->assertForbidden();
 });

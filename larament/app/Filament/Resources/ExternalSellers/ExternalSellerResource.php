@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -38,29 +39,29 @@ class ExternalSellerResource extends Resource
         return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canAccess();
     }
 
-    public static function canViewAny(): bool
+    public static function getViewAnyAuthorizationResponse(): Response
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canViewAny();
+        return (app(FeatureService::class)->outsourcedOrdersEnabled() && parent::getViewAnyAuthorizationResponse()->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canCreate(): bool
+    public static function getCreateAuthorizationResponse(): Response
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canCreate();
+        return (app(FeatureService::class)->outsourcedOrdersEnabled() && parent::getCreateAuthorizationResponse()->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canEdit($record);
+        return (app(FeatureService::class)->outsourcedOrdersEnabled() && parent::getEditAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canDelete($record);
+        return (app(FeatureService::class)->outsourcedOrdersEnabled() && parent::getDeleteAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canDeleteAny(): bool
+    public static function getDeleteAnyAuthorizationResponse(): Response
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canDeleteAny();
+        return (app(FeatureService::class)->outsourcedOrdersEnabled() && parent::getDeleteAnyAuthorizationResponse()->allowed()) ? Response::allow() : Response::deny();
     }
 
     public static function canGloballySearch(): bool

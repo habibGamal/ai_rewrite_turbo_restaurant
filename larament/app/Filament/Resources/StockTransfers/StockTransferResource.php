@@ -26,6 +26,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
 
@@ -106,14 +107,14 @@ class StockTransferResource extends Resource
         ])->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof StockTransfer && $record->closed_at === null && parent::canEdit($record);
+        return ($record instanceof StockTransfer && $record->closed_at === null && parent::getEditAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return $record instanceof StockTransfer && $record->closed_at === null && parent::canDelete($record);
+        return ($record instanceof StockTransfer && $record->closed_at === null && parent::getDeleteAuthorizationResponse($record)->allowed()) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array
