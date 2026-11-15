@@ -109,7 +109,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     const instant = tab.instant!;
     const typeCode = tab.code ?? "";
     const categories = instant.categories ?? [];
-    const can = instant.can ?? { discount: false, changeItems: false };
+    const can = instant.can ?? { discount: false, changeItems: false, returns: false };
+    const canReturn = Boolean(can.returns);
 
     const scannableProducts = useMemo(
         () => productsForOrder(categories, typeCode, false),
@@ -257,6 +258,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         try {
             await axios.post(route("pos.held-sales.store"), {
                 label: customer?.name || undefined,
+                type: typeCode,
                 items: itemsForApi(items),
                 meta: { discount, customer },
             });
@@ -386,7 +388,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 const order = data.order;
                 setLastSale({
                     id: order.id,
-                    order_number: order.order_number,
+                    order_number: Number(order.order_number),
                     total: Number(order.total),
                     change: Number(order.change),
                 });
@@ -427,7 +429,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         if (result.exchange_order) {
             setLastSale({
                 id: result.exchange_order.id,
-                order_number: result.exchange_order.order_number,
+                order_number: Number(result.exchange_order.order_number),
                 total: Number(result.exchange_order.total),
                 change: Number(result.exchange_order.change),
             });
@@ -459,7 +461,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
             case "heldList":
                 return setHeldOpen(true);
             case "returns":
-                return setReturnsOpen(true);
+                if (canReturn) setReturnsOpen(true);
+                return;
             case "pay":
                 return openPayment();
             case "clearCart":
@@ -638,12 +641,19 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                             {buttonLabel("بيانات العميل", "customer")}
                         </Button>
                         {/* Slot 4: salesperson (future). Hidden for now; customer spans both columns meanwhile. */}
-                        <Button size="large" icon={<FolderOpenOutlined />} onClick={() => setHeldOpen(true)}>
+                        <Button
+                            size="large"
+                            className={canReturn ? "" : "col-span-2"}
+                            icon={<FolderOpenOutlined />}
+                            onClick={() => setHeldOpen(true)}
+                        >
                             {buttonLabel(`الفواتير المعلقة${heldCount ? ` (${heldCount})` : ""}`, "heldList")}
                         </Button>
-                        <Button size="large" icon={<RollbackOutlined />} onClick={() => setReturnsOpen(true)}>
-                            {buttonLabel("مرتجع / استبدال", "returns")}
-                        </Button>
+                        {canReturn && (
+                            <Button size="large" icon={<RollbackOutlined />} onClick={() => setReturnsOpen(true)}>
+                                {buttonLabel("مرتجع / استبدال", "returns")}
+                            </Button>
+                        )}
                         {can.discount && (
                             <Button
                                 size="large"
@@ -773,7 +783,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 onCountChange={setHeldCount}
             />
             <ReturnsModal
-                open={returnsOpen}
+                open={returnsOpen && canReturn}
                 onClose={() => {
                     setReturnsOpen(false);
                     focusScan();
