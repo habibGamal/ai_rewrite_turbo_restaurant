@@ -149,6 +149,7 @@ class ShiftsReportService
         $sales = $completedOrders->sum('total');
         $profit = $completedOrders->sum('profit');
         $discounts = $completedOrders->sum('discount');
+        $fees = (float) $completedOrders->sum('fees_total');
 
         // Payments belong to the shift that took the money, not the order's shift.
         $cashPayments = 0;
@@ -185,6 +186,7 @@ class ShiftsReportService
             'profit' => $profit,
             'expenses' => $expenses,
             'discounts' => $discounts,
+            'fees' => $fees,
             'cashPayments' => $cashPayments,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
@@ -286,6 +288,7 @@ class ShiftsReportService
                 DB::raw('SUM(orders.total) as sales'),
                 DB::raw('SUM(orders.profit) as profit'),
                 DB::raw('SUM(orders.discount) as discounts'),
+                DB::raw('SUM(orders.fees_total) as fees'),
             ])
             ->leftJoin(
                 'orders',
@@ -327,6 +330,7 @@ class ShiftsReportService
             'profit' => $ordersData->profit ?? 0,
             'expenses' => $expensesData->expenses ?? 0,
             'discounts' => $ordersData->discounts ?? 0,
+            'fees' => (float) ($ordersData->fees ?? 0),
 
             'cashPayments' => $paymentsData->cash_payments ?? 0,
             'externalCash' => $externalCash,

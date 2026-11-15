@@ -141,6 +141,14 @@ class Order extends Model
     }
 
     /** @return HasMany<ExternalOrder, $this> */
+    /**
+     * Custom fee lines («رسوم إضافية»); their sum is fees_total.
+     */
+    public function fees(): HasMany
+    {
+        return $this->hasMany(OrderFee::class)->orderBy('id');
+    }
+
     public function externalOrders(): HasMany
     {
         return $this->hasMany(ExternalOrder::class, 'host_order_id');

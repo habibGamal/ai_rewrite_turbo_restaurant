@@ -90,6 +90,7 @@ export default function PaymentModal({
               tax: 0,
               service: 0,
               discount: cart.discount ?? 0,
+              fees: 0,
               total: cart.total,
           }
         : calculateOrderTotals(order!, orderItems ?? []);
@@ -307,6 +308,9 @@ export default function PaymentModal({
                 label: "الخصم",
                 children: formatCurrency(Number(totals.discount)),
             },
+            ...(totals.fees > 0
+                ? [{ key: "fees", label: "رسوم إضافية", children: formatCurrency(totals.fees) }]
+                : []),
             {
                 key: "5",
                 label: "الاجمالي",

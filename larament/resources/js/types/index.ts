@@ -271,6 +271,8 @@ export interface Order {
   temp_discount_percent: number;
   total: number;
   profit: number;
+  /** Custom fee lines («رسوم إضافية»); their sum is fees_total. */
+  fees?: OrderFee[];
   payment_status: 'pending' | 'partial_paid' | 'full_paid';
   dine_table_number?: string;
   guests_count?: number | null;
@@ -299,6 +301,15 @@ export interface Order {
   } | null;
   receiptPayment?: ReceiptPayment;
   receiptView?: ReceiptView;
+}
+
+export interface OrderFee {
+  id: number;
+  order_id: number;
+  name: string;
+  amount: number | string;
+  user_id?: number | null;
+  created_at?: string;
 }
 
 export interface ReceiptView {
@@ -433,6 +444,10 @@ export interface ManageOrderProps extends PageProps {
   sellers: { id: number; name: string; products: { id: number; name: string; price: number | string }[] }[];
   guestDue: number;
   canAddExternalOrder: boolean;
+  /** Custom fees are on and this order type may carry them. */
+  canAddFees?: boolean;
+  /** Fee names used before on this install, most used first. */
+  feeSuggestions?: string[];
   credit?: OrderCreditFlags;
   equipmentLines?: OrderEquipmentLine[];
   equipmentOptions?: EquipmentOption[];

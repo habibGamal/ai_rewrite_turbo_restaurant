@@ -83,12 +83,14 @@ class DaySummaryBuilder implements DocumentBuilder
         $discountTotal = 0.0;
         $cogsTotal = 0.0;
         $equipmentTotal = 0.0;
+        $feesTotal = 0.0;
 
         foreach ($completedOrders as $order) {
             $equipmentTotal += (float) $order->equipment_total;
 
             $netTotal += (float) $order->total - (float) ($order->tax ?? 0);
             $discountTotal += (float) ($order->discount ?? 0);
+            $feesTotal += (float) ($order->fees_total ?? 0);
 
             /** @var OrderItem $item */
             foreach ($order->items as $item) {
@@ -122,6 +124,7 @@ class DaySummaryBuilder implements DocumentBuilder
             'cogs_total' => Payload::money($cogsTotal),
             'expenses_total' => Payload::money($expensesTotal),
             'revenues_total' => Payload::money($revenuesTotal),
+            'fees_total' => Payload::money($feesTotal),
             'waste_total' => Payload::money($wasteTotal),
             'refunds_total' => Payload::money($returns['returnsAmount']),
             'refunds_cash' => Payload::money($returns['cashRefunds']),

@@ -147,6 +147,16 @@ export default function ReceiptTemplate({
                             {Number(order.tax).toFixed(2)}
                         </td>
                     </tr>
+                    {(order.fees ?? []).map((fee) => (
+                        <tr key={`fee-${fee.id}`}>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {fee.name}
+                            </td>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {Number(fee.amount).toFixed(2)}
+                            </td>
+                        </tr>
+                    ))}
                     <tr>
                         <td className="p-2 py-4 border border-solid border-black">
                             الاجمالي النهائي
