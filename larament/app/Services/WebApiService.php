@@ -16,6 +16,7 @@ use App\Services\Kitchen\KitchenTicketService;
 use App\Services\Orders\OrderCategoryBlockService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
+use Closure;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -239,14 +240,13 @@ class WebApiService
      */
     public function acceptOrder(int $orderId): void
     {
-        $order = Order::findOrFail($orderId);
-        $order->status = OrderStatus::PROCESSING;
-        $order->save();
+        $this->changeStatusLocked($orderId, function (Order $order): void {
+            $order->status = OrderStatus::PROCESSING;
+            $order->save();
 
-        // Web orders are placed as pending and reach the kitchen only once accepted.
-        $this->kitchenTicketService->syncOrder($order);
-
-        $this->notifyWebOrderWithStatus($order);
+            // Web orders are placed as pending and reach the kitchen only once accepted.
+            $this->kitchenTicketService->syncOrder($order);
+        });
     }
 
     /**
@@ -254,17 +254,16 @@ class WebApiService
      */
     public function rejectOrder(int $orderId): void
     {
-        $order = Order::findOrFail($orderId);
-        $order->status = OrderStatus::CANCELLED;
-        $order->save();
+        $this->changeStatusLocked($orderId, function (Order $order): void {
+            $order->status = OrderStatus::CANCELLED;
+            $order->save();
 
-        // Delete any payments
-        $order->payments()->delete();
-        Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
+            // Delete any payments
+            $order->payments()->delete();
+            Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
-        $this->kitchenTicketService->cancelForOrder($order);
-
-        $this->notifyWebOrderWithStatus($order);
+            $this->kitchenTicketService->cancelForOrder($order);
+        });
     }
 
     /**
@@ -272,11 +271,10 @@ class WebApiService
      */
     public function outForDelivery(int $orderId): void
     {
-        $order = Order::findOrFail($orderId);
-        $order->status = OrderStatus::OUT_FOR_DELIVERY;
-        $order->save();
-
-        $this->notifyWebOrderWithStatus($order);
+        $this->changeStatusLocked($orderId, function (Order $order): void {
+            $order->status = OrderStatus::OUT_FOR_DELIVERY;
+            $order->save();
+        });
     }
 
     /**
@@ -284,16 +282,33 @@ class WebApiService
      */
     public function completeOrder(int $orderId): Order
     {
-        $order = Order::findOrFail($orderId);
+        return $this->changeStatusLocked($orderId, function (Order $order): void {
+            $order->status = OrderStatus::COMPLETED;
+            $order->save();
 
-        $order->status = OrderStatus::COMPLETED;
-        $order->save();
+            $this->kitchenTicketService->autoFinishForOrder($order);
+        });
+    }
 
-        $this->kitchenTicketService->autoFinishForOrder($order);
+    /**
+     * Apply a web order status change atomically: the row is locked, the local
+     * change and the website notification run in one transaction, so a failed
+     * notification rolls the status back instead of leaving the two out of sync.
+     * Broadcast events fired inside wait for the commit (ShouldDispatchAfterCommit).
+     *
+     * @param  Closure(Order): void  $change
+     */
+    private function changeStatusLocked(int $orderId, Closure $change): Order
+    {
+        return DB::transaction(function () use ($orderId, $change): Order {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
 
-        $this->notifyWebOrderWithStatus($order);
+            $change($order);
 
-        return $order;
+            $this->notifyWebOrderWithStatus($order);
+
+            return $order;
+        });
     }
 
     /**
