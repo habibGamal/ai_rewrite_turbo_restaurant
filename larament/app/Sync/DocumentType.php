@@ -14,6 +14,7 @@ enum DocumentType: string
     case Stocktaking = 'stocktaking';
     case InventoryDay = 'inventory_day';
     case DaySummary = 'day_summary';
+    case ProductGroup = 'product_group';
     case Product = 'product';
     case Recipe = 'recipe';
     case Category = 'category';

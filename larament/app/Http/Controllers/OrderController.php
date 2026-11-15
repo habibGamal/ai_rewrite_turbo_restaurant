@@ -14,6 +14,7 @@ use App\Models\DineTable;
 use App\Models\Driver;
 use App\Models\ExpenceType;
 use App\Models\Expense;
+use App\Models\ExternalSeller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
@@ -22,14 +23,19 @@ use App\Models\Shift;
 use App\Models\TableType;
 use App\Models\User;
 use App\Orders\CashierTabLayout;
+use App\Orders\GuestBill;
 use App\Orders\OrderOpening;
 use App\Orders\OrderTypeCatalog;
 use App\Orders\ReceiptPayment;
+use App\Orders\ReceiptView;
 use App\Orders\Tenders;
 use App\Repositories\OrderRepository;
+use App\Services\FeatureService;
 use App\Services\Orders\FloorLayoutService;
 use App\Services\Orders\OrderService;
 use App\Services\PrintService;
+use App\Services\Products\PosVariantCatalogService;
+use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
 use Exception;
@@ -39,7 +45,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Models\HeldSale;
 use App\Modules\BusinessType;
-use App\Services\FeatureService;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -102,7 +107,7 @@ class OrderController extends Controller
             'orders' => $orders,
             'tabs' => $tabs,
             'defaultTab' => $this->defaultTab($tabs),
-            'tabsOrientation' => app(\App\Services\SettingsService::class)->getCashierTabsOrientation(),
+            'tabsOrientation' => app(SettingsService::class)->getCashierTabsOrientation(),
             'receivables' => $receivables,
             'currentShift' => $currentShift,
             'expenses' => $expenses,
@@ -273,7 +278,7 @@ class OrderController extends Controller
         }
 
         if ($withReceiptView) {
-            $payload['receiptView'] = \App\Orders\ReceiptView::forOrder($order);
+            $payload['receiptView'] = ReceiptView::forOrder($order);
         }
 
         return $payload;
@@ -319,7 +324,7 @@ class OrderController extends Controller
 
         // Get all regions for the dropdown
         $regions = Region::orderBy('name')->get();
-        $outsourcedEnabled = app(\App\Services\FeatureService::class)->outsourcedOrdersEnabled();
+        $outsourcedEnabled = app(FeatureService::class)->outsourcedOrdersEnabled();
 
         return Inertia::render('Orders/ManageOrder', [
             'order' => $this->orderPayload($order, true),
@@ -335,28 +340,38 @@ class OrderController extends Controller
             'regions' => $regions,
             'externalOrders' => $order->externalOrders()->with('items')->where('status', '!=', 'cancelled')->orderBy('id')->get(),
             'sellers' => $outsourcedEnabled
-                ? \App\Models\ExternalSeller::where('is_active', true)
+                ? ExternalSeller::where('is_active', true)
                     ->with(['products' => fn ($query) => $query->where('is_active', true)->orderBy('name')->select('id', 'external_seller_id', 'name', 'price')])
                     ->orderBy('name')->get(['id', 'name'])
                     ->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->name, 'products' => $seller->products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'price' => $product->price])])
                 : [],
             'canAddExternalOrder' => $outsourcedEnabled && ! $order->typeRow()->allowsCredit(),
-            'guestDue' => app(\App\Orders\GuestBill::class)->due($order),
+            'guestDue' => app(GuestBill::class)->due($order),
             'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
         ]);
     }
 
     /**
+     * The POS menu. Inactive products are never sold. With retail variants on,
+     * each active product group is one tile (in its category's `groups`) and its
+     * SKUs are not sent as individual product tiles.
+     *
      * @return list<array<string, mixed>>
      */
     private function categoryTree(): array
     {
-        $productConstraint = function ($query) {
+        $variantsEnabled = app(FeatureService::class)->variantsEnabled();
+
+        $productConstraint = function ($query) use ($variantsEnabled) {
             $query
                 ->whereNot('type', ProductType::RawMaterial)
                 ->where('legacy', false)
+                ->where('is_active', true)
+                ->when($variantsEnabled, fn ($query) => $query->whereNull('product_group_id'))
                 ->orderBy('name');
         };
+
+        $groups = $variantsEnabled ? app(PosVariantCatalogService::class)->tilesByCategory() : null;
 
         return Category::query()
             ->whereNull('parent_id')
@@ -370,32 +385,39 @@ class OrderController extends Controller
             ])
             ->orderBy('name')
             ->get()
-            ->map(fn (Category $category): array => $this->categoryNode($category))
+            ->map(fn (Category $category): array => $this->categoryNode($category, $groups))
             ->all();
     }
 
     /**
+     * @param  array<int, list<array<string, mixed>>>|null  $groups  group tiles by category id; null = variants off
      * @return array<string, mixed>
      */
-    private function categoryNode(Category $category): array
+    private function categoryNode(Category $category, ?array $groups = null): array
     {
-        return [
+        $node = [
             'id' => $category->id,
             'name' => $category->name,
             'parent_id' => $category->parent_id,
             'blocked_order_type_codes' => $category->blockedOrderTypeCodes(),
             'products' => $category->products->values(),
             'children' => $category->children
-                ->map(function (mixed $child): array {
+                ->map(function (mixed $child) use ($groups): array {
                     if (! $child instanceof Category) {
                         return [];
                     }
 
-                    return $this->categoryNode($child);
+                    return $this->categoryNode($child, $groups);
                 })
                 ->values()
                 ->all(),
         ];
+
+        if ($groups !== null) {
+            $node['groups'] = $groups[$category->id] ?? [];
+        }
+
+        return $node;
     }
 
     /**

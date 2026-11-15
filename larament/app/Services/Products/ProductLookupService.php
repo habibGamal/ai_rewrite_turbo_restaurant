@@ -17,6 +17,8 @@ use App\Services\SettingsService;
  *     Layout [PLU: 7 digits incl. prefix][weight in grams: 5 digits][check digit];
  *     the PLU is looked up as a barcode and the quantity is the weight in kg.
  *
+ * Inactive products (products.is_active = false) are skipped.
+ *
  * Trying the exact match first means a normal EAN that happens to start with the
  * scale prefix (e.g. "23...") still finds its product.
  */
@@ -93,12 +95,15 @@ class ProductLookupService
      */
     private function findBarcode(string $barcode, ?array $types): ?ProductBarcode
     {
+        // Inactive products (e.g. a retired variant SKU) are never resolved from a scan.
         return ProductBarcode::query()
             ->where('barcode', $barcode)
-            ->when($types !== null, fn ($query) => $query->whereHas('product', fn ($product) => $product->whereIn(
-                'type',
-                array_map(fn ($type) => $type instanceof ProductType ? $type->value : $type, $types),
-            )))
+            ->whereHas('product', fn ($product) => $product
+                ->where('is_active', true)
+                ->when($types !== null, fn ($product) => $product->whereIn(
+                    'type',
+                    array_map(fn ($type) => $type instanceof ProductType ? $type->value : $type, $types ?? []),
+                )))
             ->with('product')
             ->first();
     }
