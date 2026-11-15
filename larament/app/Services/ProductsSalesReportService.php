@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ProductsSalesReportService
@@ -436,7 +437,7 @@ class ProductsSalesReportService
                 });
             });
 
-        /** @var \Illuminate\Support\Collection<int, object> $rows */
+        /** @var Collection<int, object> $rows */
         $rows = $query->select([
             DB::raw('COALESCE(mc.id, 0) as main_category_id'),
             DB::raw('COALESCE(mc.name, "غير مصنف") as main_category_name'),
@@ -457,6 +458,96 @@ class ProductsSalesReportService
             'total_profit' => (float) $row->total_profit,
             'products_count' => (int) $row->products_count,
         ])->all();
+    }
+
+    /**
+     * Sales rolled up by product group (retail model): all sizes and colours
+     * of a model in one row, with how many of its SKUs sold and the best one.
+     *
+     * @return list<array{
+     *     group_id: int,
+     *     group_name: string,
+     *     total_quantity: float,
+     *     total_sales: float,
+     *     total_profit: float,
+     *     variants_sold: int,
+     *     variants_total: int,
+     *     top_variant: string|null
+     * }>
+     */
+    public function getProductGroupSales(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null, ?int $mainCategoryId = null, ?int $subCategoryId = null): array
+    {
+        $perVariant = DB::table('products as p')
+            ->join('product_groups as g', 'g.id', '=', 'p.product_group_id')
+            ->leftJoin('categories as c', 'p.category_id', '=', 'c.id')
+            ->join('order_items as oi', 'p.id', '=', 'oi.product_id')
+            ->join('orders as o', function ($join) use ($startDate, $endDate, $shiftIds) {
+                $join->on('oi.order_id', '=', 'o.id')
+                    ->where('o.status', OrderStatus::COMPLETED);
+
+                if ($shiftIds !== null) {
+                    if (empty($shiftIds)) {
+                        $join->whereRaw('1 = 0');
+                    } else {
+                        $join->whereIn('o.shift_id', $shiftIds);
+                    }
+
+                    return;
+                }
+
+                $join->whereBetween('o.created_at', [
+                    $startDate ? Carbon::parse($startDate)->startOfDay() : now()->subDays(30)->startOfDay(),
+                    $endDate ? Carbon::parse($endDate)->endOfDay() : now()->endOfDay(),
+                ]);
+            })
+            ->when($subCategoryId !== null, fn ($filtered) => $filtered->where('p.category_id', $subCategoryId))
+            ->when($mainCategoryId !== null && $subCategoryId === null, function ($filtered) use ($mainCategoryId) {
+                $filtered->where(function ($inner) use ($mainCategoryId) {
+                    $inner->where('c.id', $mainCategoryId)
+                        ->orWhere('c.parent_id', $mainCategoryId);
+                });
+            })
+            ->select([
+                'g.id as group_id',
+                'g.name as group_name',
+                'p.id as product_id',
+                'p.variant_label',
+                DB::raw('SUM(oi.quantity) as quantity'),
+                DB::raw('SUM(oi.total) as sales'),
+                DB::raw('SUM(oi.total - (oi.cost * oi.quantity)) as profit'),
+            ])
+            ->groupBy('g.id', 'g.name', 'p.id', 'p.variant_label')
+            ->get();
+
+        if ($perVariant->isEmpty()) {
+            return [];
+        }
+
+        $variantCounts = DB::table('products')
+            ->whereIn('product_group_id', $perVariant->pluck('group_id')->unique()->all())
+            ->selectRaw('product_group_id, COUNT(*) as total')
+            ->groupBy('product_group_id')
+            ->pluck('total', 'product_group_id');
+
+        return $perVariant
+            ->groupBy('group_id')
+            ->map(function ($rows, $groupId) use ($variantCounts): array {
+                $top = $rows->sortByDesc(fn (object $row): float => (float) $row->quantity)->first();
+
+                return [
+                    'group_id' => (int) $groupId,
+                    'group_name' => (string) $rows->first()->group_name,
+                    'total_quantity' => (float) $rows->sum(fn (object $row): float => (float) $row->quantity),
+                    'total_sales' => (float) $rows->sum(fn (object $row): float => (float) $row->sales),
+                    'total_profit' => (float) $rows->sum(fn (object $row): float => (float) $row->profit),
+                    'variants_sold' => $rows->count(),
+                    'variants_total' => (int) ($variantCounts[$groupId] ?? $rows->count()),
+                    'top_variant' => $top?->variant_label,
+                ];
+            })
+            ->sortByDesc('total_sales')
+            ->values()
+            ->all();
     }
 
     public static function nullableFilterId(mixed $value): ?int
