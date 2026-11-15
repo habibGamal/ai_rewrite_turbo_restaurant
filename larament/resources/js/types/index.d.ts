@@ -203,6 +203,7 @@ export interface FeatureFlags {
     custom_fees: boolean;
     outsourced_orders: boolean;
     equipment: boolean;
+    variants: boolean;
 }
 
 export type ModuleKey =

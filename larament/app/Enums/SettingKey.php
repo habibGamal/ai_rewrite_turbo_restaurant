@@ -43,6 +43,7 @@ enum SettingKey: string
     case FEATURE_CUSTOM_FEES_ENABLED = 'feature_custom_fees_enabled';
     case FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
     case FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
+    case FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
     case BUSINESS_TYPE = 'business_type';
     case ENABLED_MODULES = 'enabled_modules';
 
@@ -83,6 +84,7 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'false',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'false',
             self::FEATURE_EQUIPMENT_ENABLED => 'false',
+            self::FEATURE_VARIANTS_ENABLED => 'false',
             self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
             self::ENABLED_MODULES => self::enabledModulesDefault(),
         };
@@ -127,6 +129,7 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => self::storedBooleanRules(),
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_EQUIPMENT_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_VARIANTS_ENABLED => self::storedBooleanRules(),
             self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
             self::ENABLED_MODULES => ['nullable', 'json'],
         };
@@ -170,6 +173,7 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل الرسوم الإضافية المخصصة على الطلبات',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل الطلبات الخارجية والمتاجر المتعاونة',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
+            self::FEATURE_VARIANTS_ENABLED => 'تفعيل المقاسات والألوان (متغيرات المنتجات)',
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
         });
@@ -213,6 +217,7 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'السماح بإضافة رسوم مخصصة (نسبة أو مبلغ ثابت) على الطلبات وربطها بأنواع الطلبات.',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'إدارة المتاجر المتعاونة، أصنافها، إضافة الطلبات الخارجية في الكاشير، وتسوية حسابات الموردين.',
             self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
+            self::FEATURE_VARIANTS_ENABLED => 'تجميع المنتجات في موديلات لها خيارات (مقاس، لون، ...) لكل تركيبة منها مخزون وباركود وسعر.',
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
         });
@@ -256,6 +261,7 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED => 'تفعيل',
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
+            self::FEATURE_VARIANTS_ENABLED => 'تفعيل',
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
         });
@@ -288,7 +294,8 @@ enum SettingKey: string
             self::FEATURE_REVENUES_ENABLED,
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
-            self::FEATURE_EQUIPMENT_ENABLED => self::isStoredBoolean($value),
+            self::FEATURE_EQUIPMENT_ENABLED,
+            self::FEATURE_VARIANTS_ENABLED => self::isStoredBoolean($value),
             self::BUSINESS_TYPE => is_string($value) && BusinessType::tryFrom($value) !== null,
             self::ENABLED_MODULES => self::isModuleList($value),
             self::KDS_DEFAULT_PREP_MINUTES, self::KDS_RECALL_MINUTES => self::isIntInRange($value, 1, 240),
@@ -310,7 +317,8 @@ enum SettingKey: string
             self::FEATURE_REVENUES_ENABLED,
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
-            self::FEATURE_EQUIPMENT_ENABLED => true,
+            self::FEATURE_EQUIPMENT_ENABLED,
+            self::FEATURE_VARIANTS_ENABLED => true,
             default => false,
         };
     }
@@ -321,7 +329,8 @@ enum SettingKey: string
             self::FEATURE_REVENUES_ENABLED,
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
-            self::FEATURE_EQUIPMENT_ENABLED => true,
+            self::FEATURE_EQUIPMENT_ENABLED,
+            self::FEATURE_VARIANTS_ENABLED => true,
             default => false,
         };
     }

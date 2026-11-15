@@ -8,6 +8,7 @@ enum OptionalFeature: string
     case CUSTOM_FEES = 'feature_custom_fees_enabled';
     case OUTSOURCED_ORDERS = 'feature_outsourced_orders_enabled';
     case EQUIPMENT = 'feature_equipment_enabled';
+    case VARIANTS = 'feature_variants_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -16,6 +17,7 @@ enum OptionalFeature: string
             self::CUSTOM_FEES => SettingKey::FEATURE_CUSTOM_FEES_ENABLED,
             self::OUTSOURCED_ORDERS => SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::EQUIPMENT => SettingKey::FEATURE_EQUIPMENT_ENABLED,
+            self::VARIANTS => SettingKey::FEATURE_VARIANTS_ENABLED,
         };
     }
 
@@ -26,6 +28,7 @@ enum OptionalFeature: string
             self::CUSTOM_FEES => 'custom_fees',
             self::OUTSOURCED_ORDERS => 'outsourced_orders',
             self::EQUIPMENT => 'equipment',
+            self::VARIANTS => 'variants',
         };
     }
 
@@ -55,7 +58,8 @@ enum OptionalFeature: string
             ],
             self::REVENUES,
             self::CUSTOM_FEES,
-            self::EQUIPMENT => [],
+            self::EQUIPMENT,
+            self::VARIANTS => [],
         };
     }
 
@@ -66,6 +70,7 @@ enum OptionalFeature: string
             self::CUSTOM_FEES => 'ميزة الرسوم الإضافية غير مفعلة حالياً.',
             self::OUTSOURCED_ORDERS => 'ميزة الطلبات الخارجية غير مفعلة حالياً.',
             self::EQUIPMENT => 'ميزة المعدات غير مفعلة حالياً.',
+            self::VARIANTS => 'ميزة المقاسات والألوان (متغيرات المنتجات) غير مفعلة حالياً.',
         };
     }
 
@@ -84,6 +89,7 @@ enum OptionalFeature: string
             'custom_fees' => self::CUSTOM_FEES,
             'outsourced_orders' => self::OUTSOURCED_ORDERS,
             'equipment' => self::EQUIPMENT,
+            'variants' => self::VARIANTS,
             default => null,
         };
     }

@@ -1,8 +1,17 @@
 <?php
 
+use App\Core\CoreServiceProvider;
+use App\Modules\ExternalSellers\ExternalSellersServiceProvider;
+use App\Modules\Restaurant\RestaurantServiceProvider;
+use App\Providers\AppServiceProvider;
+use App\Providers\Filament\AdminPanelProvider;
+use Illuminate\Broadcasting\BroadcastServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\Filament\AdminPanelProvider::class,
-    App\Modules\Restaurant\RestaurantServiceProvider::class,
-    Illuminate\Broadcasting\BroadcastServiceProvider::class,
+    AppServiceProvider::class,
+    AdminPanelProvider::class,
+    CoreServiceProvider::class,
+    RestaurantServiceProvider::class,
+    ExternalSellersServiceProvider::class,
+    BroadcastServiceProvider::class,
 ];

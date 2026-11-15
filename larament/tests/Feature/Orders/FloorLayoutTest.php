@@ -2,7 +2,7 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderBehavior;
-use App\Events\Orders\OrderTypeChanged;
+use App\Events\Orders\OrderTypeChangedBroadcast;
 use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
 use App\Models\DineTable;
 use App\Models\OrderTypeRow;
@@ -125,18 +125,18 @@ it('saves through the designer endpoint and rejects non dine-in types', function
     $this->put(route('floor.save', 'takeaway'), $layout)->assertNotFound();
     expect(app(FloorLayoutService::class)->isDineInType('takeaway'))->toBeFalse();
     expect(fn () => app(FloorLayoutService::class)->read('takeaway'))
-        ->toThrow(\InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class);
 });
 
 it('broadcasts a type change', function () {
-    Event::fake([OrderTypeChanged::class]);
+    Event::fake([OrderTypeChangedBroadcast::class]);
     $user = User::factory()->create();
     $shift = Shift::factory()->create();
     $order = app(OrderService::class)->createOrder(
         new CreateOrderDTO('takeaway', $shift->id, $user->id),
     );
     app(OrderService::class)->changeOrderType($order->id, 'dine_in', '4');
-    Event::assertDispatched(OrderTypeChanged::class);
+    Event::assertDispatched(OrderTypeChangedBroadcast::class);
     $this->assertDatabaseHas('dine_tables', [
         'order_type_code' => 'dine_in',
         'table_number' => '4',

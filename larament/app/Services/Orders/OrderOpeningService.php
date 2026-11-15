@@ -2,8 +2,8 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\OrderOpened;
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Events\Orders\OrderCreated;
 use App\Models\Order;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\OrderTypeCatalog;
@@ -28,11 +28,10 @@ class OrderOpeningService
             $orderNumber = $this->orderRepository->getNextOrderNumber($dto->shiftId, $excludedCodes);
             $created = $this->orderRepository->create($dto, $orderNumber);
             $behavior->onOpened($created, $dto->opening);
+            OrderOpened::dispatch($created, $dto->opening);
 
             return $created;
         });
-
-        OrderCreated::dispatch($order);
 
         return $order;
     }

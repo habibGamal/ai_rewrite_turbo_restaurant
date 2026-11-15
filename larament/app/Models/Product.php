@@ -12,7 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-/** @property int|null $warehouse_id */
+/**
+ * @property int|null $warehouse_id
+ * @property int|null $product_group_id
+ * @property string|null $variant_label
+ * @property string|null $sku
+ * @property bool $has_custom_price
+ * @property bool $is_active
+ */
 class Product extends Model
 {
     use HasFactory, HasSyncUuid;
@@ -20,16 +27,21 @@ class Product extends Model
     protected $fillable = [
         'uuid',
         'category_id',
+        'product_group_id',
         'warehouse_id',
         'name',
+        'variant_label',
         'product_ref',
+        'sku',
         'barcode',
         'price',
+        'has_custom_price',
         'cost',
         'min_stock',
         'type',
         'unit',
         'legacy',
+        'is_active',
         'kitchen_station_id',
         'show_on_kds',
         'prep_minutes',
@@ -39,6 +51,8 @@ class Product extends Model
         'type' => ProductType::class,
         'show_on_kds' => 'boolean',
         'prep_minutes' => 'integer',
+        'has_custom_price' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     protected $appends = [
@@ -62,6 +76,24 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** The retail group this SKU is a variant of; null for a standalone product. */
+    /** @return BelongsTo<ProductGroup, $this> */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(ProductGroup::class, 'product_group_id');
+    }
+
+    /** @return BelongsToMany<ProductOptionValue, $this> */
+    public function optionValues(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductOptionValue::class, 'product_variant_values')->withTimestamps();
+    }
+
+    public function isVariant(): bool
+    {
+        return $this->product_group_id !== null;
     }
 
     public function warehouse(): BelongsTo

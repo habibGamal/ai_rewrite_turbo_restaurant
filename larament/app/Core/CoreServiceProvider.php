@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Core;
+
+use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderCompleted;
+use App\Core\Events\OrderOpened;
+use App\Core\Events\OrderTypeChanged;
+use App\Core\Events\PaymentRecorded;
+use App\Core\Listeners\BroadcastOrderCancelled;
+use App\Core\Listeners\BroadcastOrderCompleted;
+use App\Core\Listeners\BroadcastOrderCreated;
+use App\Core\Listeners\BroadcastOrderTypeChanged;
+use App\Core\Listeners\BroadcastPaymentProcessed;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Core order flow wiring: the extension registry and core's own listeners on
+ * the domain events. Listener timing is set on each listener class (see the
+ * modular core design doc, "Listener timing").
+ */
+class CoreServiceProvider extends ServiceProvider
+{
+    /** @var array<class-string, list<class-string>> */
+    private const LISTENERS = [
+        OrderOpened::class => [BroadcastOrderCreated::class],
+        OrderCompleted::class => [BroadcastOrderCompleted::class],
+        OrderCancelled::class => [BroadcastOrderCancelled::class],
+        PaymentRecorded::class => [BroadcastPaymentProcessed::class],
+        OrderTypeChanged::class => [BroadcastOrderTypeChanged::class],
+    ];
+
+    public function register(): void
+    {
+        $this->app->singleton(OrderExtensions::class);
+    }
+
+    public function boot(): void
+    {
+        foreach (self::LISTENERS as $event => $listeners) {
+            foreach ($listeners as $listener) {
+                Event::listen($event, $listener);
+            }
+        }
+    }
+}

@@ -2,12 +2,11 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\OrderCompleting;
+use App\Core\OrderExtensions;
 use App\Enums\OrderStatus;
-use App\Events\Orders\OrderCompleted;
 use App\Exceptions\OrderException;
-use App\Models\ExternalOrderCollection;
 use App\Models\Order;
-use App\Orders\GuestBill;
 use App\Orders\Tenders;
 
 class OrderCompletionService
@@ -15,7 +14,7 @@ class OrderCompletionService
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
         private readonly OrderCalculationService $orderCalculationService,
-        private readonly GuestBill $guestBill,
+        private readonly OrderExtensions $extensions,
     ) {}
 
     public function complete(Order $order, array $paymentsData, bool $shouldPrint = false): Order
@@ -26,20 +25,20 @@ class OrderCompletionService
             $this->orderCalculationService->calculateOrderTotals($order);
         }
 
-        $tenders = Tenders::fromArray($paymentsData);
-        $collections = [];
-        if ($order->externalOrders()->where('status', '!=', 'cancelled')->exists()) {
-            $split = $this->guestBill->split($order, $tenders);
-            $tenders = $split['restaurant'];
-            $collections = $split['collections'];
+        $tendered = Tenders::fromArray($paymentsData);
+        $tenders = $tendered;
+        $afterPayment = [];
+        foreach ($this->extensions->tenderSplitters() as $splitter) {
+            $split = $splitter->split($order, $tenders);
+            $tenders = $split->remaining;
+            if ($split->afterPayment !== null) {
+                $afterPayment[] = $split->afterPayment;
+            }
         }
 
         $order = $this->orderPaymentService->pay($order, $tenders, $order->shift_id);
-        foreach ($collections as $collection) {
-            ExternalOrderCollection::create($collection + [
-                'shift_id' => $order->shift_id,
-                'user_id' => auth()->id(),
-            ]);
+        foreach ($afterPayment as $callback) {
+            $callback($order);
         }
 
         $paid = (float) $order->payments()->sum('amount');
@@ -63,14 +62,14 @@ class OrderCompletionService
             }
         }
 
+        // Last point a module can refuse the sale; a throw rolls back payments.
+        OrderCompleting::dispatch($order, $tendered);
+
         $order->behavior()->onClosed($order);
 
         // Update order status
         $order->update(['status' => OrderStatus::COMPLETED]);
         $order->refresh();
-
-        // Fire event
-        OrderCompleted::dispatch($order);
 
         return $order;
     }

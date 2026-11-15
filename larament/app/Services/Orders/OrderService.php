@@ -2,12 +2,15 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderCompleted;
+use App\Core\Events\OrderItemsChanged;
+use App\Core\Events\OrderTypeChanged;
+use App\Core\OrderExtensions;
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\OrderCancelled;
 use App\Exceptions\OrderException;
-use App\Models\ExternalSeller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
@@ -17,7 +20,6 @@ use App\Orders\OrderTypeCatalog;
 use App\Orders\Tenders;
 use App\Repositories\OrderItemRepository;
 use App\Repositories\OrderRepository;
-use App\Services\Kitchen\KitchenTicketService;
 use App\Services\OrderItemChangeService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
@@ -37,13 +39,12 @@ class OrderService
         private readonly OrderPaymentService $orderPaymentService,
         private readonly ShiftService $shiftService,
         private readonly OrderStockConversionService $orderStockConversionService,
-        private readonly KitchenTicketService $kitchenTicketService,
         private readonly OrderItemRepository $orderItemRepository,
         private readonly OrderItemPricingService $itemPricer,
         private readonly ShiftLoggingService $shiftLoggingService,
         private readonly OrderItemChangeService $orderItemChangeService,
         private readonly OrderTypeCatalog $catalog,
-        private readonly ExternalSellerSettlementService $sellerSettlements,
+        private readonly OrderExtensions $extensions,
         private readonly OrderCategoryBlockService $categoryBlock,
     ) {}
 
@@ -82,11 +83,12 @@ class OrderService
             $newItems = $this->itemLines($order);
             $order->load('items');
             $order = $this->orderCalculationService->calculateOrderTotals($order);
-            $this->kitchenTicketService->syncOrder($order);
 
             $differences = $this->shiftLoggingService->calculateItemDifferences($oldItems, $newItems);
             $this->shiftLoggingService->logOrderSave($order->id, $differences);
             $this->orderItemChangeService->recordChanges($order->id, $differences);
+
+            OrderItemsChanged::dispatch($order, $differences);
 
             return $order;
         });
@@ -158,7 +160,7 @@ class OrderService
             $completedOrder->update([
                 'profit' => $this->orderCalculationService->calculateProfit($completedOrder, (float) $completedOrder->total),
             ]);
-            $this->kitchenTicketService->autoFinishForOrder($completedOrder);
+            OrderCompleted::dispatch($completedOrder, $shouldPrint);
 
             return $completedOrder;
         });
@@ -231,24 +233,6 @@ class OrderService
 
             // Delete any payments
             $order->payments()->delete();
-            foreach ($order->externalOrders()->orderBy('external_seller_id')->get() as $external) {
-                $seller = ExternalSeller::whereKey($external->external_seller_id)->lockForUpdate()->firstOrFail();
-                $external->collections()->delete();
-                $external->update(['status' => 'cancelled']);
-                $payable = $this->sellerSettlements->payable($seller);
-                if ($payable < 0) {
-                    $shift = Shift::whereNull('end_at')->where('closed', false)->lockForUpdate()->first();
-                    if ($shift === null) {
-                        throw new OrderException('يجب فتح شيفت لعكس مستحقات البائع');
-                    }
-                    $seller->settlements()->create([
-                        'shift_id' => $shift->id,
-                        'user_id' => auth()->id(),
-                        'amount' => $payable,
-                        'note' => 'عكس تسوية بعد إلغاء الطلب',
-                    ]);
-                }
-            }
             Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
             $order->refresh();
@@ -258,10 +242,9 @@ class OrderService
                 $this->orderStockConversionService->addStockForCancelledOrder($order);
             }
 
-            $this->kitchenTicketService->cancelForOrder($order);
-
-            // Fire event
-            OrderCancelled::dispatch($order, $reason);
+            // Kitchen ticket cancel and external seller reversal run as
+            // in-transaction listeners: a throw rolls back the whole cancel.
+            OrderCancelled::dispatch($order, $wasCompleted, $reason);
 
             return $order;
         });
@@ -271,9 +254,10 @@ class OrderService
     {
         return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
             $newTypeRow = $this->catalog->find($newType);
-            if ($newTypeRow->allowsCredit() && $order->externalOrders()->where('status', '!=', 'cancelled')->exists()) {
-                throw new OrderException('لا يمكن تغيير النوع مع وجود طلب خارجي');
+            foreach ($this->extensions->typeChangeGuards() as $guard) {
+                $guard->assertCanChange($order, $newTypeRow);
             }
+            $oldType = (string) $order->type;
             $newBehavior = $this->catalog->behaviorFor($newType);
             $assignsTable = $newBehavior->display($newTypeRow)->showTable;
 
@@ -294,8 +278,7 @@ class OrderService
 
             // Recalculate totals as service charges might change
             $this->orderCalculationService->calculateOrderTotals($order);
-            $this->kitchenTicketService->rebroadcastForOrder($order);
-            \App\Events\Orders\OrderTypeChanged::dispatch($order);
+            OrderTypeChanged::dispatch($order, $oldType, $newType);
 
             return $order;
         });

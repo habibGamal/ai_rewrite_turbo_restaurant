@@ -3,8 +3,8 @@
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
 use App\Exceptions\OrderException;
 use App\Models\Customer;
 use App\Models\Driver;
@@ -53,7 +53,7 @@ describe('Order Management Integration', function () {
                 ->and($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T001');
 
-            Event::assertDispatched(OrderCreated::class);
+            Event::assertDispatched(OrderCreatedBroadcast::class);
 
             // 2. Add items to order
             $itemsData = [
@@ -91,7 +91,7 @@ describe('Order Management Integration', function () {
                 ->and($order->payments)->toHaveCount(1)
                 ->and($order->payments->first()->amount)->toBe('45.00');
 
-            Event::assertDispatched(OrderCompleted::class);
+            Event::assertDispatched(OrderCompletedBroadcast::class);
         });
 
         it('creates and completes a takeaway order', function () {
