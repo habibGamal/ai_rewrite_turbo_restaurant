@@ -1,19 +1,29 @@
 import React from 'react';
 import { Modal, Form, InputNumber, Radio, message } from 'antd';
 import { router } from '@inertiajs/react';
-import { Order } from '@/types';
+import { InstantCartDiscount, Order } from '@/types';
 
 interface OrderDiscountModalProps {
     open: boolean;
     onCancel: () => void;
-    order: Order;
+    order?: Order;
+    /** Cart mode (instant sale): the discount is handed back instead of posted to an order. */
+    cartDiscount?: InstantCartDiscount | null;
+    onApply?: (discount: InstantCartDiscount | null) => void;
 }
 
-export default function OrderDiscountModal({ open, onCancel, order }: OrderDiscountModalProps) {
+export default function OrderDiscountModal({ open, onCancel, order, cartDiscount, onApply }: OrderDiscountModalProps) {
     const [form] = Form.useForm();
 
     const onFinish = (values: any) => {
-        router.post(`/orders/apply-discount/${order.id}`, values, {
+        if (onApply) {
+            const value = Number(values.discount || 0);
+            onApply(value > 0 ? { value, type: values.discount_type === 'percent' ? 'percent' : 'value' } : null);
+            message.success('تم تطبيق الخصم بنجاح');
+            onCancel();
+            return;
+        }
+        router.post(`/orders/apply-discount/${order!.id}`, values, {
             onSuccess: () => {
                 message.success('تم تطبيق الخصم بنجاح');
                 onCancel();
@@ -44,8 +54,8 @@ export default function OrderDiscountModal({ open, onCancel, order }: OrderDisco
                 layout="vertical"
                 onFinish={onFinish}
                 initialValues={{
-                    discount: 0,
-                    discount_type: 'value',
+                    discount: cartDiscount?.value ?? 0,
+                    discount_type: cartDiscount?.type ?? 'value',
                 }}
             >
                 <Form.Item

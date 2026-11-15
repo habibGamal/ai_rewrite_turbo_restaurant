@@ -149,7 +149,7 @@ it('leaves web orders and external sellers off when the install does not use the
     expect(features()->enabledModules())->toBe([Module::RESTAURANT, Module::DELIVERY, Module::MANUFACTURING]);
 });
 
-it('resolves all six behaviour codes through the registry', function () {
+it('resolves all seven behaviour codes through the registry', function () {
     $registry = app(OrderBehaviorRegistry::class);
 
     foreach (OrderBehavior::cases() as $behavior) {
@@ -158,7 +158,7 @@ it('resolves all six behaviour codes through the registry', function () {
     }
 
     expect($registry->resolve('dine_in'))->toBeInstanceOf(DineInBehavior::class)
-        ->and($registry->codes())->toHaveCount(6)
+        ->and($registry->codes())->toHaveCount(7)
         ->and($registry->selectableLabels())->toBe([
             'dine_in' => 'صالة', 'delivery' => 'دليفري', 'counter' => 'كاونتر', 'companies' => 'شركات',
         ])
@@ -167,11 +167,11 @@ it('resolves all six behaviour codes through the registry', function () {
 
 it('lets a module register a new behaviour code', function () {
     $registry = app(OrderBehaviorRegistry::class);
-    $registry->register('instant', CounterBehavior::class, 'بيع سريع');
+    $registry->register('quick_counter', CounterBehavior::class, 'بيع سريع');
 
-    expect($registry->has('instant'))->toBeTrue()
-        ->and($registry->resolve('instant'))->toBeInstanceOf(CounterBehavior::class)
-        ->and($registry->selectableLabels())->toHaveKey('instant');
+    expect($registry->has('quick_counter'))->toBeTrue()
+        ->and($registry->resolve('quick_counter'))->toBeInstanceOf(CounterBehavior::class)
+        ->and($registry->selectableLabels())->toHaveKey('quick_counter');
 });
 
 it('refuses an unknown behaviour code', function () {

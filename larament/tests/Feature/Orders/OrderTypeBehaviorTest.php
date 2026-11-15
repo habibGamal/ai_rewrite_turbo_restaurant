@@ -31,7 +31,8 @@ describe('order type catalog', function () {
             'web_takeaway' => ['label' => 'اونلاين تيك أواي', 'color' => 'primary', 'icon' => 'heroicon-o-computer-desktop', 'behavior' => OrderBehavior::WEB_TAKEAWAY],
         ];
 
-        expect(OrderTypeRow::query()->count())->toBe(7);
+        // Plus instant_sale, seeded inactive on a restaurant install (InstantSaleTest covers it).
+        expect(OrderTypeRow::query()->count())->toBe(8);
 
         foreach ($expected as $code => $attrs) {
             $row = OrderTypeRow::query()->where('code', $code)->first();

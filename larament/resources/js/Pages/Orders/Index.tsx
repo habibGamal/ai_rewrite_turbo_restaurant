@@ -17,6 +17,7 @@ interface IndexProps {
     tabs: CashierTab[];
     receivables: Receivable[];
     currentShift: { id: number };
+    defaultTab?: string | null;
     kdsCashierStatusEnabled?: boolean;
     auth: {
         user: User;
@@ -29,6 +30,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
     tabs,
     receivables,
     currentShift,
+    defaultTab,
     kdsCashierStatusEnabled = true,
     auth,
     tabsOrientation,
@@ -81,7 +83,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
     const renderedTabs = tabs;
 
     const initialTab = () => {
-        const hash = window.location.hash.replace('#', '');
+        const hash = window.location.hash.replace('#', '') || defaultTab || '';
         const found = renderedTabs.find(
             (candidate) =>
                 candidate.key === hash ||
@@ -115,11 +117,19 @@ const OrdersIndex: React.FC<IndexProps> = ({
         </span>
     );
 
+    const activeTabKey = tab;
     const tabItems = renderedTabs.map((tab) => {
         if (tab.kind === 'type') {
             return {
                 label: tabLabel(tab),
-                children: <OrderTypeTab tab={tab} orders={orders} />,
+                children: (
+                    <OrderTypeTab
+                        tab={tab}
+                        orders={orders}
+                        shiftId={currentShift.id}
+                        active={activeTabKey === tab.key}
+                    />
+                ),
                 key: tab.key,
             };
         }

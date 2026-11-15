@@ -143,8 +143,8 @@ export interface OrderDisplay {
 }
 
 export interface TabPresentation {
-  body: 'cards' | 'inbox' | 'floor';
-  creation: 'immediate' | 'choose_table' | 'none';
+  body: 'cards' | 'inbox' | 'floor' | 'instant';
+  creation: 'immediate' | 'choose_table' | 'none' | 'instant';
   statuses: string[];
   cardTitle: 'table' | 'order_number';
 }
@@ -190,6 +190,36 @@ export interface FloorLayout {
   tableLabel?: TableLabelConfig;
   [key: string]: any;
 }
+export interface InstantCartCustomer {
+  id: number;
+  name: string;
+  phone: string;
+}
+
+export interface InstantCartDiscount {
+  value: number;
+  type: 'percent' | 'value';
+}
+
+export interface InstantLastSale {
+  id: number;
+  order_number: number;
+  total: number;
+  change: number;
+}
+
+export interface InstantTabPayload {
+  categories: Category[];
+  lastSale: InstantLastSale | null;
+  heldCount: number;
+  credit: {
+    allow_partial_payment: boolean;
+    allow_pay_later: boolean;
+    require_customer_for_credit: boolean;
+  };
+  can: { discount: boolean; changeItems: boolean; returns?: boolean };
+}
+
 export interface CashierTab {
   key: string;
   kind: 'type' | 'system';
@@ -202,6 +232,7 @@ export interface CashierTab {
   layout?: FloorLayout;
   occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
   presentation?: TabPresentation;
+  instant?: InstantTabPayload;
   display?: OrderDisplay;
 }
 

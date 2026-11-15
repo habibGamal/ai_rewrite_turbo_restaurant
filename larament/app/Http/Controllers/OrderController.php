@@ -43,6 +43,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Models\HeldSale;
+use App\Modules\BusinessType;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -99,9 +101,12 @@ class OrderController extends Controller
             $expenseTypes = ExpenceType::all();
         }
 
+        $tabs = $this->tabsPayload($currentShift);
+
         return Inertia::render('Orders/Index', [
             'orders' => $orders,
-            'tabs' => $this->tabsPayload($currentShift),
+            'tabs' => $tabs,
+            'defaultTab' => $this->defaultTab($tabs),
             'tabsOrientation' => app(SettingsService::class)->getCashierTabsOrientation(),
             'receivables' => $receivables,
             'currentShift' => $currentShift,
@@ -171,12 +176,78 @@ class OrderController extends Controller
                     $tab['occupancy'] = DineTable::query()->where('order_type_code', $tab['code'])->whereNotNull('order_id')->with('order')->get()->filter(fn (DineTable $table) => $table->order !== null)->mapWithKeys(fn (DineTable $table) => [$table->table_number => ['id' => $table->order->id, 'order_number' => $table->order->order_number, 'created_at' => $table->order->created_at]])->all();
                 }
                 $tab['display'] = $this->catalog->display($tab['code'])->toArray();
+                if ($tab['presentation']['body'] === 'instant') {
+                    $tab['instant'] = $this->instantPayload($shift, $tab['code']);
+                }
             }
 
             $tabs[] = $tab;
         }
 
         return $tabs;
+    }
+
+    /**
+     * What the instant-sale tab needs to sell without an order: the product
+     * tiles, the cashier's last receipt and the type's payment rules.
+     *
+     * @return array<string, mixed>
+     */
+    private function instantPayload(Shift $shift, string $code): array
+    {
+        $user = $this->deskUser();
+        $row = $this->catalog->find($code);
+        $last = Order::query()
+            ->where('shift_id', $shift->id)
+            ->where('type', $code)
+            ->where('user_id', $user->id)
+            ->where('status', OrderStatus::COMPLETED)
+            ->latest('id')
+            ->first();
+
+        return [
+            'categories' => $this->categoryTree(),
+            'lastSale' => $last instanceof Order ? [
+                'id' => $last->id,
+                'order_number' => (int) $last->order_number,
+                'total' => (float) $last->total,
+                'change' => null,
+            ] : null,
+            'heldCount' => HeldSale::query()->where('shift_id', $shift->id)->count(),
+            'credit' => [
+                'allow_partial_payment' => (bool) $row->allow_partial_payment,
+                'allow_pay_later' => (bool) $row->allow_pay_later,
+                'require_customer_for_credit' => (bool) $row->require_customer_for_credit,
+            ],
+            'can' => [
+                'discount' => $user->can('order.apply_discount'),
+                'changeItems' => $user->can('order.change_items'),
+                'returns' => $user->can('create_order_returns'),
+            ],
+        ];
+    }
+
+    /**
+     * The tab the desk opens on when the URL names none: instant sale for
+     * retail profiles, the first tab otherwise.
+     *
+     * @param  list<array<string, mixed>>  $tabs
+     */
+    private function defaultTab(array $tabs): ?string
+    {
+        $type = app(FeatureService::class)->businessType();
+
+        if (! in_array($type, [BusinessType::FASHION, BusinessType::GROCERY, BusinessType::GENERAL_RETAIL], true)) {
+            return null;
+        }
+
+        foreach ($tabs as $tab) {
+            if (($tab['presentation']['body'] ?? null) === 'instant') {
+                return (string) $tab['key'];
+            }
+        }
+
+        return null;
     }
 
     /**
