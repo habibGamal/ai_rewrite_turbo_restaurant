@@ -34,7 +34,7 @@ class UserResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     public static function getModelLabel(): string
     {

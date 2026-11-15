@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Roles;
 use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
+use App\Modules\Module;
+use App\Modules\Wording;
 use App\Orders\TabPermissions;
 use App\Services\FeatureService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -21,6 +23,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Spatie\Permission\Models\Role;
 
 class RoleResource extends Resource
@@ -43,6 +46,18 @@ class RoleResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return 'الأدوار والصلاحيات';
+    }
+
+    /**
+     * The built-in kitchen role only holds kitchen permissions, so a shop
+     * (Restaurant module off) does not list it.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->when(
+            ! app(FeatureService::class)->moduleEnabled(Module::RESTAURANT),
+            fn (Builder $query) => $query->where('name', '!=', 'kitchen'),
+        );
     }
 
     public static function visiblePermissionsCatalog(): array
@@ -70,10 +85,10 @@ class RoleResource extends Resource
 
                 Tabs::make('الصلاحيات')
                     ->tabs([
-                        Tab::make('إدارة الموارد والمطعم')
+                        Tab::make(Wording::text('إدارة الموارد والمطعم'))
                             ->icon('heroicon-o-building-storefront')
                             ->schema([
-                                Section::make('المنتجات والفئات والطاولات')
+                                Section::make(Wording::text('المنتجات والفئات والطاولات'))
                                     ->collapsible()
                                     ->schema([
                                         CheckboxList::make('permissions_catalog')
@@ -130,7 +145,7 @@ class RoleResource extends Resource
                                     ]),
                             ]),
 
-                        Tab::make('شاشة البيع والكاشير والمطبخ')
+                        Tab::make(Wording::text('شاشة البيع والكاشير والمطبخ'))
                             ->icon('heroicon-o-shopping-cart')
                             ->schema([
                                 Section::make('نقطة البيع والعمليات (POS)')
@@ -144,6 +159,7 @@ class RoleResource extends Resource
                                             ->dehydrated(false),
                                     ]),
                                 Section::make('شاشة المطبخ')
+                                    ->visible(($catalog['شاشة المطبخ'] ?? []) !== [])
                                     ->collapsible()
                                     ->schema([
                                         CheckboxList::make('permissions_kitchen')

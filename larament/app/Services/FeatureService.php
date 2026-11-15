@@ -10,9 +10,12 @@ use App\Exceptions\OrderException;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\FeatureFlagAudit;
+use App\Models\OrderTypeRow;
 use App\Models\Setting;
 use App\Modules\BusinessType;
 use App\Modules\Module;
+use App\Orders\OrderTypeCatalog;
+use App\Orders\TabPermissions;
 use App\Services\Orders\ExternalSellerSettlementService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -353,13 +356,44 @@ class FeatureService
      */
     public function isPermissionDisabled(string $permission): bool
     {
+        $module = Module::forPermission($permission);
+        if ($module !== null && ! $this->moduleEnabled($module)) {
+            return true;
+        }
+
+        if (str_starts_with($permission, TabPermissions::TYPE_PREFIX)) {
+            return in_array($permission, $this->hiddenOrderTypeTabPermissions(), true);
+        }
+
         $feature = $this->featureForPermission($permission);
 
         return $feature !== null && ! $this->isEnabled($feature);
     }
 
     /**
-     * Return all permissions associated with currently disabled optional features.
+     * Cashier tab permissions of order types whose behaviour belongs to a
+     * switched-off module (for example the dine-in tab of a clothing shop).
+     *
+     * @return list<string>
+     */
+    private function hiddenOrderTypeTabPermissions(): array
+    {
+        if (! Schema::hasTable('order_types')) {
+            return [];
+        }
+
+        $catalog = app(OrderTypeCatalog::class);
+
+        return $catalog->all()
+            ->reject(fn (OrderTypeRow $row): bool => $catalog->isAvailable($row))
+            ->map(fn (OrderTypeRow $row): string => TabPermissions::forTypeCode($row->code))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Return all permissions associated with currently disabled optional features
+     * and switched-off modules.
      *
      * @return array<int, string>
      */
@@ -372,6 +406,14 @@ class FeatureService
                 $disabled = array_merge($disabled, $permissions);
             }
         }
+
+        foreach (Module::cases() as $module) {
+            if (! $this->moduleEnabled($module)) {
+                $disabled = array_merge($disabled, $module->permissions());
+            }
+        }
+
+        $disabled = array_merge($disabled, $this->hiddenOrderTypeTabPermissions());
 
         return array_values(array_unique($disabled));
     }

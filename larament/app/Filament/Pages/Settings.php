@@ -9,8 +9,11 @@ use App\Enums\ProductType;
 use App\Enums\SettingKey;
 use App\Models\OrderTypeRow;
 use App\Models\Product;
+use App\Modules\Module;
+use App\Modules\Wording;
 use App\Orders\CashierTabLayout;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\Products\RecipeCycleDetectionService;
 use App\Services\SettingsService;
@@ -52,6 +55,14 @@ class Settings extends Page implements HasForms
     public static function canAccess(): bool
     {
         return auth()->user()?->can('manage_settings') ?? false;
+    }
+
+    /**
+     * Service charge and the KDS tab belong to the Restaurant module.
+     */
+    private static function restaurantEnabled(): bool
+    {
+        return app(FeatureService::class)->moduleEnabled(Module::RESTAURANT);
     }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -162,6 +173,7 @@ class Settings extends Page implements HasForms
                                                     ->minValue(0)
                                                     ->maxValue(1)
                                                     ->required()
+                                                    ->visible(self::restaurantEnabled())
                                                     ->placeholder(SettingKey::DINE_IN_SERVICE_CHARGE->placeholder()),
 
                                                 TextInput::make(SettingKey::SCALE_BARCODE_PREFIX->value)
@@ -181,13 +193,13 @@ class Settings extends Page implements HasForms
                                     ]),
                             ]),
 
-                        Tabs\Tab::make('إعدادات المطعم')
+                        Tabs\Tab::make(Wording::text('إعدادات المطعم'))
                             ->icon('heroicon-m-building-storefront')
                             ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
                             ->badgeColor('danger')
                             ->schema([
                                 Section::make()
-                                    ->description('معلومات المطعم الأساسية')
+                                    ->description(Wording::text('معلومات المطعم الأساسية'))
                                     ->schema([
                                         TextInput::make(SettingKey::RESTAURANT_NAME->value)
                                             ->label(SettingKey::RESTAURANT_NAME->label())
@@ -373,6 +385,7 @@ class Settings extends Page implements HasForms
                             ]),
 
                         Tabs\Tab::make('شاشة المطبخ (KDS)')
+                            ->visible(self::restaurantEnabled())
                             ->icon('heroicon-m-tv')
                             ->badge(fn (Tabs\Tab $component): ?int => $this->tabErrorCount($component))
                             ->badgeColor('danger')
@@ -540,6 +553,9 @@ class Settings extends Page implements HasForms
             // object string, dropping empty entries for order types
             // that were not given a target.
             $targets = [];
+            // The KDS tab is not rendered without the Restaurant module;
+            // keep the stored targets untouched then.
+            $hasTargets = array_key_exists(SettingKey::KDS_ORDER_TYPE_TARGETS->value, $data);
             $targetsState = $data[SettingKey::KDS_ORDER_TYPE_TARGETS->value] ?? [];
             if (is_array($targetsState)) {
                 foreach (app(OrderTypeCatalog::class)->active() as $type) {
@@ -572,9 +588,11 @@ class Settings extends Page implements HasForms
                 }
             }
 
-            $cleanData[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = count($targets) > 0
-                ? json_encode($targets)
-                : '{}';
+            if ($hasTargets) {
+                $cleanData[SettingKey::KDS_ORDER_TYPE_TARGETS->value] = count($targets) > 0
+                    ? json_encode($targets)
+                    : '{}';
+            }
 
             DB::transaction(function () use ($cashierTabs, $cleanData) {
                 try {

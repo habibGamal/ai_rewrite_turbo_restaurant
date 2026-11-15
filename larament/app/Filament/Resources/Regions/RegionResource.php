@@ -6,6 +6,7 @@ use App\Filament\Resources\Regions\Pages\CreateRegion;
 use App\Filament\Resources\Regions\Pages\EditRegion;
 use App\Filament\Resources\Regions\Pages\ListRegions;
 use App\Filament\Resources\Regions\Pages\ViewRegion;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\Region;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -20,11 +21,13 @@ use Filament\Tables\Table;
 
 class RegionResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = Region::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 4;
 

@@ -1,6 +1,7 @@
 import { Order, OrderItemData } from "@/types";
 import { usePage } from "@inertiajs/react";
 import ExternalReceipt from "./ExternalReceipt";
+import { useTerms } from "@/lib/wording";
 
 export default function ReceiptTemplate({
     order,
@@ -11,6 +12,7 @@ export default function ReceiptTemplate({
     orderItems: OrderItemData[];
     receiptFooter: string;
 }) {
+    const terms = useTerms();
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
             <img
@@ -31,7 +33,7 @@ export default function ReceiptTemplate({
             </p>
             <p>نوع الطلب : {order.display?.label ?? order.type}</p>
             {order.display?.showTable && (
-                <p>طاولة رقم {order.dine_table_number}</p>
+                <p>{terms.tableNumber} : {order.dine_table_number}</p>
             )}
             {order.display?.showCustomer && (
                 <>

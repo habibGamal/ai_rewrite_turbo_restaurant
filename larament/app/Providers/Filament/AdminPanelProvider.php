@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\App\Profile;
 use App\Filament\Pages\Auth\Login;
+use App\Http\Middleware\EnsureModuleScreenEnabled;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -76,6 +77,9 @@ class AdminPanelProvider extends PanelProvider
                     ->label('إدارة المصروفات')
                     ->collapsible(),
                 NavigationGroup::make()
+                    ->label('إدارة المبيعات')
+                    ->collapsible(),
+                NavigationGroup::make()
                     ->label('إدارة المطعم')
                     ->collapsible(),
                 NavigationGroup::make()
@@ -94,6 +98,10 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            // Persistent so Livewire updates of a hidden screen 404 too.
+            ->middleware([
+                EnsureModuleScreenEnabled::class,
+            ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
             ]);

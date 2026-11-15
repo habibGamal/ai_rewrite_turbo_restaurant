@@ -21,10 +21,10 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/floor/designer/{code}', [FloorLayoutController::class, 'show'])->middleware('permission:update_order_types')->name('floor.designer');
-    Route::put('/floor/save/{code}', [FloorLayoutController::class, 'save'])->middleware('permission:update_order_types')->name('floor.save');
+    Route::get('/floor/designer/{code}', [FloorLayoutController::class, 'show'])->middleware(['module:restaurant', 'permission:update_order_types'])->name('floor.designer');
+    Route::put('/floor/save/{code}', [FloorLayoutController::class, 'save'])->middleware(['module:restaurant', 'permission:update_order_types'])->name('floor.save');
     // Kitchen Display Screen
-    Route::prefix('kitchen')->name('kitchen.')->group(function () {
+    Route::prefix('kitchen')->name('kitchen.')->middleware('module:restaurant')->group(function () {
         Route::get('/', [KitchenController::class, 'index'])
             ->name('index')
             ->middleware('permission:kitchen.access');
@@ -76,25 +76,25 @@ Route::middleware('auth')->group(function () {
         Route::post('/collect-remaining/{order}', [OrderController::class, 'collectRemaining'])->name('collectRemaining');
         Route::post('/cancel-order/{order}', [OrderController::class, 'cancelOrder'])->name('cancel');
         Route::post('/update-customer/{order}', [OrderController::class, 'updateCustomer'])->name('updateCustomer');
-        Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver');
+        Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver')->middleware('module:delivery');
         Route::post('/update-type/{order}', [OrderController::class, 'updateOrderType'])->name('updateType');
         Route::post('/update-notes/{order}', [OrderController::class, 'updateOrderNotes'])->name('updateNotes');
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
-        Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver');
+        Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver')->middleware('module:delivery');
     });
 
     // Quick operations routes
     Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
     Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
     Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
-    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['module:delivery', 'shift', 'permission:pos.access']);
     Route::get('/products/lookup', \App\Http\Controllers\ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
-    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift', 'permission:pos.access']);
+    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['module:restaurant', 'shift', 'permission:pos.access']);
 
     // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->middleware(['permission:web_order.manage', 'order.tab'])->group(function () {
+    Route::prefix('web-orders')->name('web-orders.')->middleware(['module:web_orders', 'permission:web_order.manage', 'order.tab'])->group(function () {
         Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
         Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
         Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
@@ -107,7 +107,7 @@ Route::middleware('auth')->group(function () {
     // Printer Management Routes
     Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware(['permission:pos.access', 'order.tab']);
     Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
-    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen')->middleware('permission:pos.access');
+    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen')->middleware(['module:restaurant', 'permission:pos.access']);
     Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
 
     // Admin Printer Management Routes

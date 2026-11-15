@@ -2,6 +2,7 @@
 
 namespace App\Filament\Traits;
 
+use App\Modules\ModuleScreens;
 use Illuminate\Support\Str;
 
 trait ViewerAccess
@@ -15,7 +16,7 @@ trait ViewerAccess
     {
         $user = auth()->user();
 
-        if (! $user) {
+        if (! $user || ! ModuleScreens::allows(static::class)) {
             return false;
         }
 

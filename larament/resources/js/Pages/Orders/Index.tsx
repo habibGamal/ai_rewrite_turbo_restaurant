@@ -9,6 +9,8 @@ import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
 import { ReceivablesTab } from '@/Components/Orders/Index/ReceivablesTab';
 import { orderTypeIcon } from '@/helpers/orderTypeIcon';
 import type { CashierTab, Order, Receivable, User } from '@/types';
+import { useModule } from '@/hooks/useModule';
+import { useTerms } from '@/lib/wording';
 
 interface IndexProps {
     orders: Order[];
@@ -35,6 +37,8 @@ const OrdersIndex: React.FC<IndexProps> = ({
     const effectiveOrientation = tabsOrientation ?? pageProps.tabsOrientation ?? 'horizontal';
     const isVertical = effectiveOrientation === 'vertical';
     const { user } = auth;
+    const restaurantEnabled = useModule('restaurant');
+    const terms = useTerms();
     const hasFloor = tabs.some((item) => item.presentation?.body === 'floor');
     useEffect(() => {
         if (!window.Echo) {
@@ -55,12 +59,12 @@ const OrdersIndex: React.FC<IndexProps> = ({
             router.reload({
                 only: ['orders'],
             });
-            if (data.reason === 'done' && kdsCashierStatusEnabled) {
+            if (data.reason === 'done' && kdsCashierStatusEnabled && restaurantEnabled) {
                 const audio = new Audio('/audio/web-notification.wav');
                 audio.play().catch(() => {});
                 notification.success({
                     message: `طلب رقم ${data.order_number} جاهز`,
-                    description: 'تم الانتهاء من تحضير أصناف الطلب في المطبخ',
+                    description: terms.kitchenItemsReady,
                     icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
                     placement: 'topLeft',
                 });
@@ -73,7 +77,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
             events.forEach((event) => channel.stopListening(`.${event}`, refresh));
             channel.stopListening('.KitchenTicketUpdated', handleKitchenUpdate);
         };
-    }, [currentShift.id, hasFloor, kdsCashierStatusEnabled]);
+    }, [currentShift.id, hasFloor, kdsCashierStatusEnabled, restaurantEnabled]);
     const renderedTabs = tabs;
 
     const initialTab = () => {

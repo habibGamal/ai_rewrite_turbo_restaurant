@@ -7,6 +7,7 @@ use App\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
 use App\Filament\Resources\ExternalSellers\Pages\ListExternalSellers;
 use App\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Models\ExternalSeller;
+use App\Modules\ModuleScreens;
 use App\Services\FeatureService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -27,7 +28,7 @@ class ExternalSellerResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -36,7 +37,9 @@ class ExternalSellerResource extends Resource
 
     public static function canAccess(): bool
     {
-        return app(FeatureService::class)->outsourcedOrdersEnabled() && parent::canAccess();
+        return app(FeatureService::class)->outsourcedOrdersEnabled()
+            && ModuleScreens::allows(static::class)
+            && parent::canAccess();
     }
 
     public static function getViewAnyAuthorizationResponse(): Response

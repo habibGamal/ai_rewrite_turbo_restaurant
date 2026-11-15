@@ -73,7 +73,7 @@ it('hides the groups resource and forbids its pages even for admin when the flag
         'pageClass' => EditProductGroup::class,
     ])->assertForbidden();
 
-    $this->get(ProductGroupResource::getUrl('index'))->assertForbidden();
+    $this->get(ProductGroupResource::getUrl('index'))->assertNotFound(); // hidden screens answer 404 (Phase 5)
 });
 
 it('shows the groups resource when the flag is on', function () {

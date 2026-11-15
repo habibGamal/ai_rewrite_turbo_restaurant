@@ -49,11 +49,27 @@ final class OrderTypeCatalog
     }
 
     /**
+     * Rows whose behaviour belongs to a switched-on module (or to core). Old
+     * orders keep resolving through all(); new work only sees these.
+     *
+     * @return Collection<int, OrderTypeRow>
+     */
+    public function available(): Collection
+    {
+        return $this->all()->filter(fn (OrderTypeRow $row): bool => $this->isAvailable($row))->values();
+    }
+
+    public function isAvailable(OrderTypeRow $row): bool
+    {
+        return $this->behaviors->isAvailable($row->behavior);
+    }
+
+    /**
      * @return Collection<int, OrderTypeRow>
      */
     public function active(): Collection
     {
-        return $this->all()->where('is_active', true)->values();
+        return $this->available()->where('is_active', true)->values();
     }
 
     /**
@@ -63,7 +79,8 @@ final class OrderTypeCatalog
     {
         $options = [];
 
-        foreach ($this->all() as $row) {
+        // Select and filter options: types of a switched-off module are left out.
+        foreach ($this->available() as $row) {
             $options[$row->code] = $row->label;
         }
 
@@ -77,11 +94,7 @@ final class OrderTypeCatalog
     {
         $codes = [];
 
-        foreach ($this->all() as $row) {
-            if (! $row->is_active) {
-                continue;
-            }
-
+        foreach ($this->active() as $row) {
             if ($this->behaviors->resolve($row->behavior)->cashierCanCreate()) {
                 $codes[] = $row->code;
             }

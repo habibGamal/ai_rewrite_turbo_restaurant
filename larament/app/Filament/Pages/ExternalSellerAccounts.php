@@ -22,7 +22,7 @@ class ExternalSellerAccounts extends Page implements HasTable
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?string $navigationLabel = 'مستحقات البائعين الخارجيين';
 

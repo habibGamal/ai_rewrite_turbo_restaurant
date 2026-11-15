@@ -22,6 +22,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderTypeRowResource extends Resource
 {
@@ -29,7 +30,7 @@ class OrderTypeRowResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 3;
 
@@ -121,6 +122,18 @@ class OrderTypeRowResource extends Resource
                     ->columns(3)
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * Order types whose behaviour belongs to a switched-off module (dine-in
+     * without Restaurant, delivery without Delivery, web types without Web
+     * orders) are not listed and cannot be opened.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $hidden = app(OrderBehaviorRegistry::class)->unavailableCodes();
+
+        return parent::getEloquentQuery()->when($hidden !== [], fn (Builder $query) => $query->whereNotIn('behavior', $hidden));
     }
 
     public static function table(Table $table): Table
