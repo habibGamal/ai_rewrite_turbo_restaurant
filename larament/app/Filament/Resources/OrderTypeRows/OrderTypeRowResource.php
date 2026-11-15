@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\OrderTypeRows;
 
+use App\Enums\GuestsMode;
 use App\Enums\OrderBehavior;
 use App\Enums\OrderTypeIcon;
 use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -98,6 +100,7 @@ class OrderTypeRowResource extends Resource
                         Select::make('behavior')
                             ->label('السلوك')
                             ->options(self::behaviorOptions())
+                            ->live()
                             ->required()
                             ->disabled(fn (?OrderTypeRow $record): bool => (bool) $record?->is_system),
                     ]),
@@ -120,6 +123,18 @@ class OrderTypeRowResource extends Resource
                             ->default(true),
                     ])
                     ->columns(3)
+                    ->columnSpanFull(),
+
+                Section::make('عدد الأفراد')
+                    ->schema([
+                        Select::make('guests_mode')
+                            ->label('عدد الأفراد')
+                            ->options(GuestsMode::options())
+                            ->default(GuestsMode::OFF->value)
+                            ->required()
+                            ->helperText('يسأل الكاشير عن عدد الأفراد عند فتح الطلب، والإجباري يمنع إنهاء الطلب بدونه. التقارير تعرض متوسط الفرد.'),
+                    ])
+                    ->visible(fn (Get $get): bool => OrderTypeRow::supportsGuests($get('behavior')))
                     ->columnSpanFull(),
             ]);
     }
@@ -177,6 +192,11 @@ class OrderTypeRowResource extends Resource
                 IconColumn::make('require_customer_for_credit')
                     ->label('يتطلب ربط عميل')
                     ->boolean(),
+
+                TextColumn::make('guests_mode')
+                    ->label('عدد الأفراد')
+                    ->formatStateUsing(fn (GuestsMode|string|null $state): string => ($state instanceof GuestsMode ? $state : (GuestsMode::tryFrom((string) $state) ?? GuestsMode::OFF))->label())
+                    ->toggleable(),
             ])
             ->defaultSort('id')
             ->recordActions([

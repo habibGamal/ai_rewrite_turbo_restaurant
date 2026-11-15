@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
 use App\Models\Customer;
 use App\Models\Order;
@@ -312,6 +313,7 @@ class ChannelPerformanceReportService
             'total_orders' => $totalOrders,
             'total_customers' => $totalCustomers,
             'avg_order_value' => $totalOrders > 0 ? $totalRevenue / $totalOrders : 0,
+            'guests' => GuestStats::fromQuery($this->getOrdersQuery($startDate, $endDate)),
         ];
     }
 
