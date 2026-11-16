@@ -78,6 +78,7 @@ class OrderBuilder implements DocumentBuilder
         return [
             'number' => $order->order_number !== null ? (string) $order->order_number : null,
             'shift_uuid' => $shiftUuid,
+            'terminal_name' => $order->terminal?->name,
             'business_date' => Payload::date($shift ? $shift->getAttribute('business_date') : null),
             'type' => $order->type,
             'status' => $order->status->value,

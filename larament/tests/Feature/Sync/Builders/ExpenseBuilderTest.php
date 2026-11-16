@@ -29,6 +29,7 @@ it('builds an expense snapshot', function () {
 
     expect($data)->toEqual([
         'shift_uuid' => $shift->uuid,
+        'terminal_session_uuid' => $expense->terminalSession?->uuid,
         'business_date' => '2026-10-29',
         'expense_type_uuid' => $expenseType->uuid,
         'amount' => '75.50',

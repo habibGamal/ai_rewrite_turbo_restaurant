@@ -25,6 +25,7 @@ use App\Models\RevenueType;
 use App\Models\Shift;
 use App\Models\Stocktaking;
 use App\Models\Supplier;
+use App\Models\TerminalSession;
 use App\Models\User;
 use App\Models\Waste;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +73,8 @@ class SyncOutboxObserver
             Order::class => $this->handleOrderSaved($model),
             OrderItem::class, Payment::class => $this->recordParentOrderIfFinal($model),
             Shift::class => Outbox::record(DocumentType::Shift, $this->getModelUuid($model)),
+            // A drawer opening, closing or changing hands re-sends its shift.
+            TerminalSession::class => $this->recordShiftOf($model),
             Expense::class => Outbox::record(DocumentType::Expense, $this->getModelUuid($model)),
             Revenue::class => Outbox::record(DocumentType::Revenue, $this->getModelUuid($model)),
             PurchaseInvoice::class => $model->closed_at !== null
@@ -257,5 +260,14 @@ class SyncOutboxObserver
     protected function getModelUuid(Model $model): string
     {
         return (string) $model->getAttribute('uuid');
+    }
+
+    private function recordShiftOf(Model $session): void
+    {
+        $uuid = Shift::query()->whereKey($session->getAttribute('shift_id'))->value('uuid');
+
+        if (is_string($uuid)) {
+            Outbox::record(DocumentType::Shift, $uuid);
+        }
     }
 }

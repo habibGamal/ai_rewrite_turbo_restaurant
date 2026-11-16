@@ -5,6 +5,7 @@ namespace App\Sync\Builders;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
+use App\Models\TerminalSession;
 use App\Sync\Builders\Concerns\IgnoresKey;
 use App\Sync\DocumentType;
 use App\Sync\Payload;
@@ -63,6 +64,7 @@ class OrderReturnBuilder implements DocumentBuilder
         return [
             'order_uuid' => $order ? $order->getAttribute('uuid') : null,
             'shift_uuid' => $shift ? $shift->getAttribute('uuid') : null,
+            'terminal_session_uuid' => TerminalSession::uuidOf($orderReturn->getAttribute('terminal_session_id')),
             'business_date' => Payload::date($shift ? $shift->getAttribute('business_date') : null),
             'total_refund' => Payload::money($orderReturn->total_refund),
             'reason' => $orderReturn->reason,
