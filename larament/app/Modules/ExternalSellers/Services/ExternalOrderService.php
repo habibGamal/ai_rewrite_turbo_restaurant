@@ -65,13 +65,6 @@ class ExternalOrderService
         });
     }
 
-    public function fulfill(int $orderId, int $externalId): void
-    {
-        $this->withLockedOrder($orderId, function (Order $order) use ($externalId): void {
-            $order->externalOrders()->whereKey($externalId)->firstOrFail()->update(['status' => 'fulfilled']);
-        });
-    }
-
     private function withLockedOrder(int $orderId, Closure $callback): void
     {
         DB::transaction(function () use ($orderId, $callback): void {

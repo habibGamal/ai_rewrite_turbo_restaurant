@@ -162,8 +162,8 @@
             </tbody>
         </table>
 
-        @include('print.receipt-reference')
         @include('print.receipt-external')
+        @include('print.receipt-reference')
         @if ($order->order_notes)
             <p>{{ $order->order_notes }}</p>
         @endif

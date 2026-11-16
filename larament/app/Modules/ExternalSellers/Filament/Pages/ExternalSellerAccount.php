@@ -9,8 +9,8 @@ use App\Models\ExternalOrderCollection;
 use App\Models\ExternalOrderItem;
 use App\Models\ExternalSeller;
 use App\Models\Shift;
-use App\Services\FeatureService;
 use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
+use App\Services\FeatureService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
@@ -281,18 +281,8 @@ class ExternalSellerAccount extends Page implements HasTable
                 TextColumn::make('status')
                     ->label('الحالة')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'fulfilled' => 'تم التنفيذ',
-                        'cancelled' => 'ملغي',
-                        'pending' => 'معلق',
-                        default => $state,
-                    })
-                    ->color(fn (string $state): string => match ($state) {
-                        'fulfilled' => 'success',
-                        'cancelled' => 'danger',
-                        'pending' => 'warning',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (string $state): string => $state === 'cancelled' ? 'ملغي' : 'نشط')
+                    ->color(fn (string $state): string => $state === 'cancelled' ? 'danger' : 'success'),
             ])
             ->filters([
                 Filter::make('date')
@@ -348,8 +338,7 @@ class ExternalSellerAccount extends Page implements HasTable
                 SelectFilter::make('status')
                     ->label('الحالة')
                     ->options([
-                        'pending' => 'معلق',
-                        'fulfilled' => 'تم التنفيذ',
+                        'pending' => 'نشط',
                         'cancelled' => 'ملغي',
                     ]),
 
