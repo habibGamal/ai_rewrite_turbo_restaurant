@@ -54,6 +54,17 @@
                         <td class="p-2"></td>
                         <td class="p-2 text-center">{{ $money($summary['total_revenues']) }}</td>
                     </tr>
+                    <tr class="bg-gray-50 dark:bg-white/5">
+                        <td class="p-2 font-semibold" colspan="4">المصروفات</td>
+                    </tr>
+                    @foreach ($summary['expense_types'] as $type)
+                        <tr class="border-b border-gray-100 dark:border-gray-800" data-testid="expense-type-row">
+                            <td class="p-2 font-medium">{{ $type['name'] }} <span class="text-xs text-gray-500">({{ $type['count'] }})</span></td>
+                            <td class="p-2 text-center">{{ $money($type['cash']) }}</td>
+                            <td class="p-2 text-center">—</td>
+                            <td class="p-2 text-center font-semibold">{{ $money($type['total']) }}</td>
+                        </tr>
+                    @endforeach
                     <tr class="border-b border-gray-200 dark:border-gray-700 font-semibold text-danger-600 dark:text-danger-400">
                         <td class="p-2">إجمالي المصروفات</td>
                         <td class="p-2"></td>
