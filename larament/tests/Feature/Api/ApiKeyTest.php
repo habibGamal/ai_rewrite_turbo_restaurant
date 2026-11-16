@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\SettingKey;
 use App\Services\BranchService;
 use App\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -92,15 +94,12 @@ it('includes X-Api-Key header on outgoing master node requests in BranchService'
         'https://master.example.com/*' => Http::response(['message' => 'ok'], 200),
     ]);
 
-    $settingsMock = Mockery::mock(SettingsService::class);
-    $settingsMock->shouldReceive('get')
-        ->with('master_node_link')
-        ->andReturn('https://master.example.com');
+    app(SettingsService::class)->set(SettingKey::MASTER_NODE_LINK->value, 'https://master.example.com');
 
-    $branchService = new BranchService($settingsMock);
+    $branchService = app(BranchService::class);
     $branchService->testMasterConnection();
 
-    Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+    Http::assertSent(function (Request $request) {
         return $request->url() === 'https://master.example.com/api/check'
             && $request->hasHeader('X-Api-Key', 'outgoing-secret-key');
     });
@@ -128,3 +127,35 @@ it('protects every required api route with api key verification', function (stri
     ['GET', '/api/get-shift-id'],
     ['POST', '/api/save-order/1'],
 ]);
+
+it('accepts the key saved in settings and prefers it over the env key', function () {
+    config(['app.web_api_key' => 'env-key-should-be-ignored']);
+    app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, 'settings-key-1234567890');
+
+    expect($this->withHeaders(['X-Api-Key' => 'settings-key-1234567890'])->getJson('/api/products/product_search')->status())
+        ->not->toBe(401);
+    $this->withHeaders(['X-Api-Key' => 'env-key-should-be-ignored'])
+        ->getJson('/api/products/product_search')
+        ->assertStatus(401);
+});
+
+it('falls back to the env key when the settings key is empty', function () {
+    config(['app.web_api_key' => 'env-fallback-key']);
+    app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, '');
+
+    expect(app(SettingsService::class)->getWebApiKey())->toBe('env-fallback-key');
+    expect($this->withHeaders(['X-Api-Key' => 'env-fallback-key'])->getJson('/api/products/product_search')->status())
+        ->not->toBe(401);
+});
+
+it('sends the settings key on outgoing master node requests', function () {
+    config(['app.web_api_key' => 'env-key']);
+    app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, 'settings-outgoing-key-123');
+    app(SettingsService::class)->set(SettingKey::MASTER_NODE_LINK->value, 'https://master.example.com');
+
+    Http::fake(['https://master.example.com/*' => Http::response(['message' => 'ok'], 200)]);
+
+    app(BranchService::class)->testMasterConnection();
+
+    Http::assertSent(fn (Request $request) => $request->hasHeader('X-Api-Key', 'settings-outgoing-key-123'));
+});

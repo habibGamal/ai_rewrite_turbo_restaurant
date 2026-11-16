@@ -309,6 +309,32 @@ class Settings extends Page implements HasForms
                                                     ->required(fn (Get $get): bool => $get(SettingKey::NODE_TYPE->value) === 'slave'),
                                             ]),
                                     ]),
+
+                                Section::make('مفتاح الربط (API)')
+                                    ->description('يستخدمه الموقع الإلكتروني والفروع للاتصال بهذه النقطة. يجب أن تكون القيمة نفسها هنا وفي الموقع وفي كل فرع.')
+                                    ->schema([
+                                        TextInput::make(SettingKey::WEB_API_KEY->value)
+                                            ->label(SettingKey::WEB_API_KEY->label())
+                                            ->helperText(fn (?string $state): string => ($state === null || $state === '') && $this->envWebApiKeyIsSet()
+                                                ? 'لا يوجد مفتاح محفوظ هنا، ويتم حالياً استخدام WEB_API_KEY من ملف .env.'
+                                                : SettingKey::WEB_API_KEY->helperText())
+                                            ->placeholder(SettingKey::WEB_API_KEY->placeholder())
+                                            ->password()
+                                            ->revealable()
+                                            ->copyable(copyMessage: 'تم نسخ المفتاح')
+                                            ->rules(SettingKey::WEB_API_KEY->validationRules())
+                                            ->suffixAction(
+                                                Action::make('generateWebApiKey')
+                                                    ->label('توليد مفتاح')
+                                                    ->tooltip('توليد مفتاح جديد وحفظه')
+                                                    ->icon('heroicon-m-key')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('توليد مفتاح API جديد')
+                                                    ->modalDescription('سيتم حفظ مفتاح جديد فوراً. أي موقع أو فرع يستخدم المفتاح القديم سيتوقف عن الاتصال حتى تضع المفتاح الجديد في إعداداته.')
+                                                    ->modalSubmitActionLabel('توليد وحفظ')
+                                                    ->action(fn () => $this->generateWebApiKey()),
+                                            ),
+                                    ]),
                             ]),
 
                         Tabs\Tab::make('إدارة الورديات')
@@ -637,6 +663,30 @@ class Settings extends Page implements HasForms
         }
     }
 
+    /**
+     * Generate a new web API key, save it at once and show it in the form.
+     */
+    public function generateWebApiKey(): void
+    {
+        $key = SettingsService::generateWebApiKey();
+        app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, $key);
+
+        $this->data[SettingKey::WEB_API_KEY->value] = $key;
+
+        Notification::make()
+            ->title('تم توليد مفتاح API جديد وحفظه')
+            ->body('انسخ المفتاح وضعه في إعدادات الموقع الإلكتروني وفي كل فرع.')
+            ->success()
+            ->send();
+    }
+
+    private function envWebApiKeyIsSet(): bool
+    {
+        $fromEnv = config('app.web_api_key');
+
+        return is_string($fromEnv) && $fromEnv !== '';
+    }
+
     public function resetToDefaults(): void
     {
         try {
@@ -653,6 +703,8 @@ class Settings extends Page implements HasForms
                     fn (string $key): bool => ! (SettingKey::tryFrom($key)?->isVendorOwned() ?? false),
                     ARRAY_FILTER_USE_KEY,
                 );
+                // Resetting must not cut off the website and branches.
+                unset($remainingDefaults[SettingKey::WEB_API_KEY->value]);
 
                 $settingsService->setMultiple($remainingDefaults);
             });

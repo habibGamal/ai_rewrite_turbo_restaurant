@@ -7,6 +7,7 @@ use App\Enums\SettingKey;
 use App\Models\Category;
 use App\Models\Product;
 use Exception;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -52,11 +53,11 @@ class BranchService
     /**
      * Get an HTTP client instance configured for master node requests
      */
-    private function masterHttp(): \Illuminate\Http\Client\PendingRequest
+    private function masterHttp(): PendingRequest
     {
         return Http::withOptions($this->querySettings)
             ->withHeaders([
-                'X-Api-Key' => (string) config('app.web_api_key'),
+                'X-Api-Key' => $this->settingsService->getWebApiKey(),
             ]);
     }
 
