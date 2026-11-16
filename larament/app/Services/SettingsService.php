@@ -127,6 +127,30 @@ class SettingsService
     }
 
     /**
+     * The key the website and slave branches send as X-Api-Key. The value
+     * saved in Settings wins; the WEB_API_KEY .env line is the fallback.
+     */
+    public function getWebApiKey(): string
+    {
+        $stored = $this->get(SettingKey::WEB_API_KEY->value);
+        if (is_string($stored) && $stored !== '') {
+            return $stored;
+        }
+
+        $fromEnv = config('app.web_api_key');
+
+        return is_string($fromEnv) ? $fromEnv : '';
+    }
+
+    /**
+     * A new random key suitable for WEB_API_KEY.
+     */
+    public static function generateWebApiKey(): string
+    {
+        return bin2hex(random_bytes(24));
+    }
+
+    /**
      * Get scale barcode prefix from settings
      */
     public function getScaleBarcodePrefix(): string

@@ -8,6 +8,7 @@ use App\Modules\Module;
 use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\SettingsService;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -551,4 +552,46 @@ it('rejects an invalid sound value', function () {
         ])
         ->call('save')
         ->assertHasFormErrors([SettingKey::KDS_NEW_ORDER_SOUND->value]);
+});
+
+// ===== Web API key =====
+it('generates and saves a web api key from the settings page', function () {
+    $component = livewire(Settings::class)
+        ->call('generateWebApiKey')
+        ->assertNotified();
+
+    $key = app(SettingsService::class)->get(SettingKey::WEB_API_KEY->value);
+
+    expect($key)->toBeString()->toHaveLength(48)
+        ->and(app(SettingsService::class)->getWebApiKey())->toBe($key);
+    $component->assertSet('data.'.SettingKey::WEB_API_KEY->value, $key);
+});
+
+it('generates the web api key through the field action', function () {
+    livewire(Settings::class)
+        ->callAction(TestAction::make('generateWebApiKey')->schemaComponent(SettingKey::WEB_API_KEY->value, schema: 'form'));
+
+    expect(app(SettingsService::class)->get(SettingKey::WEB_API_KEY->value))->toHaveLength(48);
+});
+
+it('saves a typed web api key and rejects a short one', function () {
+    livewire(Settings::class)
+        ->fillForm([SettingKey::WEB_API_KEY->value => 'short'])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::WEB_API_KEY->value]);
+
+    livewire(Settings::class)
+        ->fillForm([SettingKey::WEB_API_KEY->value => 'a-long-enough-manual-key'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(app(SettingsService::class)->getWebApiKey())->toBe('a-long-enough-manual-key');
+});
+
+it('keeps the web api key when resetting settings to defaults', function () {
+    app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, 'keep-this-key-after-reset');
+
+    livewire(Settings::class)->call('resetToDefaults');
+
+    expect(app(SettingsService::class)->getWebApiKey())->toBe('keep-this-key-after-reset');
 });

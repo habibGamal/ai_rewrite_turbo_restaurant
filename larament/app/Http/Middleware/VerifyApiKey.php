@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\SettingsService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,14 +12,14 @@ class VerifyApiKey
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $expectedKey = config('app.web_api_key');
+        $expectedKey = app(SettingsService::class)->getWebApiKey();
         $providedKey = $request->header('X-Api-Key');
 
-        if (! is_string($expectedKey) || $expectedKey === '' || ! is_string($providedKey) || ! hash_equals($expectedKey, $providedKey)) {
+        if ($expectedKey === '' || ! is_string($providedKey) || ! hash_equals($expectedKey, $providedKey)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
