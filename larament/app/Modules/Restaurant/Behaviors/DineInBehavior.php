@@ -7,15 +7,16 @@ use App\Exceptions\OrderException;
 use App\Models\DineTable;
 use App\Models\Order;
 use App\Models\OrderTypeRow;
+use App\Modules\Restaurant\Services\FloorLayoutService;
+use App\Modules\Restaurant\Services\TableManagementService;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\Behaviors\ProvidesTabData;
+use App\Orders\Behaviors\ServiceScalesWithItems;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderOpening;
 use App\Orders\TabPresentation;
-use App\Modules\Restaurant\Services\FloorLayoutService;
-use App\Modules\Restaurant\Services\TableManagementService;
 
-final class DineInBehavior implements OrderTypeBehavior, ProvidesTabData
+final class DineInBehavior implements OrderTypeBehavior, ProvidesTabData, ServiceScalesWithItems
 {
     public function __construct(
         private readonly TableManagementService $tables,

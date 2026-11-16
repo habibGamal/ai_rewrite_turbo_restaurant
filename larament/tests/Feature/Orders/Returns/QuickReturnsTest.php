@@ -211,6 +211,40 @@ it('marks an exchange on the return', function () {
     expect((float) $stats['availableCash'])->toBe((float) $this->shift->start_cash + 270 + 90);
 });
 
+it('keeps sales, returns, quantities and cash right for an exchange to a cheaper item', function () {
+    // Sold: 2 shirts (240) + socks (30) = 270 cash.
+    $order = quickSale();
+
+    // Bring back one shirt (120), take socks (30): the customer gets 90 back.
+    $response = $this->postJson(route('pos.instant-returns.store'), [
+        'order_id' => $order->id,
+        'items' => [['order_item_id' => lineOf($order, $this->shirt), 'quantity' => 1]],
+        'exchange' => [
+            'client_uuid' => (string) Str::uuid(),
+            'type' => 'instant_sale',
+            'items' => [['product_id' => $this->socks->id, 'quantity' => 1]],
+        ],
+        'tenders' => [],
+    ])->assertOk();
+    expect((float) $response->json('net'))->toBe(-90.0);
+
+    $stats = app(ShiftsReportService::class)->calculateShiftStats($this->shift->fresh());
+    // Gross sales count the replacement sale once; the refund is counted once.
+    expect((float) $stats['sales'])->toBe(300.0)
+        ->and((float) $stats['returnsAmount'])->toBe(120.0)
+        ->and((float) $stats['netSales'])->toBe(180.0)
+        // Drawer: 270 in, 90 handed back.
+        ->and((float) $stats['availableCash'])->toBe((float) $this->shift->start_cash + 180);
+
+    $today = now()->toDateString();
+    $products = app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery($today, $today)->get();
+    expect((float) $products->firstWhere('id', $this->shirt->id)->net_quantity)->toBe(1.0)
+        ->and((float) $products->firstWhere('id', $this->shirt->id)->net_sales)->toBe(120.0)
+        ->and((float) $products->firstWhere('id', $this->socks->id)->net_quantity)->toBe(2.0)
+        ->and(SafetyNet::stock($this->shirt))->toBe(9.0)
+        ->and(SafetyNet::stock($this->socks))->toBe(8.0);
+});
+
 it('shows returns as gross, refunds and net in the period reports', function () {
     $order = quickSale();
     $this->postJson(route('pos.instant-returns.store'), [

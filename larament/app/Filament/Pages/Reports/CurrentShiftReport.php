@@ -12,6 +12,7 @@ use App\Filament\Widgets\CurrentShiftMoneyInfoStats;
 use App\Filament\Widgets\CurrentShiftOrdersStats;
 use App\Filament\Widgets\CurrentShiftOrdersTable;
 use App\Filament\Widgets\NoActiveShiftWidget;
+use App\Filament\Widgets\Returns\CurrentShiftReturnsTable;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -56,6 +57,7 @@ class CurrentShiftReport extends BaseDashboard
             CurrentShiftOrdersStats::class,
             CurrentShiftDoneOrdersStats::class,
             CurrentShiftOrdersTable::class,
+            CurrentShiftReturnsTable::class,
             CurrentShiftCreditCollectionsTable::class,
             CurrentShiftExpensesDetailsTable::class,
             CurrentShiftExpensesTable::class,

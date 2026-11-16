@@ -12,6 +12,7 @@ use App\Models\OrderReturnItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Orders\OrderReturnService;
+use App\Services\Orders\ReturnRefundCalculator;
 use App\Services\Orders\ReturnRules;
 use Illuminate\Support\Facades\DB;
 
@@ -27,6 +28,7 @@ class InstantReturnService
         private readonly OrderReturnService $returns,
         private readonly InstantSaleService $sales,
         private readonly ReturnRules $rules,
+        private readonly ReturnRefundCalculator $refunds,
     ) {}
 
     /** How many receipts of other shifts the lookup lists for one typed number. */
@@ -134,9 +136,11 @@ class InstantReturnService
         $order->load('items.product');
         $returned = OrderReturnItem::query()
             ->whereIn('order_item_id', $order->items->modelKeys())
-            ->selectRaw('order_item_id, SUM(quantity) as quantity')
+            ->selectRaw('order_item_id, SUM(quantity) as quantity, SUM(refund_amount) as refunded')
             ->groupBy('order_item_id')
-            ->pluck('quantity', 'order_item_id');
+            ->get()
+            ->keyBy('order_item_id');
+        $lines = $this->refunds->lines($order);
 
         $items = [];
         foreach ($order->items as $item) {
@@ -145,14 +149,21 @@ class InstantReturnService
             }
 
             $product = $item->product;
+            $line = $lines[$item->id];
             $items[] = [
                 'id' => $item->id,
                 'product_id' => $item->product_id,
                 'name' => $product instanceof Product ? $product->name : '',
                 'quantity' => (float) $item->quantity,
                 'price' => (float) $item->price,
-                'returnable_quantity' => max(0.0, (float) $item->quantity - (float) ($returned[$item->id] ?? 0)),
-                'unit_refund' => $this->unitRefund($order, $item),
+                'returnable_quantity' => max(0.0, (float) $item->quantity - (float) ($returned[$item->id]->quantity ?? 0)),
+                'unit_refund' => $line['unit_refund'],
+                // The client prices a partial return as refundable × qty / quantity
+                // and the last units as refundable − refunded, like the server.
+                'refundable' => $line['refundable'],
+                'refunded' => round((float) ($returned[$item->id]->refunded ?? 0), 2),
+                'discounted' => $line['item_discount'] + $line['order_discount'] > 0.004,
+                'explanation' => ReturnRefundCalculator::explain($line),
             ];
         }
 
@@ -196,17 +207,29 @@ class InstantReturnService
             $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             $order->load('items');
 
+            $earlier = OrderReturnItem::query()->whereIn('order_item_id', $order->items->modelKeys())->get();
+
             $returnItems = [];
+            $taken = [];
             foreach ($lines as $line) {
                 $item = $order->items->firstWhere('id', (int) $line['order_item_id']);
                 if (! $item instanceof OrderItem) {
                     throw new OrderException('صنف الطلب غير موجود');
                 }
 
+                $quantity = (float) $line['quantity'];
+                $taken[$item->id] ??= [
+                    'quantity' => (float) $earlier->where('order_item_id', $item->id)->sum('quantity'),
+                    'refund' => (float) $earlier->where('order_item_id', $item->id)->sum('refund_amount'),
+                ];
+                $refund = $this->refunds->refundFor($order, $item->id, $quantity, $taken[$item->id]['quantity'], $taken[$item->id]['refund']);
+                $taken[$item->id]['quantity'] += $quantity;
+                $taken[$item->id]['refund'] += $refund;
+
                 $returnItems[] = [
                     'order_item_id' => $item->id,
-                    'quantity' => (float) $line['quantity'],
-                    'refund_amount' => round($this->unitRefund($order, $item) * (float) $line['quantity'], 2),
+                    'quantity' => $quantity,
+                    'refund_amount' => $refund,
                     'restocked' => (bool) ($line['restocked'] ?? true),
                 ];
             }
@@ -250,22 +273,5 @@ class InstantReturnService
 
             return ['return' => $orderReturn, 'exchange' => $sale, 'refund' => $refund, 'net' => $net];
         });
-    }
-
-    /**
-     * What one unit of the line refunds: its price after the line discount,
-     * scaled by the order-level discount (and the rounding of the total).
-     */
-    private function unitRefund(Order $order, OrderItem $item): float
-    {
-        $quantity = (float) $item->quantity;
-        if ($quantity <= 0) {
-            return 0.0;
-        }
-
-        $gross = (float) $order->sub_total + (float) $order->service + (float) $order->tax;
-        $ratio = $gross > 0 ? min(1.0, (float) $order->total / $gross) : 1.0;
-
-        return round(((float) $item->total / $quantity) * $ratio, 2);
     }
 }

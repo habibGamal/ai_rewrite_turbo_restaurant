@@ -11,6 +11,8 @@ use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
+use App\Filament\Widgets\Returns\CurrentShiftReturnsTable;
+use App\Filament\Widgets\Returns\ShiftReturnsTable;
 use App\Models\Customer;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -180,12 +182,12 @@ describe('pay-later order of 100: 50 in shift 1, 50 in shift 2', function () {
         $pages = [
             'current' => [
                 'cards' => [livewire(CurrentShiftMoneyInfoStats::class)->html()],
-                'tables' => [CurrentShiftOrdersTable::class, CurrentShiftCreditCollectionsTable::class, CurrentShiftExpensesDetailsTable::class],
+                'tables' => [CurrentShiftOrdersTable::class, CurrentShiftReturnsTable::class, CurrentShiftCreditCollectionsTable::class, CurrentShiftExpensesDetailsTable::class],
                 'params' => [],
             ],
             'period' => [
                 'cards' => [livewire(PeriodShiftMoneyInfoStats::class, $filters)->html()],
-                'tables' => [PeriodShiftOrdersTable::class, PeriodShiftCreditCollectionsTable::class, PeriodShiftExpensesDetailsTable::class],
+                'tables' => [PeriodShiftOrdersTable::class, ShiftReturnsTable::class, PeriodShiftCreditCollectionsTable::class, PeriodShiftExpensesDetailsTable::class],
                 'params' => $filters,
             ],
         ];

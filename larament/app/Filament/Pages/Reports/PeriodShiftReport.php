@@ -14,6 +14,7 @@ use App\Filament\Widgets\PeriodShiftInfoStats;
 use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
+use App\Filament\Widgets\Returns\ShiftReturnsTable;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -95,6 +96,7 @@ class PeriodShiftReport extends BaseDashboard
             PeriodShiftOrdersStats::class,
             PeriodShiftDoneOrdersStats::class,
             PeriodShiftOrdersTable::class,
+            ShiftReturnsTable::class,
             PeriodShiftCreditCollectionsTable::class,
             PeriodShiftExpensesDetailsTable::class,
             PeriodShiftExpensesTable::class,
