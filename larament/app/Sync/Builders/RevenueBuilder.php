@@ -3,6 +3,7 @@
 namespace App\Sync\Builders;
 
 use App\Models\Revenue;
+use App\Models\TerminalSession;
 use App\Sync\Builders\Concerns\IgnoresKey;
 use App\Sync\DocumentType;
 use App\Sync\Payload;
@@ -37,6 +38,7 @@ class RevenueBuilder implements DocumentBuilder
 
         return [
             'shift_uuid' => $shift?->getAttribute('uuid'),
+            'terminal_session_uuid' => TerminalSession::uuidOf($revenue->getAttribute('terminal_session_id')),
             'business_date' => Payload::date($shift?->getAttribute('business_date')),
             'revenue_type_uuid' => $type?->uuid,
             'user_uuid' => $user?->getAttribute('uuid'),

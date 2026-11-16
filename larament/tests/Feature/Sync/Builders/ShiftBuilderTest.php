@@ -41,6 +41,7 @@ it('builds a shift snapshot', function () {
         'closed' => true,
         'money_edited_at' => null,
         'money_edited_count' => 0,
+        'terminal_sessions' => [],
     ]);
 });
 

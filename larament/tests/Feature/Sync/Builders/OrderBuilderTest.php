@@ -104,6 +104,7 @@ it('builds a completed order snapshot with items and payments', function () {
         ->and(array_keys($data))->toEqual([
             'number',
             'shift_uuid',
+            'terminal_name',
             'business_date',
             'type',
             'status',

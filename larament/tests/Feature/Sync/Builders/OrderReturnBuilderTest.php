@@ -63,6 +63,7 @@ it('builds an order return snapshot with items and refunds', function () {
     expect($data)->toEqual([
         'order_uuid' => $order->uuid,
         'shift_uuid' => $shift->uuid,
+        'terminal_session_uuid' => $orderReturn->terminalSession?->uuid,
         'business_date' => '2026-10-29',
         'total_refund' => '150.00',
         'reason' => 'wrong item delivered',

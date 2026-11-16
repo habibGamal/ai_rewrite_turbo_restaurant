@@ -36,6 +36,7 @@ use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\Stocktaking;
 use App\Models\Supplier;
+use App\Models\TerminalSession;
 use App\Models\User;
 use App\Models\Waste;
 use App\Modules\Module;
@@ -125,6 +126,7 @@ class AppServiceProvider extends ServiceProvider
         Payment::observe(SyncOutboxObserver::class);
         OrderReturn::observe(SyncOutboxObserver::class);
         Shift::observe(SyncOutboxObserver::class);
+        TerminalSession::observe(SyncOutboxObserver::class);
         Expense::observe(SyncOutboxObserver::class);
         Revenue::observe(SyncOutboxObserver::class);
         PurchaseInvoice::observe(SyncOutboxObserver::class);

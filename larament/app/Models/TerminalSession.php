@@ -84,6 +84,20 @@ class TerminalSession extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * The sync uuid of a drawer session by id, for document payloads.
+     */
+    public static function uuidOf(mixed $id): ?string
+    {
+        if ($id === null || $id === '') {
+            return null;
+        }
+
+        $uuid = static::query()->whereKey((int) $id)->value('uuid');
+
+        return is_string($uuid) ? $uuid : null;
+    }
+
     /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo
     {
