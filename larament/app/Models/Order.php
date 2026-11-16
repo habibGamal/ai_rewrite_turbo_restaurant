@@ -50,6 +50,7 @@ class Order extends Model
         'kitchen_notes',
         'order_notes',
         'order_number',
+        'web_order_key',
         'web_preferences',
     ];
 

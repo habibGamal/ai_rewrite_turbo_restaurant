@@ -43,6 +43,9 @@ return [
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                // Keep a down socket server from stalling the request that broadcasts.
+                'connect_timeout' => (float) env('REVERB_CONNECT_TIMEOUT', 2),
+                'timeout' => (float) env('REVERB_TIMEOUT', 5),
             ],
         ],
 
