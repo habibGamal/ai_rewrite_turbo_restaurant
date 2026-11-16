@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\FeatureService;
 use App\Services\SettingsService;
+use App\Terminals\TerminalSessionResolver;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Spatie\Permission\Models\Permission;
@@ -68,6 +69,37 @@ class HandleInertiaRequests extends Middleware
             'receiptFooter' => $settingsService->getReceiptFooter(),
             'scaleBarcodePrefix' => $settingsService->getScaleBarcodePrefix(),
             'tabsOrientation' => $settingsService->getCashierTabsOrientation(),
+            'terminal' => $this->terminalProps($featureService),
+        ];
+    }
+
+    /**
+     * The drawer of this device, for the cashier screen's bottom bar. Null
+     * while multiple terminals are off, so nothing about drawers shows.
+     *
+     * @return array{id: int, name: string, sessionId: int|null, cashier: string|null, openedAt: string|null}|null
+     */
+    private function terminalProps(FeatureService $features): ?array
+    {
+        if (! $features->multiTerminalEnabled()) {
+            return null;
+        }
+
+        $resolver = app(TerminalSessionResolver::class);
+        $terminal = $resolver->terminal();
+
+        if ($terminal === null) {
+            return null;
+        }
+
+        $session = $resolver->current();
+
+        return [
+            'id' => $terminal->id,
+            'name' => $terminal->name,
+            'sessionId' => $session?->id,
+            'cashier' => $session?->user?->name,
+            'openedAt' => $session?->opened_at->toIso8601String(),
         ];
     }
 }

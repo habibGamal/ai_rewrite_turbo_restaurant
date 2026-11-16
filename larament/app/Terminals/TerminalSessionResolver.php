@@ -3,6 +3,7 @@
 namespace App\Terminals;
 
 use App\Models\Shift;
+use App\Models\Terminal;
 use App\Models\TerminalSession;
 
 /**
@@ -19,6 +20,8 @@ class TerminalSessionResolver
 {
     private ?TerminalSession $current = null;
 
+    private ?Terminal $terminal = null;
+
     /** @var array<int, TerminalSession> */
     private array $byShift = [];
 
@@ -30,6 +33,19 @@ class TerminalSessionResolver
     public function current(): ?TerminalSession
     {
         return $this->current;
+    }
+
+    /**
+     * The drawer this device is bound to (multiple terminals on), open or not.
+     */
+    public function setTerminal(?Terminal $terminal): void
+    {
+        $this->terminal = $terminal;
+    }
+
+    public function terminal(): ?Terminal
+    {
+        return $this->terminal ?? $this->current?->terminal;
     }
 
     public function forShift(int $shiftId): ?TerminalSession

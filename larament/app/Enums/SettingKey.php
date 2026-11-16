@@ -44,6 +44,8 @@ enum SettingKey: string
     case FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
     case FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
     case FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
+    case FEATURE_MULTI_TERMINAL_ENABLED = 'feature_multi_terminal_enabled';
+    case MAX_TERMINALS = 'max_terminals';
     case BUSINESS_TYPE = 'business_type';
     case ENABLED_MODULES = 'enabled_modules';
     case SETUP_COMPLETED = 'setup_completed';
@@ -89,6 +91,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'false',
             self::FEATURE_EQUIPMENT_ENABLED => 'false',
             self::FEATURE_VARIANTS_ENABLED => 'false',
+            self::FEATURE_MULTI_TERMINAL_ENABLED => 'false',
+            self::MAX_TERMINALS => '2',
             self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
             self::ENABLED_MODULES => self::enabledModulesDefault(),
             self::SETUP_COMPLETED => 'false',
@@ -138,6 +142,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_EQUIPMENT_ENABLED => self::storedBooleanRules(),
             self::FEATURE_VARIANTS_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_MULTI_TERMINAL_ENABLED => self::storedBooleanRules(),
+            self::MAX_TERMINALS => ['required', 'integer', 'min:1', 'max:50'],
             self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
             self::ENABLED_MODULES => ['nullable', 'json'],
             self::SETUP_COMPLETED => self::storedBooleanRules(),
@@ -186,6 +192,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل الطلبات الخارجية والمتاجر المتعاونة',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل المقاسات والألوان (متغيرات المنتجات)',
+            self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل أكثر من درج (كاشير) في الوردية',
+            self::MAX_TERMINALS => 'أقصى عدد للأدراج',
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
             self::SETUP_COMPLETED => 'اكتمل الإعداد الأولي',
@@ -234,6 +242,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'إدارة المتاجر المتعاونة، أصنافها، إضافة الطلبات الخارجية في الكاشير، وتسوية حسابات الموردين.',
             self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
             self::FEATURE_VARIANTS_ENABLED => 'تجميع المنتجات في موديلات لها خيارات (مقاس، لون، ...) لكل تركيبة منها مخزون وباركود وسعر.',
+            self::FEATURE_MULTI_TERMINAL_ENABLED => 'كل جهاز كاشير له درج بفلوس فتح خاصة وطابعة خاصة داخل نفس الوردية، والتقارير تقدر تفلتر بالدرج.',
+            self::MAX_TERMINALS => 'عدد الأدراج المفعلة اللي يقدر المدير يضيفها في شاشة «الأدراج».',
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
             self::SETUP_COMPLETED => 'يتم ضبطه عند إنهاء معالج الإعداد الأولي.',
@@ -282,6 +292,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED => 'تفعيل',
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل',
+            self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل',
+            self::MAX_TERMINALS => '2',
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
             self::SETUP_COMPLETED => 'false',
@@ -319,7 +331,9 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
-            self::FEATURE_VARIANTS_ENABLED => self::isStoredBoolean($value),
+            self::FEATURE_VARIANTS_ENABLED,
+            self::FEATURE_MULTI_TERMINAL_ENABLED => self::isStoredBoolean($value),
+            self::MAX_TERMINALS => self::isIntInRange($value, 1, 50),
             self::BUSINESS_TYPE => is_string($value) && BusinessType::tryFrom($value) !== null,
             self::ENABLED_MODULES => self::isModuleList($value),
             self::SETUP_COMPLETED => self::isStoredBoolean($value),
@@ -346,6 +360,7 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
             self::FEATURE_VARIANTS_ENABLED,
+            self::FEATURE_MULTI_TERMINAL_ENABLED,
             self::SETUP_COMPLETED => true,
             default => false,
         };
@@ -358,7 +373,8 @@ enum SettingKey: string
             self::FEATURE_CUSTOM_FEES_ENABLED,
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
-            self::FEATURE_VARIANTS_ENABLED => true,
+            self::FEATURE_VARIANTS_ENABLED,
+            self::FEATURE_MULTI_TERMINAL_ENABLED => true,
             default => false,
         };
     }
@@ -373,6 +389,7 @@ enum SettingKey: string
         return $this->isFeatureFlag() || match ($this) {
             self::BUSINESS_TYPE,
             self::ENABLED_MODULES,
+            self::MAX_TERMINALS,
             self::SETUP_COMPLETED => true,
             default => false,
         };

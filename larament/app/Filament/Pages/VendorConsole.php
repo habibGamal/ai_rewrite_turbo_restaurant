@@ -3,14 +3,17 @@
 namespace App\Filament\Pages;
 
 use App\Enums\OptionalFeature;
+use App\Enums\SettingKey;
 use App\Exceptions\BusinessTypeLockedException;
 use App\Models\FeatureFlagAudit;
 use App\Modules\BusinessType;
 use App\Modules\Module;
 use App\Services\FeatureService;
+use App\Services\SettingsService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -87,6 +90,8 @@ class VendorConsole extends Page implements HasForms, HasTable
             $state['features'][$feature->value] = $features->isEnabled($feature);
         }
 
+        $state['max_terminals'] = (int) app(SettingsService::class)->get(SettingKey::MAX_TERMINALS->value, SettingKey::MAX_TERMINALS->defaultValue());
+
         $this->form->fill($state);
     }
 
@@ -149,6 +154,15 @@ class VendorConsole extends Page implements HasForms, HasTable
                                 ->inline(false),
                             OptionalFeature::standalone(),
                         )),
+                        TextInput::make('max_terminals')
+                            ->label(SettingKey::MAX_TERMINALS->label())
+                            ->helperText(SettingKey::MAX_TERMINALS->helperText())
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(50)
+                            ->required()
+                            ->visible(fn (Get $get): bool => (bool) $get('features.'.OptionalFeature::MULTI_TERMINAL->value)),
                     ]),
             ])
             ->statePath('data');
@@ -176,6 +190,10 @@ class VendorConsole extends Page implements HasForms, HasTable
                     $featureStates[$feature->value] = (bool) ($data['features'][$feature->value] ?? false);
                 }
                 $service->updateFeatures($featureStates, $actorId);
+
+                if (isset($data['max_terminals'])) {
+                    app(SettingsService::class)->set(SettingKey::MAX_TERMINALS->value, (string) (int) $data['max_terminals']);
+                }
             });
         } catch (BusinessTypeLockedException $e) {
             $this->fillForm();

@@ -89,6 +89,7 @@ export interface ItemChange {
 
 export interface Order {
     id: number;
+    terminal_id?: number | null;
     table_id?: number;
     customer_name?: string;
     phone?: string;
@@ -237,6 +238,7 @@ export interface FeatureFlags {
     outsourced_orders: boolean;
     equipment: boolean;
     variants: boolean;
+    multi_terminal: boolean;
 }
 
 export type ModuleKey =

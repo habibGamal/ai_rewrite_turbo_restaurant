@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Button, Descriptions, Empty, Form, InputNumber, Modal, Popconfirm, Tabs, notification } from 'antd';
+import { Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Popconfirm, Switch, Tabs, notification } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import CashierLayout from '@/Layouts/CashierLayout';
 import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
@@ -25,6 +25,14 @@ interface IndexProps {
     tabsOrientation?: 'horizontal' | 'vertical';
 }
 
+interface TerminalInfo {
+    id: number;
+    name: string;
+    sessionId: number | null;
+    cashier: string | null;
+    openedAt: string | null;
+}
+
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
     tabs,
@@ -35,7 +43,15 @@ const OrdersIndex: React.FC<IndexProps> = ({
     auth,
     tabsOrientation,
 }) => {
-    const pageProps = usePage().props as { tabsOrientation?: 'horizontal' | 'vertical' };
+    const pageProps = usePage().props as {
+        tabsOrientation?: 'horizontal' | 'vertical';
+        terminal?: TerminalInfo | null;
+    };
+    const terminal = pageProps.terminal ?? null;
+    const [deviceOnly, setDeviceOnly] = useState(false);
+    const [closeDrawerOpen, setCloseDrawerOpen] = useState(false);
+    const visibleOrders =
+        terminal && deviceOnly ? orders.filter((order) => order.terminal_id === terminal.id) : orders;
     const effectiveOrientation = tabsOrientation ?? pageProps.tabsOrientation ?? 'horizontal';
     const isVertical = effectiveOrientation === 'vertical';
     const { user } = auth;
@@ -107,6 +123,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
         router.post(route('shifts.end'), { real_end_cash: 0 });
     };
 
+    const closeDrawer = (values: { note?: string }) => {
+        router.post(route('terminals.close'), values);
+        setCloseDrawerOpen(false);
+    };
+
     const tabLabel = (tab: CashierTab) => (
         <span className="inline-flex items-center gap-2">
             {orderTypeIcon(tab.icon)}
@@ -125,7 +146,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
                 children: (
                     <OrderTypeTab
                         tab={tab}
-                        orders={orders}
+                        orders={visibleOrders}
                         shiftId={currentShift.id}
                         active={activeTabKey === tab.key}
                     />
@@ -141,11 +162,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
                 <ShiftExpensesTab />
             ) : tab.key === 'system:cancelled' ? (
                 <DisplayTab
-                    orders={orders.filter((order) => order.status === 'cancelled')}
+                    orders={visibleOrders.filter((order) => order.status === 'cancelled')}
                 />
             ) : (
                 <DisplayTab
-                    orders={orders.filter((order) => order.status === 'completed')}
+                    orders={visibleOrders.filter((order) => order.status === 'completed')}
                 />
             );
 
@@ -166,14 +187,48 @@ const OrdersIndex: React.FC<IndexProps> = ({
                         <Descriptions.Item label="الموظف">{user?.email}</Descriptions.Item>
                     </Descriptions>
 
-                    <Popconfirm
-                        title="هل انت متأكد؟"
-                        onConfirm={() => endShiftWithZero()}
-                        okText="نعم"
-                        cancelText="لا"
+                    {terminal ? (
+                        <div className="flex items-center gap-4" data-testid="drawer-bar">
+                            <span>
+                                <strong>{terminal.name}</strong>
+                                {terminal.cashier ? ` · ${terminal.cashier}` : ''}
+                                {terminal.openedAt
+                                    ? ` · من ${new Date(terminal.openedAt).toLocaleTimeString('ar-EG')}`
+                                    : ''}
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                                <Switch size="small" checked={deviceOnly} onChange={setDeviceOnly} />
+                                طلبات الجهاز ده
+                            </span>
+                            <Button onClick={() => setCloseDrawerOpen(true)}>قفل الدرج</Button>
+                        </div>
+                    ) : (
+                        <Popconfirm
+                            title="هل انت متأكد؟"
+                            onConfirm={() => endShiftWithZero()}
+                            okText="نعم"
+                            cancelText="لا"
+                        >
+                            <Button>انهاء الشيفت</Button>
+                        </Popconfirm>
+                    )}
+
+                    <Modal
+                        open={closeDrawerOpen}
+                        onCancel={() => setCloseDrawerOpen(false)}
+                        title={terminal ? `قفل «${terminal.name}»` : ''}
+                        footer={null}
+                        destroyOnHidden
                     >
-                        <Button>انهاء الشيفت</Button>
-                    </Popconfirm>
+                        <Form onFinish={closeDrawer} layout="vertical">
+                            <Form.Item name="note" label="ملاحظة (اختياري)">
+                                <Input.TextArea rows={2} maxLength={1000} />
+                            </Form.Item>
+                            <Button htmlType="submit" type="primary" danger>
+                                قفل الدرج
+                            </Button>
+                        </Form>
+                    </Modal>
 
                     <Modal
                         open={endShiftModalVisible}

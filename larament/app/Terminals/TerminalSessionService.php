@@ -6,7 +6,9 @@ use App\Enums\PaymentMethod;
 use App\Models\Shift;
 use App\Models\Terminal;
 use App\Models\TerminalSession;
+use App\Models\TerminalSessionHandover;
 use App\Models\User;
+use App\Services\ShiftService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,17 +30,21 @@ class TerminalSessionService
      */
     public function openDefault(Shift $shift, ?User $user = null): TerminalSession
     {
-        $userId = $user?->getKey() ?? $shift->user_id;
+        return $this->openOn($shift, Terminal::default(), $user, (float) ($shift->start_cash ?? 0));
+    }
 
+    public function openOn(Shift $shift, Terminal $terminal, ?User $user, float $openingCash): TerminalSession
+    {
+        $userId = $user?->getKey() ?? $shift->user_id;
         $closed = (bool) $shift->closed || $shift->end_at !== null;
 
         $session = TerminalSession::query()->create([
             'shift_id' => $shift->getKey(),
-            'terminal_id' => Terminal::default()->getKey(),
+            'terminal_id' => $terminal->getKey(),
             'user_id' => $userId,
             'opened_by' => $userId,
-            'opening_cash' => $shift->start_cash ?? 0,
-            'opened_at' => $shift->start_at ?? now(),
+            'opening_cash' => $openingCash,
+            'opened_at' => $closed ? ($shift->start_at ?? now()) : now(),
             // A shift that is already closed (made before drawers existed)
             // gets a closed session carrying its recorded expected cash.
             'closed_at' => $closed ? ($shift->end_at ?? now()) : null,
@@ -49,6 +55,107 @@ class TerminalSessionService
         $this->resolver->flush();
 
         return $session;
+    }
+
+    /**
+     * Open a drawer for a cashier. The first drawer of the day opens the
+     * store shift; later drawers join it and add their opening cash to the
+     * shift's opening cash, so the shift stays the sum of its drawers.
+     *
+     * @throws TerminalException
+     */
+    public function openDrawer(Terminal $terminal, User $user, float $openingCash): TerminalSession
+    {
+        return DB::transaction(function () use ($terminal, $user, $openingCash): TerminalSession {
+            $shifts = app(ShiftService::class);
+            $shift = $shifts->getCurrentShift();
+
+            if ($shift === null) {
+                $shift = $shifts->startShift($openingCash, $user, $terminal);
+
+                return $shift->terminalSessions()->where('terminal_id', $terminal->getKey())->open()->firstOrFail();
+            }
+
+            $shift = Shift::query()->lockForUpdate()->findOrFail($shift->getKey());
+
+            if (! $terminal->is_active) {
+                throw new TerminalException('الدرج ده موقوف.');
+            }
+
+            if ($this->openSessionOn($shift, $terminal) !== null) {
+                throw new TerminalException('الدرج ده مفتوح بالفعل.');
+            }
+
+            $elsewhere = $this->openSessionOf($shift, $user);
+            if ($elsewhere !== null) {
+                throw new TerminalException('أنت فاتح درج تاني ('.$elsewhere->terminal->name.'). اقفله الأول.');
+            }
+
+            $session = $this->openOn($shift, $terminal, $user, $openingCash);
+
+            $shift->forceFill(['start_cash' => round((float) $shift->start_cash + $openingCash, 2)])->save();
+
+            return $session;
+        });
+    }
+
+    /**
+     * Another cashier takes over an open drawer. The session carries on;
+     * only the signed-in cashier changes and the handover is recorded.
+     *
+     * @throws TerminalException
+     */
+    public function handover(TerminalSession $session, User $to, ?string $note = null): TerminalSessionHandover
+    {
+        return DB::transaction(function () use ($session, $to, $note): TerminalSessionHandover {
+            $session = TerminalSession::query()->lockForUpdate()->with('terminal')->findOrFail($session->getKey());
+
+            if (! $session->isOpen()) {
+                throw new TerminalException('الدرج ده اتقفل.');
+            }
+
+            $elsewhere = TerminalSession::query()
+                ->where('shift_id', $session->shift_id)
+                ->where('user_id', $to->getKey())
+                ->whereKeyNot($session->getKey())
+                ->open()
+                ->with('terminal')
+                ->first();
+            if ($elsewhere !== null) {
+                throw new TerminalException('أنت فاتح درج تاني ('.$elsewhere->terminal->name.'). اقفله الأول.');
+            }
+
+            $handover = $session->handovers()->create([
+                'from_user_id' => $session->user_id,
+                'to_user_id' => $to->getKey(),
+                'note' => $note,
+                'handed_at' => now(),
+            ]);
+
+            $session->forceFill(['user_id' => $to->getKey()])->save();
+            $this->resolver->flush();
+
+            return $handover;
+        });
+    }
+
+    public function openSessionOn(Shift $shift, Terminal $terminal): ?TerminalSession
+    {
+        return TerminalSession::query()
+            ->where('shift_id', $shift->getKey())
+            ->where('terminal_id', $terminal->getKey())
+            ->open()
+            ->first();
+    }
+
+    public function openSessionOf(Shift $shift, User $user): ?TerminalSession
+    {
+        return TerminalSession::query()
+            ->where('shift_id', $shift->getKey())
+            ->where('user_id', $user->getKey())
+            ->open()
+            ->with('terminal')
+            ->first();
     }
 
     /**

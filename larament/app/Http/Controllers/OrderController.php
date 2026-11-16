@@ -43,6 +43,7 @@ use App\Services\Products\PosVariantCatalogService;
 use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -221,7 +222,9 @@ class OrderController extends Controller
                 'total' => (float) $last->total,
                 'change' => null,
             ] : null,
-            'heldCount' => HeldSale::query()->where('shift_id', $shift->id)->count(),
+            'heldCount' => HeldSale::query()->where('shift_id', $shift->id)
+                ->when(app(TerminalSessionResolver::class)->current()?->id, fn ($query, int $session) => $query->where('terminal_session_id', $session))
+                ->count(),
             'credit' => [
                 'allow_partial_payment' => (bool) $row->allow_partial_payment,
                 'allow_pay_later' => (bool) $row->allow_pay_later,

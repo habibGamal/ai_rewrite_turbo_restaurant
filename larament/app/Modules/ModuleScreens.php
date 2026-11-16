@@ -3,11 +3,12 @@
 namespace App\Modules;
 
 use App\Enums\OptionalFeature;
+use App\Filament\Pages\Reports\CustomFeesReport;
 use App\Filament\Pages\Reports\EquipmentReport;
 use App\Filament\Resources\Equipment\EquipmentResource;
-use App\Filament\Pages\Reports\CustomFeesReport;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RevenueTypes\RevenueTypeResource;
+use App\Filament\Resources\Terminals\TerminalResource;
 use App\Services\FeatureService;
 use Filament\Resources\Pages\Page as ResourcePage;
 
@@ -35,6 +36,7 @@ final class ModuleScreens
             EquipmentResource::class => OptionalFeature::EQUIPMENT,
             EquipmentReport::class => OptionalFeature::EQUIPMENT,
             CustomFeesReport::class => OptionalFeature::CUSTOM_FEES,
+            TerminalResource::class => OptionalFeature::MULTI_TERMINAL,
         ];
     }
 

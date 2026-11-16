@@ -28,6 +28,13 @@ class Terminal extends Model
         'sort',
     ];
 
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'is_active' => true,
+        'is_default' => false,
+        'sort' => 0,
+    ];
+
     protected $casts = [
         'is_active' => 'boolean',
         'is_default' => 'boolean',
@@ -61,5 +68,21 @@ class Terminal extends Model
     public function sessions(): HasMany
     {
         return $this->hasMany(TerminalSession::class);
+    }
+
+    /** @return HasMany<TerminalDevice, $this> */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(TerminalDevice::class);
+    }
+
+    /**
+     * The receipt printer of this drawer, else the Settings cashier printer.
+     */
+    public function receiptPrinter(): ?string
+    {
+        $printer = trim((string) $this->receipt_printer);
+
+        return $printer === '' ? null : $printer;
     }
 }

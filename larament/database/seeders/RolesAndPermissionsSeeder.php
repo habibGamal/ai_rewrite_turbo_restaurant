@@ -74,6 +74,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'create_equipment' => 'إضافة معدة',
                 'update_equipment' => 'تعديل معدة',
                 'delete_equipment' => 'حذف معدة',
+
+                'view_terminals' => 'عرض الأدراج',
+                'create_terminals' => 'إضافة درج',
+                'update_terminals' => 'تعديل درج',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',
@@ -215,6 +219,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'invoice.print' => 'طباعة الفواتير',
                 'order.add_equipment' => 'إضافة معدات للطلب',
                 'order.remove_equipment' => 'حذف أو تقليل معدات من الطلب',
+                'terminal.open' => 'فتح واستلام الدرج',
+                'terminal.close' => 'قفل درجه',
+                'terminal.close_others' => 'قفل درج كاشير تاني نيابةً عنه',
+                'terminal.bind_device' => 'ربط الأجهزة بالأدراج',
             ],
             'شاشة المطبخ' => [
                 'kitchen.access' => 'الدخول والتفاعل مع شاشة المطبخ',
@@ -296,6 +304,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'expense.create',
                 'invoice.print',
                 'order.add_equipment',
+                'terminal.open',
+                'terminal.close',
                 ...$tabCatalog,
             ],
             'kitchen' => ['kitchen.access'],

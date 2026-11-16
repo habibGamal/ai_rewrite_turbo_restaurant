@@ -329,6 +329,7 @@ it('retains historical external order details, accounting, receipts, and sync pa
                 'outsourced_orders' => false,
                 'equipment' => false,
                 'variants' => false,
+                'multi_terminal' => false,
             ])
             ->where('canAddExternalOrder', false)
             ->where('sellers', [])

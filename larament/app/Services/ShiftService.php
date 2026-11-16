@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\HeldSale;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Models\Terminal;
 use App\Models\User;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\OrderTypeCatalog;
@@ -20,6 +21,7 @@ class ShiftService
         private readonly OrderTypeCatalog $catalog,
         private readonly ShiftsReportService $shiftsReportService,
         private readonly TerminalSessionService $terminalSessions,
+        private readonly FeatureService $features,
     ) {}
 
     /**
@@ -35,7 +37,7 @@ class ShiftService
     /**
      * Start a new shift for a user
      */
-    public function startShift(float $startCash, ?User $user = null): Shift
+    public function startShift(float $startCash, ?User $user = null, ?Terminal $terminal = null): Shift
     {
         shouldDayBeOpen();
 
@@ -45,7 +47,7 @@ class ShiftService
             throw new Exception('User already has an active shift');
         }
 
-        return DB::transaction(function () use ($user, $startCash) {
+        return DB::transaction(function () use ($user, $startCash, $terminal) {
             $shift = Shift::create([
                 'start_cash' => $startCash,
                 'start_at' => now(),
@@ -56,7 +58,7 @@ class ShiftService
 
             // Every shift has at least one drawer session; with multiple
             // terminals off it is the hidden default drawer.
-            $this->terminalSessions->openDefault($shift, $user ?? auth()->user());
+            $this->terminalSessions->openOn($shift, $terminal ?? Terminal::default(), $user ?? auth()->user(), $startCash);
 
             // Transfer open web orders from previous shift if setting is enabled
             if ($this->settingsService->isWebOrdersShiftTransferAllowed()) {
@@ -134,7 +136,14 @@ class ShiftService
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {
-            $this->terminalSessions->closeAllOpen($currentShift, auth()->user());
+            if ($this->features->multiTerminalEnabled()) {
+                // Each cashier closes their own drawer first.
+                if ($currentShift->terminalSessions()->open()->exists()) {
+                    throw new Exception('لازم كل الأدراج تتقفل قبل إنهاء الوردية');
+                }
+            } else {
+                $this->terminalSessions->closeAllOpen($currentShift, auth()->user());
+            }
 
             // Expected drawer cash is the report's "النقدية المتاحة": opening cash + cash payments
             // received in this shift + external cash − seller settlements − expenses. Payments count

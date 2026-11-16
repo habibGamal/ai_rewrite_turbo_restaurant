@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\FeatureService;
 use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
@@ -22,6 +23,10 @@ class ShiftController extends Controller
      */
     public function showStartShift()
     {
+        if (app(FeatureService::class)->multiTerminalEnabled()) {
+            return redirect()->route('terminals.open');
+        }
+
         if (! $this->shiftService->canStartShift()) {
             return redirect()->route('orders.index');
         }
@@ -34,6 +39,10 @@ class ShiftController extends Controller
      */
     public function startShift(Request $request)
     {
+        if (app(FeatureService::class)->multiTerminalEnabled()) {
+            return redirect()->route('terminals.open');
+        }
+
         $validated = $request->validate([
             'start_cash' => 'required|numeric|min:0',
         ]);

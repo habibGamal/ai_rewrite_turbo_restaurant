@@ -17,6 +17,7 @@ use App\Http\Controllers\ProductLabelController;
 use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\TerminalController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/end', [ShiftController::class, 'endShift'])
             ->name('end')
             ->middleware('permission:shift.end');
+    });
+
+    // Drawers (multiple terminals): bind device, open, take over, close
+    Route::prefix('terminals')->name('terminals.')->group(function () {
+        Route::get('/device', [TerminalController::class, 'device'])->name('device');
+        Route::post('/device', [TerminalController::class, 'bindDevice'])->name('device.bind')->middleware('permission:terminal.bind_device');
+        Route::get('/open', [TerminalController::class, 'showOpen'])->name('open');
+        Route::post('/open', [TerminalController::class, 'open'])->name('open.store')->middleware('permission:terminal.open');
+        Route::get('/handover', [TerminalController::class, 'showHandover'])->name('handover');
+        Route::post('/handover', [TerminalController::class, 'handover'])->name('handover.store')->middleware('permission:terminal.open');
+        Route::post('/close', [TerminalController::class, 'close'])->name('close')->middleware('permission:terminal.close');
+        Route::post('/sessions/{session}/close', [TerminalController::class, 'closeOther'])->name('sessions.close')->middleware('permission:terminal.close_others');
     });
 
     // Order Management Routes

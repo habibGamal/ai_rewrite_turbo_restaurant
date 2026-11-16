@@ -8,8 +8,10 @@ use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
 use App\Orders\ReceiptPayment;
+use App\Orders\ReceiptView;
 use App\Services\PrintStrategies\PrintStrategyFactory;
 use App\Services\PrintStrategies\PrintStrategyInterface;
+use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Log;
 use Mike42\Escpos\EscposImage;
@@ -108,12 +110,24 @@ class PrintService
     }
 
     /**
+     * The receipt printer of this device's drawer (multiple terminals on and
+     * the drawer has its own printer), else the Settings cashier printer.
+     * Any drawer may print any order: the receipt goes to the printer of the
+     * device that asked for it.
+     */
+    public function cashierPrinter(): string
+    {
+        return app(TerminalSessionResolver::class)->terminal()?->receiptPrinter()
+            ?? (string) setting(SettingKey::CASHIER_PRINTER_IP);
+    }
+
+    /**
      * Open the cashier drawer
      */
     public function openCashierDrawer(): void
     {
         try {
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $printerIp = $this->cashierPrinter();
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
@@ -353,7 +367,7 @@ class PrintService
     public function testCashierPrinter(): void
     {
         try {
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $printerIp = $this->cashierPrinter();
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
@@ -391,7 +405,7 @@ class PrintService
     {
         try {
 
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
+            $printerIp = $this->cashierPrinter();
             $connector = $this->createConnector($printerIp);
             $printer = new Printer($connector);
 
@@ -399,7 +413,7 @@ class PrintService
 
             // Load order with relationships
             $order->load(['user', 'customer', 'driver', 'items.product', 'table', 'payments']);
-            $receiptView = \App\Orders\ReceiptView::forOrder($order);
+            $receiptView = ReceiptView::forOrder($order);
 
             $itemCount = $order->items->count();
 
