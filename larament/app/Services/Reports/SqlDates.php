@@ -26,6 +26,27 @@ final class SqlDates
         return self::sqlite() ? "(CAST(strftime('%w', {$column}) AS INTEGER) + 1)" : "DAYOFWEEK({$column})";
     }
 
+    /**
+     * The first day of the bucket a timestamp falls in, as Y-m-d: the day
+     * itself, its week (weeks start on Saturday) or its month.
+     */
+    public static function bucket(string $column, string $granularity): string
+    {
+        return match ($granularity) {
+            'week' => self::sqlite()
+                ? "date({$column}, '-' || ((CAST(strftime('%w', {$column}) AS INTEGER) + 1) % 7) || ' days')"
+                : "DATE_SUB(DATE({$column}), INTERVAL (DAYOFWEEK({$column}) % 7) DAY)",
+            'month' => self::sqlite() ? "strftime('%Y-%m-01', {$column})" : "DATE_FORMAT({$column}, '%Y-%m-01')",
+            default => self::day($column),
+        };
+    }
+
+    /** SQL that joins two expressions with a '|' between them. */
+    public static function pair(string $first, string $second): string
+    {
+        return self::sqlite() ? "({$first} || '|' || {$second})" : "CONCAT({$first}, '|', {$second})";
+    }
+
     private static function sqlite(): bool
     {
         return DB::connection()->getDriverName() === 'sqlite';

@@ -4,9 +4,12 @@ namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\ChannelChangeWidget;
 use App\Filament\Widgets\ChannelComparisonTableWidget;
+use App\Filament\Widgets\ChannelHeatmapWidget;
 use App\Filament\Widgets\ChannelKpisWidget;
 use App\Filament\Widgets\ChannelShareWidget;
+use App\Filament\Widgets\ChannelTrendWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
@@ -81,10 +84,19 @@ class ChannelPerformanceReport extends BaseDashboard
             ChannelComparisonTableWidget::class,
         ];
 
-        // Shares only mean something with two channels or more.
-        if ($service->ordersQuery($filters)->distinct()->count('orders.type') > 1) {
+        // Shares and the per-channel change only mean something with two channels or more.
+        $severalChannels = $service->ordersQuery($filters)->distinct()->count('orders.type') > 1;
+        if ($severalChannels) {
             $widgets[] = ChannelShareWidget::class;
         }
+
+        $comparison = $filters->comparison();
+        if ($severalChannels && $comparison !== null && $service->hasOrders($comparison)) {
+            $widgets[] = ChannelChangeWidget::class;
+        }
+
+        $widgets[] = ChannelTrendWidget::class;
+        $widgets[] = ChannelHeatmapWidget::class;
 
         return $widgets;
     }

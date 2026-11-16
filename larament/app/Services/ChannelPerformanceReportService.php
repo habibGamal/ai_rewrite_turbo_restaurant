@@ -273,6 +273,149 @@ class ChannelPerformanceReportService
         return $result;
     }
 
+    /** Day buckets up to 45 days, weeks up to ~6 months, months after that. */
+    public static function granularity(ChannelReportFilters $filters): string
+    {
+        $days = $filters->days();
+
+        return $days <= 45 ? 'day' : ($days <= 186 ? 'week' : 'month');
+    }
+
+    /**
+     * Net sales and orders per channel per day, week or month, for the trend
+     * chart. Every bucket of the period is present for every channel.
+     *
+     * @return array{granularity: string, buckets: array<string, string>, series: array<string, array{label: string, chart: string, values: array<string, array{orders: int, net_sales: float}>}>}
+     */
+    public function trend(ChannelReportFilters $filters): array
+    {
+        $granularity = self::granularity($filters);
+        $bucket = SqlDates::bucket('orders.created_at', $granularity);
+
+        $sales = $this->ordersQuery($filters)
+            ->toBase()
+            ->select('orders.type')
+            ->selectRaw("{$bucket} AS bucket")
+            ->selectRaw('COUNT(*) AS orders_count')
+            ->selectRaw('COALESCE(SUM(orders.total), 0) AS gross')
+            ->groupBy('orders.type')
+            ->groupByRaw($bucket)
+            ->get();
+
+        $refunds = $this->returns->groupedBy(
+            $this->returns->periodQuery($filters->startDate(), $filters->endDate()),
+            SqlDates::pair('ro.type', SqlDates::bucket('orr.created_at', $granularity)),
+        );
+
+        $buckets = $this->buckets($filters, $granularity);
+        $channels = $this->channels();
+        $empty = array_fill_keys(array_keys($buckets), ['orders' => 0, 'net_sales' => 0.0]);
+
+        $series = [];
+        $ensure = function (string $code) use (&$series, $channels, $empty) {
+            $series[$code] ??= [
+                'label' => $channels[$code]['label'] ?? $this->types->label($code),
+                'chart' => $channels[$code]['chart'] ?? self::PALETTE[count($series) % count(self::PALETTE)],
+                'values' => $empty,
+            ];
+        };
+
+        foreach ($sales as $row) {
+            $code = (string) $row->type;
+            $key = substr((string) $row->bucket, 0, 10);
+            if (! isset($empty[$key])) {
+                continue;
+            }
+            $ensure($code);
+            $series[$code]['values'][$key]['orders'] += (int) $row->orders_count;
+            $series[$code]['values'][$key]['net_sales'] += (float) $row->gross;
+        }
+
+        foreach ($refunds as $groupKey => $refund) {
+            [$code, $key] = explode('|', (string) $groupKey, 2) + [1 => ''];
+            $key = substr($key, 0, 10);
+            if (! isset($empty[$key]) || ($filters->channels !== [] && ! in_array($code, $filters->channels, true))) {
+                continue;
+            }
+            $ensure($code);
+            $series[$code]['values'][$key]['net_sales'] -= $refund['amount'];
+        }
+
+        foreach ($series as $code => $line) {
+            foreach ($line['values'] as $key => $value) {
+                $series[$code]['values'][$key]['net_sales'] = round($value['net_sales'], 2);
+            }
+        }
+
+        // Biggest channel first, so it gets the first legend slot.
+        uasort($series, fn (array $a, array $b) => array_sum(array_column($b['values'], 'net_sales')) <=> array_sum(array_column($a['values'], 'net_sales')));
+
+        return ['granularity' => $granularity, 'buckets' => $buckets, 'series' => $series];
+    }
+
+    /**
+     * Orders and sales by weekday (1 = Sunday … 7 = Saturday) and hour, for
+     * one channel or all of them.
+     *
+     * @return array<int, array<int, array{orders: int, sales: float}>> [weekday][hour]
+     */
+    public function heatmap(ChannelReportFilters $filters, ?string $channel = null): array
+    {
+        $day = SqlDates::dayOfWeek('orders.created_at');
+        $hour = SqlDates::hour('orders.created_at');
+
+        $rows = $this->ordersQuery($filters)
+            ->when($channel, fn (Builder $query) => $query->where('orders.type', $channel))
+            ->toBase()
+            ->selectRaw("{$day} AS weekday")
+            ->selectRaw("{$hour} AS hour")
+            ->selectRaw('COUNT(*) AS orders_count')
+            ->selectRaw('COALESCE(SUM(orders.total), 0) AS sales')
+            ->groupByRaw("{$day}, {$hour}")
+            ->get();
+
+        $grid = [];
+        foreach (range(1, 7) as $weekday) {
+            $grid[$weekday] = array_fill(0, 24, ['orders' => 0, 'sales' => 0.0]);
+        }
+        foreach ($rows as $row) {
+            $grid[(int) $row->weekday][(int) $row->hour] = [
+                'orders' => (int) $row->orders_count,
+                'sales' => round((float) $row->sales, 2),
+            ];
+        }
+
+        return $grid;
+    }
+
+    /**
+     * @return array<string, string> bucket start (Y-m-d) => label
+     */
+    private function buckets(ChannelReportFilters $filters, string $granularity): array
+    {
+        $cursor = match ($granularity) {
+            'week' => $filters->start->subDays(($filters->start->dayOfWeek + 1) % 7),
+            'month' => $filters->start->startOfMonth(),
+            default => $filters->start,
+        };
+
+        $buckets = [];
+        while ($cursor->lessThanOrEqualTo($filters->end)) {
+            $buckets[$cursor->toDateString()] = match ($granularity) {
+                'week' => 'أسبوع '.$cursor->format('d/m'),
+                'month' => $cursor->format('m/Y'),
+                default => $cursor->format('d/m'),
+            };
+            $cursor = match ($granularity) {
+                'week' => $cursor->addWeek(),
+                'month' => $cursor->addMonth(),
+                default => $cursor->addDay(),
+            };
+        }
+
+        return $buckets;
+    }
+
     /**
      * Guests and average per guest over the period's completed orders.
      */

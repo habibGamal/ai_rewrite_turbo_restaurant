@@ -3,9 +3,12 @@
 use App\Core\Orders\SalesBreakdown;
 use App\Enums\OrderStatus;
 use App\Filament\Pages\Reports\ChannelPerformanceReport;
+use App\Filament\Widgets\ChannelChangeWidget;
 use App\Filament\Widgets\ChannelComparisonTableWidget;
+use App\Filament\Widgets\ChannelHeatmapWidget;
 use App\Filament\Widgets\ChannelKpisWidget;
 use App\Filament\Widgets\ChannelShareWidget;
+use App\Filament\Widgets\ChannelTrendWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Models\Customer;
 use App\Models\Order;
@@ -248,4 +251,92 @@ it('shows each channel change against the comparison period in the table', funct
     livewire(ChannelComparisonTableWidget::class, ['pageFilters' => ['startDate' => '2026-11-07', 'endDate' => '2026-11-16']])
         ->assertSee('+50.0%')
         ->assertSee('28/10/2026 - 06/11/2026');
+});
+
+describe('time', function () {
+    it('picks day, week or month buckets by the period length', function () {
+        $days = fn (string $start) => ChannelPerformanceReportService::granularity(ChannelReportFilters::fromArray(['startDate' => $start, 'endDate' => '2026-11-16']));
+
+        expect($days('2026-11-01'))->toBe('day')
+            ->and($days('2026-08-01'))->toBe('week')
+            ->and($days('2026-01-01'))->toBe('month');
+    });
+
+    it('draws a line per channel with net sales per day', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 100, ['created_at' => '2026-11-15 13:00']);
+        channelOrder('delivery', 50, ['created_at' => '2026-11-15 20:00']);
+        channelOrder('dine_in', 300, ['created_at' => '2026-11-16 10:00']);
+
+        $trend = $this->service->trend(ChannelReportFilters::fromArray(['startDate' => '2026-11-14', 'endDate' => '2026-11-16']));
+
+        expect($trend['granularity'])->toBe('day')
+            ->and(array_keys($trend['buckets']))->toBe(['2026-11-14', '2026-11-15', '2026-11-16'])
+            ->and(array_keys($trend['series']))->toBe(['dine_in', 'delivery'])
+            ->and($trend['series']['delivery']['values']['2026-11-15'])->toBe(['orders' => 2, 'net_sales' => 150.0])
+            ->and($trend['series']['delivery']['values']['2026-11-16'])->toBe(['orders' => 0, 'net_sales' => 0.0]);
+    });
+
+    it('groups weeks from Saturday', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        // 2026-11-14 is a Saturday, 2026-11-13 a Friday.
+        channelOrder('delivery', 100, ['created_at' => '2026-11-13 13:00']);
+        channelOrder('delivery', 40, ['created_at' => '2026-11-14 13:00']);
+        channelOrder('delivery', 60, ['created_at' => '2026-11-16 13:00']);
+
+        $trend = $this->service->trend(ChannelReportFilters::fromArray(['startDate' => '2026-09-01', 'endDate' => '2026-11-16']));
+        $values = $trend['series']['delivery']['values'];
+
+        expect($trend['granularity'])->toBe('week')
+            ->and($values['2026-11-07']['net_sales'])->toBe(100.0)
+            ->and($values['2026-11-14']['net_sales'])->toBe(100.0)
+            ->and(array_key_last($values))->toBe('2026-11-14');
+    });
+
+    it('fills the hour and weekday grid', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        // 2026-11-14 is a Saturday (weekday 7).
+        channelOrder('delivery', 100, ['created_at' => '2026-11-14 21:15']);
+        channelOrder('delivery', 50, ['created_at' => '2026-11-14 21:40']);
+        channelOrder('dine_in', 80, ['created_at' => '2026-11-15 13:00']);
+
+        $filters = ChannelReportFilters::fromArray(['startDate' => '2026-11-10', 'endDate' => '2026-11-16']);
+        $all = $this->service->heatmap($filters);
+        $delivery = $this->service->heatmap($filters, 'delivery');
+
+        expect($all[7][21])->toBe(['orders' => 2, 'sales' => 150.0])
+            ->and($all[1][13])->toBe(['orders' => 1, 'sales' => 80.0])
+            ->and($delivery[1][13]['orders'])->toBe(0);
+    });
+
+    it('shows the change, trend and heatmap widgets', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 150, ['created_at' => '2026-11-15 13:00']);
+        channelOrder('dine_in', 100, ['created_at' => '2026-11-15 14:00']);
+        channelOrder('delivery', 100, ['created_at' => '2026-11-05 13:00']);
+        $filters = ['startDate' => '2026-11-07', 'endDate' => '2026-11-16'];
+
+        $page = livewire(ChannelPerformanceReport::class)->set('filters.startDate', '2026-11-07')->set('filters.endDate', '2026-11-16');
+        expect($page->instance()->getWidgets())->toContain(ChannelChangeWidget::class, ChannelTrendWidget::class, ChannelHeatmapWidget::class);
+
+        $change = livewire(ChannelChangeWidget::class, ['pageFilters' => $filters]);
+        expect($change->instance()->changes())->toBe([['label' => 'دليفري', 'change' => 50.0]]);
+
+        livewire(ChannelTrendWidget::class, ['pageFilters' => $filters])->assertSuccessful();
+        livewire(ChannelHeatmapWidget::class, ['pageFilters' => $filters])
+            ->assertSee('السبت')
+            ->set('channel', 'dine_in')
+            ->set('metric', 'sales')
+            ->assertSuccessful();
+    });
+
+    it('hides the change widget without a comparison', function () {
+        channelOrder('delivery', 150);
+        channelOrder('dine_in', 100);
+
+        $widgets = livewire(ChannelPerformanceReport::class)->set('filters.compareTo', 'none')->instance()->getWidgets();
+
+        expect($widgets)->not->toContain(ChannelChangeWidget::class)
+            ->toContain(ChannelTrendWidget::class);
+    });
 });
