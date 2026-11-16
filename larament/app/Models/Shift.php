@@ -66,6 +66,12 @@ class Shift extends Model
         return $this->hasMany(Expense::class);
     }
 
+    /** @return HasMany<TerminalSession, $this> */
+    public function terminalSessions(): HasMany
+    {
+        return $this->hasMany(TerminalSession::class);
+    }
+
     public function revenues(): HasMany
     {
         return $this->hasMany(Revenue::class);

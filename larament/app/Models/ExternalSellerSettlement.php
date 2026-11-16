@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTerminalSession;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ExternalSellerSettlement extends Model
 {
+    use BelongsToTerminalSession;
+
     protected $guarded = [];
 
     /** @return BelongsTo<ExternalSeller, $this> */

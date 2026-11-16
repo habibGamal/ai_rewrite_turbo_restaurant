@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Sync\DateDocument;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
+use App\Terminals\TerminalSessionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -225,6 +226,7 @@ class ShiftMoneyService
         ];
 
         $shift->forceFill($attributes)->save();
+        app(TerminalSessionService::class)->recomputeClosed($shift);
 
         AuditLogger::updated($shift, $original, $reason, self::CONTEXT, $shift);
 
