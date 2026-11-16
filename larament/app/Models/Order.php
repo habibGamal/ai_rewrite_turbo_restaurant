@@ -12,6 +12,7 @@ use App\Models\Concerns\HasSyncUuid;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\OrderDisplay;
 use App\Orders\OrderTypeCatalog;
+use App\Terminals\TerminalSessionResolver;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,7 @@ class Order extends Model
         'driver_id',
         'user_id',
         'shift_id',
+        'terminal_id',
         'type',
         'status',
         'sub_total',
@@ -118,6 +120,22 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected static function booted(): void
+    {
+        // Remember which drawer the order was opened from.
+        static::creating(function (Order $order): void {
+            if ($order->terminal_id === null && $order->getAttribute('shift_id') !== null) {
+                $order->terminal_id = app(TerminalSessionResolver::class)->forShift((int) $order->shift_id)?->terminal_id;
+            }
+        });
+    }
+
+    /** @return BelongsTo<Terminal, $this> */
+    public function terminal(): BelongsTo
+    {
+        return $this->belongsTo(Terminal::class);
     }
 
     public function shift(): BelongsTo

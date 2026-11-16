@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RevenueMethod;
+use App\Models\Concerns\BelongsToTerminalSession;
 use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Revenue extends Model
 {
-    use HasFactory, HasSyncUuid;
+    use BelongsToTerminalSession, HasFactory, HasSyncUuid;
 
     protected $fillable = [
         'uuid',

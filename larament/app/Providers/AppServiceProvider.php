@@ -47,6 +47,7 @@ use App\Orders\OrderTypeCatalog;
 use App\Policies\RolePolicy;
 use App\Services\FeatureService;
 use App\Sync\SyncOutboxObserver;
+use App\Terminals\TerminalSessionResolver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
 use Filament\Auth\Http\Responses\LoginResponse;
@@ -91,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->scoped(OrderTypeCatalog::class);
         $this->app->scoped(CostHistoryRecorder::class);
+        $this->app->scoped(TerminalSessionResolver::class);
         $this->app->bind(CostingStrategyResolver::class);
         $this->app->bind(CostingStrategy::class, fn ($app) => $app->make(CostingStrategyResolver::class)->resolve());
     }

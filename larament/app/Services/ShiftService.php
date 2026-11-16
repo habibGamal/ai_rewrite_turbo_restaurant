@@ -9,6 +9,7 @@ use App\Models\Shift;
 use App\Models\User;
 use App\Orders\Behaviors\OrderTypeBehavior;
 use App\Orders\OrderTypeCatalog;
+use App\Terminals\TerminalSessionService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +19,7 @@ class ShiftService
         private readonly SettingsService $settingsService,
         private readonly OrderTypeCatalog $catalog,
         private readonly ShiftsReportService $shiftsReportService,
+        private readonly TerminalSessionService $terminalSessions,
     ) {}
 
     /**
@@ -51,6 +53,10 @@ class ShiftService
                 'closed' => false,
                 'user_id' => $user ? $user->id : auth()->id(),
             ]);
+
+            // Every shift has at least one drawer session; with multiple
+            // terminals off it is the hidden default drawer.
+            $this->terminalSessions->openDefault($shift, $user ?? auth()->user());
 
             // Transfer open web orders from previous shift if setting is enabled
             if ($this->settingsService->isWebOrdersShiftTransferAllowed()) {
@@ -128,6 +134,8 @@ class ShiftService
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {
+            $this->terminalSessions->closeAllOpen($currentShift, auth()->user());
+
             // Expected drawer cash is the report's "النقدية المتاحة": opening cash + cash payments
             // received in this shift + external cash − seller settlements − expenses. Payments count
             // in the shift that received them, so a pay-later order adds only what was actually paid
