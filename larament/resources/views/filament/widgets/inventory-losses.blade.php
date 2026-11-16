@@ -97,6 +97,44 @@
             @endif
         </x-filament::section>
 
+        <x-filament::section heading="الهالك حسب السبب" description="من سجلات التالف المؤكدة في الفترة بقيمة كل سطر. السبب بيتسجل على كل صنف في سجل التالف.">
+            @if ($reasons === [])
+                <div class="py-6 text-center text-sm text-gray-500">مفيش هالك في الفترة دي.</div>
+            @else
+                <div class="overflow-x-auto" data-testid="inventory-waste-reasons">
+                    <table class="w-full min-w-[560px] text-sm">
+                        <thead>
+                            <tr class="text-xs text-gray-500 dark:text-gray-400">
+                                <th class="{{ $th }}">السبب</th>
+                                <th class="{{ $th }}">السطور</th>
+                                <th class="{{ $th }}">الأصناف</th>
+                                <th class="{{ $th }}">القيمة (ج.م)</th>
+                                <th class="{{ $th }}">النسبة</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                            @foreach ($reasons as $row)
+                                <tr>
+                                    <td @class(['px-2 py-2 font-semibold', 'text-gray-500' => $row['reason'] === null])>{{ $row['label'] }}</td>
+                                    <td class="{{ $td }}">{{ number_format($row['lines']) }}</td>
+                                    <td class="{{ $td }}">{{ number_format($row['items']) }}</td>
+                                    <td class="{{ $td }} font-semibold">{{ $money($row['value']) }}</td>
+                                    <td class="{{ $td }}">
+                                        <div class="flex min-w-[120px] items-center gap-2">
+                                            <div class="h-1.5 flex-1 overflow-hidden rounded bg-gray-100 dark:bg-white/10">
+                                                <div class="h-full bg-orange-600" style="width: {{ $row['share'] }}%"></div>
+                                            </div>
+                                            <span class="w-12 text-xs text-gray-500">{{ number_format($row['share'], 1) }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </x-filament::section>
+
         <x-filament::section heading="عجز متكرر" description="أصناف طلع فيها عجز في جردين أو أكتر في نفس الفترة.">
             @if ($repeated === [])
                 <div class="py-6 text-center text-sm text-gray-500">مفيش صنف عجزه اتكرر.</div>

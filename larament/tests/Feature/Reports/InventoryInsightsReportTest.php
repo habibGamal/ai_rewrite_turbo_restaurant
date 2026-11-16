@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\WasteReason;
 use App\Filament\Pages\Reports\InventoryMovementsReport;
 use App\Filament\Widgets\InventoryAlertsWidget;
 use App\Filament\Widgets\InventoryLossesWidget;
@@ -16,6 +17,7 @@ use App\Models\Stocktaking;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\Waste;
 use App\Modules\Module;
 use App\Services\FeatureService;
 use App\Services\Reports\Inventory\InventoryInsightsReportService;
@@ -109,6 +111,24 @@ it('ranks the items that lost the most and compares the count with the recipes',
 
     app(FeatureService::class)->setModules([Module::RETAIL]);
     expect(app(InventoryInsightsReportService::class)->topLossItems(insightFilters())[0]['against_theory'])->toBeNull();
+});
+
+it('splits closed waste of the period by reason', function () {
+    $waste = Waste::factory()->create(['closed_at' => now(), 'business_date' => '2026-11-07']);
+    $open = Waste::factory()->create(['closed_at' => null, 'business_date' => '2026-11-07']);
+    $line = fn (Waste $record, Product $product, float $total, ?WasteReason $reason) => DB::table('wasted_items')->insert([
+        'waste_id' => $record->id, 'product_id' => $product->id, 'quantity' => 1, 'price' => $total, 'total' => $total,
+        'reason' => $reason?->value, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $line($waste, $this->rice, 30, WasteReason::EXPIRED);
+    $line($waste, $this->oil, 50, WasteReason::EXPIRED);
+    $line($waste, $this->oil, 20, null);
+    $line($open, $this->oil, 999, WasteReason::DAMAGED);
+
+    expect(insights()->wasteReasons(insightFilters()))->toBe([
+        ['reason' => 'expired', 'label' => 'انتهاء صلاحية', 'lines' => 2, 'items' => 2, 'value' => 80.0, 'share' => 80.0],
+        ['reason' => null, 'label' => 'بدون سبب', 'lines' => 1, 'items' => 1, 'value' => 20.0, 'share' => 20.0],
+    ])->and(insights()->wasteReasons(insightFilters(['product_id' => $this->rice->id])))->toHaveCount(1);
 });
 
 it('finds items short in more than one count', function () {
@@ -231,7 +251,7 @@ describe('the page', function () {
         $filters = ['startDate' => '2026-11-01', 'endDate' => '2026-11-30'];
 
         livewire(InventoryLossesWidget::class, ['pageFilters' => $filters])
-            ->assertSee('أكتر الأصناف فاقدًا')->assertSee('أرز')->assertSee('62.5%')->assertSee('عجز متكرر')
+            ->assertSee('أكتر الأصناف فاقدًا')->assertSee('الهالك حسب السبب')->assertSee('أرز')->assertSee('62.5%')->assertSee('عجز متكرر')
             ->assertDontSee('بضاعة راكدة');
         livewire(InventoryPurchasesWidget::class, ['pageFilters' => $filters])
             ->assertSee('مورد نور')->assertSee('250.00')->assertSee('سجل تغيرات التكلفة');

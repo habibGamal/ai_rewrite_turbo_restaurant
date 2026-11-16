@@ -35,6 +35,7 @@ class InventoryLossesWidget extends Widget
         return [
             'trend' => $service->lossTrend($filters),
             'items' => $service->topLossItems($filters),
+            'reasons' => $service->wasteReasons($filters),
             'repeated' => $service->repeatedShortages($filters),
             'restaurant' => $service->restaurant(),
             'slowMoving' => $service->retail() ? $service->slowMoving($filters) : null,
