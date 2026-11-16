@@ -1,0 +1,133 @@
+/* Turbo POS docs theme: teal brand, Arabic-first typography. */
+:root {
+  --vp-c-brand-1: #0f766e;
+  --vp-c-brand-2: #0d9488;
+  --vp-c-brand-3: #14b8a6;
+  --vp-c-brand-soft: rgba(20, 184, 166, 0.14);
+  --vp-font-family-base: 'Inter', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #0f766e 10%, #f59e0b 90%);
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, rgba(20, 184, 166, 0.45) 40%, rgba(245, 158, 11, 0.4) 60%);
+  --vp-home-hero-image-filter: blur(56px);
+  --vp-custom-block-tip-bg: rgba(20, 184, 166, 0.08);
+}
+
+.dark {
+  --vp-c-brand-1: #2dd4bf;
+  --vp-c-brand-2: #14b8a6;
+  --vp-c-brand-3: #0d9488;
+  --vp-c-brand-soft: rgba(45, 212, 191, 0.16);
+}
+
+html[lang='ar'] {
+  --vp-font-family-base: 'IBM Plex Sans Arabic', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html[lang='ar'] .vp-doc {
+  font-size: 16.5px;
+  line-height: 1.95;
+}
+
+html[lang='ar'] .vp-doc h1,
+html[lang='ar'] .vp-doc h2,
+html[lang='ar'] .vp-doc h3 {
+  letter-spacing: 0;
+}
+
+/* Code, paths and keys stay left-to-right inside Arabic text. */
+html[lang='ar'] .vp-doc code,
+html[lang='ar'] .vp-doc kbd {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+html[lang='ar'] .vp-doc div[class*='language-'] {
+  direction: ltr;
+}
+
+.vp-doc kbd {
+  display: inline-block;
+  min-width: 1.8em;
+  padding: 1px 7px;
+  border: 1px solid var(--vp-c-divider);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.85em;
+  text-align: center;
+}
+
+/* Tables read better full width with a soft header. */
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.vp-doc th {
+  background: var(--vp-c-brand-soft);
+}
+
+/* Step cards: <div class="steps"> wrapping an ordered list. */
+.vp-doc .steps ol {
+  list-style: none;
+  counter-reset: step;
+  padding-inline-start: 0;
+}
+
+.vp-doc .steps ol > li {
+  counter-increment: step;
+  position: relative;
+  padding: 14px 18px;
+  padding-inline-start: 58px;
+  margin: 10px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+}
+
+.vp-doc .steps ol > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 16px;
+  top: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--vp-c-brand-1);
+  color: #fff;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+/* Small badges used in tables: <span class="pill">. */
+.vp-doc .pill {
+  display: inline-block;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  white-space: nowrap;
+}
+
+.vp-doc .pill.amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.dark .vp-doc .pill.amber {
+  color: #fbbf24;
+}
+
+.VPFeature .title {
+  font-weight: 700;
+}
+
+.mermaid {
+  direction: ltr;
+  text-align: center;
+}
