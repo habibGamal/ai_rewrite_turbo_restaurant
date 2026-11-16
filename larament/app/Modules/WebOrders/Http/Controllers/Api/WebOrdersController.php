@@ -4,8 +4,9 @@ namespace App\Modules\WebOrders\Http\Controllers\Api;
 
 use App\Enums\OrderBehavior;
 use App\Http\Controllers\Controller;
-use App\Orders\OrderTypeCatalog;
+use App\Modules\WebOrders\Exceptions\WebOrderConflictException;
 use App\Modules\WebOrders\Services\WebApiService;
+use App\Orders\OrderTypeCatalog;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,6 +61,7 @@ class WebOrdersController extends Controller
             ]))],
             'order.shiftId' => 'required|integer',
             'order.orderNumber' => 'required|string',
+            'order.idempotencyKey' => 'nullable|string|max:100',
             'order.subTotal' => 'required|numeric',
             'order.tax' => 'required|numeric',
             'order.service' => 'required|numeric',
@@ -82,11 +84,21 @@ class WebOrdersController extends Controller
         }
 
         try {
-            $this->webApiService->placeOrder($request->all());
+            $placed = $this->webApiService->placeOrder($request->all());
 
+            return response()->json($placed->toResponse());
+        } catch (WebOrderConflictException $e) {
             return response()->json([
-                'message' => 'تم إنشاء الطلب بنجاح',
-            ]);
+                'message' => 'رقم الطلب مستخدم بالفعل لطلب مختلف',
+                'error' => $e->getMessage(),
+                'conflict' => true,
+                'mismatches' => $e->mismatches,
+                'existing_order' => [
+                    'id' => $e->existing->id,
+                    'order_number' => $e->existing->order_number,
+                    'status' => $e->existing->status->value,
+                ],
+            ], 409);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'فشل في إنشاء الطلب',

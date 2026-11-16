@@ -2,26 +2,30 @@
 
 namespace App\Modules\WebOrders\Services;
 
-use App\Services\SettingsService;
-
 use App\Core\Events\OrderCancelled;
 use App\Core\Events\OrderCompleted;
 use App\Core\Events\OrderItemsChanged;
+use App\Enums\OrderBehavior;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\SettingKey;
-use App\Modules\WebOrders\Events\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\DailySnapshot;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shift;
+use App\Modules\WebOrders\DTOs\PlacedWebOrder;
+use App\Modules\WebOrders\Events\WebOrderReceived;
+use App\Modules\WebOrders\Exceptions\WebOrderConflictException;
+use App\Orders\OrderTypeCatalog;
 use App\Services\Orders\OrderCategoryBlockService;
+use App\Services\SettingsService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
 use Closure;
 use Exception;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -193,49 +197,236 @@ class WebApiService
     }
 
     /**
-     * Place a new web order
+     * Place a web order, idempotently.
+     *
+     * A retry of an order the POS already saved (for example after the first
+     * response was lost) is answered with that saved order instead of a
+     * duplicate-key error, but only when it really is the same order: same
+     * website key (when sent), customer phone, total and items. Anything else
+     * under an existing order number is a conflict.
+     *
+     * @throws WebOrderConflictException when the order number belongs to a different order
+     * @throws Exception when the order cannot be placed
      */
-    public function placeOrder(array $data): void
+    public function placeOrder(array $data): PlacedWebOrder
     {
+        $existing = $this->findExistingWebOrder($data['order']);
+        if ($existing !== null) {
+            return $this->alreadyReceived($existing, $data);
+        }
+
         $this->verifyShiftId($data['order']['shiftId']);
 
-        DB::transaction(function () use ($data) {
-            $customer = $this->createOrGetCustomer($data['user']);
-            $customer->delivery_cost = $data['order']['service'] ?? 0;
-            $customer->save();
-
-            $created = $customer->orders()->create([
-                'shift_id' => $data['order']['shiftId'],
-                'status' => OrderStatus::PENDING,
-                'type' => $data['order']['type'],
-                'order_number' => $data['order']['orderNumber'],
-                'order_notes' => $data['order']['note'] ?? '',
-                'sub_total' => $data['order']['subTotal'],
-                'tax' => $data['order']['tax'],
-                'service' => $data['order']['service'],
-                'discount' => $data['order']['discount'],
-                'total' => $data['order']['total'],
-                'temp_discount_percent' => 0,
-                'profit' => 0, // Will be calculated later
-                'payment_status' => PaymentStatus::PENDING,
-                'web_preferences' => $data['order']['webPreferences'] ?? null,
-            ]);
-            if (! $created instanceof Order) {
-                throw new Exception('فشل في إنشاء الطلب');
+        try {
+            $order = DB::transaction(fn (): Order => $this->createWebOrder($data));
+        } catch (UniqueConstraintViolationException $e) {
+            // A parallel attempt of the same order won the insert.
+            $existing = $this->findExistingWebOrder($data['order']);
+            if ($existing === null) {
+                throw $e;
             }
-            $order = $created;
 
-            $this->fillOrderItems($order, $data['order']['items']);
-            $this->handlePayments($order, $data['order']);
+            return $this->alreadyReceived($existing, $data);
+        }
 
-            // Load the customer relationship for broadcasting
-            $order->load('customer', 'items');
+        // Live screens only; the order is saved whatever happens here.
+        rescue(fn () => WebOrderReceived::dispatch($order), report: false);
 
-            // Broadcast web order received event
-            WebOrderReceived::dispatch($order);
+        Log::info('طلب ويب جديد تم استلامه', ['order_id' => $order->id, 'order_number' => $order->order_number]);
 
-            Log::info('طلب ويب جديد تم استلامه', ['order_id' => $order->id, 'order_number' => $order->order_number]);
-        });
+        return new PlacedWebOrder($order, alreadyReceived: false);
+    }
+
+    private function createWebOrder(array $data): Order
+    {
+        $customer = $this->createOrGetCustomer($data['user']);
+        $customer->delivery_cost = $data['order']['service'] ?? 0;
+        $customer->save();
+
+        $created = $customer->orders()->create([
+            'shift_id' => $data['order']['shiftId'],
+            'status' => OrderStatus::PENDING,
+            'type' => $data['order']['type'],
+            'order_number' => $data['order']['orderNumber'],
+            'web_order_key' => $this->webOrderKey($data['order']),
+            'order_notes' => $data['order']['note'] ?? '',
+            'sub_total' => $data['order']['subTotal'],
+            'tax' => $data['order']['tax'],
+            'service' => $data['order']['service'],
+            'discount' => $data['order']['discount'],
+            'total' => $data['order']['total'],
+            'temp_discount_percent' => 0,
+            'profit' => 0, // Will be calculated later
+            'payment_status' => PaymentStatus::PENDING,
+            'web_preferences' => $data['order']['webPreferences'] ?? null,
+        ]);
+        if (! $created instanceof Order) {
+            throw new Exception('فشل في إنشاء الطلب');
+        }
+        $order = $created;
+
+        $this->fillOrderItems($order, $data['order']['items']);
+        $this->handlePayments($order, $data['order']);
+
+        // Load the customer relationship for broadcasting
+        $order->load('customer', 'items');
+
+        return $order;
+    }
+
+    /**
+     * The website's stable key for this order, when it sends one.
+     *
+     * @param  array<string, mixed>  $webOrder
+     */
+    private function webOrderKey(array $webOrder): ?string
+    {
+        $key = $webOrder['idempotencyKey'] ?? null;
+
+        return is_string($key) && $key !== '' ? $key : null;
+    }
+
+    /**
+     * The web order the POS already holds for this website order: by its key
+     * first, then by order number among web orders of any shift (a retry can
+     * arrive after the shift that saved it was closed).
+     *
+     * @param  array<string, mixed>  $webOrder
+     */
+    private function findExistingWebOrder(array $webOrder): ?Order
+    {
+        $key = $this->webOrderKey($webOrder);
+        if ($key !== null) {
+            $byKey = Order::where('web_order_key', $key)->first();
+            if ($byKey !== null) {
+                return $byKey;
+            }
+        }
+
+        $webTypes = app(OrderTypeCatalog::class)->codesWithBehavior([
+            OrderBehavior::WEB_DELIVERY,
+            OrderBehavior::WEB_TAKEAWAY,
+        ]);
+
+        return Order::where('order_number', (string) $webOrder['orderNumber'])
+            ->whereIn('type', $webTypes)
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * @throws WebOrderConflictException
+     */
+    private function alreadyReceived(Order $existing, array $data): PlacedWebOrder
+    {
+        $mismatches = $this->mismatches($existing, $data);
+
+        if ($mismatches !== []) {
+            Log::warning('طلب ويب برقم مستخدم لطلب مختلف', [
+                'order_id' => $existing->id,
+                'order_number' => $existing->order_number,
+                'mismatches' => $mismatches,
+            ]);
+
+            throw new WebOrderConflictException($existing, $mismatches);
+        }
+
+        Log::info('طلب ويب مستلم من قبل، تم الرد بالطلب الموجود', [
+            'order_id' => $existing->id,
+            'order_number' => $existing->order_number,
+        ]);
+
+        return new PlacedWebOrder($existing, alreadyReceived: true);
+    }
+
+    /**
+     * What differs between the saved order and the incoming one. Empty means
+     * it is the same order.
+     *
+     * @return list<string>
+     */
+    private function mismatches(Order $existing, array $data): array
+    {
+        $webOrder = $data['order'];
+        $mismatches = [];
+
+        $incomingKey = $this->webOrderKey($webOrder);
+        $savedKey = $existing->web_order_key;
+        if ($incomingKey !== null && $savedKey !== null && $incomingKey !== $savedKey) {
+            $mismatches[] = 'مفتاح الطلب';
+        }
+
+        if ((string) $existing->order_number !== (string) $webOrder['orderNumber']) {
+            $mismatches[] = 'رقم الطلب';
+        }
+
+        $existing->loadMissing('customer', 'items.product');
+
+        $customer = $existing->customer;
+        $savedPhone = $customer instanceof Customer ? (string) $customer->phone : '';
+        if ($savedPhone !== (string) ($data['user']['phone'] ?? '')) {
+            $mismatches[] = 'العميل';
+        }
+
+        if (abs((float) $existing->total - (float) $webOrder['total']) >= 0.01) {
+            $mismatches[] = 'الإجمالي';
+        }
+
+        if ($this->itemsFingerprint($existing) !== $this->incomingItemsFingerprint($webOrder['items'] ?? [])) {
+            $mismatches[] = 'الأصناف';
+        }
+
+        return $mismatches;
+    }
+
+    /**
+     * product_ref => total quantity, from the saved order lines.
+     *
+     * @return array<string, string>
+     */
+    private function itemsFingerprint(Order $order): array
+    {
+        $quantities = [];
+        foreach ($order->items as $item) {
+            if (! $item instanceof OrderItem) {
+                continue;
+            }
+            $product = $item->product;
+            $ref = $product instanceof Product ? (string) $product->product_ref : 'id:'.$item->product_id;
+            $quantities[$ref] = ($quantities[$ref] ?? 0) + (float) $item->quantity;
+        }
+
+        return $this->normaliseFingerprint($quantities);
+    }
+
+    /**
+     * product_ref => total quantity, from the incoming website items.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<string, string>
+     */
+    private function incomingItemsFingerprint(array $items): array
+    {
+        $quantities = [];
+        foreach ($items as $item) {
+            foreach ($item['posRefObj'] ?? [] as $ref) {
+                $key = (string) $ref['productRef'];
+                $quantities[$key] = ($quantities[$key] ?? 0) + (float) $item['quantity'] * (float) $ref['quantity'];
+            }
+        }
+
+        return $this->normaliseFingerprint($quantities);
+    }
+
+    /**
+     * @param  array<string, float|int>  $quantities
+     * @return array<string, string>
+     */
+    private function normaliseFingerprint(array $quantities): array
+    {
+        ksort($quantities);
+
+        return array_map(fn (float|int $quantity): string => number_format((float) $quantity, 3, '.', ''), $quantities);
     }
 
     /**

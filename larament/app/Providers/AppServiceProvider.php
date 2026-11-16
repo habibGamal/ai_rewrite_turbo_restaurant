@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\VendorAwareUserProvider;
+use App\Broadcasting\ResilientBroadcastManager;
 use App\Costing\CostHistoryRecorder;
 use App\Costing\CostingStrategy;
 use App\Costing\CostingStrategyResolver;
@@ -51,6 +52,7 @@ use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
 use Filament\Auth\Http\Responses\LoginResponse;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -69,6 +71,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // A down Reverb server must never fail an order, payment or web order:
+        // network broadcasts are logged and dropped instead of throwing.
+        $this->app->extend(BroadcastManager::class, fn (BroadcastManager $manager, $app): BroadcastManager => $manager instanceof ResilientBroadcastManager ? $manager : new ResilientBroadcastManager($app));
         $this->app->bind(BaseImportCsv::class, ImportCsv::class);
         $this->app->bind(ExportCsv::class, ExporterCsv::class);
         $this->app->singleton(LoginResponse::class, CustomLoginResponse::class);
