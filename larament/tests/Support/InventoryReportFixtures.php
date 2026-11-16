@@ -5,6 +5,7 @@ use App\Models\InventoryItemMovement;
 use App\Models\ManufacturingOrder;
 use App\Models\ManufacturingRecipe;
 use App\Models\Product;
+use App\Models\ProductCostHistory;
 use App\Models\PurchaseInvoice;
 use App\Models\StockIssue;
 use App\Models\Stocktaking;
@@ -94,15 +95,12 @@ function reportFixture(string $report, Product $product, array $attributes = [])
     }
 
     $document = match ($report) {
-        'PurchasesReport', 'CostHistoryReport' => reportPurchase($product, 10, 20, $attributes),
-        'WasteReport' => reportWaste($product, 2, 40, $attributes),
-        'StocktakingReport' => reportCount($product, 10, 8, -40, $attributes),
-        'StockIssuesReport' => reportIssue($product, 40, $attributes),
+        'CostHistoryReport' => reportPurchase($product, 10, 20, $attributes),
         'ManufacturingYieldReport' => reportManufacturing($product, 100, 98, $attributes),
     };
 
     if ($report === 'CostHistoryReport') {
-        return \App\Models\ProductCostHistory::create([
+        return ProductCostHistory::create([
             'product_id' => $product->id, 'old_cost' => 20, 'new_cost' => 25, 'method' => 'weighted_average',
             'source_type' => $document->getMorphClass(), 'source_id' => $document->id,
         ]);
