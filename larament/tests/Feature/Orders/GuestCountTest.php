@@ -15,6 +15,7 @@ use App\Orders\OrderTypeCatalog;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\DailyComparisonReportService;
 use App\Services\Orders\OrderService;
+use App\Services\Reports\Channels\ChannelReportFilters;
 use App\Services\ShiftsReportService;
 use App\Sync\Builders\DaySummaryBuilder;
 
@@ -224,7 +225,7 @@ describe('reports', function () {
         $from = now()->subDay()->toDateString();
         $to = now()->addDay()->toDateString();
 
-        $channel = app(ChannelPerformanceReportService::class)->getChannelEfficiencyMetrics($from, $to)['guests'];
+        $channel = app(ChannelPerformanceReportService::class)->guests(ChannelReportFilters::fromArray(['startDate' => $from, 'endDate' => $to]));
         $daily = app(DailyComparisonReportService::class)->getPeriodSummary($from, $to)['guests'];
 
         expect($channel->averagePerGuest())->toBe(80.0)

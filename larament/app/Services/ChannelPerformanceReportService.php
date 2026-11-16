@@ -4,374 +4,317 @@ namespace App\Services;
 
 use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
-use App\Models\Customer;
 use App\Models\Order;
+use App\Services\Reports\Channels\ChannelReportFilters;
 use App\Services\Reports\ReportOrderTypesService;
 use App\Services\Reports\ReturnsAggregates;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
+use App\Services\Reports\SqlDates;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * «تقرير أداء قنوات البيع والمقارنة». A channel is an order type.
+ *
+ * Every figure comes from the orders themselves (the same split as
+ * SalesBreakdown), so the report's totals match the shift and daily reports:
+ * net sales = orders.total − refunds paid in the period (grouped by the
+ * original order's channel); profit = orders.profit − the refunds' profit
+ * impact. Only completed orders count as sales; cancelled orders feed the
+ * cancellation rate.
+ */
 class ChannelPerformanceReportService
 {
-    public function getOrdersQuery(?string $startDate = null, ?string $endDate = null)
+    /** Distinct colours for channels in charts, by catalog order. */
+    public const PALETTE = ['#2563eb', '#f97316', '#10b981', '#a855f7', '#ef4444', '#eab308', '#06b6d4', '#ec4899', '#64748b', '#84cc16'];
+
+    public function __construct(
+        private readonly ReportOrderTypesService $types,
+        private readonly ReturnsAggregates $returns,
+    ) {}
+
+    /**
+     * Orders in the filters' period and channels.
+     *
+     * @return Builder<Order>
+     */
+    public function ordersQuery(ChannelReportFilters $filters, OrderStatus $status = OrderStatus::COMPLETED): Builder
     {
         return Order::query()
-            ->where('status', OrderStatus::COMPLETED)
-            ->when($startDate, function ($query) use ($startDate) {
-                $query->where('orders.created_at', '>=', Carbon::parse($startDate)->startOfDay());
-            })
-            ->when($endDate, function ($query) use ($endDate) {
-                $query->where('orders.created_at', '<=', Carbon::parse($endDate)->endOfDay());
-            });
+            ->where('orders.status', $status)
+            ->where('orders.created_at', '>=', $filters->start->startOfDay())
+            ->where('orders.created_at', '<=', $filters->end->endOfDay())
+            ->when($filters->channels !== [], fn (Builder $query) => $query->whereIn('orders.type', $filters->channels));
+    }
+
+    public function hasOrders(ChannelReportFilters $filters): bool
+    {
+        return $this->ordersQuery($filters)->exists();
     }
 
     /**
-     * Get overall channel performance summary
+     * Every channel the report can show, in the cashier's tab order: active
+     * ones plus any inactive one that has orders.
+     *
+     * @return array<string, array{label: string, color: string, chart: string}>
      */
-    public function getChannelPerformanceSummary(?string $startDate = null, ?string $endDate = null): Collection
+    public function channels(): array
     {
-        // Refunds paid in the period, grouped by the original order's channel.
-        $aggregates = app(ReturnsAggregates::class);
-        $returns = $aggregates->groupedBy($aggregates->periodQuery($startDate, $endDate), 'ro.type');
+        $result = [];
+        foreach ($this->types->forQuery(Order::query()) as $i => $type) {
+            $result[$type['code']] = [
+                'label' => $type['label'],
+                'color' => $type['color'],
+                'chart' => self::PALETTE[$i % count(self::PALETTE)],
+            ];
+        }
 
-        return $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                'orders.type',
-                DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                DB::raw('COUNT(DISTINCT orders.customer_id) as unique_customers'),
-                DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_quantity'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
-                DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
-                DB::raw('COALESCE(AVG(order_items.total), 0) as avg_order_value'),
-                DB::raw('COALESCE(SUM(order_items.total) / COUNT(DISTINCT orders.customer_id), 0) as avg_revenue_per_customer'),
-                DB::raw('COALESCE(COUNT(DISTINCT orders.id) / COUNT(DISTINCT orders.customer_id), 0) as avg_orders_per_customer'),
-                // Profit margin calculation
-                DB::raw('CASE
-                    WHEN COALESCE(SUM(order_items.total), 0) > 0
-                    THEN (COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) / COALESCE(SUM(order_items.total), 1)) * 100
-                    ELSE 0
-                END as profit_margin_percentage'),
-            ])
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+        return $result;
+    }
+
+    /**
+     * @return array<string, string> code => label, for the channels filter
+     */
+    public function channelOptions(): array
+    {
+        return array_map(fn (array $channel) => $channel['label'], $this->channels());
+    }
+
+    /**
+     * One row per channel with sales, cancellations or refunds in the period,
+     * biggest net sales first.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function channelRows(ChannelReportFilters $filters): array
+    {
+        $sales = $this->ordersQuery($filters)
+            ->toBase()
+            ->select('orders.type')
+            ->selectRaw('COUNT(*) AS orders_count')
+            ->selectRaw('COALESCE(SUM(orders.sub_total), 0) AS items')
+            ->selectRaw('COALESCE(SUM(orders.discount), 0) AS discount')
+            ->selectRaw('COALESCE(SUM(orders.service), 0) AS service')
+            ->selectRaw('COALESCE(SUM(orders.tax), 0) AS tax')
+            ->selectRaw('COALESCE(SUM(orders.fees_total), 0) AS fees')
+            ->selectRaw('COALESCE(SUM(orders.equipment_total), 0) AS equipment')
+            ->selectRaw('COALESCE(SUM(orders.total), 0) AS gross')
+            ->selectRaw('COALESCE(SUM(orders.profit), 0) AS profit')
+            ->selectRaw('COUNT(DISTINCT orders.customer_id) AS customers')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders.guests_count > 0 THEN orders.guests_count ELSE 0 END), 0) AS guests')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders.guests_count > 0 THEN orders.total ELSE 0 END), 0) AS guest_sales')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders.guests_count > 0 THEN 1 ELSE 0 END), 0) AS guest_orders')
             ->groupBy('orders.type')
-            ->orderByDesc('total_sales')
             ->get()
-            ->map(function ($item) use ($returns) {
-                $item->type_label = $this->labelForOrderType($item->type);
-                $item->market_share = 0; // Will be calculated later
-                $channelReturns = $returns[(string) $item->type] ?? ['amount' => 0.0, 'profit_impact' => 0.0, 'count' => 0];
-                $item->returns_count = $channelReturns['count'];
-                $item->total_refunds = $channelReturns['amount'];
-                $item->net_sales = round((float) $item->total_sales - $channelReturns['amount'], 2);
-                $item->net_profit = round((float) $item->total_profit - $channelReturns['profit_impact'], 2);
+            ->keyBy(fn ($row) => (string) $row->type);
 
-                return $item;
-            });
+        $cancelled = $this->ordersQuery($filters, OrderStatus::CANCELLED)
+            ->toBase()
+            ->select('orders.type')
+            ->selectRaw('COUNT(*) AS cancelled')
+            ->groupBy('orders.type')
+            ->pluck('cancelled', 'type')
+            ->all();
+
+        $returns = $this->returns->groupedBy(
+            $this->returns->periodQuery($filters->startDate(), $filters->endDate()),
+            'ro.type',
+        );
+        if ($filters->channels !== []) {
+            $returns = array_intersect_key($returns, array_flip($filters->channels));
+        }
+
+        $channels = $this->channels();
+        $codes = array_unique([...$sales->keys()->all(), ...array_keys($cancelled), ...array_keys($returns)]);
+
+        $rows = [];
+        foreach ($codes as $code) {
+            $code = (string) $code;
+            $row = $sales->get($code);
+            $refund = $returns[$code] ?? ['amount' => 0.0, 'profit_impact' => 0.0, 'count' => 0];
+            $rows[$code] = $this->derive([
+                'code' => $code,
+                'label' => $channels[$code]['label'] ?? $this->types->label($code),
+                'color' => $channels[$code]['color'] ?? 'gray',
+                'chart' => $channels[$code]['chart'] ?? self::PALETTE[count($rows) % count(self::PALETTE)],
+                'orders' => (int) ($row->orders_count ?? 0),
+                'items' => (float) ($row->items ?? 0),
+                'discount' => (float) ($row->discount ?? 0),
+                'service' => (float) ($row->service ?? 0),
+                'tax' => (float) ($row->tax ?? 0),
+                'fees' => (float) ($row->fees ?? 0),
+                'equipment' => (float) ($row->equipment ?? 0),
+                'gross' => (float) ($row->gross ?? 0),
+                'profit' => (float) ($row->profit ?? 0),
+                'customers' => (int) ($row->customers ?? 0),
+                'guests' => (int) ($row->guests ?? 0),
+                'guest_sales' => (float) ($row->guest_sales ?? 0),
+                'guest_orders' => (int) ($row->guest_orders ?? 0),
+                'cancelled' => (int) ($cancelled[$code] ?? 0),
+                'refunds' => (float) $refund['amount'],
+                'refunds_count' => (int) $refund['count'],
+                'refunds_profit' => (float) $refund['profit_impact'],
+            ]);
+        }
+
+        uasort($rows, fn (array $a, array $b) => $b['net_sales'] <=> $a['net_sales']);
+
+        $totalSales = array_sum(array_column($rows, 'net_sales'));
+        $totalOrders = array_sum(array_column($rows, 'orders'));
+        foreach ($rows as $code => $row) {
+            $rows[$code]['sales_share'] = self::ratio($row['net_sales'], $totalSales);
+            $rows[$code]['orders_share'] = self::ratio($row['orders'], $totalOrders);
+        }
+
+        return $rows;
     }
 
     /**
-     * Get channel performance trends over time
+     * The channels' sums; customers are counted once across channels.
+     *
+     * @param  array<string, array<string, mixed>>  $rows
+     * @return array<string, mixed>
      */
-    public function getChannelTrends(?string $startDate = null, ?string $endDate = null, string $period = 'daily'): Collection
+    public function totals(ChannelReportFilters $filters, array $rows): array
     {
-        $dateFormat = match ($period) {
-            'hourly' => '%Y-%m-%d %H:00:00',
-            'daily' => '%Y-%m-%d',
-            'weekly' => '%Y-%u',
-            'monthly' => '%Y-%m',
-            default => '%Y-%m-%d'
-        };
+        $sum = fn (string $key) => array_sum(array_column($rows, $key));
 
-        return $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                DB::raw("DATE_FORMAT(orders.created_at, '{$dateFormat}') as period"),
-                'orders.type',
-                DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
-                DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as total_profit'),
-                DB::raw('COUNT(DISTINCT orders.customer_id) as unique_customers'),
-            ])
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->groupBy('period', 'orders.type')
-            ->orderBy('period')
-            ->orderBy('orders.type')
-            ->get()
-            ->map(function ($item) use ($period) {
-                $item->type_label = $this->labelForOrderType($item->type);
-                $item->period_label = $this->formatPeriodLabel($item->period, $period);
+        $totals = $this->derive([
+            'code' => null,
+            'label' => 'الإجمالي',
+            'orders' => (int) $sum('orders'),
+            'items' => $sum('items'),
+            'discount' => $sum('discount'),
+            'service' => $sum('service'),
+            'tax' => $sum('tax'),
+            'fees' => $sum('fees'),
+            'equipment' => $sum('equipment'),
+            'gross' => $sum('gross'),
+            'profit' => $sum('profit'),
+            'customers' => (int) $this->ordersQuery($filters)->whereNotNull('orders.customer_id')->distinct()->count('orders.customer_id'),
+            'guests' => (int) $sum('guests'),
+            'guest_sales' => $sum('guest_sales'),
+            'guest_orders' => (int) $sum('guest_orders'),
+            'cancelled' => (int) $sum('cancelled'),
+            'refunds' => $sum('refunds'),
+            'refunds_count' => (int) $sum('refunds_count'),
+            'refunds_profit' => $sum('refunds_profit'),
+        ]);
+        $totals['sales_share'] = $rows === [] ? 0.0 : 100.0;
+        $totals['orders_share'] = $rows === [] ? 0.0 : 100.0;
 
-                return $item;
-            });
+        return $totals;
     }
 
     /**
-     * Get customer acquisition by channel
+     * The whole report: this period's channels and totals, the comparison
+     * period's (keyed the same way), and which optional columns have data.
+     *
+     * @return array{filters: ChannelReportFilters, rows: array<string, array<string, mixed>>, totals: array<string, mixed>, comparison: ?ChannelReportFilters, previous_rows: array<string, array<string, mixed>>, previous_totals: ?array<string, mixed>, columns: array{charges: bool, guests: bool, cancelled: bool, refunds: bool, customers: bool}}
      */
-    public function getCustomerAcquisitionByChannel(?string $startDate = null, ?string $endDate = null): Collection
+    public function report(ChannelReportFilters $filters): array
     {
-        return DB::table('customers')
-            ->select([
-                DB::raw('first_order.type as acquisition_channel'),
-                DB::raw('COUNT(DISTINCT customers.id) as customers_acquired'),
-                DB::raw('COALESCE(AVG(customer_stats.total_orders), 0) as avg_lifetime_orders'),
-                DB::raw('COALESCE(AVG(customer_stats.total_spent), 0) as avg_lifetime_value'),
-                DB::raw('COALESCE(AVG(customer_stats.avg_order_value), 0) as avg_order_value'),
-            ])
-            ->joinSub(
-                // Get first order for each customer
-                Order::select([
-                    'customer_id',
-                    'type',
-                    DB::raw('MIN(created_at) as first_order_date'),
-                ])
-                    ->where('status', OrderStatus::COMPLETED)
-                    ->whereNotNull('customer_id')
-                    ->groupBy('customer_id', 'type'),
-                'first_order',
-                'customers.id',
-                '=',
-                'first_order.customer_id'
-            )
-            ->joinSub(
-                // Get customer lifetime stats
-                $this->getOrdersQuery($startDate, $endDate)
-                    ->select([
-                        'orders.customer_id',
-                        DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                        DB::raw('COALESCE(SUM(order_items.total), 0) as total_spent'),
-                        DB::raw('COALESCE(AVG(order_items.total), 0) as avg_order_value'),
-                    ])
-                    ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-                    ->whereNotNull('orders.customer_id')
-                    ->groupBy('orders.customer_id'),
-                'customer_stats',
-                'customers.id',
-                '=',
-                'customer_stats.customer_id'
-            )
-            ->when($startDate, function ($query) use ($startDate) {
-                $query->where('customers.created_at', '>=', Carbon::parse($startDate)->startOfDay());
-            })
-            ->when($endDate, function ($query) use ($endDate) {
-                $query->where('customers.created_at', '<=', Carbon::parse($endDate)->endOfDay());
-            })
-            ->groupBy('first_order.type')
-            ->orderByDesc('customers_acquired')
-            ->get()
-            ->map(function ($item) {
-                $item->channel_label = app(ReportOrderTypesService::class)->label((string) $item->acquisition_channel);
+        $rows = $this->channelRows($filters);
+        $totals = $this->totals($filters, $rows);
 
-                return $item;
-            });
-    }
-
-    /**
-     * Get cross-channel customer behavior
-     */
-    public function getCrossChannelBehavior(?string $startDate = null, ?string $endDate = null): array
-    {
-        // Get customers who use multiple channels
-        $multiChannelCustomers = $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                'orders.customer_id',
-                DB::raw('COUNT(DISTINCT orders.type) as channels_used'),
-                DB::raw('GROUP_CONCAT(DISTINCT orders.type) as channel_list'),
-                DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_spent'),
-            ])
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->whereNotNull('orders.customer_id')
-            ->groupBy('orders.customer_id')
-            ->having('channels_used', '>', 1)
-            ->get();
-
-        // Calculate channel switching patterns
-        $channelSwitching = $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                DB::raw('LAG(orders.type) OVER (PARTITION BY orders.customer_id ORDER BY orders.created_at) as previous_channel'),
-                'orders.type as current_channel',
-                DB::raw('COUNT(*) as switch_count'),
-            ])
-            ->whereNotNull('orders.customer_id')
-            ->groupBy('previous_channel', 'current_channel')
-            ->havingRaw('previous_channel IS NOT NULL')
-            ->havingRaw('previous_channel != current_channel')
-            ->get();
-
-        $totalMultiChannel = $multiChannelCustomers->count();
-        $avgChannelsPerCustomer = $multiChannelCustomers->avg('channels_used');
-        $multiChannelRevenue = $multiChannelCustomers->sum('total_spent');
+        $comparison = $filters->comparison();
+        $previousRows = $comparison ? $this->channelRows($comparison) : [];
+        $previousTotals = $comparison ? $this->totals($comparison, $previousRows) : null;
 
         return [
-            'multi_channel_customers' => $totalMultiChannel,
-            'avg_channels_per_customer' => $avgChannelsPerCustomer,
-            'multi_channel_revenue' => $multiChannelRevenue,
-            'channel_switching_patterns' => $channelSwitching,
-            'multi_channel_customers_detail' => $multiChannelCustomers,
+            'filters' => $filters,
+            'rows' => $rows,
+            'totals' => $totals,
+            'comparison' => $comparison,
+            'previous_rows' => $previousRows,
+            'previous_totals' => $previousTotals,
+            'columns' => [
+                'charges' => $totals['charges'] != 0.0,
+                'guests' => $totals['guests'] > 0,
+                'cancelled' => $totals['cancelled'] > 0,
+                'refunds' => $totals['refunds'] != 0.0,
+                'customers' => $totals['customers'] > 0,
+            ],
         ];
     }
 
     /**
-     * Get channel profitability analysis
+     * Net sales and orders per day, for the KPI sparklines. Refunds count on
+     * the day they were paid.
+     *
+     * @return array<string, array{orders: int, net_sales: float}> keyed by Y-m-d, every day of the period
      */
-    public function getChannelProfitabilityAnalysis(?string $startDate = null, ?string $endDate = null): Collection
+    public function daily(ChannelReportFilters $filters): array
     {
-        return $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                'orders.type',
-                DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_revenue'),
-                DB::raw('COALESCE(SUM(order_items.cost * order_items.quantity), 0) as total_cost'),
-                DB::raw('COALESCE(SUM(order_items.total - (order_items.cost * order_items.quantity)), 0) as gross_profit'),
-                // Calculate estimated operational costs (could be enhanced with actual data)
-                DB::raw('CASE
-                    WHEN orders.type IN ("delivery", "web_delivery", "talabat") THEN COALESCE(SUM(order_items.total), 0) * 0.15
-                    WHEN orders.type IN ("dine_in") THEN COALESCE(SUM(order_items.total), 0) * 0.25
-                    ELSE COALESCE(SUM(order_items.total), 0) * 0.10
-                END as estimated_operational_cost'),
-                DB::raw('COALESCE(AVG(order_items.total), 0) as avg_order_value'),
-            ])
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->groupBy('orders.type')
-            ->orderByDesc('gross_profit')
+        $day = SqlDates::day('orders.created_at');
+        $sales = $this->ordersQuery($filters)
+            ->toBase()
+            ->selectRaw("{$day} AS day")
+            ->selectRaw('COUNT(*) AS orders_count')
+            ->selectRaw('COALESCE(SUM(orders.total), 0) AS gross')
+            ->groupByRaw($day)
             ->get()
-            ->map(function ($item) {
-                $item->type_label = $this->labelForOrderType($item->type);
-                $item->net_profit = $item->gross_profit - $item->estimated_operational_cost;
-                $item->gross_margin = $item->total_revenue > 0 ?
-                    ($item->gross_profit / $item->total_revenue) * 100 : 0;
-                $item->net_margin = $item->total_revenue > 0 ?
-                    ($item->net_profit / $item->total_revenue) * 100 : 0;
-                $item->profit_per_order = $item->total_orders > 0 ?
-                    $item->net_profit / $item->total_orders : 0;
+            ->keyBy('day');
 
-                return $item;
-            });
-    }
+        $returnsQuery = $this->returns->periodQuery($filters->startDate(), $filters->endDate());
+        if ($filters->channels !== []) {
+            $returnsQuery->whereIn('order_returns.order_id', Order::query()->whereIn('type', $filters->channels)->select('id'));
+        }
+        $refunds = $this->returns->groupedBy($returnsQuery, SqlDates::day('orr.created_at'));
 
-    /**
-     * Get channel performance by time of day
-     */
-    public function getChannelPerformanceByHour(?string $startDate = null, ?string $endDate = null): Collection
-    {
-        return $this->getOrdersQuery($startDate, $endDate)
-            ->select([
-                DB::raw('HOUR(orders.created_at) as hour'),
-                'orders.type',
-                DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
-                DB::raw('COALESCE(SUM(order_items.total), 0) as total_sales'),
-                DB::raw('COUNT(DISTINCT orders.customer_id) as unique_customers'),
-            ])
-            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->groupBy('hour', 'orders.type')
-            ->orderBy('hour')
-            ->orderBy('orders.type')
-            ->get()
-            ->map(function ($item) {
-                $item->hour_label = sprintf('%02d:00', $item->hour);
-                $item->type_label = $this->labelForOrderType($item->type);
-
-                return $item;
-            });
-    }
-
-    /**
-     * Get channel efficiency metrics
-     */
-    public function getChannelEfficiencyMetrics(?string $startDate = null, ?string $endDate = null): array
-    {
-        $channelData = $this->getChannelPerformanceSummary($startDate, $endDate);
-
-        $totalRevenue = $channelData->sum('total_sales');
-        $totalOrders = $channelData->sum('total_orders');
-        $totalCustomers = $channelData->sum('unique_customers');
-
-        // Calculate market share and efficiency metrics
-        $channelData = $channelData->map(function ($item) use ($totalRevenue, $totalOrders, $totalCustomers) {
-            $item->market_share = $totalRevenue > 0 ? ($item->total_sales / $totalRevenue) * 100 : 0;
-            $item->order_share = $totalOrders > 0 ? ($item->total_orders / $totalOrders) * 100 : 0;
-            $item->customer_share = $totalCustomers > 0 ? ($item->unique_customers / $totalCustomers) * 100 : 0;
-
-            // Efficiency score (revenue per order relative to average)
-            $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
-            $item->efficiency_score = $avgOrderValue > 0 ? ($item->avg_order_value / $avgOrderValue) * 100 : 0;
-
-            return $item;
-        });
-
-        $topChannelByRevenue = $channelData->sortByDesc('total_sales')->first();
-        $topChannelByOrders = $channelData->sortByDesc('total_orders')->first();
-        $mostEfficientChannel = $channelData->sortByDesc('efficiency_score')->first();
-
-        return [
-            'channel_summary' => $channelData,
-            'top_channel_by_revenue' => $topChannelByRevenue,
-            'top_channel_by_orders' => $topChannelByOrders,
-            'most_efficient_channel' => $mostEfficientChannel,
-            'total_revenue' => $totalRevenue,
-            'total_orders' => $totalOrders,
-            'total_customers' => $totalCustomers,
-            'avg_order_value' => $totalOrders > 0 ? $totalRevenue / $totalOrders : 0,
-            'guests' => GuestStats::fromQuery($this->getOrdersQuery($startDate, $endDate)),
-        ];
-    }
-
-    /**
-     * Format period label based on period type
-     */
-    private function formatPeriodLabel(string $period, string $periodType): string
-    {
-        return match ($periodType) {
-            'hourly' => Carbon::parse($period)->format('d/m H:i'),
-            'daily' => Carbon::parse($period)->format('d/m/Y'),
-            'weekly' => 'أسبوع '.$period,
-            'monthly' => Carbon::createFromFormat('Y-m', $period)->format('M Y'),
-            default => $period
-        };
-    }
-
-    private function labelForOrderType(mixed $type): string
-    {
-        $code = (string) $type;
-
-        return app(ReportOrderTypesService::class)->label($code);
-    }
-
-    /**
-     * Get period info for display
-     */
-    public function getPeriodInfo(?string $startDate = null, ?string $endDate = null): array
-    {
-        if (! $startDate && ! $endDate) {
-            return [
-                'title' => 'تقرير أداء القنوات - جميع الفترات',
-                'description' => 'تحليل أداء جميع قنوات البيع والمقارنة بينها',
+        $result = [];
+        for ($date = $filters->start; $date->lessThanOrEqualTo($filters->end); $date = $date->addDay()) {
+            $key = $date->toDateString();
+            $row = $sales->get($key);
+            $result[$key] = [
+                'orders' => (int) ($row->orders_count ?? 0),
+                'net_sales' => round((float) ($row->gross ?? 0) - ($refunds[$key]['amount'] ?? 0.0), 2),
             ];
         }
 
-        $start = $startDate ? Carbon::parse($startDate) : null;
-        $end = $endDate ? Carbon::parse($endDate) : null;
+        return $result;
+    }
 
-        if ($start && $end) {
-            return [
-                'title' => 'تقرير أداء القنوات',
-                'description' => sprintf(
-                    'تحليل أداء قنوات البيع من %s إلى %s',
-                    $start->format('d/m/Y'),
-                    $end->format('d/m/Y')
-                ),
-            ];
-        } elseif ($start) {
-            return [
-                'title' => 'تقرير أداء القنوات',
-                'description' => sprintf('تحليل أداء قنوات البيع من %s حتى الآن', $start->format('d/m/Y')),
-            ];
-        } else {
-            return [
-                'title' => 'تقرير أداء القنوات',
-                'description' => sprintf('تحليل أداء قنوات البيع حتى %s', $end->format('d/m/Y')),
-            ];
+    /**
+     * Guests and average per guest over the period's completed orders.
+     */
+    public function guests(ChannelReportFilters $filters): GuestStats
+    {
+        return GuestStats::fromQuery($this->ordersQuery($filters));
+    }
+
+    /**
+     * Add the figures computed from the sums.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function derive(array $row): array
+    {
+        $row['net_sales'] = round($row['gross'] - $row['refunds'], 2);
+        $row['net_profit'] = round($row['profit'] - $row['refunds_profit'], 2);
+        $row['charges'] = round($row['service'] + $row['fees'] + $row['equipment'], 2);
+        $row['avg_order'] = $row['orders'] > 0 ? round($row['net_sales'] / $row['orders'], 2) : 0.0;
+        $row['margin'] = self::ratio($row['net_profit'], $row['net_sales']);
+        $row['discount_rate'] = self::ratio($row['discount'], $row['items']);
+        $row['refund_rate'] = self::ratio($row['refunds'], $row['gross']);
+        $row['cancel_rate'] = self::ratio($row['cancelled'], $row['orders'] + $row['cancelled']);
+        $row['avg_per_guest'] = $row['guests'] > 0 ? round($row['guest_sales'] / $row['guests'], 2) : 0.0;
+
+        return $row;
+    }
+
+    /** Percentage, 0 when the base is 0. */
+    public static function ratio(float|int $part, float|int $whole): float
+    {
+        return $whole != 0 ? round($part / $whole * 100, 2) : 0.0;
+    }
+
+    /** Percentage change, null when there is nothing to compare with. */
+    public static function change(float|int $current, float|int|null $previous): ?float
+    {
+        if ($previous === null || $previous == 0) {
+            return null;
         }
+
+        return round(($current - $previous) / abs($previous) * 100, 1);
     }
 }

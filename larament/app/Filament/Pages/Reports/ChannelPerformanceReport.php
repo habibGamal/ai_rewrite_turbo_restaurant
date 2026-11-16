@@ -4,14 +4,22 @@ namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
-use App\Filament\Widgets\ChannelMarketShareWidget;
-use App\Filament\Widgets\ChannelPerformanceStatsWidget;
+use App\Filament\Widgets\ChannelComparisonTableWidget;
+use App\Filament\Widgets\ChannelKpisWidget;
+use App\Filament\Widgets\ChannelShareWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Services\ChannelPerformanceReportService;
+use App\Services\Reports\Channels\ChannelReportFilters;
+use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
+/**
+ * «تقرير أداء قنوات البيع والمقارنة»: how much each channel (order type)
+ * sells and earns, and how that changed against a comparison period.
+ */
 class ChannelPerformanceReport extends BaseDashboard
 {
     use HasFiltersForm, ViewerAccess;
@@ -28,13 +36,6 @@ class ChannelPerformanceReport extends BaseDashboard
 
     protected static ?int $navigationSort = 8;
 
-    protected ChannelPerformanceReportService $channelReportService;
-
-    public function boot(): void
-    {
-        $this->channelReportService = app(ChannelPerformanceReportService::class);
-    }
-
     public function filtersForm(Schema $schema): Schema
     {
         return $schema
@@ -44,28 +45,47 @@ class ChannelPerformanceReport extends BaseDashboard
                     'last_30_days',
                     29
                 ),
+                Section::make('المقارنة والقنوات')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        Select::make('compareTo')
+                            ->label('قارن بـ')
+                            ->options(ChannelReportFilters::compareOptions())
+                            ->default(ChannelReportFilters::COMPARE_PREVIOUS)
+                            ->selectablePlaceholder(false)
+                            ->live(),
+                        Select::make('channels')
+                            ->label('القنوات')
+                            ->placeholder('كل القنوات')
+                            ->multiple()
+                            ->options(fn (): array => app(ChannelPerformanceReportService::class)->channelOptions())
+                            ->live(),
+                    ]),
             ]);
     }
 
     public function getWidgets(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+        $service = app(ChannelPerformanceReportService::class);
+        $filters = ChannelReportFilters::fromArray($this->filters);
 
-        $ordersCount = $this->channelReportService->getOrdersQuery(
-            $startDate,
-            $endDate
-        )->count();
-
-        if ($ordersCount === 0) {
+        if (! $service->hasOrders($filters)) {
             return [
                 NoCustomersSalesInPeriodWidget::class,
             ];
         }
 
-        return [
-            ChannelPerformanceStatsWidget::class,
-            ChannelMarketShareWidget::class,
+        $widgets = [
+            ChannelKpisWidget::class,
+            ChannelComparisonTableWidget::class,
         ];
+
+        // Shares only mean something with two channels or more.
+        if ($service->ordersQuery($filters)->distinct()->count('orders.type') > 1) {
+            $widgets[] = ChannelShareWidget::class;
+        }
+
+        return $widgets;
     }
 }

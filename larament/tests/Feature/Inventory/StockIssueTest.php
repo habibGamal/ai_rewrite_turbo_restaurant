@@ -24,6 +24,7 @@ use App\Policies\StockIssuePolicy;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\InventoryDailyAggregationService;
 use App\Services\ProductsSalesReportService;
+use App\Services\Reports\Channels\ChannelReportFilters;
 use App\Services\ShiftsReportService;
 use App\Services\StockIssueService;
 use App\Services\StockService;
@@ -31,6 +32,7 @@ use Carbon\Carbon;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Forms\Components\Repeater;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 use function Pest\Laravel\actingAs;
@@ -306,8 +308,8 @@ it('is not counted in sales, shift money or profit', function () {
     $shiftStatsBefore = $shiftsReport->calculateShiftStats($shift);
     $periodStatsBefore = $shiftsReport->calculatePeriodStats($today, $today, [$shift->id]);
     $salesSummaryBefore = $productsSalesReport->getPeriodSummary($today, $today, [$shift->id]);
-    $channelMetricsBefore = $channelReport->getChannelEfficiencyMetrics($today, $today);
-    $channelProfitBefore = $channelReport->getChannelProfitabilityAnalysis($today, $today)->sum('gross_profit');
+    $channelFilters = ChannelReportFilters::fromArray(['startDate' => $today, 'endDate' => $today]);
+    $channelTotalsBefore = $channelReport->totals($channelFilters, $channelReport->channelRows($channelFilters));
 
     // Confirm a stock issue
     $rice = Product::factory()->create([
@@ -331,17 +333,14 @@ it('is not counted in sales, shift money or profit', function () {
     $shiftStatsAfter = $shiftsReport->calculateShiftStats($shift->fresh());
     $periodStatsAfter = $shiftsReport->calculatePeriodStats($today, $today, [$shift->id]);
     $salesSummaryAfter = $productsSalesReport->getPeriodSummary($today, $today, [$shift->id]);
-    $channelMetricsAfter = $channelReport->getChannelEfficiencyMetrics($today, $today);
-    $channelProfitAfter = $channelReport->getChannelProfitabilityAnalysis($today, $today)->sum('gross_profit');
+    $channelTotalsAfter = $channelReport->totals($channelFilters, $channelReport->channelRows($channelFilters));
 
     expect($shiftStatsAfter)->toBe($shiftStatsBefore)
         ->and($periodStatsAfter)->toBe($periodStatsBefore)
         ->and($salesSummaryAfter['total_sales'])->toBe($salesSummaryBefore['total_sales'])
         ->and($salesSummaryAfter['total_profit'])->toBe($salesSummaryBefore['total_profit'])
         ->and($salesSummaryAfter['total_quantity'])->toBe($salesSummaryBefore['total_quantity'])
-        ->and($channelMetricsAfter['total_revenue'])->toBe($channelMetricsBefore['total_revenue'])
-        ->and($channelMetricsAfter['total_orders'])->toBe($channelMetricsBefore['total_orders'])
-        ->and($channelProfitAfter)->toBe($channelProfitBefore);
+        ->and($channelTotalsAfter)->toBe($channelTotalsBefore);
 });
 
 it('blocks closing the day while a draft issue exists', function () {
@@ -474,11 +473,11 @@ it('manages stock issues through Filament resource and registers permissions', f
     // Migration down() and up() work cleanly
     $migration = require database_path('migrations/2026_11_10_320001_create_stock_issues_tables.php');
     $migration->down();
-    expect(\Illuminate\Support\Facades\Schema::hasTable('stock_issue_items'))->toBeFalse()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('stock_issues'))->toBeFalse();
+    expect(Schema::hasTable('stock_issue_items'))->toBeFalse()
+        ->and(Schema::hasTable('stock_issues'))->toBeFalse();
     $migration->up();
-    expect(\Illuminate\Support\Facades\Schema::hasTable('stock_issues'))->toBeTrue()
-        ->and(\Illuminate\Support\Facades\Schema::hasTable('stock_issue_items'))->toBeTrue();
+    expect(Schema::hasTable('stock_issues'))->toBeTrue()
+        ->and(Schema::hasTable('stock_issue_items'))->toBeTrue();
 });
 
 it('refuses a second confirm of the same issue loaded before the first confirm', function () {
@@ -488,10 +487,10 @@ it('refuses a second confirm of the same issue loaded before the first confirm',
     openInventoryDay($product);
 
     $staleCopy = StockIssue::find($issue->id);
-    app(\App\Services\StockIssueService::class)->confirm($issue);
+    app(StockIssueService::class)->confirm($issue);
 
-    expect(fn () => app(\App\Services\StockIssueService::class)->confirm($staleCopy))
-        ->toThrow(\Illuminate\Validation\ValidationException::class);
-    expect(\App\Models\InventoryItemMovement::where('referenceable_id', $issue->id)
-        ->where('reason', \App\Enums\MovementReason::STOCK_ISSUE)->count())->toBe(1);
+    expect(fn () => app(StockIssueService::class)->confirm($staleCopy))
+        ->toThrow(ValidationException::class);
+    expect(InventoryItemMovement::where('referenceable_id', $issue->id)
+        ->where('reason', MovementReason::STOCK_ISSUE)->count())->toBe(1);
 });
