@@ -76,6 +76,11 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::EQUIPMENT);
     }
 
+    public function multiTerminalEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::MULTI_TERMINAL);
+    }
+
     public function variantsEnabled(): bool
     {
         return $this->isEnabled(OptionalFeature::VARIANTS);
@@ -107,6 +112,7 @@ class FeatureService
             'outsourced_orders' => $this->outsourcedOrdersEnabled(),
             'equipment' => $this->equipmentEnabled(),
             'variants' => $this->variantsEnabled(),
+            'multi_terminal' => $this->multiTerminalEnabled(),
         ];
     }
 

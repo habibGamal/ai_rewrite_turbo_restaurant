@@ -255,6 +255,7 @@ export interface OrderCreditFlags {
 
 export interface Order {
   id: number;
+  terminal_id?: number | null;
   customer_id?: number;
   service_rate?: number;
   driver_id?: number;
@@ -398,6 +399,7 @@ export interface FeatureFlags {
   outsourced_orders: boolean;
   equipment: boolean;
   variants?: boolean;
+  multi_terminal?: boolean;
 }
 
 export type ModuleKey =

@@ -11,6 +11,7 @@ enum OptionalFeature: string
     case OUTSOURCED_ORDERS = 'feature_outsourced_orders_enabled';
     case EQUIPMENT = 'feature_equipment_enabled';
     case VARIANTS = 'feature_variants_enabled';
+    case MULTI_TERMINAL = 'feature_multi_terminal_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -20,6 +21,7 @@ enum OptionalFeature: string
             self::OUTSOURCED_ORDERS => SettingKey::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::EQUIPMENT => SettingKey::FEATURE_EQUIPMENT_ENABLED,
             self::VARIANTS => SettingKey::FEATURE_VARIANTS_ENABLED,
+            self::MULTI_TERMINAL => SettingKey::FEATURE_MULTI_TERMINAL_ENABLED,
         };
     }
 
@@ -55,6 +57,7 @@ enum OptionalFeature: string
             self::OUTSOURCED_ORDERS => 'outsourced_orders',
             self::EQUIPMENT => 'equipment',
             self::VARIANTS => 'variants',
+            self::MULTI_TERMINAL => 'multi_terminal',
         };
     }
 
@@ -103,6 +106,15 @@ enum OptionalFeature: string
                 'view_custom_fees_report',
             ],
             self::VARIANTS => [],
+            self::MULTI_TERMINAL => [
+                'terminal.open',
+                'terminal.close',
+                'terminal.close_others',
+                'terminal.bind_device',
+                'view_terminals',
+                'create_terminals',
+                'update_terminals',
+            ],
         };
     }
 
@@ -114,6 +126,7 @@ enum OptionalFeature: string
             self::OUTSOURCED_ORDERS => 'ميزة الطلبات الخارجية غير مفعلة حالياً.',
             self::EQUIPMENT => 'ميزة المعدات غير مفعلة حالياً.',
             self::VARIANTS => 'ميزة المقاسات والألوان (متغيرات المنتجات) غير مفعلة حالياً.',
+            self::MULTI_TERMINAL => 'ميزة الأدراج المتعددة غير مفعلة حالياً.',
         };
     }
 
@@ -133,6 +146,7 @@ enum OptionalFeature: string
             'outsourced_orders' => self::OUTSOURCED_ORDERS,
             'equipment' => self::EQUIPMENT,
             'variants' => self::VARIANTS,
+            'multi_terminal' => self::MULTI_TERMINAL,
             default => null,
         };
     }

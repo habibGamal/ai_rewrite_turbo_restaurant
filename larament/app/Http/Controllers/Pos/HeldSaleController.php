@@ -9,6 +9,7 @@ use App\Models\HeldSale;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSessionResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -25,6 +26,7 @@ class HeldSaleController extends Controller
 
         $held = HeldSale::query()
             ->where('shift_id', $shift)
+            ->when($this->drawerSession(), fn ($query, int $session) => $query->where('terminal_session_id', $session))
             ->with('user:id,name')
             ->latest()
             ->get()
@@ -69,10 +71,20 @@ class HeldSaleController extends Controller
     public function destroy(HeldSale $heldSale, ShiftService $shifts): Response
     {
         abort_unless($heldSale->shift_id === $this->shift($shifts), 404);
+        $drawer = $this->drawerSession();
+        abort_unless($drawer === null || (int) $heldSale->getAttribute('terminal_session_id') === $drawer, 404);
 
         $heldSale->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * With multiple terminals on, each drawer keeps its own held carts.
+     */
+    private function drawerSession(): ?int
+    {
+        return app(TerminalSessionResolver::class)->current()?->id;
     }
 
     private function shift(ShiftService $shifts): int

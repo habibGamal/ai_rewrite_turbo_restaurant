@@ -19,6 +19,7 @@ use App\Core\Listeners\BroadcastPaymentProcessed;
 use App\Core\Orders\CustomFeesDisableBlocker;
 use App\Enums\OptionalFeature;
 use App\Services\FeatureService;
+use App\Terminals\MultiTerminalDisableBlocker;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -49,6 +50,12 @@ class CoreServiceProvider extends ServiceProvider
                 OptionalFeature::EQUIPMENT,
                 fn (): array => $this->app->make(EquipmentDisableBlocker::class)(),
             );
+        });
+
+        // Multiple terminals cannot be switched off while a real drawer
+        // (not the hidden default one) is open.
+        $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
+            $features->registerDisableBlocker(OptionalFeature::MULTI_TERMINAL, new MultiTerminalDisableBlocker);
         });
 
         // Custom fees cannot be switched off while an open order carries fee lines.
