@@ -49,6 +49,7 @@ enum SettingKey: string
     case SETUP_COMPLETED = 'setup_completed';
     case RETURNS_MAX_DAYS = 'returns_max_days';
     case WEB_API_KEY = 'web_api_key';
+    case WEBSITE_INTEGRATION_TOKEN = 'website_integration_token';
 
     /**
      * Get default value for this setting
@@ -93,6 +94,7 @@ enum SettingKey: string
             self::SETUP_COMPLETED => 'false',
             self::RETURNS_MAX_DAYS => '0',
             self::WEB_API_KEY => '',
+            self::WEBSITE_INTEGRATION_TOKEN => '',
         };
     }
 
@@ -141,6 +143,7 @@ enum SettingKey: string
             self::SETUP_COMPLETED => self::storedBooleanRules(),
             self::RETURNS_MAX_DAYS => ['required', 'integer', 'min:0', 'max:3650'],
             self::WEB_API_KEY => ['nullable', 'string', 'min:16', 'max:255', 'regex:/^\S*$/'],
+            self::WEBSITE_INTEGRATION_TOKEN => ['nullable', 'string', 'min:16', 'max:255', 'regex:/^\S*$/'],
         };
     }
 
@@ -188,6 +191,7 @@ enum SettingKey: string
             self::SETUP_COMPLETED => 'اكتمل الإعداد الأولي',
             self::RETURNS_MAX_DAYS => 'أقصى عدد أيام للمرتجع',
             self::WEB_API_KEY => 'مفتاح API للموقع والفروع',
+            self::WEBSITE_INTEGRATION_TOKEN => 'رمز التكامل من الموقع',
         });
     }
 
@@ -235,6 +239,7 @@ enum SettingKey: string
             self::SETUP_COMPLETED => 'يتم ضبطه عند إنهاء معالج الإعداد الأولي.',
             self::RETURNS_MAX_DAYS => 'لا يُقبل مرتجع لطلب أقدم من هذا العدد من الأيام إلا لمن لديه صلاحية مرتجع الطلبات القديمة. ضع 0 لإلغاء الحد.',
             self::WEB_API_KEY => 'يرسله الموقع الإلكتروني والفروع في ترويسة X-Api-Key. ضع نفس القيمة في إعدادات الموقع وفي كل فرع. إذا تُرك فارغاً تُستخدم قيمة WEB_API_KEY من ملف .env.',
+            self::WEBSITE_INTEGRATION_TOKEN => 'ترسله نقطة البيع للموقع عند تحديث حالة طلبات الموقع (Authorization: Bearer). أنشئه من لوحة تحكم الموقع: الطلبات ← «رمز التكامل»، ثم الصقه هنا.',
         });
     }
 
@@ -282,6 +287,7 @@ enum SettingKey: string
             self::SETUP_COMPLETED => 'false',
             self::RETURNS_MAX_DAYS => '0',
             self::WEB_API_KEY => 'اضغط توليد لإنشاء مفتاح جديد',
+            self::WEBSITE_INTEGRATION_TOKEN => 'الصق رمز التكامل من الموقع',
         });
     }
 
@@ -322,7 +328,7 @@ enum SettingKey: string
             self::KDS_SOUND_VOLUME => self::isIntInRange($value, 0, 100),
             self::KDS_REMINDER_SECONDS => self::isIntInRange($value, 0, 600),
             self::RETURNS_MAX_DAYS => self::isIntInRange($value, 0, 3650),
-            self::WEB_API_KEY => $value === null || $value === '' || (is_string($value) && strlen($value) >= 16 && strlen($value) <= 255 && preg_match('/^\S+$/', $value) === 1),
+            self::WEB_API_KEY, self::WEBSITE_INTEGRATION_TOKEN => $value === null || $value === '' || (is_string($value) && strlen($value) >= 16 && strlen($value) <= 255 && preg_match('/^\S+$/', $value) === 1),
             self::KDS_ORDER_TYPE_TARGETS => self::isJsonValue($value),
             self::KDS_NEW_ORDER_SOUND, self::KDS_CHANGE_SOUND, self::KDS_CANCEL_SOUND => is_string($value) && KdsSound::tryFrom($value) !== null,
         };
