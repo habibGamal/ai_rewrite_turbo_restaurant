@@ -2,22 +2,28 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Exports\ChannelComparisonExport;
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\ChannelChangeWidget;
 use App\Filament\Widgets\ChannelComparisonTableWidget;
 use App\Filament\Widgets\ChannelHeatmapWidget;
 use App\Filament\Widgets\ChannelKpisWidget;
+use App\Filament\Widgets\ChannelPaymentsWidget;
+use App\Filament\Widgets\ChannelProductsWidget;
 use App\Filament\Widgets\ChannelShareWidget;
 use App\Filament\Widgets\ChannelTrendWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * «تقرير أداء قنوات البيع والمقارنة»: how much each channel (order type)
@@ -68,6 +74,25 @@ class ChannelPerformanceReport extends BaseDashboard
             ]);
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('exportChannels')
+                ->label('تصدير Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->action(function (): BinaryFileResponse {
+                    $filters = ChannelReportFilters::fromArray($this->filters);
+                    $report = app(ChannelPerformanceReportService::class)->report($filters);
+
+                    return Excel::download(
+                        new ChannelComparisonExport($report),
+                        'channels-'.$filters->startDate().'-'.$filters->endDate().'.xlsx',
+                    );
+                }),
+        ];
+    }
+
     public function getWidgets(): array
     {
         $service = app(ChannelPerformanceReportService::class);
@@ -97,6 +122,8 @@ class ChannelPerformanceReport extends BaseDashboard
 
         $widgets[] = ChannelTrendWidget::class;
         $widgets[] = ChannelHeatmapWidget::class;
+        $widgets[] = ChannelProductsWidget::class;
+        $widgets[] = ChannelPaymentsWidget::class;
 
         return $widgets;
     }
