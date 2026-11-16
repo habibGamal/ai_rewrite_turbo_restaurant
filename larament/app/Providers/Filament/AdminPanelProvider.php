@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\App\Profile;
 use App\Filament\Pages\Auth\Login;
 use App\Http\Middleware\EnsureModuleScreenEnabled;
+use App\Http\Middleware\RejectBadgeSessions;
 use App\Modules\ModuleFilament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -14,6 +15,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -22,6 +24,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Kisame76\FilamentTreeTable\FilamentTreeTablePlugin;
 
@@ -34,6 +37,12 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(Login::class)
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn (): HtmlString => new HtmlString(
+                    '<div style="text-align:center;margin-top:1rem"><a href="'.e(route('badge.login')).'" style="text-decoration:underline">دخول نقطة البيع بالبادج</a></div>'
+                ),
+            )
             ->brandName(config('app.name', 'Turbo'))
             ->brandLogo('/images/turbo_logo.png')
             ->brandLogoHeight('2rem')
@@ -106,6 +115,7 @@ class AdminPanelProvider extends PanelProvider
             ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
+                RejectBadgeSessions::class,
             ]);
     }
 }

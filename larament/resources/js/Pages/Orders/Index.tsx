@@ -11,6 +11,7 @@ import { orderTypeIcon } from '@/helpers/orderTypeIcon';
 import type { CashierTab, Order, Receivable, User } from '@/types';
 import { useModule } from '@/hooks/useModule';
 import { useTerms } from '@/lib/wording';
+import BadgeScanForm from '@/Components/Auth/BadgeScanForm';
 
 interface IndexProps {
     orders: Order[];
@@ -50,6 +51,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
     const terminal = pageProps.terminal ?? null;
     const [deviceOnly, setDeviceOnly] = useState(false);
     const [closeDrawerOpen, setCloseDrawerOpen] = useState(false);
+    const [switchOpen, setSwitchOpen] = useState(false);
     const visibleOrders =
         terminal && deviceOnly ? orders.filter((order) => order.terminal_id === terminal.id) : orders;
     const effectiveOrientation = tabsOrientation ?? pageProps.tabsOrientation ?? 'horizontal';
@@ -200,18 +202,36 @@ const OrdersIndex: React.FC<IndexProps> = ({
                                 <Switch size="small" checked={deviceOnly} onChange={setDeviceOnly} />
                                 طلبات الجهاز ده
                             </span>
+                            <Button onClick={() => setSwitchOpen(true)}>تبديل الكاشير</Button>
                             <Button onClick={() => setCloseDrawerOpen(true)}>قفل الدرج</Button>
                         </div>
                     ) : (
-                        <Popconfirm
-                            title="هل انت متأكد؟"
-                            onConfirm={() => endShiftWithZero()}
-                            okText="نعم"
-                            cancelText="لا"
-                        >
-                            <Button>انهاء الشيفت</Button>
-                        </Popconfirm>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={() => setSwitchOpen(true)}>تبديل الكاشير</Button>
+                            <Popconfirm
+                                title="هل انت متأكد؟"
+                                onConfirm={() => endShiftWithZero()}
+                                okText="نعم"
+                                cancelText="لا"
+                            >
+                                <Button>انهاء الشيفت</Button>
+                            </Popconfirm>
+                        </div>
                     )}
+
+                    <Modal
+                        open={switchOpen}
+                        onCancel={() => setSwitchOpen(false)}
+                        title="تبديل الكاشير بالبادج"
+                        footer={null}
+                        destroyOnHidden
+                    >
+                        <BadgeScanForm
+                            action={route('badge.switch')}
+                            submitLabel="دخول"
+                            onDone={() => setSwitchOpen(false)}
+                        />
+                    </Modal>
 
                     <Modal
                         open={closeDrawerOpen}

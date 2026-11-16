@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\TestEvent;
+use App\Http\Controllers\BadgePrintController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\TerminalController;
+use App\Http\Middleware\RejectBadgeSessions;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +48,11 @@ Route::middleware('auth')->group(function () {
             ->name('end')
             ->middleware('permission:shift.end');
     });
+
+    // Printable badge card (code shown once, right after «طباعة بادج»)
+    Route::get('/users/{user}/badge/print', BadgePrintController::class)
+        ->name('users.badge.print')
+        ->middleware(RejectBadgeSessions::class);
 
     // Drawers (multiple terminals): bind device, open, take over, close
     Route::prefix('terminals')->name('terminals.')->group(function () {
