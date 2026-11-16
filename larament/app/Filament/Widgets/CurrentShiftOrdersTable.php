@@ -9,6 +9,7 @@ use App\Filament\Widgets\Concerns\ScopedOrderPayments;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
@@ -65,7 +66,7 @@ class CurrentShiftOrdersTable extends BaseWidget
         } else {
             $query = Order::query()
                 ->where('shift_id', $currentShift->id)
-                ->with(['customer', 'user', ...$this->scopedPaymentsEagerLoad($scope)]);
+                ->with(['customer', 'user', 'terminal', ...$this->scopedPaymentsEagerLoad($scope)]);
         }
 
         return $table
@@ -82,7 +83,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                         $currentShift = $this->getCurrentShift();
                         if ($currentShift) {
                             return $query->where('shift_id', $currentShift->id)
-                                ->with(['customer', 'user', 'payments']);
+                                ->with(['customer', 'user', 'terminal', 'payments']);
                         }
 
                         return $query->where('id', 0);
@@ -225,6 +226,13 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->color('gray')
                     ->toggleable(),
 
+                TextColumn::make('terminal.name')
+                    ->label('الدرج')
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
+
                 TextColumn::make('created_at')
                     ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
@@ -240,6 +248,11 @@ class CurrentShiftOrdersTable extends BaseWidget
                 SelectFilter::make('type')
                     ->label('النوع')
                     ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
+
+                SelectFilter::make('terminal_id')
+                    ->label('الدرج')
+                    ->relationship('terminal', 'name')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled()),
 
                 $this->scopedPaymentMethodFilter($scope),
 

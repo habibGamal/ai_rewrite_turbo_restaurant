@@ -13,6 +13,7 @@ use App\Filament\Widgets\CurrentShiftOrdersStats;
 use App\Filament\Widgets\CurrentShiftOrdersTable;
 use App\Filament\Widgets\NoActiveShiftWidget;
 use App\Filament\Widgets\Returns\CurrentShiftReturnsTable;
+use App\Filament\Widgets\Terminals\CurrentShiftDrawersTable;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -56,6 +57,8 @@ class CurrentShiftReport extends BaseDashboard
             CurrentShiftMoneyInfoStats::class,
             CurrentShiftOrdersStats::class,
             CurrentShiftDoneOrdersStats::class,
+            // Drawers table only while multiple terminals are on.
+            ...(CurrentShiftDrawersTable::canView() ? [CurrentShiftDrawersTable::class] : []),
             CurrentShiftOrdersTable::class,
             CurrentShiftReturnsTable::class,
             CurrentShiftCreditCollectionsTable::class,

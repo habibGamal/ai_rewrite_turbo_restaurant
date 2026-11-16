@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
 use App\Models\Expense;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Carbon\Carbon;
 use Filament\Actions\ExportAction;
@@ -43,7 +44,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                 ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
                 })
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         } else {
             $startDate = $this->pageFilters['startDate'];
@@ -55,7 +56,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                         Carbon::parse($endDate)->endOfDay(),
                     ]);
                 })
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         }
 
@@ -85,6 +86,12 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
+
+                TextColumn::make('terminalSession.terminal.name')
+                    ->label('الدرج')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
 
                 TextColumn::make('amount')
                     ->label('المبلغ')

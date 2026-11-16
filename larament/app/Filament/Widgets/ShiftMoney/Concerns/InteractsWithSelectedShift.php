@@ -3,9 +3,13 @@
 namespace App\Filament\Widgets\ShiftMoney\Concerns;
 
 use App\Models\Shift;
+use App\Models\TerminalSession;
+use App\Services\FeatureService;
 use App\Services\ShiftMoneyService;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
@@ -45,6 +49,48 @@ trait InteractsWithSelectedShift
         $shift = $this->selectedShift();
 
         return $shift !== null && $this->shiftMoney()->isClosed($shift);
+    }
+
+    protected function drawersOn(): bool
+    {
+        return app(FeatureService::class)->multiTerminalEnabled();
+    }
+
+    /**
+     * The drawer the row belongs to: required while multiple terminals are
+     * on, hidden otherwise (the row takes the shift's default drawer).
+     */
+    protected function drawerField(): Select
+    {
+        return Select::make('terminal_session_id')
+            ->label('الدرج')
+            ->options(function (): array {
+                $shift = $this->selectedShift();
+
+                if ($shift === null) {
+                    return [];
+                }
+
+                return TerminalSession::query()
+                    ->where('shift_id', $shift->id)
+                    ->with(['terminal', 'user'])
+                    ->orderBy('opened_at')
+                    ->get()
+                    ->mapWithKeys(fn (TerminalSession $session): array => [
+                        $session->id => $session->terminal->name.($session->user ? ' — '.$session->user->name : ''),
+                    ])
+                    ->all();
+            })
+            ->required(fn (): bool => $this->drawersOn())
+            ->visible(fn (): bool => $this->drawersOn());
+    }
+
+    protected function drawerColumn(): TextColumn
+    {
+        return TextColumn::make('terminalSession.terminal.name')
+            ->label('الدرج')
+            ->placeholder('—')
+            ->visible(fn (): bool => $this->drawersOn());
     }
 
     /**

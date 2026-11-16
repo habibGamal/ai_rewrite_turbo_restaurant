@@ -84,6 +84,12 @@ class TerminalSession extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function closedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
     /** @return HasMany<TerminalSessionHandover, $this> */
     public function handovers(): HasMany
     {
