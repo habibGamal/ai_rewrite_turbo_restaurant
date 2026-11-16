@@ -531,7 +531,13 @@ class WebApiService
 
             // Runs inside the order row lock: keep the wait short so a slow
             // website cannot hold the order (and the cashier) for long.
-            $response = Http::connectTimeout(3)->timeout(5)->post($websiteUrl.'/api/order-status', [
+            $request = Http::connectTimeout(3)->timeout(5)->acceptJson();
+            // The website rejects status updates without its integration token.
+            $token = (string) setting(SettingKey::WEBSITE_INTEGRATION_TOKEN);
+            if ($token !== '') {
+                $request = $request->withToken($token);
+            }
+            $response = $request->post($websiteUrl.'/api/order-status', [
                 'orderNumber' => $order->order_number,
                 'status' => $order->status->value,
             ]);

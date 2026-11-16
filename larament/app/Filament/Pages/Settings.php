@@ -311,7 +311,7 @@ class Settings extends Page implements HasForms
                                     ]),
 
                                 Section::make('مفتاح الربط (API)')
-                                    ->description('يستخدمه الموقع الإلكتروني والفروع للاتصال بهذه النقطة. يجب أن تكون القيمة نفسها هنا وفي الموقع وفي كل فرع.')
+                                    ->description('المفتاح يستخدمه الموقع الإلكتروني والفروع للاتصال بهذه النقطة، ويجب أن يكون نفسه هنا وفي الموقع وفي كل فرع. رمز التكامل تستخدمه هذه النقطة لإرسال حالات الطلبات إلى الموقع.')
                                     ->schema([
                                         TextInput::make(SettingKey::WEB_API_KEY->value)
                                             ->label(SettingKey::WEB_API_KEY->label())
@@ -334,6 +334,15 @@ class Settings extends Page implements HasForms
                                                     ->modalSubmitActionLabel('توليد وحفظ')
                                                     ->action(fn () => $this->generateWebApiKey()),
                                             ),
+
+                                        TextInput::make(SettingKey::WEBSITE_INTEGRATION_TOKEN->value)
+                                            ->label(SettingKey::WEBSITE_INTEGRATION_TOKEN->label())
+                                            ->helperText(SettingKey::WEBSITE_INTEGRATION_TOKEN->helperText())
+                                            ->placeholder(SettingKey::WEBSITE_INTEGRATION_TOKEN->placeholder())
+                                            ->password()
+                                            ->revealable()
+                                            ->copyable(copyMessage: 'تم نسخ الرمز')
+                                            ->rules(SettingKey::WEBSITE_INTEGRATION_TOKEN->validationRules()),
                                     ]),
                             ]),
 
@@ -705,6 +714,7 @@ class Settings extends Page implements HasForms
                 );
                 // Resetting must not cut off the website and branches.
                 unset($remainingDefaults[SettingKey::WEB_API_KEY->value]);
+                unset($remainingDefaults[SettingKey::WEBSITE_INTEGRATION_TOKEN->value]);
 
                 $settingsService->setMultiple($remainingDefaults);
             });
