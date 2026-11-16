@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\GuestAverageStats;
 use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Services\FeatureService;
@@ -19,6 +20,7 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
     protected ?string $pollingInterval = null;
 
     use CreditReconciliationStats;
+    use GuestAverageStats;
     use InteractsWithPageFilters;
     use OtherRevenuesStats;
     use ReturnsStats;
@@ -124,6 +126,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
                 ->description('متوسط قيمة الطلب الواحد')
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
+
+            ...$this->guestAverageStats($this->shiftsReportService->shiftIdsQueryFromFilters($this->pageFilters)),
 
             ...$this->otherRevenuesStats($stats),
             ...app(EquipmentReportService::class)->shiftStats($this->shiftsReportService->shiftIdsQueryFromFilters($this->pageFilters)),

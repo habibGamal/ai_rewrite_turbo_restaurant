@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Log;
 class OrderReturnService
 {
     public function __construct(
-        private readonly OrderStockConversionService $stockConversionService
+        private readonly OrderStockConversionService $stockConversionService,
+        private readonly ReturnRefundCalculator $refunds,
     ) {}
 
     /**
@@ -26,7 +27,9 @@ class OrderReturnService
      * 'restocked' => false (damaged: it already left stock at sale, so no movement).
      *
      * A line is one of:
-     *  - an item: ['order_item_id' => int, 'quantity' => float, 'refund_amount' => float, 'restocked' => ?bool]
+     *  - an item: ['order_item_id' => int, 'quantity' => float, 'refund_amount' => ?float, 'restocked' => ?bool]
+     *    The item refund is at most what the customer paid for those units after
+     *    discounts (see ReturnRefundCalculator); left out, it is that amount.
      *  - a custom fee, refunded by amount (in full or in part): ['order_fee_id' => int, 'refund_amount' => float]
      *  - an equipment line, by quantity, the refund at most qty × unit price:
      *    ['order_equipment_id' => int, 'quantity' => int, 'refund_amount' => float]
@@ -58,8 +61,8 @@ class OrderReturnService
                 throw new Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
             }
 
-            // Validate return items
-            $this->validateReturnItems($order, $returnItems);
+            // Validate return items (and fill item refunds left out)
+            $returnItems = $this->validateReturnItems($order, $returnItems);
 
             $returnItems = array_map(fn (array $item): array => self::isItemLine($item)
                 ? [...$item, 'restocked' => $reverseStock && ($item['restocked'] ?? true)]
@@ -151,13 +154,18 @@ class OrderReturnService
      * Validate return lines against what is left on each item, fee and
      * equipment line.
      */
-    private function validateReturnItems(Order $order, array $returnItems): void
+    private function validateReturnItems(Order $order, array $returnItems): array
     {
         // Earlier returns plus the lines already checked in this request, so two
         // lines on the same item, fee or equipment cannot over-refund it.
         $returned = collect($order->returns->flatMap->items->all());
 
-        foreach ($returnItems as $item) {
+        foreach ($returnItems as $index => $item) {
+            if (self::isItemLine($item) && ! isset($item['refund_amount']) && isset($item['order_item_id'], $item['quantity'])) {
+                $item['refund_amount'] = $this->itemRefundAfter($order, (int) $item['order_item_id'], (float) $item['quantity'], $returned);
+                $returnItems[$index] = $item;
+            }
+
             $this->validateReturnLine($order, $item, $returned);
             $returned->push([
                 'order_item_id' => self::isItemLine($item) ? ($item['order_item_id'] ?? null) : null,
@@ -167,6 +175,37 @@ class OrderReturnService
                 'refund_amount' => (float) ($item['refund_amount'] ?? 0),
             ]);
         }
+
+        return $returnItems;
+    }
+
+    /**
+     * The refund for $quantity units of an item line after the given returns.
+     *
+     * @param  Collection<int, mixed>  $returned
+     */
+    private function itemRefundAfter(Order $order, int $orderItemId, float $quantity, Collection $returned): float
+    {
+        $lines = $returned->filter(fn ($line) => (int) data_get($line, 'order_item_id') === $orderItemId);
+
+        return $this->refunds->refundFor(
+            $order,
+            $orderItemId,
+            $quantity,
+            (float) $lines->sum(fn ($line) => (float) data_get($line, 'quantity')),
+            (float) $lines->sum(fn ($line) => (float) data_get($line, 'refund_amount')),
+        );
+    }
+
+    /**
+     * What returning $quantity units of an item refunds now, after the
+     * order's earlier returns.
+     */
+    public function itemRefund(Order $order, int $orderItemId, float $quantity): float
+    {
+        $order->load(['items', 'returns.items']);
+
+        return $this->itemRefundAfter($order, $orderItemId, $quantity, collect($order->returns->flatMap->items->all()));
     }
 
     /**
@@ -244,6 +283,15 @@ class OrderReturnService
 
         if ($item['quantity'] <= 0) {
             throw new Exception('الكمية يجب أن تكون أكبر من صفر');
+        }
+
+        // Never more than the customer paid for these units after discounts.
+        $max = $this->itemRefundAfter($order, $orderItem->id, (float) $item['quantity'], $returned);
+        if ((float) $item['refund_amount'] > $max + 0.01) {
+            throw new Exception(
+                "مبلغ استرجاع الصنف {$orderItem->product->name} أكبر من المستحق بعد الخصومات. ".
+                "المستحق: {$max}, المطلوب: {$item['refund_amount']}"
+            );
         }
     }
 

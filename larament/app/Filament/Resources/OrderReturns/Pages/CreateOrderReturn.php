@@ -6,7 +6,6 @@ use App\Filament\Forms\ReturnChargeLines;
 use App\Filament\Resources\OrderReturns\OrderReturnResource;
 use App\Models\Order;
 use App\Services\Orders\OrderReturnService;
-use App\Services\Resources\OrderReturnCalculatorService;
 use Exception;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -22,7 +21,6 @@ class CreateOrderReturn extends CreateRecord
         if (isset($data['return_items'])) {
             $data['return_items'] = collect($data['return_items'])
                 ->filter(fn ($item) => ($item['quantity'] ?? 0) > 0)
-                ->map(fn ($item) => OrderReturnCalculatorService::prepareReturnItemData($item))
                 ->values()
                 ->toArray();
         }
@@ -50,12 +48,12 @@ class CreateOrderReturn extends CreateRecord
             // Get the order
             $order = Order::findOrFail($data['order_id']);
 
-            // Prepare return items
+            // Prepare return items. The refund of an item is always worked out
+            // on the server: what the customer paid for those units after discounts.
             $returnItems = collect($data['return_items'])
                 ->map(fn ($item) => [
                     'order_item_id' => $item['order_item_id'],
                     'quantity' => $item['quantity'],
-                    'refund_amount' => $item['refund_amount'],
                 ])
                 ->values()
                 ->toArray();

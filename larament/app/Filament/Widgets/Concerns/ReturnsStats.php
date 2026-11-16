@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets\Concerns;
 
+use App\Filament\Widgets\Returns\ShiftReturnsTable;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
@@ -36,7 +37,13 @@ trait ReturnsStats
             Stat::make('المرتجعات', number_format($amount, 2).' جنيه')
                 ->description($count.' مرتجع'.($split !== '' ? ' · '.$split : '').($damaged > 0 ? ' · تالف '.rtrim(rtrim(number_format($damaged, 2), '0'), '.') : ''))
                 ->descriptionIcon('heroicon-m-arrow-uturn-left')
-                ->color($amount > 0 ? 'danger' : 'gray'),
+                ->color($amount > 0 ? 'danger' : 'gray')
+                // Opens the returns table further down the report.
+                ->extraAttributes([
+                    'class' => 'transition hover:scale-105 cursor-pointer',
+                    'title' => 'عرض جدول المرتجعات',
+                    'x-on:click' => "document.getElementById('".ShiftReturnsTable::ANCHOR."')?.scrollIntoView({ behavior: 'smooth', block: 'start' })",
+                ]),
 
             Stat::make('صافي المبيعات', number_format((float) ($stats['netSales'] ?? 0), 2).' جنيه')
                 ->description('المبيعات − المرتجعات')

@@ -11,7 +11,9 @@ use App\Filament\Resources\OrderReturns\Pages\ViewOrderReturn;
 use App\Filament\Resources\OrderReturns\RelationManagers\ReturnedItemsRelationManager;
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Models\OrderReturnItem;
 use App\Services\Orders\OrderReturnService;
+use App\Services\Orders\ReturnRefundCalculator;
 use App\Services\Resources\OrderReturnCalculatorService;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
@@ -95,17 +97,25 @@ class OrderReturnResource extends Resource
                                 }
 
                                 $returnService = app(OrderReturnService::class);
+                                $refundLines = app(ReturnRefundCalculator::class)->lines($order);
+                                $returnedLines = OrderReturnItem::query()->whereIn('order_item_id', $order->items->modelKeys())->get();
 
-                                // Set return items
-                                $returnItems = $order->items->map(function ($item) use ($returnService, $order) {
+                                // Set return items: the refund is what the customer paid
+                                // for the line after its item discount and its share of
+                                // the order discount (see ReturnRefundCalculator).
+                                $returnItems = $order->items->map(function ($item) use ($returnService, $order, $refundLines, $returnedLines) {
                                     $availableQty = $returnService->getAvailableQuantityForReturn($order, $item->id);
+                                    $line = $refundLines[$item->id];
 
                                     return [
                                         'order_item_id' => $item->id,
                                         'product_name' => $item->product->name,
                                         'original_quantity' => $item->quantity,
                                         'available_quantity' => $availableQty,
-                                        'unit_price' => $item->price,
+                                        'unit_price' => $line['unit_refund'],
+                                        'line_refundable' => $line['refundable'],
+                                        'line_refunded' => round((float) $returnedLines->where('order_item_id', $item->id)->sum('refund_amount'), 2),
+                                        'explanation' => ReturnRefundCalculator::explain($line),
                                         'quantity' => 0,
                                         'refund_amount' => 0,
                                     ];
@@ -176,6 +186,9 @@ class OrderReturnResource extends Resource
                             ->label('')
                             ->schema([
                                 Hidden::make('order_item_id'),
+                                Hidden::make('line_refundable')->dehydrated(false),
+                                Hidden::make('line_refunded')->dehydrated(false),
+                                Hidden::make('explanation')->dehydrated(false),
 
                                 TextInput::make('product_name')
                                     ->label('المنتج')
@@ -196,10 +209,11 @@ class OrderReturnResource extends Resource
                                     ->numeric(),
 
                                 TextInput::make('unit_price')
-                                    ->label('سعر الوحدة')
+                                    ->label('سعر الرد للوحدة')
                                     ->disabled()
                                     ->dehydrated(false)
                                     ->prefix('ج.م')
+                                    ->helperText(fn (Get $get) => $get('explanation'))
                                     ->numeric(),
 
                                 TextInput::make('quantity')

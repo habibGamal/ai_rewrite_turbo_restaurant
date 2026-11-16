@@ -12,12 +12,14 @@ use App\Filament\Widgets\CurrentShiftMoneyInfoStats;
 use App\Filament\Widgets\CurrentShiftOrdersStats;
 use App\Filament\Widgets\CurrentShiftOrdersTable;
 use App\Filament\Widgets\NoActiveShiftWidget;
+use App\Filament\Widgets\Returns\CurrentShiftReturnsTable;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
 use App\Models\User;
+use Carbon\Carbon;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -100,6 +102,7 @@ it('displays all current shift widgets when there is an active shift', function 
         CurrentShiftOrdersStats::class,
         CurrentShiftDoneOrdersStats::class,
         CurrentShiftOrdersTable::class,
+        CurrentShiftReturnsTable::class,
         CurrentShiftCreditCollectionsTable::class,
         CurrentShiftExpensesDetailsTable::class,
         CurrentShiftExpensesTable::class,
@@ -165,7 +168,7 @@ it('has correct navigation sort order', function () {
 
 it('has correct route path', function () {
     // Route path is defined in the page class as a protected static property
-    $reflection = new \ReflectionClass(CurrentShiftReport::class);
+    $reflection = new ReflectionClass(CurrentShiftReport::class);
     $property = $reflection->getProperty('routePath');
     $property->setAccessible(true);
     expect($property->getValue())->toBe('current-shift-report');
@@ -549,7 +552,7 @@ it('correctly handles shift timestamps', function () {
     $currentShift = $component->instance()->getCurrentShift();
 
     expect($currentShift)->not->toBeNull();
-    expect($currentShift->start_at)->toBeInstanceOf(\Carbon\Carbon::class);
+    expect($currentShift->start_at)->toBeInstanceOf(Carbon::class);
     expect($currentShift->start_at->diffInHours(now()))->toBeGreaterThanOrEqual(8);
 });
 

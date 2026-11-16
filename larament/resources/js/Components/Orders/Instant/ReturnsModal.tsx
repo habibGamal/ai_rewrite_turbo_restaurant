@@ -43,7 +43,24 @@ interface ReturnLine {
     price: number;
     returnable_quantity: number;
     unit_refund: number;
+    /** What the customer paid for the whole line after discounts. */
+    refundable: number;
+    /** Already refunded on this line by earlier returns. */
+    refunded: number;
+    discounted: boolean;
+    /** How refundable was reached, e.g. «100.00 × 2 = 200.00 − خصم الصنف 20.00 = 180.00». */
+    explanation: string;
 }
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/** Same rule as the server: a share of the line, and the last units take what is left. */
+const lineRefund = (line: ReturnLine, quantity: number): number => {
+    if (quantity <= 0 || Number(line.quantity) <= 0) return 0;
+    const left = Math.max(0, round2(Number(line.refundable) - Number(line.refunded)));
+    if (quantity >= Number(line.returnable_quantity) - 0.0001) return left;
+    return Math.min(left, round2((Number(line.refundable) * quantity) / Number(line.quantity)));
+};
 
 interface ReturnOrder {
     id: number;
@@ -181,7 +198,7 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
     const refund = useMemo(
         () =>
             (order?.items ?? []).reduce(
-                (sum, line) => sum + (quantities[line.id] ?? 0) * Number(line.unit_refund),
+                (sum, line) => sum + lineRefund(line, quantities[line.id] ?? 0),
                 0
             ),
         [order, quantities]
@@ -351,9 +368,21 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
                             { title: "الكمية", dataIndex: "quantity" },
                             { title: "قابل للرد", dataIndex: "returnable_quantity" },
                             {
-                                title: "سعر الرد",
+                                title: "سعر الرد للوحدة",
                                 dataIndex: "unit_refund",
-                                render: (value: number) => formatCurrency(Number(value)),
+                                render: (value: number, line) => (
+                                    <>
+                                        {formatCurrency(Number(value))}
+                                        {line.discounted && (
+                                            <Tag color="gold" className="ms-1">
+                                                بعد الخصم
+                                            </Tag>
+                                        )}
+                                        <div className="text-xs text-gray-500" dir="rtl">
+                                            {line.explanation}
+                                        </div>
+                                    </>
+                                ),
                             },
                             {
                                 title: "كمية المرتجع",
@@ -368,6 +397,10 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
                                         }
                                     />
                                 ),
+                            },
+                            {
+                                title: "قيمة الرد",
+                                render: (_, line) => formatCurrency(lineRefund(line, quantities[line.id] ?? 0)),
                             },
                             ...(canSkipRestock
                                 ? [
@@ -389,6 +422,10 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
                                 : []),
                         ]}
                     />
+
+                    <Typography.Text type="secondary" className="block mt-1 text-xs">
+                        قيمة الرد = ما دفعه العميل في الصنف: خصم الصنف يخص الصنف وحده، وخصم الفاتورة يوزع على الأصناف بنسبة قيمتها.
+                    </Typography.Text>
 
                     <Divider orientation="right">أصناف الاستبدال (اختياري)</Divider>
                     <div className="grid grid-cols-2 gap-2 mb-2">

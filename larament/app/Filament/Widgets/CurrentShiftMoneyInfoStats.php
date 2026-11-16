@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\GuestAverageStats;
 use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
 use App\Models\Shift;
@@ -15,6 +16,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class CurrentShiftMoneyInfoStats extends BaseWidget
 {
     use CreditReconciliationStats;
+    use GuestAverageStats;
     use OtherRevenuesStats;
     use ReturnsStats;
 
@@ -129,6 +131,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->description('متوسط قيمة الطلب الواحد')
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
+
+            ...$this->guestAverageStats([$currentShift->id]),
 
             ...$this->otherRevenuesStats($stats),
             ...app(EquipmentReportService::class)->shiftStats([$currentShift->id]),
