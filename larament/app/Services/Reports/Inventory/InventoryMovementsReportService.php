@@ -136,7 +136,7 @@ class InventoryMovementsReportService
         return $query;
     }
 
-    private function filterCategory(QueryBuilder $query, InventoryReportFilters $filters, string $productColumn): void
+    public function filterCategory(QueryBuilder $query, InventoryReportFilters $filters, string $productColumn): void
     {
         if ($filters->subCategoryId !== null) {
             $query->whereIn($productColumn, Product::query()->select('id')->where('category_id', $filters->subCategoryId));
@@ -148,7 +148,7 @@ class InventoryMovementsReportService
         }
     }
 
-    private static function upTo(string $date): string
+    public static function upTo(string $date): string
     {
         return $date.' 23:59:59';
     }

@@ -5,10 +5,14 @@ namespace App\Filament\Pages\Reports;
 use App\Exports\InventoryMovementsExport;
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\InventoryAlertsWidget;
 use App\Filament\Widgets\InventoryItemsTableWidget;
+use App\Filament\Widgets\InventoryLossesWidget;
 use App\Filament\Widgets\InventoryMovementsKpisWidget;
 use App\Filament\Widgets\InventoryMovementTypesWidget;
+use App\Filament\Widgets\InventoryPurchasesWidget;
 use App\Filament\Widgets\InventoryValueBridgeWidget;
+use App\Filament\Widgets\InventoryWarehousesWidget;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Warehouse;
@@ -42,6 +46,14 @@ class InventoryMovementsReport extends BaseDashboard
 
     public const TAB_ITEMS = 'items';
 
+    public const TAB_LOSSES = 'losses';
+
+    public const TAB_PURCHASES = 'purchases';
+
+    public const TAB_WAREHOUSES = 'warehouses';
+
+    public const TAB_ALERTS = 'alerts';
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
     protected static string $routePath = 'inventory-movements-report';
@@ -62,6 +74,10 @@ class InventoryMovementsReport extends BaseDashboard
         return [
             self::TAB_OVERVIEW => 'نظرة عامة',
             self::TAB_ITEMS => 'الأصناف',
+            self::TAB_LOSSES => 'الفاقد والجرد',
+            self::TAB_PURCHASES => 'المشتريات والتكلفة',
+            self::TAB_WAREHOUSES => 'المخازن',
+            self::TAB_ALERTS => 'تنبيهات',
         ];
     }
 
@@ -134,6 +150,10 @@ class InventoryMovementsReport extends BaseDashboard
                     ->icons([
                         self::TAB_OVERVIEW => 'heroicon-o-chart-bar-square',
                         self::TAB_ITEMS => 'heroicon-o-cube',
+                        self::TAB_LOSSES => 'heroicon-o-arrow-trending-down',
+                        self::TAB_PURCHASES => 'heroicon-o-shopping-cart',
+                        self::TAB_WAREHOUSES => 'heroicon-o-building-storefront',
+                        self::TAB_ALERTS => 'heroicon-o-bell-alert',
                     ])
                     ->default(self::TAB_OVERVIEW)
                     ->inline()
@@ -174,10 +194,11 @@ class InventoryMovementsReport extends BaseDashboard
     public function getWidgets(): array
     {
         return match ($this->activeTab()) {
-            self::TAB_ITEMS => [
-                InventoryMovementsKpisWidget::class,
-                InventoryItemsTableWidget::class,
-            ],
+            self::TAB_ITEMS => [InventoryMovementsKpisWidget::class, InventoryItemsTableWidget::class],
+            self::TAB_LOSSES => [InventoryMovementsKpisWidget::class, InventoryLossesWidget::class],
+            self::TAB_PURCHASES => [InventoryMovementsKpisWidget::class, InventoryPurchasesWidget::class],
+            self::TAB_WAREHOUSES => [InventoryMovementsKpisWidget::class, InventoryWarehousesWidget::class],
+            self::TAB_ALERTS => [InventoryAlertsWidget::class],
             default => [
                 InventoryMovementsKpisWidget::class,
                 InventoryValueBridgeWidget::class,
