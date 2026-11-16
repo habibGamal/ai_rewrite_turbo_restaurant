@@ -101,7 +101,7 @@ class OrderTypeRowResource extends Resource
 
                         Select::make('behavior')
                             ->label('السلوك')
-                            ->options(self::behaviorOptions())
+                            ->options(fn (?OrderTypeRow $record): array => self::behaviorOptions($record))
                             ->live()
                             ->required()
                             ->disabled(fn (?OrderTypeRow $record): bool => (bool) $record?->is_system),
@@ -231,13 +231,26 @@ class OrderTypeRowResource extends Resource
     }
 
     /**
-     * Behaviours an admin may pick for an order type.
+     * Behaviours an admin may pick for an order type. When editing, the row's
+     * own behaviour is always offered even if it is not selectable for new
+     * types (instant sale, web orders), so the select shows it and the form
+     * validates.
      *
      * @return array<string, string>
      */
-    public static function behaviorOptions(): array
+    public static function behaviorOptions(?OrderTypeRow $record = null): array
     {
-        return app(OrderBehaviorRegistry::class)->selectableLabels();
+        $registry = app(OrderBehaviorRegistry::class);
+        $options = $registry->selectableLabels();
+
+        $current = $record?->behavior;
+        $code = $current instanceof OrderBehavior ? $current->value : $current;
+
+        if (is_string($code) && $code !== '' && ! array_key_exists($code, $options)) {
+            $options[$code] = $registry->label($code);
+        }
+
+        return $options;
     }
 
     public static function behaviorLabel(OrderBehavior|string|null $state): string

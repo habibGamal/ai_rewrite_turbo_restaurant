@@ -2,6 +2,7 @@
 
 use App\Enums\OrderBehavior;
 use App\Enums\OrderTypeIcon;
+use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
 use App\Filament\Resources\OrderTypeRows\Pages\CreateOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\EditOrderTypeRow;
 use App\Filament\Resources\OrderTypeRows\Pages\ListOrderTypeRows;
@@ -289,4 +290,36 @@ it('displays credit icon columns in the order types table', function () {
         ->assertTableColumnExists('allow_partial_payment')
         ->assertTableColumnExists('allow_pay_later')
         ->assertTableColumnExists('require_customer_for_credit');
+});
+
+it('activates the instant sale order type', function () {
+    $row = OrderTypeRow::query()->where('code', 'instant_sale')->firstOrFail();
+    $row->update(['is_active' => false]);
+
+    livewire(EditOrderTypeRow::class, ['record' => $row->getRouteKey()])
+        ->assertFormSet(['behavior' => OrderBehavior::INSTANT->value])
+        ->assertFormFieldExists(
+            'behavior',
+            fn (Select $field): bool => array_key_exists(OrderBehavior::INSTANT->value, $field->getOptions()),
+        )
+        ->fillForm(['is_active' => true])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($row->fresh()->is_active)->toBeTrue()
+        ->and($row->fresh()->behavior)->toBe(OrderBehavior::INSTANT);
+});
+
+it('saves every listed order type without touching its behavior', function () {
+    $rows = OrderTypeRowResource::getEloquentQuery()->get();
+
+    expect($rows->pluck('code'))->toContain('instant_sale');
+
+    foreach ($rows as $row) {
+        livewire(EditOrderTypeRow::class, ['record' => $row->getRouteKey()])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        expect($row->fresh()->behavior)->toBe($row->behavior);
+    }
 });
