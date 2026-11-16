@@ -1,6 +1,8 @@
 <?php
 
 use App\Filament\Exports\CashierCommissionTableExporter;
+use App\Filament\Exports\CashierItemChangesTableExporter;
+use App\Filament\Exports\CashierOrdersTableExporter;
 use App\Filament\Pages\Reports\CashierCommissionReport;
 use App\Filament\Pages\Reports\CashierPerformanceDetails;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
@@ -397,7 +399,10 @@ test('CashierCommissionReport page and table widget render successfully', functi
         ],
     ])->assertOk()
         ->assertCanSeeTableRecords([$this->user1])
-        ->assertTableActionExists('export');
+        ->assertTableActionExists('export')
+        ->assertTableActionExists('view_details')
+        ->assertTableActionDoesNotExist('view_changes')
+        ->assertTableActionDoesNotExist('view_orders');
 });
 
 test('CashierCommissionTableExporter correctly formats and exports cashier performance metrics', function () {
@@ -511,12 +516,190 @@ test('CashierPerformanceDetails page and widgets render successfully', function 
     // Test CashierOrdersTableWidget
     livewire(CashierOrdersTableWidget::class, ['userId' => $this->user1->id])
         ->assertOk()
-        ->assertCanSeeTableRecords([$order]);
+        ->assertCanSeeTableRecords([$order])
+        ->assertTableActionExists('export');
 
     // Test CashierItemChangesTableWidget
     livewire(CashierItemChangesTableWidget::class, ['userId' => $this->user1->id])
         ->assertOk()
-        ->assertSee('Burger');
+        ->assertSee('Burger')
+        ->assertTableActionExists('export');
+});
+
+test('CashierOrdersTableExporter and CashierItemChangesTableExporter correctly export data', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user1->id,
+        'shift_id' => $this->shift->id,
+        'order_number' => 888,
+        'total' => 250,
+        'discount' => 15,
+        'sub_total' => 265,
+    ]);
+
+    $change = OrderItemChange::create([
+        'order_id' => $order->id,
+        'user_id' => $this->user1->id,
+        'product_id' => $this->product1->id,
+        'product_name' => 'Burger',
+        'change_type' => 'added',
+        'new_quantity' => 2,
+        'delta' => 2,
+        'unit_price' => 100,
+        'total_price' => 200,
+    ]);
+
+    // Test CashierOrdersTableExporter
+    $orderColumns = collect(CashierOrdersTableExporter::getColumns())
+        ->mapWithKeys(fn ($column) => [$column->getName() => $column->getLabel()])
+        ->all();
+
+    expect($orderColumns)->toHaveKeys([
+        'order_number',
+        'type',
+        'status',
+        'payment_status',
+        'sub_total',
+        'discount',
+        'total',
+        'dine_table_number',
+        'customer_name',
+        'created_at',
+    ]);
+
+    $exportOrders = new Export(['exporter' => CashierOrdersTableExporter::class]);
+    $exportOrders->user()->associate($this->user1);
+    $ordersExporter = new CashierOrdersTableExporter($exportOrders, $orderColumns, []);
+    $orderExportedRow = $ordersExporter($order);
+
+    expect($orderExportedRow[0])->toBe('888');
+    expect($orderExportedRow[4])->toBe('265.00'); // sub_total
+    expect($orderExportedRow[5])->toBe('15.00');  // discount
+    expect($orderExportedRow[6])->toBe('250.00'); // total
+
+    // Test CashierItemChangesTableExporter
+    $changeColumns = collect(CashierItemChangesTableExporter::getColumns())
+        ->mapWithKeys(fn ($column) => [$column->getName() => $column->getLabel()])
+        ->all();
+
+    expect($changeColumns)->toHaveKeys([
+        'order_number',
+        'product_name',
+        'change_type',
+        'old_quantity',
+        'new_quantity',
+        'delta',
+        'unit_price',
+        'total_price',
+        'created_at',
+    ]);
+
+    $exportChanges = new Export(['exporter' => CashierItemChangesTableExporter::class]);
+    $exportChanges->user()->associate($this->user1);
+    $changesExporter = new CashierItemChangesTableExporter($exportChanges, $changeColumns, []);
+    $changeExportedRow = $changesExporter($change);
+
+    expect($changeExportedRow[0])->toBe('#888');
+    expect($changeExportedRow[1])->toBe('Burger');
+    expect($changeExportedRow[2])->toBe('إضافة');
+    expect($changeExportedRow[5])->toBe('+2');
+    expect($changeExportedRow[6])->toBe('100.00');
+    expect($changeExportedRow[7])->toBe('+200.00');
+});
+
+test('CashierPerformanceDetails obeys filters from cashier commission report and matches numbers', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    // Shift 1 (included)
+    $shift1 = $this->shift;
+    $order1 = Order::factory()->create([
+        'user_id' => $this->user1->id,
+        'shift_id' => $shift1->id,
+        'order_number' => 101,
+        'total' => 200,
+        'discount' => 20,
+    ]);
+    OrderItemChange::create([
+        'order_id' => $order1->id,
+        'user_id' => $this->user1->id,
+        'product_id' => $this->product1->id,
+        'product_name' => 'Burger',
+        'change_type' => 'added',
+        'new_quantity' => 2,
+        'delta' => 2,
+        'unit_price' => 100,
+        'total_price' => 200,
+    ]);
+
+    // Shift 2 (excluded)
+    $shift2 = Shift::factory()->create([
+        'user_id' => $this->user1->id,
+        'start_at' => now()->subDays(20),
+        'closed' => true,
+    ]);
+    $order2 = Order::factory()->create([
+        'user_id' => $this->user1->id,
+        'shift_id' => $shift2->id,
+        'order_number' => 102,
+        'total' => 500,
+        'discount' => 0,
+    ]);
+    OrderItemChange::create([
+        'order_id' => $order2->id,
+        'user_id' => $this->user1->id,
+        'product_id' => $this->product2->id,
+        'product_name' => 'Fries',
+        'change_type' => 'added',
+        'new_quantity' => 5,
+        'delta' => 5,
+        'unit_price' => 40,
+        'total_price' => 200,
+    ]);
+
+    // Test CashierPerformanceDetails with filterType => 'shifts', shifts => [$shift1->id]
+    $component = livewire(CashierPerformanceDetails::class, [
+        'record' => $this->user1->id,
+        'filterType' => 'shifts',
+        'shifts' => [$shift1->id],
+    ]);
+
+    $component->assertOk()
+        ->assertSee($this->user1->name);
+
+    $filter = $component->instance()->getResolvedFilter();
+    expect($filter['shiftIds'])->toBe([$shift1->id]);
+
+    // Stats widget should only show order1 numbers (total 200, discount 20)
+    livewire(CashierDetailStatsWidget::class, [
+        'record' => $this->user1,
+        'shiftIds' => [$shift1->id],
+        'hasFilter' => true,
+    ])
+        ->assertOk()
+        ->assertSee('1 طلب')
+        ->assertSee('200.00 ج.م')
+        ->assertSee('20.00 ج.م');
+
+    // Orders table should see order1 and NOT order2
+    livewire(CashierOrdersTableWidget::class, [
+        'userId' => $this->user1->id,
+        'shiftIds' => [$shift1->id],
+        'hasFilter' => true,
+    ])
+        ->assertOk()
+        ->assertCanSeeTableRecords([$order1])
+        ->assertCanNotSeeTableRecords([$order2]);
+
+    // Item changes table should see Burger and NOT Fries
+    livewire(CashierItemChangesTableWidget::class, [
+        'userId' => $this->user1->id,
+        'shiftIds' => [$shift1->id],
+        'hasFilter' => true,
+    ])
+        ->assertOk()
+        ->assertSee('Burger')
+        ->assertDontSee('Fries');
 });
 
 test('OrderTimelineRelationManager displays order history timeline', function () {

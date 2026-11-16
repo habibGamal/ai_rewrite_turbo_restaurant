@@ -4,7 +4,6 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CashierCommissionTableExporter;
 use App\Filament\Pages\Reports\CashierPerformanceDetails;
-use App\Models\OrderItemChange;
 use App\Models\User;
 use App\Services\CashierCommissionReportService;
 use App\Services\ShiftsReportService;
@@ -181,42 +180,24 @@ class CashierCommissionTableWidget extends BaseWidget
                     ->label('تفاصيل الأداء')
                     ->icon('heroicon-o-chart-bar')
                     ->color('primary')
-                    ->url(fn (User $record): string => CashierPerformanceDetails::getUrl(['record' => $record->id]))
-                    ->openUrlInNewTab(false),
+                    ->url(function (User $record) use ($filterType, $startDate, $endDate): string {
+                        $params = [
+                            'record' => $record->id,
+                            'filterType' => $filterType,
+                        ];
 
-                Action::make('view_changes')
-                    ->label('تعديلات الأصناف')
-                    ->icon('heroicon-o-list-bullet')
-                    ->color('warning')
-                    ->modalHeading(fn (User $record): string => 'سجل تعديلات الأصناف - '.$record->name)
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('إغلاق')
-                    ->modalContent(function (User $record) use ($shiftIds, $startDate, $endDate) {
-                        $changesQuery = OrderItemChange::query()
-                            ->where('order_item_changes.user_id', $record->id)
-                            ->with('order');
-
-                        if (! empty($shiftIds)) {
-                            $changesQuery->join('orders', 'orders.id', '=', 'order_item_changes.order_id')
-                                ->whereIn('orders.shift_id', $shiftIds)
-                                ->select('order_item_changes.*');
-                        } elseif ($startDate && $endDate) {
-                            $changesQuery->whereBetween('order_item_changes.created_at', [$startDate, $endDate]);
+                        if ($filterType === 'shifts') {
+                            $params['shifts'] = $this->pageFilters['shifts'] ?? [];
+                        } else {
+                            $params['startDate'] = $startDate->toDateString();
+                            $params['endDate'] = $endDate->toDateString();
+                            if (isset($this->pageFilters['presetPeriod'])) {
+                                $params['presetPeriod'] = $this->pageFilters['presetPeriod'];
+                            }
                         }
 
-                        $changes = $changesQuery->orderBy('order_item_changes.created_at', 'desc')->get();
-
-                        return view('filament.widgets.cashier-item-changes-modal', [
-                            'cashier' => $record,
-                            'changes' => $changes,
-                        ]);
-                    }),
-
-                Action::make('view_orders')
-                    ->label('الطلبات')
-                    ->icon('heroicon-o-shopping-cart')
-                    ->color('info')
-                    ->url(fn (User $record): string => url("/admin/orders?tableFilters[user_id][value]={$record->id}"))
+                        return CashierPerformanceDetails::getUrl($params);
+                    })
                     ->openUrlInNewTab(false),
             ])
             ->striped()

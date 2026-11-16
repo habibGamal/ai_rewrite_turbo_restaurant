@@ -2,9 +2,12 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Exports\CashierItemChangesTableExporter;
 use App\Models\OrderItemChange;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -27,9 +30,31 @@ class CashierItemChangesTableWidget extends BaseWidget
 
     public ?User $record = null;
 
-    public function mount(?int $userId = null, ?User $record = null): void
-    {
+    public array $shiftIds = [];
+
+    public ?string $startDate = null;
+
+    public ?string $endDate = null;
+
+    public string $filterType = 'period';
+
+    public bool $hasFilter = false;
+
+    public function mount(
+        ?int $userId = null,
+        ?User $record = null,
+        array $shiftIds = [],
+        ?string $startDate = null,
+        ?string $endDate = null,
+        string $filterType = 'period',
+        bool $hasFilter = false
+    ): void {
         $this->userId = $userId ?? $record?->id;
+        $this->shiftIds = $shiftIds;
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+        $this->filterType = $filterType;
+        $this->hasFilter = $hasFilter;
     }
 
     public function table(Table $table): Table
@@ -37,6 +62,16 @@ class CashierItemChangesTableWidget extends BaseWidget
         $query = OrderItemChange::query()
             ->where('user_id', $this->userId ?? 0)
             ->with(['order']);
+
+        if ($this->hasFilter) {
+            if (! empty($this->shiftIds)) {
+                $query->whereHas('order', function (Builder $q) {
+                    $q->whereIn('shift_id', $this->shiftIds);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
 
         return $table
             ->query($query)
@@ -124,7 +159,15 @@ class CashierItemChangesTableWidget extends BaseWidget
                             ->when($data['created_until'], fn (Builder $q, $d) => $q->whereDate('created_at', '<=', $d));
                     }),
             ])
-            ->headerActions([])
+            ->headerActions([
+                ExportAction::make()
+                    ->label('تصدير تعديلات الأصناف')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->exporter(CashierItemChangesTableExporter::class)
+                    ->formats([ExportFormat::Xlsx, ExportFormat::Csv])
+                    ->fileName(fn () => 'cashier-item-changes-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
+            ])
             ->recordActions([
                 Action::make('view_order')
                     ->label('عرض الطلب')

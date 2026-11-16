@@ -4,9 +4,12 @@ namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Filament\Exports\CashierOrdersTableExporter;
 use App\Models\Order;
 use App\Models\User;
 use App\Orders\OrderTypeCatalog;
+use Filament\Actions\ExportAction;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
@@ -30,9 +33,31 @@ class CashierOrdersTableWidget extends BaseWidget
 
     public ?User $record = null;
 
-    public function mount(?int $userId = null, ?User $record = null): void
-    {
+    public array $shiftIds = [];
+
+    public ?string $startDate = null;
+
+    public ?string $endDate = null;
+
+    public string $filterType = 'period';
+
+    public bool $hasFilter = false;
+
+    public function mount(
+        ?int $userId = null,
+        ?User $record = null,
+        array $shiftIds = [],
+        ?string $startDate = null,
+        ?string $endDate = null,
+        string $filterType = 'period',
+        bool $hasFilter = false
+    ): void {
         $this->userId = $userId ?? $record?->id;
+        $this->shiftIds = $shiftIds;
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+        $this->filterType = $filterType;
+        $this->hasFilter = $hasFilter;
     }
 
     public function table(Table $table): Table
@@ -40,6 +65,14 @@ class CashierOrdersTableWidget extends BaseWidget
         $query = Order::query()
             ->where('user_id', $this->userId ?? 0)
             ->with(['customer']);
+
+        if ($this->hasFilter) {
+            if (! empty($this->shiftIds)) {
+                $query->whereIn('shift_id', $this->shiftIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
 
         return $table
             ->query($query)
@@ -137,7 +170,15 @@ class CashierOrdersTableWidget extends BaseWidget
                             ->when($data['created_until'], fn (Builder $q, $d) => $q->whereDate('created_at', '<=', $d));
                     }),
             ])
-            ->headerActions([])
+            ->headerActions([
+                ExportAction::make()
+                    ->label('تصدير الطلبات')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->exporter(CashierOrdersTableExporter::class)
+                    ->formats([ExportFormat::Xlsx, ExportFormat::Csv])
+                    ->fileName(fn () => 'cashier-orders-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
+            ])
             ->recordActions([
                 ViewAction::make()
                     ->url(fn (Order $record): string => url("/admin/orders/{$record->id}")),

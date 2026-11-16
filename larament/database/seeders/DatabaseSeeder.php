@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             // RegionSeeder::class,
             // ExpenceTypeSeeder::class,
             // ProductSeeder::class,
+            // ClothesBusinessSeeder::class,
             // ExpenseSeeder::class,
             // PurchaseInvoiceSeeder::class,
         ]);

@@ -1,6 +1,17 @@
 <x-filament-panels::page>
+    @php
+        $filter = $this->getResolvedFilter();
+    @endphp
+
     <div class="mb-4">
-        @livewire(\App\Filament\Widgets\CashierDetailStatsWidget::class, ['record' => $cashier])
+        @livewire(\App\Filament\Widgets\CashierDetailStatsWidget::class, [
+            'record' => $cashier,
+            'shiftIds' => $filter['shiftIds'],
+            'startDate' => $filter['startDate'],
+            'endDate' => $filter['endDate'],
+            'filterType' => $filter['filterType'],
+            'hasFilter' => true,
+        ], key('cashier-detail-stats-'.$cashier->id))
     </div>
 
     <div x-data="{ activeTab: @entangle('activeTab') }" class="space-y-4">
@@ -26,11 +37,25 @@
         </div>
 
         <div x-show="activeTab === 'orders'">
-            @livewire(\App\Filament\Widgets\CashierOrdersTableWidget::class, ['userId' => $cashier->id])
+            @livewire(\App\Filament\Widgets\CashierOrdersTableWidget::class, [
+                'userId' => $cashier->id,
+                'shiftIds' => $filter['shiftIds'],
+                'startDate' => $filter['startDate'],
+                'endDate' => $filter['endDate'],
+                'filterType' => $filter['filterType'],
+                'hasFilter' => true,
+            ], key('cashier-orders-table-'.$cashier->id))
         </div>
 
         <div x-show="activeTab === 'items'">
-            @livewire(\App\Filament\Widgets\CashierItemChangesTableWidget::class, ['userId' => $cashier->id])
+            @livewire(\App\Filament\Widgets\CashierItemChangesTableWidget::class, [
+                'userId' => $cashier->id,
+                'shiftIds' => $filter['shiftIds'],
+                'startDate' => $filter['startDate'],
+                'endDate' => $filter['endDate'],
+                'filterType' => $filter['filterType'],
+                'hasFilter' => true,
+            ], key('cashier-items-table-'.$cashier->id))
         </div>
     </div>
 </x-filament-panels::page>
