@@ -1,12 +1,9 @@
 <?php
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
-use App\Filament\Exports\PurchasesReportExporter;
-use App\Filament\Pages\Reports\PurchasesReport;
-use App\Filament\Widgets\PurchasesReportTable;
+use App\Filament\Pages\Reports\CostHistoryReport;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\Warehouse;
 use App\Modules\Manufacturing\Filament\Exports\ManufacturingYieldOrderExporter;
 use App\Modules\Manufacturing\Filament\Pages\Reports\ManufacturingYieldReport;
 use App\Modules\Manufacturing\Filament\Widgets\ManufacturingYieldOrderTable;
@@ -30,7 +27,7 @@ function reportClass(string $kind, string $class): string
     return $root.$kind.'\\'.$class;
 }
 
-dataset('document reports', ['PurchasesReport', 'WasteReport', 'StocktakingReport', 'StockIssuesReport', 'ManufacturingYieldReport', 'CostHistoryReport']);
+dataset('document reports', ['ManufacturingYieldReport', 'CostHistoryReport']);
 
 it('renders the report with shared filters and its table', function (string $name) {
     $this->actingAs(User::factory()->admin()->create());
@@ -68,27 +65,9 @@ it('provides an Excel export and the same columns in the table and exporter', fu
     expect($table->instance()->getTable()->getAction('export')->getFormats())->toBe([ExportFormat::Xlsx]);
 })->with('document reports');
 
-it('renders posted purchase totals and exports complete groups after query serialization and ID lookup', function () {
-    $this->actingAs($user = User::factory()->admin()->create());
-    $product = Product::factory()->create(['name' => 'أرز التقرير', 'type' => 'raw_material']);
-    openInventoryDay($product);
-    reportPurchase($product, 10, 20);
-    reportPurchase($product, 10, 30);
-    $widget = livewire(PurchasesReportTable::class, ['pageFilters' => ['startDate' => '2026-11-01', 'endDate' => '2026-11-30']])
-        ->assertCountTableRecords(1)->assertSee('أرز التقرير')->assertSee('٥٠٠٫٠٠')->assertSee('٢٥٫٠٠٠٠');
-    $query = $widget->instance()->getTableQueryForExport();
-    $row = $query->first();
-    $restored = EloquentSerializeFacade::unserialize(EloquentSerializeFacade::serialize($query))->find([$row->id])->sole();
-    $export = new Export(['exporter' => PurchasesReportExporter::class]);
-    $export->user()->associate($user);
-    $exporter = new PurchasesReportExporter($export, ['quantity' => 'الكمية', 'value' => 'القيمة', 'average_price' => 'متوسط السعر'], []);
-    expect($exporter($restored))->toBe(['20', '500', '25']);
-    livewire(PurchasesReportTable::class, ['pageFilters' => ['warehouse_id' => Warehouse::factory()->create()->id]])->assertCountTableRecords(0);
-});
-
 it('updates the date range from the same presets as the stock report', function () {
     $this->actingAs(User::factory()->admin()->create());
-    livewire(PurchasesReport::class)->fillForm(['presetPeriod' => 'last_7_days'], 'filtersForm')
+    livewire(CostHistoryReport::class)->fillForm(['presetPeriod' => 'last_7_days'], 'filtersForm')
         ->assertSchemaStateSet(['startDate' => now()->subDays(6)->toDateString(), 'endDate' => now()->toDateString()], 'filtersForm');
 });
 
@@ -105,7 +84,7 @@ it('exports a complete filtered row after the queued query round trip', function
     $columns = collect($exporterClass::getColumns())->mapWithKeys(fn ($column) => [$column->getName() => $column->getLabel()])->all();
     $exporter = new $exporterClass(new Export(['exporter' => $exporterClass]), $columns, []);
     $values = $exporter($restored);
-    expect($values)->toHaveCount(count($columns))->toContain($name === 'StockIssuesReport' ? 'وجبات العاملين' : $product->name);
+    expect($values)->toHaveCount(count($columns))->toContain($product->name);
     if ($name === 'CostHistoryReport') {
         expect($values)->toContain('متوسط مرجح')->toContain('فاتورة مشتريات');
     }

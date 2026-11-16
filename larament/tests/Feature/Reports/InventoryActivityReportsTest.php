@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Modules\Manufacturing\Services\ManufacturingYieldReportService;
 use App\Services\Reports\Inventory\CostHistoryReportService;
-use App\Services\Reports\Inventory\StockIssuesReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 require_once __DIR__.'/../../Support/InventoryReportFixtures.php';
@@ -17,29 +16,6 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->product = Product::factory()->create(['type' => 'raw_material']);
     openInventoryDay($this->product);
-});
-
-it('totals staff meals in November at 4320 by destination warehouse and user', function () {
-    $user = User::factory()->create();
-    reportIssue($this->product, 2000, ['user_id' => $user->id]);
-    reportIssue($this->product, 2320, ['user_id' => $user->id]);
-    reportIssue($this->product, 999, ['user_id' => $user->id, 'closed_at' => null]);
-    reportIssue($this->product, 999, ['user_id' => $user->id, 'business_date' => '2026-10-31']);
-    $row = StockIssuesReportService::query('2026-11-01', '2026-11-30')->sole();
-    expect((float) $row->value)->toBe(4320.0)->and($row->user_name)->toBe($user->name)
-        ->and($row->destination)->toBe('وجبات العاملين');
-});
-
-it('separates issue destinations warehouses and users and filters the item costs', function () {
-    $user = User::factory()->create();
-    $warehouse = Warehouse::factory()->create();
-    reportIssue($this->product, 100, ['user_id' => $user->id]);
-    reportIssue($this->product, 200, ['user_id' => $user->id, 'warehouse_id' => $warehouse->id]);
-    reportIssue($this->product, 300, ['user_id' => $user->id, 'destination' => 'ضيافة']);
-    reportIssue(Product::factory()->create(), 400, ['user_id' => $user->id]);
-    expect(StockIssuesReportService::query('2026-11-01', '2026-11-30')->get())->toHaveCount(3);
-    $row = StockIssuesReportService::query('2026-11-01', '2026-11-30', ['warehouse_id' => $warehouse->id, 'product_id' => $this->product->id])->sole();
-    expect((float) $row->value)->toBe(200.0);
 });
 
 it('averages minus two three and four percent across manufacturing orders', function () {

@@ -16,6 +16,7 @@ use App\Services\DailyComparisonReportService;
 use App\Services\Orders\Instant\InstantReturnService;
 use App\Services\PeakHoursPerformanceReportService;
 use App\Services\ProductsSalesReportService;
+use App\Services\Reports\Channels\ChannelReportFilters;
 use App\Services\Reports\ReturnsAggregates;
 use App\Services\ShiftService;
 use App\Services\ShiftsReportService;
@@ -260,10 +261,10 @@ it('shows returns as gross, refunds and net in the period reports', function () 
         ->and($daily->total_refunds)->toBe(120.0)
         ->and($daily->net_sales)->toBe(150.0);
 
-    $channel = app(ChannelPerformanceReportService::class)->getChannelPerformanceSummary($today, $today)
-        ->firstWhere('type', 'instant_sale');
-    expect((float) $channel->total_refunds)->toBe(120.0)
-        ->and((float) $channel->net_sales)->toBe(round((float) $channel->total_sales - 120, 2));
+    $channel = app(ChannelPerformanceReportService::class)
+        ->channelRows(ChannelReportFilters::fromArray(['startDate' => $today, 'endDate' => $today]))['instant_sale'];
+    expect($channel['refunds'])->toBe(120.0)
+        ->and($channel['net_sales'])->toBe(round($channel['gross'] - 120, 2));
 
     $hour = app(PeakHoursPerformanceReportService::class)->getHourlyPerformance($today, $today)->first();
     expect($hour->total_refunds)->toBe(120.0)

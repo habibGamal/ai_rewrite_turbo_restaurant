@@ -31,8 +31,9 @@ use App\Services\Orders\OrderService;
 use App\Services\ProductsSalesReportService;
 use App\Services\PurchaseService;
 use App\Services\Reports\Inventory\CostHistoryReportService;
+use App\Services\Reports\Inventory\InventoryMovementsReportService;
+use App\Services\Reports\Inventory\InventoryReportFilters;
 use App\Services\Reports\Inventory\ItemLedgerReportService;
-use App\Services\Reports\Inventory\MovementSummaryReportService;
 use App\Services\Reports\StockReportService;
 use App\Services\SettingsService;
 use App\Services\StockIssueService;
@@ -188,7 +189,7 @@ it('uses the open business date for movements and after midnight ledger and summ
     expect($movement->business_date->toDateString())->toBe('2026-11-10');
     $record = StockReportService::query('2026-11-10', '2026-11-10', true, productId: $product->id)->sole();
     expect((float) $record->incoming)->toBe(2.0)
-        ->and((float) MovementSummaryReportService::rows('2026-11-10', '2026-11-10')['purchase']->quantity)->toBe(2.0)
+        ->and(app(InventoryMovementsReportService::class)->bucketTotals(InventoryReportFilters::fromArray(['startDate' => '2026-11-10', 'endDate' => '2026-11-10']))['purchase']['value'])->toBe(60.0)
         ->and(ItemLedgerReportService::rows($product->id, null, '2026-11-10', '2026-11-10'))->toHaveCount(1)
         ->and(ItemLedgerReportService::rows($product->id, null, '2026-11-11', '2026-11-11'))->toHaveCount(0)
         ->and(ItemLedgerReportService::openingBalance($product->id, null, '2026-11-11'))->toBe(2.0);
@@ -264,11 +265,13 @@ it('summarises manual, adjustment and initial stock movements so the summary agr
     $stock->addStock([['product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 30]], MovementReason::PURCHASE);
 
     $today = app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString();
-    $rows = MovementSummaryReportService::rows($today, $today);
-    $net = collect($rows)->sum(fn ($row) => ($row->operation === 'in' ? 1 : -1) * (float) $row->quantity);
+    $filters = InventoryReportFilters::fromArray(['startDate' => $today, 'endDate' => $today]);
+    $report = app(InventoryMovementsReportService::class);
+    $totals = $report->bucketTotals($filters);
+    $item = $report->itemsQuery($filters)->where('id', $product->id)->sole();
 
-    expect((float) $rows['other_in']->quantity)->toBe(50.0)
-        ->and((float) $rows['other_out']->quantity)->toBe(4.0)
-        ->and((float) $rows['purchase']->quantity)->toBe(10.0)
-        ->and(round($net, 3))->toBe(56.0); // 50 − 4 + 10: every movement of the day is in some summary row
+    expect($totals['other_in']['movements'])->toBe(1)
+        ->and($totals['other_out']['movements'])->toBe(1)
+        ->and($totals['purchase']['value'])->toBe(300.0)
+        ->and(round((float) $item->getAttribute('closing_qty'), 3))->toBe(56.0); // 50 − 4 + 10: every movement of the day is in some bucket
 });

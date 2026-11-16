@@ -1,16 +1,30 @@
 <?php
 
+use App\Core\Orders\SalesBreakdown;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Exports\ChannelComparisonExport;
 use App\Filament\Pages\Reports\ChannelPerformanceReport;
-use App\Filament\Widgets\ChannelMarketShareWidget;
-use App\Filament\Widgets\ChannelPerformanceStatsWidget;
+use App\Filament\Widgets\ChannelChangeWidget;
+use App\Filament\Widgets\ChannelComparisonTableWidget;
+use App\Filament\Widgets\ChannelHeatmapWidget;
+use App\Filament\Widgets\ChannelKpisWidget;
+use App\Filament\Widgets\ChannelPaymentsWidget;
+use App\Filament\Widgets\ChannelProductsWidget;
+use App\Filament\Widgets\ChannelShareWidget;
+use App\Filament\Widgets\ChannelTrendWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\ChannelPerformanceReportService;
+use App\Services\Reports\Channels\ChannelReportFilters;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -18,290 +32,378 @@ use function Pest\Livewire\livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // Create admin user for authentication (ViewerAccess trait allows viewers and admins)
     $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
+    $this->service = app(ChannelPerformanceReportService::class);
 });
 
-// Page Rendering Tests
-it('can render the channel performance report page', function () {
-    livewire(ChannelPerformanceReport::class)
-        ->assertSuccessful();
+/**
+ * An order with a known split: total = items + service − discount.
+ */
+function channelOrder(string $type, float $items, array $extra = []): Order
+{
+    $service = $extra['service'] ?? 0;
+    $discount = $extra['discount'] ?? 0;
+
+    return Order::factory()->create([
+        'type' => $type,
+        'status' => $extra['status'] ?? OrderStatus::COMPLETED,
+        'sub_total' => $items,
+        'service' => $service,
+        'tax' => 0,
+        'discount' => $discount,
+        'fees_total' => 0,
+        'equipment_total' => 0,
+        'total' => $items + $service - $discount,
+        'profit' => $extra['profit'] ?? ($items + $service - $discount) / 2,
+        'customer_id' => $extra['customer_id'] ?? null,
+        'guests_count' => $extra['guests'] ?? null,
+        'created_at' => $extra['created_at'] ?? now()->subDays(2),
+    ]);
+}
+
+function last30(array $extra = []): ChannelReportFilters
+{
+    return ChannelReportFilters::fromArray([
+        'startDate' => now()->subDays(29)->toDateString(),
+        'endDate' => now()->toDateString(),
+        ...$extra,
+    ]);
+}
+
+describe('page', function () {
+    it('renders for admins and viewers, not cashiers', function () {
+        livewire(ChannelPerformanceReport::class)->assertSuccessful();
+
+        actingAs(User::factory()->viewer()->create());
+        livewire(ChannelPerformanceReport::class)->assertSuccessful();
+
+        actingAs(User::factory()->cashier()->create());
+        livewire(ChannelPerformanceReport::class)->assertForbidden();
+    });
+
+    it('shows the empty state when there are no completed orders', function () {
+        channelOrder('delivery', 100, ['status' => OrderStatus::PENDING]);
+        channelOrder('delivery', 100, ['status' => OrderStatus::CANCELLED]);
+
+        $widgets = livewire(ChannelPerformanceReport::class)->instance()->getWidgets();
+
+        expect($widgets)->toBe([NoCustomersSalesInPeriodWidget::class]);
+    });
+
+    it('shows the KPIs, the comparison table and the share bars for several channels', function () {
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 200);
+
+        livewire(ChannelPerformanceReport::class)
+            ->assertSeeLivewire(ChannelKpisWidget::class)
+            ->assertSeeLivewire(ChannelComparisonTableWidget::class)
+            ->assertSeeLivewire(ChannelShareWidget::class)
+            ->assertDontSeeLivewire(NoCustomersSalesInPeriodWidget::class);
+    });
+
+    it('drops the share bars when only one channel sold', function () {
+        channelOrder('delivery', 100);
+
+        $widgets = livewire(ChannelPerformanceReport::class)->instance()->getWidgets();
+
+        expect($widgets)->toContain(ChannelComparisonTableWidget::class)
+            ->not->toContain(ChannelShareWidget::class);
+    });
+
+    it('lists every channel in the table with a totals row and sorts it', function () {
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 300);
+
+        livewire(ChannelComparisonTableWidget::class, ['pageFilters' => []])
+            ->assertSee('دليفري')
+            ->assertSee('صالة')
+            ->assertSee('الإجمالي')
+            ->assertSeeInOrder(['channel-row-dine_in', 'channel-row-delivery'])
+            ->call('sortBy', 'net_sales')
+            ->assertSet('direction', 'asc')
+            ->assertSeeInOrder(['channel-row-delivery', 'channel-row-dine_in']);
+    });
+
+    it('renders the KPI and share widgets', function () {
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 300);
+
+        livewire(ChannelKpisWidget::class, ['pageFilters' => []])
+            ->assertSee('صافي المبيعات')
+            ->assertSee('نسبة الإلغاء');
+        livewire(ChannelShareWidget::class, ['pageFilters' => []])
+            ->assertSee('75.0%')
+            ->assertSee('25.0%');
+    });
 });
 
-it('can access page with viewer role', function () {
-    $viewer = User::factory()->viewer()->create();
-    actingAs($viewer);
+describe('figures', function () {
+    it('takes sales from the order totals, so they match the shift reports', function () {
+        channelOrder('delivery', 100, ['service' => 12, 'discount' => 10]);
+        channelOrder('dine_in', 250, ['service' => 25]);
 
-    livewire(ChannelPerformanceReport::class)
-        ->assertSuccessful();
+        $filters = last30();
+        $totals = $this->service->totals($filters, $this->service->channelRows($filters));
+
+        expect($totals['net_sales'])->toBe(377.0)
+            ->and($totals['net_sales'])->toBe(SalesBreakdown::fromQuery($this->service->ordersQuery($filters))->total)
+            ->and($totals['charges'])->toBe(37.0)
+            ->and($totals['discount'])->toBe(10.0);
+    });
+
+    it('averages per order, not per line', function () {
+        channelOrder('delivery', 100);
+        channelOrder('delivery', 300);
+
+        $row = $this->service->channelRows(last30())['delivery'];
+
+        expect($row['orders'])->toBe(2)
+            ->and($row['avg_order'])->toBe(200.0)
+            ->and($row['margin'])->toBe(50.0);
+    });
+
+    it('counts a customer once across channels in the totals', function () {
+        $customer = Customer::factory()->create();
+        channelOrder('delivery', 100, ['customer_id' => $customer->id]);
+        channelOrder('dine_in', 100, ['customer_id' => $customer->id]);
+
+        $filters = last30();
+        $rows = $this->service->channelRows($filters);
+
+        expect($rows['delivery']['customers'])->toBe(1)
+            ->and($rows['dine_in']['customers'])->toBe(1)
+            ->and($this->service->totals($filters, $rows)['customers'])->toBe(1);
+    });
+
+    it('computes the cancellation rate and shares', function () {
+        channelOrder('delivery', 100);
+        channelOrder('delivery', 100, ['status' => OrderStatus::CANCELLED]);
+        channelOrder('dine_in', 200);
+        channelOrder('dine_in', 200);
+        channelOrder('dine_in', 200);
+
+        $rows = $this->service->channelRows(last30());
+
+        expect($rows['delivery']['cancel_rate'])->toBe(50.0)
+            ->and($rows['dine_in']['cancel_rate'])->toBe(0.0)
+            ->and($rows['dine_in']['sales_share'])->toBe(85.71)
+            ->and($rows['dine_in']['orders_share'])->toBe(75.0)
+            ->and(array_key_first($rows))->toBe('dine_in');
+    });
+
+    it('shows guests per channel only where they were counted', function () {
+        channelOrder('dine_in', 300, ['guests' => 3]);
+        channelOrder('delivery', 100);
+
+        $report = $this->service->report(last30());
+
+        expect($report['rows']['dine_in']['avg_per_guest'])->toBe(100.0)
+            ->and($report['rows']['delivery']['guests'])->toBe(0)
+            ->and($report['columns']['guests'])->toBeTrue()
+            ->and($report['columns']['charges'])->toBeFalse();
+    });
+
+    it('limits everything to the chosen channels', function () {
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 200);
+
+        $filters = last30(['channels' => ['delivery']]);
+        $rows = $this->service->channelRows($filters);
+
+        expect(array_keys($rows))->toBe(['delivery'])
+            ->and($this->service->totals($filters, $rows)['net_sales'])->toBe(100.0);
+    });
+
+    it('compares with the previous period of the same length', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 150, ['created_at' => '2026-11-15 13:00']);
+        channelOrder('delivery', 100, ['created_at' => '2026-11-05 13:00']);
+        channelOrder('delivery', 999, ['created_at' => '2026-10-20 13:00']);
+
+        $report = $this->service->report(ChannelReportFilters::fromArray(['startDate' => '2026-11-07', 'endDate' => '2026-11-16']));
+
+        expect($report['comparison']->startDate())->toBe('2026-10-28')
+            ->and($report['comparison']->endDate())->toBe('2026-11-06')
+            ->and($report['totals']['net_sales'])->toBe(150.0)
+            ->and($report['previous_totals']['net_sales'])->toBe(100.0)
+            ->and(ChannelPerformanceReportService::change($report['totals']['net_sales'], $report['previous_totals']['net_sales']))->toBe(50.0);
+    });
+
+    it('compares with the same period last year, or not at all', function () {
+        $lastYear = ChannelReportFilters::fromArray(['startDate' => '2026-11-01', 'endDate' => '2026-11-16', 'compareTo' => 'last_year'])->comparison();
+        $none = ChannelReportFilters::fromArray(['startDate' => '2026-11-01', 'endDate' => '2026-11-16', 'compareTo' => 'none']);
+
+        expect($lastYear->startDate())->toBe('2025-11-01')
+            ->and($lastYear->endDate())->toBe('2025-11-16')
+            ->and($none->comparison())->toBeNull()
+            ->and($this->service->report($none)['previous_totals'])->toBeNull();
+    });
+
+    it('fills every day of the period for the sparklines', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 100, ['created_at' => '2026-11-15 13:00']);
+
+        $daily = $this->service->daily(ChannelReportFilters::fromArray(['startDate' => '2026-11-14', 'endDate' => '2026-11-16']));
+
+        expect(array_keys($daily))->toBe(['2026-11-14', '2026-11-15', '2026-11-16'])
+            ->and($daily['2026-11-15'])->toBe(['orders' => 1, 'net_sales' => 100.0]);
+    });
 });
 
-it('cannot access page with cashier role', function () {
-    $cashier = User::factory()->cashier()->create();
-    actingAs($cashier);
+it('shows each channel change against the comparison period in the table', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+    channelOrder('delivery', 150, ['created_at' => '2026-11-15 13:00']);
+    channelOrder('delivery', 100, ['created_at' => '2026-11-05 13:00']);
 
-    livewire(ChannelPerformanceReport::class)
-        ->assertForbidden();
+    livewire(ChannelComparisonTableWidget::class, ['pageFilters' => ['startDate' => '2026-11-07', 'endDate' => '2026-11-16']])
+        ->assertSee('+50.0%')
+        ->assertSee('28/10/2026 - 06/11/2026');
 });
 
-// Widget Rendering Tests - No Data Scenario
-it('shows no sales widget when there are no completed orders', function () {
-    $component = livewire(ChannelPerformanceReport::class);
+describe('time', function () {
+    it('picks day, week or month buckets by the period length', function () {
+        $days = fn (string $start) => ChannelPerformanceReportService::granularity(ChannelReportFilters::fromArray(['startDate' => $start, 'endDate' => '2026-11-16']));
 
-    $widgets = $component->instance()->getWidgets();
+        expect($days('2026-11-01'))->toBe('day')
+            ->and($days('2026-08-01'))->toBe('week')
+            ->and($days('2026-01-01'))->toBe('month');
+    });
 
-    expect($widgets)->toContain(NoCustomersSalesInPeriodWidget::class);
+    it('draws a line per channel with net sales per day', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 100, ['created_at' => '2026-11-15 13:00']);
+        channelOrder('delivery', 50, ['created_at' => '2026-11-15 20:00']);
+        channelOrder('dine_in', 300, ['created_at' => '2026-11-16 10:00']);
+
+        $trend = $this->service->trend(ChannelReportFilters::fromArray(['startDate' => '2026-11-14', 'endDate' => '2026-11-16']));
+
+        expect($trend['granularity'])->toBe('day')
+            ->and(array_keys($trend['buckets']))->toBe(['2026-11-14', '2026-11-15', '2026-11-16'])
+            ->and(array_keys($trend['series']))->toBe(['dine_in', 'delivery'])
+            ->and($trend['series']['delivery']['values']['2026-11-15'])->toBe(['orders' => 2, 'net_sales' => 150.0])
+            ->and($trend['series']['delivery']['values']['2026-11-16'])->toBe(['orders' => 0, 'net_sales' => 0.0]);
+    });
+
+    it('groups weeks from Saturday', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        // 2026-11-14 is a Saturday, 2026-11-13 a Friday.
+        channelOrder('delivery', 100, ['created_at' => '2026-11-13 13:00']);
+        channelOrder('delivery', 40, ['created_at' => '2026-11-14 13:00']);
+        channelOrder('delivery', 60, ['created_at' => '2026-11-16 13:00']);
+
+        $trend = $this->service->trend(ChannelReportFilters::fromArray(['startDate' => '2026-09-01', 'endDate' => '2026-11-16']));
+        $values = $trend['series']['delivery']['values'];
+
+        expect($trend['granularity'])->toBe('week')
+            ->and($values['2026-11-07']['net_sales'])->toBe(100.0)
+            ->and($values['2026-11-14']['net_sales'])->toBe(100.0)
+            ->and(array_key_last($values))->toBe('2026-11-14');
+    });
+
+    it('fills the hour and weekday grid', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        // 2026-11-14 is a Saturday (weekday 7).
+        channelOrder('delivery', 100, ['created_at' => '2026-11-14 21:15']);
+        channelOrder('delivery', 50, ['created_at' => '2026-11-14 21:40']);
+        channelOrder('dine_in', 80, ['created_at' => '2026-11-15 13:00']);
+
+        $filters = ChannelReportFilters::fromArray(['startDate' => '2026-11-10', 'endDate' => '2026-11-16']);
+        $all = $this->service->heatmap($filters);
+        $delivery = $this->service->heatmap($filters, 'delivery');
+
+        expect($all[7][21])->toBe(['orders' => 2, 'sales' => 150.0])
+            ->and($all[1][13])->toBe(['orders' => 1, 'sales' => 80.0])
+            ->and($delivery[1][13]['orders'])->toBe(0);
+    });
+
+    it('shows the change, trend and heatmap widgets', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+        channelOrder('delivery', 150, ['created_at' => '2026-11-15 13:00']);
+        channelOrder('dine_in', 100, ['created_at' => '2026-11-15 14:00']);
+        channelOrder('delivery', 100, ['created_at' => '2026-11-05 13:00']);
+        $filters = ['startDate' => '2026-11-07', 'endDate' => '2026-11-16'];
+
+        $page = livewire(ChannelPerformanceReport::class)->set('filters.startDate', '2026-11-07')->set('filters.endDate', '2026-11-16');
+        expect($page->instance()->getWidgets())->toContain(ChannelChangeWidget::class, ChannelTrendWidget::class, ChannelHeatmapWidget::class);
+
+        $change = livewire(ChannelChangeWidget::class, ['pageFilters' => $filters]);
+        expect($change->instance()->changes())->toBe([['label' => 'دليفري', 'change' => 50.0]]);
+
+        livewire(ChannelTrendWidget::class, ['pageFilters' => $filters])->assertSuccessful();
+        livewire(ChannelHeatmapWidget::class, ['pageFilters' => $filters])
+            ->assertSee('السبت')
+            ->set('channel', 'dine_in')
+            ->set('metric', 'sales')
+            ->assertSuccessful();
+    });
+
+    it('hides the change widget without a comparison', function () {
+        channelOrder('delivery', 150);
+        channelOrder('dine_in', 100);
+
+        $widgets = livewire(ChannelPerformanceReport::class)->set('filters.compareTo', 'none')->instance()->getWidgets();
+
+        expect($widgets)->not->toContain(ChannelChangeWidget::class)
+            ->toContain(ChannelTrendWidget::class);
+    });
 });
 
-it('does not show performance widgets when there are no completed orders', function () {
-    $component = livewire(ChannelPerformanceReport::class);
+describe('details', function () {
+    it('ranks products per channel with their share of the channel', function () {
+        $shawarma = Product::factory()->create(['name' => 'شاورما']);
+        $fries = Product::factory()->create(['name' => 'بطاطس']);
+        $delivery = channelOrder('delivery', 400);
+        OrderItem::factory()->create(['order_id' => $delivery->id, 'product_id' => $shawarma->id, 'quantity' => 2, 'price' => 150, 'total' => 300]);
+        OrderItem::factory()->create(['order_id' => $delivery->id, 'product_id' => $fries->id, 'quantity' => 5, 'price' => 20, 'total' => 100]);
+        $dineIn = channelOrder('dine_in', 40);
+        OrderItem::factory()->create(['order_id' => $dineIn->id, 'product_id' => $fries->id, 'quantity' => 2, 'price' => 20, 'total' => 40]);
 
-    $widgets = $component->instance()->getWidgets();
+        $bySales = $this->service->topProducts(last30());
+        $byQuantity = $this->service->topProducts(last30(), 10, 'quantity');
 
-    expect($widgets)->not->toContain(ChannelPerformanceStatsWidget::class);
-    expect($widgets)->not->toContain(ChannelMarketShareWidget::class);
-});
+        expect(array_column($bySales['delivery'], 'name'))->toBe(['شاورما', 'بطاطس'])
+            ->and($bySales['delivery'][0]['share'])->toBe(75.0)
+            ->and(array_column($byQuantity['delivery'], 'name'))->toBe(['بطاطس', 'شاورما'])
+            ->and($bySales['dine_in'][0])->toMatchArray(['name' => 'بطاطس', 'quantity' => 2.0, 'sales' => 40.0, 'share' => 100.0]);
 
-// Widget Rendering Tests - With Data
-it('shows performance widgets when there are completed orders', function () {
-    // Create test data
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer = Customer::factory()->create();
+        livewire(ChannelProductsWidget::class, ['pageFilters' => []])
+            ->assertSee('شاورما')
+            ->set('channel', 'dine_in')
+            ->assertDontSee('شاورما')
+            ->assertSee('بطاطس');
+    });
 
-    // Create orders with different types (channels)
-    $deliveryOrder = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'delivery',
-        'status' => OrderStatus::COMPLETED,
-        'created_at' => now()->subDays(5),
-    ]);
+    it('splits each channel by payment method', function () {
+        $delivery = channelOrder('delivery', 300);
+        Payment::factory()->create(['order_id' => $delivery->id, 'shift_id' => $delivery->shift_id, 'method' => PaymentMethod::CASH, 'amount' => 200]);
+        Payment::factory()->create(['order_id' => $delivery->id, 'shift_id' => $delivery->shift_id, 'method' => PaymentMethod::CARD, 'amount' => 100]);
 
-    OrderItem::factory()->create([
-        'order_id' => $deliveryOrder->id,
-        'product_id' => $product->id,
-        'quantity' => 2,
-        'price' => $product->price,
-        'cost' => $product->cost,
-        'total' => $product->price * 2,
-    ]);
+        $mix = $this->service->paymentMix(last30());
 
-    $dineInOrder = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'dine_in',
-        'status' => OrderStatus::COMPLETED,
-        'created_at' => now()->subDays(3),
-    ]);
+        expect($mix['delivery'])->toBe(['total' => 300.0, 'methods' => ['cash' => 200.0, 'card' => 100.0]]);
 
-    OrderItem::factory()->create([
-        'order_id' => $dineInOrder->id,
-        'product_id' => $product->id,
-        'quantity' => 2,
-        'price' => $product->price,
-        'cost' => $product->cost,
-        'total' => $product->price * 2,
-    ]);
+        livewire(ChannelPaymentsWidget::class, ['pageFilters' => []])
+            ->assertSee('نقدي')
+            ->assertSee('66.7%')
+            ->assertDontSee('بطاقة طلبات');
+    });
 
-    livewire(ChannelPerformanceReport::class)
-        ->assertSeeLivewire(ChannelPerformanceStatsWidget::class)
-        ->assertSeeLivewire(ChannelMarketShareWidget::class)
-        ->assertDontSeeLivewire(NoCustomersSalesInPeriodWidget::class);
-});
+    it('exports the comparison table to Excel', function () {
+        Excel::fake();
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 300);
 
-it('does not count pending orders in the report', function () {
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer = Customer::factory()->create();
+        livewire(ChannelPerformanceReport::class)->callAction('exportChannels');
 
-    // Create pending order
-    $pendingOrder = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'delivery',
-        'status' => OrderStatus::PENDING,
-        'created_at' => now()->subDays(5),
-    ]);
+        Excel::assertDownloaded('channels-'.now()->subDays(29)->toDateString().'-'.now()->toDateString().'.xlsx', function (ChannelComparisonExport $export) {
+            $lines = $export->array();
 
-    OrderItem::factory()->create([
-        'order_id' => $pendingOrder->id,
-        'product_id' => $product->id,
-        'quantity' => 2,
-        'price' => $product->price,
-        'cost' => $product->cost,
-        'total' => $product->price * 2,
-    ]);
-
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(NoCustomersSalesInPeriodWidget::class);
-    expect($widgets)->not->toContain(ChannelPerformanceStatsWidget::class);
-});
-
-it('does not count cancelled orders in the report', function () {
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer = Customer::factory()->create();
-
-    // Create cancelled order
-    $cancelledOrder = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'delivery',
-        'status' => OrderStatus::CANCELLED,
-        'created_at' => now()->subDays(5),
-    ]);
-
-    OrderItem::factory()->create([
-        'order_id' => $cancelledOrder->id,
-        'product_id' => $product->id,
-        'quantity' => 2,
-        'price' => $product->price,
-        'cost' => $product->cost,
-        'total' => $product->price * 2,
-    ]);
-
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(NoCustomersSalesInPeriodWidget::class);
-    expect($widgets)->not->toContain(ChannelPerformanceStatsWidget::class);
-});
-
-// Channel Performance Tests
-it('tracks performance for multiple channels', function () {
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer = Customer::factory()->create();
-
-    // Create orders for different channels
-    $channels = [
-        'delivery',
-        'dine_in',
-        'takeaway',
-        'web_delivery',
-    ];
-
-    foreach ($channels as $channel) {
-        $order = Order::factory()->create([
-            'customer_id' => $customer->id,
-            'type' => $channel,
-            'status' => OrderStatus::COMPLETED,
-            'created_at' => now()->subDays(rand(1, 7)),
-        ]);
-
-        OrderItem::factory()->create([
-            'order_id' => $order->id,
-            'product_id' => $product->id,
-            'quantity' => rand(1, 3),
-            'price' => $product->price,
-            'cost' => $product->cost,
-            'total' => $product->price * rand(1, 3),
-        ]);
-    }
-
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(ChannelPerformanceStatsWidget::class);
-    expect($widgets)->toContain(ChannelMarketShareWidget::class);
-});
-
-it('shows widgets with multiple orders in same channel', function () {
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer1 = Customer::factory()->create();
-    $customer2 = Customer::factory()->create();
-
-    // Create multiple orders in same channel
-    foreach ([$customer1, $customer2] as $customer) {
-        $order = Order::factory()->create([
-            'customer_id' => $customer->id,
-            'type' => 'delivery',
-            'status' => OrderStatus::COMPLETED,
-            'created_at' => now()->subDays(rand(1, 7)),
-        ]);
-
-        OrderItem::factory()->create([
-            'order_id' => $order->id,
-            'product_id' => $product->id,
-            'quantity' => 2,
-            'price' => $product->price,
-            'cost' => $product->cost,
-            'total' => $product->price * 2,
-        ]);
-    }
-
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(ChannelPerformanceStatsWidget::class);
-    expect($widgets)->toContain(ChannelMarketShareWidget::class);
-});
-
-// Service Integration Tests
-it('handles empty results from service gracefully', function () {
-    // No orders created, service will return empty results
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(NoCustomersSalesInPeriodWidget::class);
-    expect($widgets)->not->toContain(ChannelPerformanceStatsWidget::class);
-});
-
-// Edge Cases
-it('handles single order correctly', function () {
-    $product = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $customer = Customer::factory()->create();
-
-    $order = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'delivery',
-        'status' => OrderStatus::COMPLETED,
-        'created_at' => now()->subDays(5),
-    ]);
-
-    OrderItem::factory()->create([
-        'order_id' => $order->id,
-        'product_id' => $product->id,
-        'quantity' => 1,
-        'price' => $product->price,
-        'cost' => $product->cost,
-        'total' => $product->price,
-    ]);
-
-    $component = livewire(ChannelPerformanceReport::class);
-    $widgets = $component->instance()->getWidgets();
-
-    expect($widgets)->toContain(ChannelPerformanceStatsWidget::class);
-    expect($widgets)->toContain(ChannelMarketShareWidget::class);
-});
-
-it('handles orders with multiple items', function () {
-    $product1 = Product::factory()->create(['price' => 100, 'cost' => 50]);
-    $product2 = Product::factory()->create(['price' => 50, 'cost' => 25]);
-    $customer = Customer::factory()->create();
-
-    $order = Order::factory()->create([
-        'customer_id' => $customer->id,
-        'type' => 'delivery',
-        'status' => OrderStatus::COMPLETED,
-        'created_at' => now()->subDays(5),
-    ]);
-
-    OrderItem::factory()->create([
-        'order_id' => $order->id,
-        'product_id' => $product1->id,
-        'quantity' => 2,
-        'price' => $product1->price,
-        'cost' => $product1->cost,
-        'total' => $product1->price * 2,
-    ]);
-
-    OrderItem::factory()->create([
-        'order_id' => $order->id,
-        'product_id' => $product2->id,
-        'quantity' => 3,
-        'price' => $product2->price,
-        'cost' => $product2->cost,
-        'total' => $product2->price * 3,
-    ]);
-
-    livewire(ChannelPerformanceReport::class)
-        ->assertSeeLivewire(ChannelPerformanceStatsWidget::class)
-        ->assertSeeLivewire(ChannelMarketShareWidget::class);
+            return count($lines) === 3
+                && $lines[0][0] === 'صالة'
+                && $lines[2][0] === 'الإجمالي'
+                && $lines[2][2] === 400.0
+                && count($export->headings()) === 19;
+        });
+    });
 });
