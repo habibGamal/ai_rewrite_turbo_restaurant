@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\PlatformConnection;
 use App\Models\Revenue;
 use App\Models\Shift;
+use App\Models\TerminalSession;
 use App\Models\User;
 use App\Sync\DateDocument;
 use App\Sync\DocumentType;
@@ -59,13 +60,38 @@ class ShiftMoneyService
         return ! $this->isClosed($shift) || $user->can(self::PERMISSION_EDIT_CLOSED);
     }
 
+    /**
+     * The drawer an admin picked for a row, which must belong to the shift.
+     * Null lets the row take the shift's default drawer.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws ValidationException
+     */
+    private function drawerOf(Shift $shift, array $data): ?int
+    {
+        $id = $data['terminal_session_id'] ?? null;
+
+        if ($id === null || $id === '') {
+            return null;
+        }
+
+        $exists = TerminalSession::query()->where('shift_id', $shift->id)->whereKey((int) $id)->exists();
+
+        if (! $exists) {
+            throw ValidationException::withMessages(['terminal_session_id' => 'الدرج ده مش من الوردية دي.']);
+        }
+
+        return (int) $id;
+    }
+
     public function isClosed(Shift $shift): bool
     {
         return (bool) $shift->closed || $shift->end_at !== null;
     }
 
     /**
-     * @param  array{expence_type_id: int|string, amount: float|int|string, notes?: ?string}  $data
+     * @param  array{expence_type_id: int|string, amount: float|int|string, notes?: ?string, terminal_session_id?: int|string|null}  $data
      */
     public function addExpense(Shift $shift, array $data, ?string $reason = null): Expense
     {
@@ -75,6 +101,7 @@ class ShiftMoneyService
                 'expence_type_id' => $data['expence_type_id'],
                 'amount' => $data['amount'],
                 'notes' => $data['notes'] ?? null,
+                'terminal_session_id' => $this->drawerOf($shift, $data),
             ]);
 
             AuditLogger::created($expense, $reason, self::CONTEXT, $shift);
@@ -84,12 +111,16 @@ class ShiftMoneyService
     }
 
     /**
-     * @param  array{expence_type_id?: int|string, amount?: float|int|string, notes?: ?string}  $data
+     * @param  array{expence_type_id?: int|string, amount?: float|int|string, notes?: ?string, terminal_session_id?: int|string|null}  $data
      */
     public function updateExpense(Expense $expense, array $data, ?string $reason = null): Expense
     {
         return $this->change($this->shiftOf($expense), $reason, function (Shift $shift) use ($expense, $data, $reason): Expense {
-            $this->updateAudited($expense, array_intersect_key($data, array_flip(['expence_type_id', 'amount', 'notes'])), $reason, $shift);
+            $changes = array_intersect_key($data, array_flip(['expence_type_id', 'amount', 'notes']));
+            if (array_key_exists('terminal_session_id', $data)) {
+                $changes['terminal_session_id'] = $this->drawerOf($shift, $data);
+            }
+            $this->updateAudited($expense, $changes, $reason, $shift);
 
             return $expense;
         });
@@ -104,7 +135,7 @@ class ShiftMoneyService
     }
 
     /**
-     * @param  array{revenue_type_id: int|string, amount: float|int|string, method?: string, notes?: ?string}  $data
+     * @param  array{revenue_type_id: int|string, amount: float|int|string, method?: string, notes?: ?string, terminal_session_id?: int|string|null}  $data
      */
     public function addRevenue(Shift $shift, array $data, ?string $reason = null): Revenue
     {
@@ -116,6 +147,7 @@ class ShiftMoneyService
                 'amount' => $data['amount'],
                 'method' => $data['method'] ?? 'cash',
                 'notes' => $data['notes'] ?? null,
+                'terminal_session_id' => $this->drawerOf($shift, $data),
             ]);
 
             AuditLogger::created($revenue, $reason, self::CONTEXT, $shift);
@@ -125,12 +157,16 @@ class ShiftMoneyService
     }
 
     /**
-     * @param  array{revenue_type_id?: int|string, amount?: float|int|string, method?: string, notes?: ?string}  $data
+     * @param  array{revenue_type_id?: int|string, amount?: float|int|string, method?: string, notes?: ?string, terminal_session_id?: int|string|null}  $data
      */
     public function updateRevenue(Revenue $revenue, array $data, ?string $reason = null): Revenue
     {
         return $this->change($this->shiftOf($revenue), $reason, function (Shift $shift) use ($revenue, $data, $reason): Revenue {
-            $this->updateAudited($revenue, array_intersect_key($data, array_flip(['revenue_type_id', 'amount', 'method', 'notes'])), $reason, $shift);
+            $changes = array_intersect_key($data, array_flip(['revenue_type_id', 'amount', 'method', 'notes']));
+            if (array_key_exists('terminal_session_id', $data)) {
+                $changes['terminal_session_id'] = $this->drawerOf($shift, $data);
+            }
+            $this->updateAudited($revenue, $changes, $reason, $shift);
 
             return $revenue;
         });

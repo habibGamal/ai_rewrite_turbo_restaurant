@@ -39,7 +39,7 @@ class PeriodShiftRevenuesDetailsTable extends BaseWidget
         $shiftIds = app(ShiftsReportService::class)->shiftIdsQueryFromFilters($this->pageFilters);
 
         return $table
-            ->query(Revenue::query()->whereIn('shift_id', $shiftIds)->with(['revenueType', 'shift.user', 'user']))
+            ->query(Revenue::query()->whereIn('shift_id', $shiftIds)->with(['revenueType', 'shift.user', 'user', 'terminalSession.terminal']))
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل الإيرادات')
@@ -50,6 +50,11 @@ class PeriodShiftRevenuesDetailsTable extends BaseWidget
             ])
             ->columns([
                 TextColumn::make('revenueType.name')->label('بند الإيراد')->sortable(),
+                TextColumn::make('terminalSession.terminal.name')
+                    ->label('الدرج')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
                 TextColumn::make('amount')
                     ->label('المبلغ')
                     ->money('EGP')

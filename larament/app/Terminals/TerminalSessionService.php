@@ -185,8 +185,8 @@ class TerminalSessionService
     }
 
     /**
-     * Refresh the recorded expected cash of a closed shift's closed sessions
-     * (after its money was edited from «مصروفات وإيرادات الورديات»).
+     * Refresh the recorded expected cash of a shift's closed sessions (after
+     * its money was edited from «مصروفات وإيرادات الورديات»).
      */
     public function recomputeClosed(Shift $shift): void
     {
@@ -199,21 +199,27 @@ class TerminalSessionService
             ])->save());
     }
 
-    public function expectedCash(TerminalSession $session): float
+    /**
+     * The cash a drawer took and paid out, by kind, and what should be in it
+     * now: opening + cash in − cash out (no counting).
+     *
+     * @return array{opening: float, payments: float, external: float, revenues: float, settlements: float, expenses: float, refunds: float, cash_in: float, cash_out: float, expected: float}
+     */
+    public function breakdown(TerminalSession $session): array
     {
         $id = $session->getKey();
 
-        $cashPayments = (float) DB::table('payments')
+        $payments = (float) DB::table('payments')
             ->where('terminal_session_id', $id)
             ->where('method', PaymentMethod::CASH->value)
             ->sum('amount');
 
-        $externalCash = (float) DB::table('external_order_collections')
+        $external = (float) DB::table('external_order_collections')
             ->where('terminal_session_id', $id)
             ->where('method', 'cash')
             ->sum('amount');
 
-        $cashRevenues = (float) DB::table('revenues')
+        $revenues = (float) DB::table('revenues')
             ->where('terminal_session_id', $id)
             ->where('method', 'cash')
             ->sum('amount');
@@ -226,14 +232,36 @@ class TerminalSessionService
             ->where('terminal_session_id', $id)
             ->sum('amount');
 
-        $cashRefunds = (float) DB::table('refunds')
+        $refunds = (float) DB::table('refunds')
             ->whereIn('order_return_id', DB::table('order_returns')->where('terminal_session_id', $id)->select('id'))
             ->where('method', 'cash')
             ->sum('amount');
 
-        return round(
-            (float) $session->opening_cash + $cashPayments + $externalCash + $cashRevenues - $settlements - $expenses - $cashRefunds,
-            2,
-        );
+        $opening = (float) $session->opening_cash;
+        $cashIn = $payments + $external + $revenues;
+        $cashOut = $settlements + $expenses + $refunds;
+
+        return [
+            'opening' => $opening,
+            'payments' => round($payments, 2),
+            'external' => round($external, 2),
+            'revenues' => round($revenues, 2),
+            'settlements' => round($settlements, 2),
+            'expenses' => round($expenses, 2),
+            'refunds' => round($refunds, 2),
+            'cash_in' => round($cashIn, 2),
+            'cash_out' => round($cashOut, 2),
+            'expected' => round($opening + $cashIn - $cashOut, 2),
+        ];
+    }
+
+    /**
+     * What should be in the drawer: opening cash + cash payments + cash
+     * external collections + cash revenues − seller settlements − expenses −
+     * cash refunds, all taken by this drawer session.
+     */
+    public function expectedCash(TerminalSession $session): float
+    {
+        return $this->breakdown($session)['expected'];
     }
 }

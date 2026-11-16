@@ -15,6 +15,7 @@ use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
 use App\Filament\Widgets\Returns\ShiftReturnsTable;
+use App\Filament\Widgets\Terminals\PeriodShiftDrawersTable;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -95,6 +96,8 @@ class PeriodShiftReport extends BaseDashboard
             PeriodShiftMoneyInfoStats::class,
             PeriodShiftOrdersStats::class,
             PeriodShiftDoneOrdersStats::class,
+            // Drawers table only while multiple terminals are on.
+            ...(PeriodShiftDrawersTable::canView() ? [PeriodShiftDrawersTable::class] : []),
             PeriodShiftOrdersTable::class,
             ShiftReturnsTable::class,
             PeriodShiftCreditCollectionsTable::class,

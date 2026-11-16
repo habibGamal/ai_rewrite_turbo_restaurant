@@ -35,9 +35,10 @@ class ShiftMoneyExpensesTable extends BaseWidget
         $shiftId = $this->selectedShift()->id ?? 0;
 
         return $table
-            ->query(Expense::query()->where('shift_id', $shiftId)->with('expenceType'))
+            ->query(Expense::query()->where('shift_id', $shiftId)->with(['expenceType', 'terminalSession.terminal']))
             ->columns([
                 TextColumn::make('expenceType.name')->label('نوع المصروف'),
+                $this->drawerColumn(),
                 TextColumn::make('amount')
                     ->label('المبلغ')
                     ->money('EGP')
@@ -67,6 +68,7 @@ class ShiftMoneyExpensesTable extends BaseWidget
                         'expence_type_id' => $record->expence_type_id,
                         'amount' => $record->amount,
                         'notes' => $record->notes,
+                        'terminal_session_id' => $record->getAttribute('terminal_session_id'),
                     ])
                     ->schema($this->formSchema())
                     ->action(function (Expense $record, array $data): void {
@@ -117,6 +119,7 @@ class ShiftMoneyExpensesTable extends BaseWidget
                 ->label('ملاحظات')
                 ->rows(2)
                 ->maxLength(255),
+            $this->drawerField(),
             $this->reasonField(),
         ];
     }

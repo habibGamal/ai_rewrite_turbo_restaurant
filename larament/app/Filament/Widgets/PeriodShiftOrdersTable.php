@@ -8,6 +8,7 @@ use App\Filament\Exports\PeriodShiftOrdersExporter;
 use App\Filament\Widgets\Concerns\ScopedOrderPayments;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
@@ -58,7 +59,7 @@ class PeriodShiftOrdersTable extends BaseWidget
         $scope = $this->shiftsReportService->shiftIdsQuery($startDate, $endDate, $shiftIds);
 
         $query = Order::query()
-            ->with(['customer', 'user', 'shift', ...$this->scopedPaymentsEagerLoad($scope)])
+            ->with(['customer', 'user', 'terminal', 'shift', ...$this->scopedPaymentsEagerLoad($scope)])
             ->whereIn('shift_id', clone $scope);
 
         return $table
@@ -73,7 +74,7 @@ class PeriodShiftOrdersTable extends BaseWidget
                     ->exporter(PeriodShiftOrdersExporter::class)
                     // The exporter scopes payments itself (from these options), so the export job gets a
                     // plain eager load instead of the table's closure-constrained one.
-                    ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['customer', 'user', 'shift', 'payments']))
+                    ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['customer', 'user', 'terminal', 'shift', 'payments']))
                     ->options(['scope' => [$startDate, $endDate, $shiftIds]])
                     ->fileName(fn () => 'period-shift-orders-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
@@ -215,6 +216,13 @@ class PeriodShiftOrdersTable extends BaseWidget
                     ->color('gray')
                     ->toggleable(),
 
+                TextColumn::make('terminal.name')
+                    ->label('الدرج')
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
+
                 TextColumn::make('created_at')
                     ->label('وقت الإنشاء')
                     ->dateTime('d/m/Y H:i')
@@ -230,6 +238,11 @@ class PeriodShiftOrdersTable extends BaseWidget
                 SelectFilter::make('type')
                     ->label('النوع')
                     ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
+
+                SelectFilter::make('terminal_id')
+                    ->label('الدرج')
+                    ->relationship('terminal', 'name')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled()),
 
                 $this->scopedPaymentMethodFilter($scope),
 

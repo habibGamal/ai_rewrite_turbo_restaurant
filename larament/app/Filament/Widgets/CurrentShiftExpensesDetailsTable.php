@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
 use App\Models\Expense;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\ExportAction;
 use Filament\Forms\Components\TextInput;
@@ -38,7 +39,7 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
         } else {
             $expenseQuery = Expense::query()
                 ->where('shift_id', $currentShift->id)
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         }
 
@@ -69,6 +70,12 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
+
+                TextColumn::make('terminalSession.terminal.name')
+                    ->label('الدرج')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
 
                 TextColumn::make('amount')
                     ->label('المبلغ')

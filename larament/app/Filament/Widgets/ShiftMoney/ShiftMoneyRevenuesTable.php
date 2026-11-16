@@ -39,9 +39,10 @@ class ShiftMoneyRevenuesTable extends BaseWidget
         $shiftId = $this->selectedShift()->id ?? 0;
 
         return $table
-            ->query(Revenue::query()->where('shift_id', $shiftId)->with(['revenueType', 'user']))
+            ->query(Revenue::query()->where('shift_id', $shiftId)->with(['revenueType', 'user', 'terminalSession.terminal']))
             ->columns([
                 TextColumn::make('revenueType.name')->label('بند الإيراد'),
+                $this->drawerColumn(),
                 TextColumn::make('amount')
                     ->label('المبلغ')
                     ->money('EGP')
@@ -74,6 +75,7 @@ class ShiftMoneyRevenuesTable extends BaseWidget
                         'amount' => $record->amount,
                         'method' => $record->method->value,
                         'notes' => $record->notes,
+                        'terminal_session_id' => $record->getAttribute('terminal_session_id'),
                     ])
                     ->schema($this->formSchema())
                     ->action(function (Revenue $record, array $data): void {
@@ -134,6 +136,7 @@ class ShiftMoneyRevenuesTable extends BaseWidget
                 ->label('ملاحظات')
                 ->rows(2)
                 ->maxLength(255),
+            $this->drawerField(),
             $this->reasonField(),
         ];
     }
