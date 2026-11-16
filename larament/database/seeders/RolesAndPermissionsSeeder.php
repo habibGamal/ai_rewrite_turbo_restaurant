@@ -197,6 +197,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             'نقطة البيع والعمليات (POS)' => [
                 'pos.access' => 'الدخول لنقطة البيع (POS)',
+                'user.badge_login' => 'الدخول لنقطة البيع بالبادج',
                 'shift.start' => 'فتح وردية جديدة',
                 'shift.end' => 'إنهاء الوردية',
                 'order.create' => 'إنشاء وحفظ الطلبات',
@@ -306,6 +307,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'order.add_equipment',
                 'terminal.open',
                 'terminal.close',
+                'user.badge_login',
                 ...$tabCatalog,
             ],
             'kitchen' => ['kitchen.access'],

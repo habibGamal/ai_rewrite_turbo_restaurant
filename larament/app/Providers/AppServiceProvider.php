@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\BadgeService;
 use App\Auth\VendorAwareUserProvider;
 use App\Broadcasting\ResilientBroadcastManager;
 use App\Costing\CostHistoryRecorder;
@@ -53,6 +54,7 @@ use Filament\Actions\Imports\Jobs\ImportCsv as BaseImportCsv;
 use Filament\Auth\Http\Responses\LoginResponse;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Events\TransactionRolledBack;
@@ -103,6 +105,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // A password login clears the POS-only mark a badge login leaves.
+        Event::listen(Login::class, function (): void {
+            if (app()->bound('session')) {
+                session()->forget(BadgeService::SESSION_KEY);
+            }
+        });
 
         Auth::provider('vendor-aware', fn ($app, array $config): VendorAwareUserProvider => new VendorAwareUserProvider($app['hash'], $config['model']));
 

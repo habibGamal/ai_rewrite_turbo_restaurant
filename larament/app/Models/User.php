@@ -65,6 +65,7 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'badge_pin',
     ];
 
     /**
@@ -75,6 +76,8 @@ class User extends Authenticatable implements FilamentUser
     protected $hidden = [
         'password',
         'remember_token',
+        'badge_hash',
+        'badge_pin',
     ];
 
     /**
@@ -88,6 +91,8 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_vendor' => 'boolean',
+            'badge_issued_at' => 'datetime',
+            'badge_pin' => 'hashed',
         ];
     }
 
