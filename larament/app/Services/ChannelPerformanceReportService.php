@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Services\Reports\Channels\ChannelReportFilters;
 use App\Services\Reports\ReportOrderTypesService;
@@ -386,6 +387,83 @@ class ChannelPerformanceReportService
         }
 
         return $grid;
+    }
+
+    /**
+     * Best-selling products per channel by item value (order_items.total,
+     * before the order-level discount), with each one's share of the
+     * channel's item value.
+     *
+     * @return array<string, list<array{product_id: int, name: string, quantity: float, sales: float, share: float}>>
+     */
+    public function topProducts(ChannelReportFilters $filters, int $limit = 10, string $by = 'sales'): array
+    {
+        $rows = $this->ordersQuery($filters)
+            ->toBase()
+            ->join('order_items', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'products.id', '=', 'order_items.product_id')
+            ->select('orders.type', 'order_items.product_id', 'products.name')
+            ->selectRaw('COALESCE(SUM(order_items.quantity), 0) AS quantity')
+            ->selectRaw('COALESCE(SUM(order_items.total), 0) AS sales')
+            ->groupBy('orders.type', 'order_items.product_id', 'products.name')
+            ->get();
+
+        $channelSales = [];
+        foreach ($rows as $row) {
+            $channelSales[(string) $row->type] = ($channelSales[(string) $row->type] ?? 0) + (float) $row->sales;
+        }
+
+        $key = $by === 'quantity' ? 'quantity' : 'sales';
+        $result = [];
+        foreach ($rows->groupBy('type') as $code => $products) {
+            $result[(string) $code] = $products
+                ->sortByDesc(fn ($row) => (float) $row->{$key})
+                ->take($limit)
+                ->map(fn ($row) => [
+                    'product_id' => (int) $row->product_id,
+                    'name' => (string) $row->name,
+                    'quantity' => round((float) $row->quantity, 3),
+                    'sales' => round((float) $row->sales, 2),
+                    'share' => self::ratio((float) $row->sales, $channelSales[(string) $code]),
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $result;
+    }
+
+    /**
+     * How each channel's completed orders were paid, by payment method.
+     *
+     * @return array<string, array{total: float, methods: array<string, float>}>
+     */
+    public function paymentMix(ChannelReportFilters $filters): array
+    {
+        $rows = $this->ordersQuery($filters)
+            ->toBase()
+            ->join('payments', 'payments.order_id', '=', 'orders.id')
+            ->select('orders.type', 'payments.method')
+            ->selectRaw('COALESCE(SUM(payments.amount), 0) AS amount')
+            ->groupBy('orders.type', 'payments.method')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $code = (string) $row->type;
+            $result[$code] ??= ['total' => 0.0, 'methods' => []];
+            $result[$code]['methods'][(string) $row->method] = round((float) $row->amount, 2);
+            $result[$code]['total'] = round($result[$code]['total'] + (float) $row->amount, 2);
+        }
+
+        // Methods in a fixed order: cash, card, Talabat card, then anything else.
+        $order = array_flip(array_map(fn (PaymentMethod $method) => $method->value, PaymentMethod::cases()));
+        foreach ($result as $code => $mix) {
+            uksort($mix['methods'], fn (string $a, string $b) => ($order[$a] ?? 99) <=> ($order[$b] ?? 99));
+            $result[$code]['methods'] = $mix['methods'];
+        }
+
+        return $result;
     }
 
     /**

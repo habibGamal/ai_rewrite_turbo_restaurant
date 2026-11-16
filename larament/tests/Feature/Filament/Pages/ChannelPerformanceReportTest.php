@@ -2,21 +2,29 @@
 
 use App\Core\Orders\SalesBreakdown;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Exports\ChannelComparisonExport;
 use App\Filament\Pages\Reports\ChannelPerformanceReport;
 use App\Filament\Widgets\ChannelChangeWidget;
 use App\Filament\Widgets\ChannelComparisonTableWidget;
 use App\Filament\Widgets\ChannelHeatmapWidget;
 use App\Filament\Widgets\ChannelKpisWidget;
+use App\Filament\Widgets\ChannelPaymentsWidget;
+use App\Filament\Widgets\ChannelProductsWidget;
 use App\Filament\Widgets\ChannelShareWidget;
 use App\Filament\Widgets\ChannelTrendWidget;
 use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -338,5 +346,64 @@ describe('time', function () {
 
         expect($widgets)->not->toContain(ChannelChangeWidget::class)
             ->toContain(ChannelTrendWidget::class);
+    });
+});
+
+describe('details', function () {
+    it('ranks products per channel with their share of the channel', function () {
+        $shawarma = Product::factory()->create(['name' => 'شاورما']);
+        $fries = Product::factory()->create(['name' => 'بطاطس']);
+        $delivery = channelOrder('delivery', 400);
+        OrderItem::factory()->create(['order_id' => $delivery->id, 'product_id' => $shawarma->id, 'quantity' => 2, 'price' => 150, 'total' => 300]);
+        OrderItem::factory()->create(['order_id' => $delivery->id, 'product_id' => $fries->id, 'quantity' => 5, 'price' => 20, 'total' => 100]);
+        $dineIn = channelOrder('dine_in', 40);
+        OrderItem::factory()->create(['order_id' => $dineIn->id, 'product_id' => $fries->id, 'quantity' => 2, 'price' => 20, 'total' => 40]);
+
+        $bySales = $this->service->topProducts(last30());
+        $byQuantity = $this->service->topProducts(last30(), 10, 'quantity');
+
+        expect(array_column($bySales['delivery'], 'name'))->toBe(['شاورما', 'بطاطس'])
+            ->and($bySales['delivery'][0]['share'])->toBe(75.0)
+            ->and(array_column($byQuantity['delivery'], 'name'))->toBe(['بطاطس', 'شاورما'])
+            ->and($bySales['dine_in'][0])->toMatchArray(['name' => 'بطاطس', 'quantity' => 2.0, 'sales' => 40.0, 'share' => 100.0]);
+
+        livewire(ChannelProductsWidget::class, ['pageFilters' => []])
+            ->assertSee('شاورما')
+            ->set('channel', 'dine_in')
+            ->assertDontSee('شاورما')
+            ->assertSee('بطاطس');
+    });
+
+    it('splits each channel by payment method', function () {
+        $delivery = channelOrder('delivery', 300);
+        Payment::factory()->create(['order_id' => $delivery->id, 'shift_id' => $delivery->shift_id, 'method' => PaymentMethod::CASH, 'amount' => 200]);
+        Payment::factory()->create(['order_id' => $delivery->id, 'shift_id' => $delivery->shift_id, 'method' => PaymentMethod::CARD, 'amount' => 100]);
+
+        $mix = $this->service->paymentMix(last30());
+
+        expect($mix['delivery'])->toBe(['total' => 300.0, 'methods' => ['cash' => 200.0, 'card' => 100.0]]);
+
+        livewire(ChannelPaymentsWidget::class, ['pageFilters' => []])
+            ->assertSee('نقدي')
+            ->assertSee('66.7%')
+            ->assertDontSee('بطاقة طلبات');
+    });
+
+    it('exports the comparison table to Excel', function () {
+        Excel::fake();
+        channelOrder('delivery', 100);
+        channelOrder('dine_in', 300);
+
+        livewire(ChannelPerformanceReport::class)->callAction('exportChannels');
+
+        Excel::assertDownloaded('channels-'.now()->subDays(29)->toDateString().'-'.now()->toDateString().'.xlsx', function (ChannelComparisonExport $export) {
+            $lines = $export->array();
+
+            return count($lines) === 3
+                && $lines[0][0] === 'صالة'
+                && $lines[2][0] === 'الإجمالي'
+                && $lines[2][2] === 400.0
+                && count($export->headings()) === 19;
+        });
     });
 });
