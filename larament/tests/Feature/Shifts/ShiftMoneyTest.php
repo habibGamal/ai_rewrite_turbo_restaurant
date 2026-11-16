@@ -13,6 +13,7 @@ use App\Filament\Widgets\PeriodShiftExpensesTable;
 use App\Filament\Widgets\PeriodShiftRevenuesDetailsTable;
 use App\Filament\Widgets\ShiftMoney\ShiftMoneyExpensesTable;
 use App\Filament\Widgets\ShiftMoney\ShiftMoneyRevenuesTable;
+use App\Filament\Widgets\ShiftMoney\ShiftMoneySummaryStats;
 use App\Models\AuditLog;
 use App\Models\ExpenceType;
 use App\Models\Expense;
@@ -101,7 +102,7 @@ describe('ShiftMoneyService', function () {
         expect($this->service->summary($shift)['expected_cash'])->toBe(60.0);
     });
 
-    it('recomputes expected cash and shortage of a closed shift and keeps counted cash', function () {
+    it('recomputes expected cash of a closed shift and leaves the legacy count and shortage alone', function () {
         $shift = closedShiftWithMoney();
 
         $this->service->addExpense($shift, ['expence_type_id' => $this->type->id, 'amount' => 20], 'فاتورة نسيها الكاشير');
@@ -109,8 +110,8 @@ describe('ShiftMoneyService', function () {
         $shift->refresh();
         expect((float) $shift->end_cash)->toBe(100.0)
             ->and((float) $shift->real_cash)->toBe(115.0)
-            ->and((float) $shift->losses_amount)->toBe(-15.0)
-            ->and($shift->has_deficit)->toBeFalse()
+            ->and((float) $shift->losses_amount)->toBe(5.0)
+            ->and($shift->has_deficit)->toBeTrue()
             ->and($shift->money_edited_count)->toBe(1)
             ->and($shift->money_edited_at)->not->toBeNull();
 
@@ -118,7 +119,8 @@ describe('ShiftMoneyService', function () {
         expect($shiftLog->reason)->toBe('فاتورة نسيها الكاشير')
             ->and((float) $shiftLog->old_values['end_cash'])->toBe(120.0)
             ->and((float) $shiftLog->new_values['end_cash'])->toBe(100.0)
-            ->and($shiftLog->new_values)->not->toHaveKey('real_cash');
+            ->and($shiftLog->new_values)->not->toHaveKey('real_cash')
+            ->and($shiftLog->new_values)->not->toHaveKey('losses_amount');
     });
 
     it('moves expected cash for cash revenues only', function () {
@@ -126,9 +128,7 @@ describe('ShiftMoneyService', function () {
         $revenue = $shift->revenues()->first();
 
         $this->service->updateRevenue($revenue, ['amount' => 80], 'تصحيح المبلغ');
-        expect((float) $shift->fresh()->end_cash)->toBe(150.0)
-            ->and((float) $shift->fresh()->losses_amount)->toBe(35.0)
-            ->and($shift->fresh()->has_deficit)->toBeTrue();
+        expect((float) $shift->fresh()->end_cash)->toBe(150.0);
 
         $this->service->updateRevenue($revenue->fresh(), ['method' => 'card'], 'كان فيزا');
         expect((float) $shift->fresh()->end_cash)->toBe(70.0);
@@ -152,8 +152,7 @@ describe('ShiftMoneyService', function () {
 
         $this->service->deleteExpense($expense->fresh(), 'مش مصروف');
         expect(Expense::query()->count())->toBe(0)
-            ->and((float) $shift->fresh()->end_cash)->toBe(150.0)
-            ->and((float) $shift->fresh()->losses_amount)->toBe(35.0);
+            ->and((float) $shift->fresh()->end_cash)->toBe(150.0);
     });
 
     it('requires a reason on a closed shift', function () {
@@ -225,6 +224,16 @@ describe('shift money page', function () {
 
         app(FeatureService::class)->enable(OptionalFeature::REVENUES);
         expect($page->instance()->getWidgets())->toContain(ShiftMoneyRevenuesTable::class);
+    });
+
+    it('shows no counted cash or shortage card for a closed shift', function () {
+        $shift = closedShiftWithMoney();
+
+        livewire(ShiftMoneySummaryStats::class, ['pageFilters' => ['shift_id' => $shift->id]])
+            ->assertSee('النقدية المتوقعة')
+            ->assertDontSee('النقدية الفعلية')
+            ->assertDontSee('العجز')
+            ->assertDontSee('الزيادة');
     });
 
     it('adds an expense to a closed shift from the table with a reason', function () {

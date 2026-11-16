@@ -9,7 +9,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use Livewire\Attributes\On;
 
 /**
- * Opening, expected and counted cash and the shortage of the picked shift,
+ * Opening and expected cash, expenses and revenues of the picked shift,
  * refreshed after every change on the page.
  */
 class ShiftMoneySummaryStats extends BaseWidget
@@ -55,20 +55,12 @@ class ShiftMoneySummaryStats extends BaseWidget
         $summary = $this->shiftMoney()->summary($shift);
         $money = fn (?float $value): string => $value === null ? '—' : number_format($value, 2).' جنيه';
 
-        $shortage = $summary['shortage'];
-        $shortageLabel = $shortage === null ? 'العجز / الزيادة' : ($shortage > 0 ? 'العجز' : ($shortage < 0 ? 'الزيادة' : 'العجز / الزيادة'));
-
         $stats = [
             Stat::make('نقدية البداية', $money($summary['start_cash']))
                 ->color('gray'),
             Stat::make('النقدية المتوقعة', $money($summary['expected_cash']))
                 ->description($summary['closed'] ? 'بعد آخر تعديل' : 'حتى الآن')
                 ->color('info'),
-            Stat::make('النقدية الفعلية (المعدودة)', $money($summary['counted_cash']))
-                ->description($summary['closed'] ? 'لا تتغير بالتعديل' : 'الوردية لم تغلق بعد')
-                ->color('gray'),
-            Stat::make($shortageLabel, $money($shortage === null ? null : abs($shortage)))
-                ->color($shortage === null || $shortage == 0.0 ? 'gray' : ($shortage > 0 ? 'danger' : 'success')),
             Stat::make('المصروفات', $money($summary['expenses']))
                 ->color('danger'),
         ];

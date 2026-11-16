@@ -24,8 +24,8 @@ use Illuminate\Validation\ValidationException;
  * Every change runs in one transaction with the shift row locked, writes an
  * audit_logs row (context shift_money), and when the shift is already closed:
  * needs shift_money.edit_closed and a reason, recomputes the shift's expected
- * cash (end_cash), shortage (losses_amount) and has_deficit, and marks it as
- * edited. What the cashier counted (real_cash) is never changed.
+ * cash (end_cash) and marks it as edited. Counted cash and shortage
+ * (real_cash, losses_amount, has_deficit) are legacy and never touched here.
  */
 class ShiftMoneyService
 {
@@ -144,24 +144,20 @@ class ShiftMoneyService
     }
 
     /**
-     * The figures the page header shows: opening, expected, counted cash and
-     * the shortage (positive) or surplus (negative). For an open shift the
-     * expected cash is live and nothing is counted yet.
+     * The figures the page header shows: opening and expected cash, expenses
+     * and revenues. For an open shift the expected cash is live.
      *
-     * @return array{start_cash: float, expected_cash: float, counted_cash: ?float, shortage: ?float, closed: bool, expenses: float, revenues: float}
+     * @return array{start_cash: float, expected_cash: float, closed: bool, expenses: float, revenues: float}
      */
     public function summary(Shift $shift): array
     {
         $stats = $this->reports->calculateShiftStats($shift);
         $closed = $this->isClosed($shift);
         $expected = round((float) $stats['availableCash'], 2);
-        $counted = $shift->real_cash !== null ? round((float) $shift->real_cash, 2) : null;
 
         return [
             'start_cash' => round((float) $shift->start_cash, 2),
             'expected_cash' => $expected,
-            'counted_cash' => $closed ? $counted : null,
-            'shortage' => $closed && $counted !== null ? round($expected - $counted, 2) : null,
             'closed' => $closed,
             'expenses' => round((float) $stats['expenses'], 2),
             'revenues' => round((float) $stats['revenues'], 2),
@@ -214,8 +210,8 @@ class ShiftMoneyService
     }
 
     /**
-     * New expected cash from the same formula the shift was closed with; the
-     * counted cash stays, so the shortage moves by the change.
+     * New expected cash from the same formula the shift was closed with.
+     * Counted cash and shortage are legacy and no longer kept up to date.
      */
     private function recompute(Shift $shift, string $reason): void
     {
@@ -227,12 +223,6 @@ class ShiftMoneyService
             'money_edited_at' => now(),
             'money_edited_count' => (int) $shift->money_edited_count + 1,
         ];
-
-        if ($shift->real_cash !== null) {
-            $difference = round($endCash - (float) $shift->real_cash, 2);
-            $attributes['losses_amount'] = $difference;
-            $attributes['has_deficit'] = $difference > 0;
-        }
 
         $shift->forceFill($attributes)->save();
 
