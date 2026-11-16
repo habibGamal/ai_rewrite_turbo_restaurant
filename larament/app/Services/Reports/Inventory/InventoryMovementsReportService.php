@@ -168,7 +168,8 @@ class InventoryMovementsReportService
             ->selectRaw("{$bucket} as bucket")
             ->selectRaw('COALESCE(SUM(m.total_cost), 0) as value')
             ->selectRaw('COUNT(*) as movements')
-            ->groupByRaw("{$bucket}, COALESCE(m.referenceable_type, ''), COALESCE(m.referenceable_id, -m.id)");
+            ->groupBy('bucket')
+            ->groupByRaw("COALESCE(m.referenceable_type, ''), COALESCE(m.referenceable_id, -m.id)");
 
         $rows = DB::query()->fromSub($documents, 'd')
             ->selectRaw('d.bucket, SUM(d.value) as value, SUM(d.movements) as movements, COUNT(*) as documents')
@@ -178,7 +179,7 @@ class InventoryMovementsReportService
 
         $items = $period()
             ->selectRaw("{$bucket} as bucket, COUNT(DISTINCT m.product_id) as items")
-            ->groupByRaw($bucket)
+            ->groupBy('bucket')
             ->pluck('items', 'bucket');
 
         $totals = [];

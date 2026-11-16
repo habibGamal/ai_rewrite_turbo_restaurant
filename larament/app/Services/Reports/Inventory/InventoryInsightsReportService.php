@@ -263,7 +263,7 @@ class InventoryInsightsReportService
         $this->movements->filterCategory($query, $filters, 'i.product_id');
 
         $rows = $query
-            ->selectRaw('i.reason, COUNT(*) as lines, COUNT(DISTINCT i.product_id) as items, COALESCE(SUM(i.total), 0) as value')
+            ->selectRaw('i.reason, COUNT(*) as `lines`, COUNT(DISTINCT i.product_id) as items, COALESCE(SUM(i.total), 0) as value')
             ->groupBy('i.reason')
             ->orderByDesc('value')
             ->get();
@@ -484,14 +484,14 @@ class InventoryInsightsReportService
         $this->movements->filterCategory($query, $filters, 'i.product_id');
 
         $rows = $query
-            ->selectRaw("COALESCE(NULLIF(TRIM(s.destination), ''), 'بدون جهة') as destination, COUNT(DISTINCT s.id) as issues, COALESCE(SUM(i.total_cost), 0) as value")
-            ->groupByRaw("COALESCE(NULLIF(TRIM(s.destination), ''), 'بدون جهة')")
+            ->selectRaw("COALESCE(NULLIF(TRIM(s.destination), ''), 'بدون جهة') as destination_label, COUNT(DISTINCT s.id) as issues, COALESCE(SUM(i.total_cost), 0) as value")
+            ->groupBy('destination_label')
             ->orderByDesc('value')
             ->get();
         $total = $rows->sum(fn ($row) => (float) $row->value);
 
         return $rows->map(fn ($row) => [
-            'destination' => (string) $row->destination,
+            'destination' => (string) $row->destination_label,
             'issues' => (int) $row->issues,
             'value' => round((float) $row->value, 2),
             'share' => $total > 0 ? round((float) $row->value * 100 / $total, 1) : 0.0,
