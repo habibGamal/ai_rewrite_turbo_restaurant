@@ -331,7 +331,11 @@ describe('expenses and revenues report', function () {
         Revenue::factory()->create(['shift_id' => $shift->id, 'revenue_type_id' => $rent->id, 'amount' => 100]);
         Revenue::factory()->card()->create(['shift_id' => $shift->id, 'revenue_type_id' => $rent->id, 'amount' => 30]);
         Revenue::factory()->create(['shift_id' => $outside->id, 'revenue_type_id' => $rent->id, 'amount' => 999]);
-        Expense::factory()->create(['shift_id' => $shift->id, 'expence_type_id' => $this->type->id, 'amount' => 60]);
+        Expense::factory()->create(['shift_id' => $shift->id, 'expence_type_id' => $this->type->id, 'amount' => 45]);
+        $salary = ExpenceType::query()->create(['name' => 'رواتب']);
+        Expense::factory()->create(['shift_id' => $shift->id, 'expence_type_id' => $salary->id, 'amount' => 10]);
+        Expense::factory()->create(['shift_id' => $shift->id, 'expence_type_id' => $salary->id, 'amount' => 5]);
+        Expense::factory()->create(['shift_id' => $outside->id, 'expence_type_id' => $salary->id, 'amount' => 999]);
 
         $scope = app(ShiftsReportService::class)->shiftIdsQuery(now()->subDays(6)->toDateString(), now()->toDateString());
         $summary = app(ExpensesRevenuesReportService::class)->summary($scope);
@@ -342,6 +346,10 @@ describe('expenses and revenues report', function () {
             ->and($summary['orders']['parts'])->toMatchArray(['الأصناف' => 200.0, 'الخدمة' => 20.0, 'الخصم' => -10.0, 'رسوم إضافية' => 15.0, 'المعدات' => 25.0])
             ->and($summary['revenue_types'])->toBe([['name' => 'إيجار', 'count' => 2, 'cash' => 100.0, 'card' => 30.0, 'total' => 130.0]])
             ->and($summary['total_revenues'])->toBe(340.0)
+            ->and($summary['expense_types'])->toBe([
+                ['name' => $this->type->name, 'count' => 1, 'cash' => 45.0, 'card' => 0.0, 'total' => 45.0],
+                ['name' => 'رواتب', 'count' => 2, 'cash' => 15.0, 'card' => 0.0, 'total' => 15.0],
+            ])
             ->and($summary['expenses'])->toBe(60.0)
             ->and($summary['net'])->toBe(280.0);
     });
@@ -350,10 +358,14 @@ describe('expenses and revenues report', function () {
         app(FeatureService::class)->enable(OptionalFeature::REVENUES);
         $shift = Shift::factory()->closed()->create(['start_at' => now()->subDay()]);
         Revenue::factory()->create(['shift_id' => $shift->id, 'amount' => 100]);
+        $fuel = ExpenceType::query()->create(['name' => 'وقود']);
+        Expense::factory()->create(['shift_id' => $shift->id, 'expence_type_id' => $fuel->id, 'amount' => 37]);
 
         livewire(ExpensesRevenuesSummaryWidget::class, ['pageFilters' => ['filterType' => 'shifts', 'shifts' => [$shift->id]]])
             ->assertSuccessful()
             ->assertSee('إيرادات الطلبات')
+            ->assertSee('وقود')
+            ->assertSee('37.00')
             ->assertSee('100.00');
     });
 });

@@ -25,6 +25,7 @@ class ExpensesRevenuesReportService
      *     revenue_types: list<array{name: string, count: int, cash: float, card: float, total: float}>,
      *     other_revenues: float,
      *     total_revenues: float,
+     *     expense_types: list<array{name: string, count: int, cash: float, card: float, total: float}>,
      *     expenses: float,
      *     net: float,
      * }
@@ -69,7 +70,29 @@ class ExpensesRevenuesReportService
             ->all();
 
         $other = round(array_sum(array_column($types, 'total')), 2);
-        $expenses = round((float) DB::table('expenses')->whereIn('shift_id', clone $shiftIds)->sum('amount'), 2);
+        // Expenses have no payment method: they are paid from the drawer, so
+        // the whole amount is cash (it is what expected cash subtracts).
+        $expenseTypes = DB::table('expenses')
+            ->leftJoin('expence_types', 'expence_types.id', '=', 'expenses.expence_type_id')
+            ->whereIn('expenses.shift_id', clone $shiftIds)
+            ->groupBy('expenses.expence_type_id', 'expence_types.name')
+            ->orderByDesc(DB::raw('SUM(expenses.amount)'))
+            ->orderBy('expence_types.name')
+            ->select('expence_types.name')
+            ->selectRaw('COUNT(*) as rows_count')
+            ->selectRaw('COALESCE(SUM(expenses.amount), 0) as total_amount')
+            ->get()
+            ->map(fn ($row): array => [
+                'name' => (string) ($row->name ?? 'بدون نوع'),
+                'count' => (int) $row->rows_count,
+                'cash' => round((float) $row->total_amount, 2),
+                'card' => 0.0,
+                'total' => round((float) $row->total_amount, 2),
+            ])
+            ->values()
+            ->all();
+
+        $expenses = round(array_sum(array_column($expenseTypes, 'total')), 2);
         $totalRevenues = round($ordersNet + $other, 2);
 
         return [
@@ -83,6 +106,7 @@ class ExpensesRevenuesReportService
             'revenue_types' => $types,
             'other_revenues' => $other,
             'total_revenues' => $totalRevenues,
+            'expense_types' => $expenseTypes,
             'expenses' => $expenses,
             'net' => round($totalRevenues - $expenses, 2),
         ];
