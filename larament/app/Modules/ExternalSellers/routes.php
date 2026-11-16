@@ -14,5 +14,4 @@ Route::middleware(['web', 'auth', 'shift', 'permission:pos.access', 'order.tab']
     ->group(function () {
         Route::post('/{order}/external', [ExternalOrderController::class, 'save'])->name('external.save');
         Route::delete('/{order}/external/{external}/items/{item}', [ExternalOrderController::class, 'removeLine'])->name('external.removeLine');
-        Route::post('/{order}/external/{external}/fulfill', [ExternalOrderController::class, 'fulfill'])->name('external.fulfill');
     });

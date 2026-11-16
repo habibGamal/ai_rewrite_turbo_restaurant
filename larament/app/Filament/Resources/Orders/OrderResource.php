@@ -384,12 +384,8 @@ class OrderResource extends Resource
                                     ->label('البائع الخارجي'),
                                 TextEntry::make('status')
                                     ->label('الحالة')
-                                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                                        'fulfilled' => 'تم التنفيذ',
-                                        'cancelled' => 'ملغي',
-                                        'pending' => 'معلق',
-                                        default => $state,
-                                    })
+                                    ->formatStateUsing(fn (string $state): string => $state === 'cancelled' ? 'ملغي' : 'نشط')
+                                    ->color(fn (string $state): string => $state === 'cancelled' ? 'danger' : 'success')
                                     ->badge(),
                                 TextEntry::make('total')
                                     ->label('الإجمالي')

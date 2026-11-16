@@ -312,8 +312,6 @@ it('retains historical external order details, accounting, receipts, and sync pa
     $external = app(ExternalOrderService::class)->save($order->id, $seller->id, [
         ['product_id' => $product->id, 'quantity' => 2],
     ]);
-    app(ExternalOrderService::class)->fulfill($order->id, $external->id);
-
     // Complete order (collects 100 restaurant + 90 external cash) and settle seller (pays 90)
     app(OrderCompletionService::class)->complete($order, ['cash' => 190]);
     app(ExternalSellerSettlementService::class)->pay($seller->id, 90.0, 'تسوية نهائية');

@@ -2,13 +2,12 @@
 
 namespace App\Modules\ExternalSellers\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-
 use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
+use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Services\FeatureService;
 use App\Modules\ExternalSellers\Services\ExternalOrderService;
+use App\Services\FeatureService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -47,18 +46,6 @@ class ExternalOrderController extends Controller
             $this->service->removeLine($order->id, $external, $item);
 
             return back()->with('success', 'تم حذف الصنف الخارجي');
-        } catch (OrderException $exception) {
-            return back()->withErrors(['error' => $exception->getMessage()]);
-        }
-    }
-
-    public function fulfill(Order $order, int $external): RedirectResponse
-    {
-        try {
-            app(FeatureService::class)->assertEnabled(OptionalFeature::OUTSOURCED_ORDERS);
-            $this->service->fulfill($order->id, $external);
-
-            return back()->with('success', 'تم تنفيذ الطلب الخارجي');
         } catch (OrderException $exception) {
             return back()->withErrors(['error' => $exception->getMessage()]);
         }

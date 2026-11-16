@@ -1,28 +1,34 @@
 <?php
 
+use App\Enums\OptionalFeature;
 use App\Enums\OrderStatus;
 use App\Exceptions\OrderException;
-use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
-use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\ExternalSellerResource;
 use App\Models\ExternalSeller;
 use App\Models\InventoryItem;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\User;
-use App\Orders\GuestBill;
-use App\Orders\Tenders;
-use App\Services\InventoryDailyAggregationService;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\ExternalSellerResource;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\EditExternalSeller;
+use App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager;
 use App\Modules\ExternalSellers\Services\ExternalOrderService;
 use App\Modules\ExternalSellers\Services\ExternalSellerSettlementService;
+use App\Orders\GuestBill;
+use App\Orders\ReceiptView;
+use App\Orders\Tenders;
+use App\Services\FeatureService;
+use App\Services\InventoryDailyAggregationService;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftsReportService;
 use App\Sync\Builders\OrderBuilder;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    app(\App\Services\FeatureService::class)->enable(\App\Enums\OptionalFeature::OUTSOURCED_ORDERS);
+    app(FeatureService::class)->enable(OptionalFeature::OUTSOURCED_ORDERS);
 });
 
 it('splits the guest bill while keeping restaurant money separate', function () {
@@ -145,14 +151,17 @@ it('renders external lines on both receipt forms and accounts for cash and settl
 
     foreach (['print.receipt-template', 'print.receipt-footer'] as $view) {
         $html = view($view, ['order' => $order->fresh(['items', 'payments', 'user'])])->render();
+        $text = preg_replace('/\s+/u', ' ', strip_tags($html));
         expect($html)->toContain('طلب خارجي — عربة الصوص')
-            ->toContain('إجمالي المطعم: 100.00')
-            ->toContain('المطلوب من العميل: 140.00');
+            ->and($text)->toContain('إجمالي المطعم 100.00')
+            ->toContain('المطلوب من العميل 140.00')
+            // The reference barcode comes after the seller lines and the amount due.
+            ->and(mb_strpos($text, 'الرقم المرجعي'))->toBeGreaterThan(mb_strpos($text, 'المطلوب من العميل'));
     }
     $header = view('print.receipt-header', [
         'order' => $order->fresh(['items', 'payments', 'user']),
         'items' => collect(),
-        'receiptView' => \App\Orders\ReceiptView::forOrder($order),
+        'receiptView' => ReceiptView::forOrder($order),
     ])->render();
     expect($header)->not->toContain('طلب خارجي — عربة الصوص')
         ->not->toContain('المطلوب من العميل');
@@ -230,7 +239,7 @@ it('completes an external-only order without changing stock', function () {
         ->and((float) $completed->payments()->sum('amount'))->toBe(0.0);
 });
 
-it('saves, fulfills and removes seller lines through the till and includes them in sync', function () {
+it('saves and removes seller lines through the till and includes them in sync', function () {
     $user = User::factory()->admin()->create();
     $shift = Shift::factory()->active()->create(['user_id' => $user->id]);
     $order = Order::factory()->create(['user_id' => $user->id, 'shift_id' => $shift->id, 'type' => 'takeaway', 'status' => OrderStatus::PROCESSING]);
@@ -248,8 +257,8 @@ it('saves, fulfills and removes seller lines through the till and includes them 
         ->has('sellers', 1)
         ->where('canAddExternalOrder', true)
         ->where('guestDue', round((float) $order->total + 40, 2)));
-    $this->post(route('orders.external.fulfill', [$order, $external->id]))->assertRedirect();
-    expect($external->fresh()->status)->toBe('fulfilled');
+    expect($external->fresh()->status)->toBe('pending')
+        ->and(Route::has('orders.external.fulfill'))->toBeFalse();
     $document = app(OrderBuilder::class)->build($order->uuid);
     expect($document['external_orders'][0]['seller_name'])->toBe('عربة الصوص')
         ->and($document['external_orders'][0]['items'][0]['name'])->toBe('صوص');
@@ -354,9 +363,9 @@ it('creates seller products through the relation manager', function () {
     $user = User::factory()->admin()->create();
     $seller = ExternalSeller::create(['name' => 'Seller', 'is_active' => true]);
     $this->actingAs($user);
-    Livewire::test(\App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers\ProductsRelationManager::class, [
+    Livewire::test(ProductsRelationManager::class, [
         'ownerRecord' => $seller,
-        'pageClass' => \App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\Pages\EditExternalSeller::class,
+        'pageClass' => EditExternalSeller::class,
     ])->callTableAction('create', data: ['name' => 'Sauce', 'price' => 12.5, 'is_active' => true])
         ->assertHasNoTableActionErrors();
     expect($seller->products()->where('name', 'Sauce')->exists())->toBeTrue();

@@ -1,21 +1,23 @@
 <?php
 
-use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount;
-use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount\SettlementsTable;
-use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
+use App\Enums\OptionalFeature;
 use App\Models\ExternalOrder;
 use App\Models\ExternalSeller;
 use App\Models\ExternalSellerSettlement;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Models\User;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccount\SettlementsTable;
+use App\Modules\ExternalSellers\Filament\Pages\ExternalSellerAccounts;
+use App\Services\FeatureService;
 use Carbon\Carbon;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    app(\App\Services\FeatureService::class)->enable(\App\Enums\OptionalFeature::OUTSOURCED_ORDERS);
+    app(FeatureService::class)->enable(OptionalFeature::OUTSOURCED_ORDERS);
     $this->admin = User::factory()->admin()->create();
     $this->shift = Shift::factory()->active()->create(['user_id' => $this->admin->id]);
 });
@@ -75,7 +77,7 @@ it('matches the stats and filtering example with seller عربة الصوص', fu
         'host_order_id' => $host1->id,
         'external_seller_id' => $seller->id,
         'seller_name' => $seller->name,
-        'status' => 'fulfilled',
+        'status' => 'pending',
         'total' => 40.00,
         'created_at' => Carbon::parse('2026-11-05 12:00:00'),
     ]);
@@ -99,7 +101,7 @@ it('matches the stats and filtering example with seller عربة الصوص', fu
         'host_order_id' => $host2->id,
         'external_seller_id' => $seller->id,
         'seller_name' => $seller->name,
-        'status' => 'fulfilled',
+        'status' => 'pending',
         'total' => 60.00,
         'created_at' => Carbon::parse('2026-11-15 14:00:00'),
     ]);
@@ -230,18 +232,18 @@ it('filters the orders table by status', function () {
     ]);
 
     $host2 = Order::factory()->create(['shift_id' => $this->shift->id, 'user_id' => $this->admin->id]);
-    $fulfilled = ExternalOrder::create([
+    $cancelled = ExternalOrder::create([
         'host_order_id' => $host2->id,
         'external_seller_id' => $seller->id,
         'seller_name' => $seller->name,
-        'status' => 'fulfilled',
+        'status' => 'cancelled',
         'total' => 75,
     ]);
 
     livewire(ExternalSellerAccount::class, ['record' => $seller->id])
         ->filterTable('status', 'pending')
         ->assertCanSeeTableRecords([$pending])
-        ->assertCanNotSeeTableRecords([$fulfilled]);
+        ->assertCanNotSeeTableRecords([$cancelled]);
 });
 
 it('filters the orders table by uncollected', function () {
