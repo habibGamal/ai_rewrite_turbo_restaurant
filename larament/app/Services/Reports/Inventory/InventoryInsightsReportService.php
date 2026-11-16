@@ -3,6 +3,7 @@
 namespace App\Services\Reports\Inventory;
 
 use App\Enums\MovementReason;
+use App\Enums\WasteReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\Stocktaking;
@@ -239,6 +240,43 @@ class InventoryInsightsReportService
                 'last_sale' => $row->last_sale ? substr((string) $row->last_sale, 0, 10) : null,
                 'days' => $row->last_sale ? (int) CarbonImmutable::parse(substr((string) $row->last_sale, 0, 10))->diffInDays($filters->end) : null,
             ])->all();
+    }
+
+    /**
+     * Closed waste records of the period split by the reason on each line
+     * (valued at the line's total). Lines without a reason are grouped too.
+     *
+     * @return list<array{reason: ?string, label: string, lines: int, items: int, value: float, share: float}>
+     */
+    public function wasteReasons(InventoryReportFilters $filters): array
+    {
+        $query = DB::table('wasted_items as i')
+            ->join('wastes as w', 'w.id', '=', 'i.waste_id')
+            ->whereNotNull('w.closed_at')
+            ->whereBetween('w.business_date', [$filters->startDate(), InventoryMovementsReportService::upTo($filters->endDate())]);
+        if ($filters->warehouseId !== null) {
+            $query->where('w.warehouse_id', $filters->warehouseId);
+        }
+        if ($filters->productId !== null) {
+            $query->where('i.product_id', $filters->productId);
+        }
+        $this->movements->filterCategory($query, $filters, 'i.product_id');
+
+        $rows = $query
+            ->selectRaw('i.reason, COUNT(*) as lines, COUNT(DISTINCT i.product_id) as items, COALESCE(SUM(i.total), 0) as value')
+            ->groupBy('i.reason')
+            ->orderByDesc('value')
+            ->get();
+        $total = $rows->sum(fn ($row) => (float) $row->value);
+
+        return $rows->map(fn ($row) => [
+            'reason' => $row->reason,
+            'label' => $row->reason === null ? 'بدون سبب' : (WasteReason::tryFrom($row->reason)?->getLabel() ?? $row->reason),
+            'lines' => (int) $row->lines,
+            'items' => (int) $row->items,
+            'value' => round((float) $row->value, 2),
+            'share' => $total > 0 ? round((float) $row->value * 100 / $total, 1) : 0.0,
+        ])->all();
     }
 
     // ------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Wastes;
 
+use App\Enums\WasteReason;
 use App\Filament\Actions\CloseWasteAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintWasteAction;
@@ -129,6 +130,8 @@ class WasteResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
+                                TableColumn::make('السبب')
+                                    ->width('170px'),
                             ])
                             ->schema([
                                 Hidden::make('product_id'),
@@ -177,6 +180,11 @@ class WasteResource extends Resource
                                     ->prefix('ج.م')
                                     ->disabled()
                                     ->dehydrated(false),
+
+                                Select::make('reason')
+                                    ->label('السبب')
+                                    ->options(WasteReason::class)
+                                    ->placeholder('بدون سبب'),
                             ])
                             ->defaultItems(0)
                             ->reorderableWithButtons()

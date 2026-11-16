@@ -1,13 +1,16 @@
 <?php
 
+use App\Enums\WasteReason;
 use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
 use App\Filament\Resources\Wastes\Pages\ListWastes;
 use App\Filament\Resources\Wastes\Pages\ViewWaste;
+use App\Filament\Resources\Wastes\WasteResource;
 use App\Models\InventoryItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Waste;
+use App\Models\WastedItem;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Str;
 
@@ -99,6 +102,24 @@ it('can create a waste record', function () {
     ]);
 });
 
+it('saves the reason of each wasted line', function () {
+    $product = Product::factory()->create(['cost' => 12.5]);
+
+    livewire(CreateWaste::class)
+        ->fillForm([
+            'user_id' => $this->admin->id,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 2, 'price' => 12.5, 'reason' => WasteReason::EXPIRED->value],
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(WastedItem::query()->sole())
+        ->reason->toBe(WasteReason::EXPIRED)
+        ->total->toEqual(25);
+});
+
 it('can create a waste record without notes', function () {
     livewire(CreateWaste::class)
         ->fillForm([
@@ -172,7 +193,7 @@ it('cannot delete a closed waste record', function () {
         'closed_at' => now(),
     ]);
 
-    expect(\App\Filament\Resources\Wastes\WasteResource::canDelete($record))->toBeFalse();
+    expect(WasteResource::canDelete($record))->toBeFalse();
 });
 
 it('cannot edit a closed waste record', function () {
@@ -180,7 +201,7 @@ it('cannot edit a closed waste record', function () {
         'closed_at' => now(),
     ]);
 
-    expect(\App\Filament\Resources\Wastes\WasteResource::canEdit($record))->toBeFalse();
+    expect(WasteResource::canEdit($record))->toBeFalse();
 });
 
 // Form Validation Tests
