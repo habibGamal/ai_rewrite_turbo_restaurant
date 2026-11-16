@@ -54,7 +54,7 @@ trait InteractsWithSelectedShift
     {
         return Textarea::make('reason')
             ->label('سبب التعديل')
-            ->helperText('الوردية مغلقة: سيتم تسجيل التعديل وإعادة حساب النقدية المتوقعة والعجز.')
+            ->helperText('الوردية مغلقة: سيتم تسجيل التعديل وإعادة حساب النقدية المتوقعة.')
             ->rows(2)
             ->maxLength(1000)
             ->required(fn (): bool => $this->selectedShiftIsClosed())
