@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PurchaseInvoices;
 
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
+use App\Filament\Actions\Forms\GeneratePurchaseBarcodesAction;
 use App\Filament\Actions\Forms\GroupQuantityGridAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
@@ -17,6 +18,7 @@ use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\FeatureService;
 use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\BulkActionGroup;
@@ -124,6 +126,7 @@ class PurchaseInvoiceResource extends Resource
                             ProductImporterAction::make('importProducts'),
                             LowStockImporterAction::make('importLowStock'),
                             GroupQuantityGridAction::make('groupQuantityGrid'),
+                            GeneratePurchaseBarcodesAction::make('generatePurchaseBarcodes'),
                         ])
                             ->key('purchaseImportActions')
                             ->alignStart(),
@@ -136,9 +139,10 @@ class PurchaseInvoiceResource extends Resource
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                self::showsBarcodes() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية')
@@ -147,7 +151,7 @@ class PurchaseInvoiceResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
-                            ])
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
                                 TextInput::make('product_name')
@@ -161,6 +165,16 @@ class PurchaseInvoiceResource extends Resource
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                // Read-only: filled from the product, or by «توليد باركود للأصناف».
+                                TextInput::make('barcode')
+                                    ->label('الباركود')
+                                    ->formatStateUsing(fn ($record, $state) => $state ?? $record?->product?->barcode)
+                                    ->placeholder('بدون باركود')
+                                    ->extraInputAttributes(['dir' => 'ltr'])
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->visible(fn (): bool => self::showsBarcodes()),
 
                                 TextInput::make('unit')
                                     ->label('الوحدة')
@@ -204,6 +218,15 @@ class PurchaseInvoiceResource extends Resource
                             ->collapsible(),
                     ]),
             ])->columns(1);
+    }
+
+    /**
+     * The barcode column and generate button exist only while the vendor has
+     * switched purchase barcodes on.
+     */
+    public static function showsBarcodes(): bool
+    {
+        return app(FeatureService::class)->purchaseBarcodesEnabled();
     }
 
     public static function infolist(Schema $schema): Schema

@@ -98,6 +98,7 @@ class ProductSelector extends Select
                 $newItem = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'barcode' => $product->barcode,
                     'unit' => Product::formatUnit($product->unit),
                     'quantity' => $quantity,
                     'price' => $price,
@@ -152,6 +153,7 @@ class ProductSelector extends Select
             $newItem = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
+                'barcode' => $product->barcode,
                 'unit' => Product::formatUnit($product->unit),
                 'quantity' => $quantity,
                 'price' => $price,

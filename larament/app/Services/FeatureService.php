@@ -86,6 +86,11 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::VARIANTS);
     }
 
+    public function purchaseBarcodesEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::PURCHASE_BARCODES);
+    }
+
     /**
      * @return array<string, bool>
      */
@@ -102,7 +107,7 @@ class FeatureService
     /**
      * Shared Inertia props for optional features using typed short keys.
      *
-     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool}
+     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool, multi_terminal: bool}
      */
     public function toInertiaProps(): array
     {

@@ -12,6 +12,7 @@ enum OptionalFeature: string
     case EQUIPMENT = 'feature_equipment_enabled';
     case VARIANTS = 'feature_variants_enabled';
     case MULTI_TERMINAL = 'feature_multi_terminal_enabled';
+    case PURCHASE_BARCODES = 'feature_purchase_barcodes_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -22,6 +23,7 @@ enum OptionalFeature: string
             self::EQUIPMENT => SettingKey::FEATURE_EQUIPMENT_ENABLED,
             self::VARIANTS => SettingKey::FEATURE_VARIANTS_ENABLED,
             self::MULTI_TERMINAL => SettingKey::FEATURE_MULTI_TERMINAL_ENABLED,
+            self::PURCHASE_BARCODES => SettingKey::FEATURE_PURCHASE_BARCODES_ENABLED,
         };
     }
 
@@ -58,6 +60,7 @@ enum OptionalFeature: string
             self::EQUIPMENT => 'equipment',
             self::VARIANTS => 'variants',
             self::MULTI_TERMINAL => 'multi_terminal',
+            self::PURCHASE_BARCODES => 'purchase_barcodes',
         };
     }
 
@@ -106,6 +109,7 @@ enum OptionalFeature: string
                 'view_custom_fees_report',
             ],
             self::VARIANTS => [],
+            self::PURCHASE_BARCODES => [],
             self::MULTI_TERMINAL => [
                 'terminal.open',
                 'terminal.close',
@@ -127,6 +131,7 @@ enum OptionalFeature: string
             self::EQUIPMENT => 'ميزة المعدات غير مفعلة حالياً.',
             self::VARIANTS => 'ميزة المقاسات والألوان (متغيرات المنتجات) غير مفعلة حالياً.',
             self::MULTI_TERMINAL => 'ميزة الأدراج المتعددة غير مفعلة حالياً.',
+            self::PURCHASE_BARCODES => 'ميزة توليد الباركود من فاتورة الشراء غير مفعلة حالياً.',
         };
     }
 
@@ -147,6 +152,7 @@ enum OptionalFeature: string
             'equipment' => self::EQUIPMENT,
             'variants' => self::VARIANTS,
             'multi_terminal' => self::MULTI_TERMINAL,
+            'purchase_barcodes' => self::PURCHASE_BARCODES,
             default => null,
         };
     }
