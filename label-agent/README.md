@@ -32,7 +32,7 @@ the page that asked.
 ## Receipts and the cash drawer (multi-terminal, hosted POS)
 
 A POS on a VPS can't reach a USB or LAN receipt printer at the counter.
-A drawer («الأدراج» in the POS) set to print «عن طريق برنامج Turbo Label»
+A point of sale («منافذ البيع» in the POS) set to print «عن طريق برنامج Turbo Label»
 queues its ESC/POS bytes on the server instead (receipt, drawer kick, test
 page). The app on that drawer's PC is paired with the drawer and asks the
 POS for them every 1.5 s, sends them to the printer as RAW, and reports
@@ -45,11 +45,11 @@ connected.
 | `GET /api/print-agent/jobs` | waiting jobs `[{id, kind, label, printer, data(base64)}]` |
 | `POST /api/print-agent/jobs/{id}` | `{ok, error?}` |
 
-Pairing: in the POS, «الأدراج» → «ربط برنامج الطباعة» shows a code
+Pairing: in the POS, «منافذ البيع» → «ربط برنامج الطباعة» shows a code
 (`TL1.` + base64url `{s: server, t: token, n: drawer}`) and a «ربط البرنامج»
 button that opens `turbo-label://pair?code=...`. Opened on the drawer's PC,
 the app asks once and pairs. The code can also be pasted in the window
-(«ربط بدرج...»). A new code or «إلغاء ربط البرنامج» in the POS stops the
+(«ربط بمنفذ بيع...»). A new code or «إلغاء ربط البرنامج» in the POS stops the
 old one.
 
 The receipt printer is the one chosen for the drawer in the POS, else the
@@ -60,7 +60,7 @@ the "Generic / Text Only" driver always works for RAW printing.
 
 Double-click the tray icon (or open the exe again) for:
 
-- «الأدراج والفواتير»: paired drawers with their status, pair / unpair.
+- «منافذ البيع والفواتير»: paired points of sale with their status, pair / unpair.
 - «الطابعات»: label printer and receipt printer, test label (any size),
   test receipt, open the cash drawer.
 - «المواقع المسموحة»: POS sites allowed to print labels; remove them.

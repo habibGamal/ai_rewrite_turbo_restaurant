@@ -16,16 +16,16 @@ const BindDevice: React.FC<BindDeviceProps> = ({ current, canBind, terminals }) 
 
     return (
         <CashierLayout>
-            <Head title="ربط الجهاز بدرج" />
+            <Head title="ربط الجهاز بمنفذ بيع" />
 
             <div className="grid place-items-center w-full min-h-[50vh] p-4">
-                <Card title="ربط الجهاز ده بدرج" className="w-full max-w-[500px]">
+                <Card title="ربط هذا الجهاز بمنفذ بيع" className="w-full max-w-[500px]">
                     {current && (
                         <Alert
                             className="mb-4"
                             type="info"
                             showIcon
-                            message={`الجهاز ده مربوط حالياً بـ «${current.name}»`}
+                            message={`هذا الجهاز مربوط حالياً بـ «${current.name}»`}
                         />
                     )}
 
@@ -33,21 +33,21 @@ const BindDevice: React.FC<BindDeviceProps> = ({ current, canBind, terminals }) 
                         <Alert
                             type="warning"
                             showIcon
-                            message="الجهاز ده مش مربوط بدرج"
-                            description="اطلب من المدير يدخل على الجهاز ده ويربطه بدرج مرة واحدة."
+                            message="هذا الجهاز غير مربوط بمنفذ بيع"
+                            description="اطلب من المدير الدخول من هذا الجهاز وربطه بمنفذ بيع مرة واحدة."
                         />
                     ) : terminals.length === 0 ? (
-                        <Empty description="مفيش أدراج مفعلة. ضيف درج من لوحة التحكم ← الأدراج." />
+                        <Empty description="لا توجد منافذ بيع مفعلة. أضف منفذ بيع من لوحة التحكم ← منافذ البيع." />
                     ) : (
                         <Form layout="vertical" onFinish={onFinish} initialValues={{ terminal_id: current?.id }}>
                             <Form.Item
-                                label="الدرج"
+                                label="منفذ البيع"
                                 name="terminal_id"
-                                rules={[{ required: true, message: 'اختار الدرج' }]}
+                                rules={[{ required: true, message: 'اختر منفذ البيع' }]}
                             >
                                 <Select
                                     size="large"
-                                    placeholder="اختار الدرج"
+                                    placeholder="اختر منفذ البيع"
                                     options={terminals.map((t) => ({
                                         value: t.id,
                                         label: t.devices > 0 ? `${t.name} (${t.devices} جهاز)` : t.name,

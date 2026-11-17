@@ -63,7 +63,7 @@ trait InteractsWithSelectedShift
     protected function drawerField(): Select
     {
         return Select::make('terminal_session_id')
-            ->label('الدرج')
+            ->label('منفذ البيع')
             ->options(function (): array {
                 $shift = $this->selectedShift();
 
@@ -88,7 +88,7 @@ trait InteractsWithSelectedShift
     protected function drawerColumn(): TextColumn
     {
         return TextColumn::make('terminalSession.terminal.name')
-            ->label('الدرج')
+            ->label('منفذ البيع')
             ->placeholder('—')
             ->visible(fn (): bool => $this->drawersOn());
     }

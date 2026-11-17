@@ -10,7 +10,7 @@ class PeriodShiftDrawersTable extends ShiftDrawersTable
 {
     use InteractsWithPageFilters;
 
-    protected static ?string $heading = 'أدراج الورديات';
+    protected static ?string $heading = 'منافذ البيع في الورديات';
 
     protected function shiftIds(): QueryBuilder
     {

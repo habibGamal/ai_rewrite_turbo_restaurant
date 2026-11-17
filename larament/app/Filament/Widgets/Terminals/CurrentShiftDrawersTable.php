@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class CurrentShiftDrawersTable extends ShiftDrawersTable
 {
-    protected static ?string $heading = 'أدراج الوردية الحالية';
+    protected static ?string $heading = 'منافذ البيع في الوردية الحالية';
 
     protected function shiftIds(): QueryBuilder
     {

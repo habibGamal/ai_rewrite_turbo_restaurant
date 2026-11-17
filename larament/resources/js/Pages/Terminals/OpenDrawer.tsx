@@ -57,7 +57,7 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
 
     return (
         <CashierLayout>
-            <Head title="فتح الدرج" />
+            <Head title="فتح منفذ البيع" />
 
             <div className="flex flex-col items-center gap-4 w-full p-4">
                 <Card title={`فتح «${terminal.name}»`} className="w-full max-w-[500px]">
@@ -66,43 +66,43 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
                             className="mb-4"
                             type="info"
                             showIcon
-                            message="مفيش وردية شغالة. فتح الدرج ده هيبدأ وردية جديدة."
+                            message="لا توجد وردية مفتوحة. فتح منفذ البيع هذا سيبدأ وردية جديدة."
                         />
                     )}
                     {canOpen ? (
                         <Form layout="vertical" onFinish={openDrawer}>
                             <Form.Item
-                                label="الفكة اللي في الدرج"
+                                label="الرصيد الافتتاحي (الفكة)"
                                 name="opening_cash"
                                 rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}
                             >
                                 <InputNumber min={0} className="w-full" size="large" placeholder="0" />
                             </Form.Item>
                             <Button type="primary" htmlType="submit" size="large" className="w-full">
-                                فتح الدرج
+                                فتح منفذ البيع
                             </Button>
                         </Form>
                     ) : (
-                        <Alert type="warning" showIcon message="مش مسموح لك تفتح درج." />
+                        <Alert type="warning" showIcon message="غير مسموح لك بفتح منفذ بيع." />
                     )}
                 </Card>
 
                 {sessions.length > 0 && (
-                    <Card title="أدراج الوردية" className="w-full max-w-[900px]">
+                    <Card title="منافذ البيع في الوردية" className="w-full max-w-[900px]">
                         <Table<DrawerSession>
                             rowKey="id"
                             size="small"
                             pagination={false}
                             dataSource={sessions}
                             columns={[
-                                { title: 'الدرج', dataIndex: 'terminal' },
+                                { title: 'منفذ البيع', dataIndex: 'terminal' },
                                 { title: 'الكاشير', dataIndex: 'cashier', render: (v) => v ?? '—' },
                                 { title: 'فتح', dataIndex: 'openedAt', render: time },
                                 {
                                     title: 'الحالة',
                                     dataIndex: 'closedAt',
                                     render: (v) =>
-                                        v ? <Tag>اتقفل {time(v)}</Tag> : <Tag color="green">مفتوح</Tag>,
+                                        v ? <Tag>أُغلق {time(v)}</Tag> : <Tag color="green">مفتوح</Tag>,
                                 },
                                 { title: 'الفكة', dataIndex: 'openingCash', render: money },
                                 ...(canEndShift
@@ -116,7 +116,7 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
                                               render: (_: unknown, row: DrawerSession) =>
                                                   row.closedAt === null ? (
                                                       <Button danger size="small" onClick={() => setClosing(row)}>
-                                                          قفل نيابةً عنه
+                                                          إغلاق نيابةً عنه
                                                       </Button>
                                                   ) : null,
                                           },
@@ -129,8 +129,8 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
                             <div className="mt-4 flex items-center justify-between gap-4">
                                 <span className="text-gray-500">
                                     {openCount > 0
-                                        ? `لازم تتقفل كل الأدراج قبل إنهاء الوردية (${openCount} مفتوح).`
-                                        : 'كل الأدراج اتقفلت.'}
+                                        ? `يجب إغلاق جميع منافذ البيع قبل إنهاء الوردية (${openCount} مفتوح).`
+                                        : 'أُغلقت جميع منافذ البيع.'}
                                 </span>
                                 <Popconfirm
                                     title="إنهاء الوردية؟"
@@ -152,7 +152,7 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
             <Modal
                 open={closing !== null}
                 onCancel={() => setClosing(null)}
-                title={closing ? `قفل «${closing.terminal}» نيابةً عن ${closing.cashier ?? 'الكاشير'}` : ''}
+                title={closing ? `إغلاق «${closing.terminal}» نيابةً عن ${closing.cashier ?? 'الكاشير'}` : ''}
                 footer={null}
             >
                 <Form form={closeForm} layout="vertical" onFinish={closeOther}>
@@ -164,7 +164,7 @@ const OpenDrawer: React.FC<OpenDrawerProps> = ({
                         <Input.TextArea rows={3} maxLength={1000} />
                     </Form.Item>
                     <Button type="primary" danger htmlType="submit">
-                        قفل الدرج
+                        إغلاق منفذ البيع
                     </Button>
                 </Form>
             </Modal>

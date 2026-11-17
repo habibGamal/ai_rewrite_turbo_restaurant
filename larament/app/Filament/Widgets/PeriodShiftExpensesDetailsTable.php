@@ -88,7 +88,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->color('info'),
 
                 TextColumn::make('terminalSession.terminal.name')
-                    ->label('الدرج')
+                    ->label('منفذ البيع')
                     ->placeholder('—')
                     ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
                     ->toggleable(),

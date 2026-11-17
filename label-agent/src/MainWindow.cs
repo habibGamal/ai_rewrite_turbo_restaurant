@@ -18,7 +18,7 @@ public sealed class MainWindow : Form
     private readonly Action<string?> _pair;
 
     private readonly Label _serverLabel = new() { AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(4, 8, 4, 8) };
-    private readonly ListView _connections = NewList(("المتجر", 140), ("الدرج", 120), ("النظام", 220), ("الحالة", 300), ("آخر اتصال", 90));
+    private readonly ListView _connections = NewList(("المتجر", 140), ("منفذ البيع", 120), ("النظام", 220), ("الحالة", 300), ("آخر اتصال", 90));
     private readonly ComboBox _labelPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly ComboBox _receiptPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly NumericUpDown _testWidth = new() { Minimum = 10, Maximum = 200, Value = 38, DecimalPlaces = 0, Width = 60 };
@@ -104,18 +104,18 @@ public sealed class MainWindow : Form
 
     private TabPage DrawersTab()
     {
-        var page = new TabPage("الأدراج والفواتير") { Padding = new Padding(8) };
+        var page = new TabPage("منافذ البيع والفواتير") { Padding = new Padding(8) };
 
         var help = new Label
         {
             Dock = DockStyle.Top,
             AutoSize = false,
             Height = 44,
-            Text = "ليطبع هذا الجهاز فواتير الدرج ويفتح درج النقود: افتح «الأدراج» في النظام، واجعل الطباعة عن طريق «برنامج Turbo Label»، ثم اضغط «ربط برنامج الطباعة» من هذا الجهاز، أو الصق رمز الربط هنا.",
+            Text = "ليطبع هذا الجهاز فواتير منفذ البيع ويفتح درج النقود: افتح «منافذ البيع» في النظام، واجعل الطباعة عن طريق «برنامج Turbo Label»، ثم اضغط «ربط برنامج الطباعة» من هذا الجهاز، أو الصق رمز الربط هنا.",
         };
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
-        buttons.Controls.Add(MakeButton("ربط بدرج...", (_, _) => AskForCode()));
+        buttons.Controls.Add(MakeButton("ربط بمنفذ بيع...", (_, _) => AskForCode()));
         buttons.Controls.Add(MakeButton("إلغاء ربط المحدد", (_, _) => RemoveSelected()));
 
         page.Controls.Add(_connections);
@@ -145,7 +145,7 @@ public sealed class MainWindow : Form
         {
             AutoSize = true,
             MaximumSize = new Size(760, 0),
-            Text = "تُستخدم إذا لم تُحدَّد للدرج طابعة في النظام. يجب أن تكون طابعة فواتير حرارية (ESC/POS) ودرج النقود متصل بها.",
+            Text = "تُستخدم إذا لم تُحدَّد لمنفذ البيع طابعة في النظام. يجب أن تكون طابعة فواتير حرارية (ESC/POS) ودرج النقود متصل بها.",
         });
         layout.Controls.Add(Row(_receiptPrinter));
         layout.Controls.Add(Row(
@@ -321,7 +321,7 @@ public sealed class MainWindow : Form
 
         if (connections.Count == 0)
         {
-            _connections.Items.Add(new ListViewItem(new[] { "", "", "هذا الجهاز غير مربوط بأي درج", "", "" }) { ForeColor = Color.Gray });
+            _connections.Items.Add(new ListViewItem(new[] { "", "", "هذا الجهاز غير مربوط بأي منفذ بيع", "", "" }) { ForeColor = Color.Gray });
         }
 
         _connections.EndUpdate();
@@ -350,7 +350,7 @@ public sealed class MainWindow : Form
     {
         using var dialog = new Form
         {
-            Text = "ربط بدرج",
+            Text = "ربط بمنفذ بيع",
             RightToLeft = RightToLeft.Yes,
             RightToLeftLayout = true,
             StartPosition = FormStartPosition.CenterParent,
@@ -391,7 +391,7 @@ public sealed class MainWindow : Form
             return;
         }
 
-        if (Ask($"إلغاء ربط هذا الجهاز بدرج النظام:\n{server}\n\nلن تُطبع الفواتير هنا حتى تربطه من جديد."))
+        if (Ask($"إلغاء ربط هذا الجهاز بمنفذ البيع في النظام:\n{server}\n\nلن تُطبع الفواتير هنا حتى تربطه من جديد."))
         {
             _config.RemoveConnection(server);
             RefreshStatus();
@@ -431,7 +431,7 @@ public sealed class MainWindow : Form
             return;
         }
 
-        Run("فتح الدرج", printer, () => RawPrinter.Send(printer, RawPrinter.DrawerKick, "Turbo Label - drawer"));
+        Run("فتح درج النقود", printer, () => RawPrinter.Send(printer, RawPrinter.DrawerKick, "Turbo Label - drawer"));
     }
 
     private void Run(string kind, string printer, Action print)

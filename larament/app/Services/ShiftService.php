@@ -139,7 +139,7 @@ class ShiftService
             if ($this->features->multiTerminalEnabled()) {
                 // Each cashier closes their own drawer first.
                 if ($currentShift->terminalSessions()->open()->exists()) {
-                    throw new Exception('لازم كل الأدراج تتقفل قبل إنهاء الوردية');
+                    throw new Exception('يجب إغلاق جميع منافذ البيع قبل إنهاء الوردية');
                 }
             } else {
                 $this->terminalSessions->closeAllOpen($currentShift, auth()->user());

@@ -55,12 +55,12 @@ class TerminalResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return 'درج';
+        return 'منفذ بيع';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'الأدراج';
+        return 'منافذ البيع';
     }
 
     public static function maxActive(): int
@@ -83,7 +83,7 @@ class TerminalResource extends Resource
 
         if ($count >= self::maxActive()) {
             throw ValidationException::withMessages([
-                'data.is_active' => 'وصلت إلى الحد الأقصى للأدراج المفعلة ('.self::maxActive().'). تواصل مع الدعم الفني لزيادته.',
+                'data.is_active' => 'وصلت إلى الحد الأقصى لمنافذ البيع المفعلة ('.self::maxActive().'). تواصل مع الدعم الفني لزيادته.',
             ]);
         }
     }
@@ -93,7 +93,7 @@ class TerminalResource extends Resource
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label('اسم الدرج')
+                    ->label('اسم منفذ البيع')
                     ->placeholder('كاشير ١')
                     ->required()
                     ->maxLength(100)
@@ -105,7 +105,7 @@ class TerminalResource extends Resource
                             ->label('الطباعة عن طريق')
                             ->options([
                                 Terminal::PRINT_VIA_SERVER => 'الخادم (IP أو طابعة مشتركة)',
-                                Terminal::PRINT_VIA_AGENT => 'برنامج Turbo Label على جهاز الدرج',
+                                Terminal::PRINT_VIA_AGENT => 'برنامج Turbo Label على جهاز منفذ البيع',
                             ])
                             ->helperText('إذا كان النظام على خادم بعيد عن المتجر (VPS)، فاختر برنامج Turbo Label ليطبع على الطابعة المتصلة بجهاز الكاشير.')
                             ->default(Terminal::PRINT_VIA_SERVER)
@@ -118,7 +118,7 @@ class TerminalResource extends Resource
                             ->visible(fn (Get $get): bool => $get('print_via') !== Terminal::PRINT_VIA_AGENT)
                             ->maxLength(255),
                         Select::make('agent_printer')
-                            ->label('طابعة الفاتورة على جهاز الدرج')
+                            ->label('طابعة الفاتورة على جهاز منفذ البيع')
                             ->helperText('من الطابعات التي عثر عليها البرنامج في الجهاز. إذا تُركت فارغة تُستخدم الطابعة المختارة في البرنامج نفسه.')
                             ->options(fn (?Terminal $record): array => collect($record?->agentPrinters() ?? [])
                                 ->when(filled($record?->agent_printer), fn ($c) => $c->push($record->agent_printer))
@@ -140,7 +140,7 @@ class TerminalResource extends Resource
                     ->required(),
                 Toggle::make('is_active')
                     ->label('مفعل')
-                    ->helperText('لا يمكن فتح الدرج الموقوف، ويبقى ظاهراً في التقارير السابقة.')
+                    ->helperText('لا يمكن فتح منفذ البيع الموقوف، ويبقى ظاهراً في التقارير السابقة.')
                     ->default(true),
             ]);
     }
@@ -150,7 +150,7 @@ class TerminalResource extends Resource
         return $table
             ->defaultSort('sort')
             ->columns([
-                TextColumn::make('name')->label('اسم الدرج')->searchable()->sortable(),
+                TextColumn::make('name')->label('اسم منفذ البيع')->searchable()->sortable(),
                 TextColumn::make('receipt_printer')
                     ->label('طابعة الفاتورة')
                     ->state(fn (Terminal $record): ?string => $record->printsViaAgent()
@@ -170,10 +170,10 @@ class TerminalResource extends Resource
                     ->color('gray')
                     ->visible(fn (Terminal $record): bool => $record->printsViaAgent() && (auth()->user()?->can('update', $record) ?? false))
                     ->requiresConfirmation()
-                    ->modalHeading('ربط برنامج Turbo Label بالدرج')
+                    ->modalHeading('ربط برنامج Turbo Label بمنفذ البيع')
                     ->modalDescription(fn (Terminal $record): string => $record->agentPaired()
                         ? 'سيُلغي الرمز الجديد ربط البرنامج الحالي، ويجب ربطه من جديد.'
-                        : 'افتح هذه الصفحة من جهاز الدرج نفسه، وبعد ظهور الرمز اضغط «ربط البرنامج» أو انسخ الرمز في نافذة البرنامج.')
+                        : 'افتح هذه الصفحة من جهاز منفذ البيع نفسه، وبعد ظهور الرمز اضغط «ربط البرنامج» أو انسخ الرمز في نافذة البرنامج.')
                     ->modalSubmitActionLabel('إنشاء رمز الربط')
                     ->action(function (Terminal $record): void {
                         $code = app(PrintAgentQueue::class)->pair($record);
@@ -181,9 +181,9 @@ class TerminalResource extends Resource
                         Notification::make()
                             ->success()
                             ->persistent()
-                            ->title('رمز ربط الدرج «'.$record->name.'»')
+                            ->title('رمز ربط منفذ البيع «'.$record->name.'»')
                             ->body(new HtmlString(
-                                '<p>على جهاز الدرج، اضغط «ربط البرنامج»، أو افتح Turbo Label والصق هذا الرمز في «ربط بدرج»:</p>'
+                                '<p>على جهاز منفذ البيع، اضغط «ربط البرنامج»، أو افتح Turbo Label والصق هذا الرمز في «ربط بمنفذ بيع»:</p>'
                                 .'<code dir="ltr" style="display:block;user-select:all;word-break:break-all;font-size:11px;margin-top:6px">'
                                 .e($code).'</code>'
                             ))
@@ -223,7 +223,7 @@ class TerminalResource extends Resource
                     ->icon('heroicon-o-link-slash')
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->modalDescription('ستطلب الأجهزة المربوطة بهذا الدرج الربط من جديد عند أول فتح لنقطة البيع.')
+                    ->modalDescription('ستطلب الأجهزة المربوطة بمنفذ البيع هذا الربط من جديد عند أول فتح لنقطة البيع.')
                     ->visible(fn (Terminal $record): bool => $record->devices()->exists() && (auth()->user()?->can('update', $record) ?? false))
                     ->action(function (Terminal $record): void {
                         $record->devices()->delete();
@@ -235,7 +235,7 @@ class TerminalResource extends Resource
     public static function agentStatus(?Terminal $record): string
     {
         if ($record === null || ! $record->agentPaired()) {
-            return 'البرنامج غير مربوط. احفظ الدرج ثم اضغط «ربط برنامج الطباعة» من قائمة الأدراج.';
+            return 'البرنامج غير مربوط. احفظ منفذ البيع ثم اضغط «ربط برنامج الطباعة» من قائمة منافذ البيع.';
         }
 
         $info = $record->agent_info ?? [];
