@@ -149,7 +149,8 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/auth.php';
 
 // Label print jobs fetched by the Windows print app: signed links, no login.
-Route::middleware('signed')->group(function () {
+// Signed over the path only, so a proxy changing scheme/host/port can't break them.
+Route::middleware('signed:relative')->group(function () {
     Route::get('/labels/jobs/{job}', [LabelJobController::class, 'manifest'])->whereUuid('job')->name('labels.jobs.manifest');
     Route::get('/labels/jobs/{job}/pages/{page}', [LabelJobController::class, 'page'])->whereUuid('job')->whereNumber('page')->name('labels.jobs.page');
 });

@@ -134,9 +134,14 @@ class LabelPrintJobs
         return is_array($job) ? $job : null;
     }
 
+    /**
+     * Signed over the path only (signed:relative): behind a proxy or a
+     * panel (http inside, https outside, another port) an absolute
+     * signature never matches and the print app gets 403.
+     */
     public function manifestUrl(string $id): string
     {
-        return URL::temporarySignedRoute('labels.jobs.manifest', now()->addMinutes(self::TTL_MINUTES), ['job' => $id]);
+        return url(URL::temporarySignedRoute('labels.jobs.manifest', now()->addMinutes(self::TTL_MINUTES), ['job' => $id], absolute: false));
     }
 
     /**
@@ -168,7 +173,8 @@ class LabelPrintJobs
             'total_labels' => $job['total'],
             'total_pages' => array_sum(array_column($job['rows'], 'copies')),
             'pages' => array_map(fn (array $row, int $index): array => [
-                'image' => URL::temporarySignedRoute('labels.jobs.page', $expires, ['job' => $id, 'page' => $index]),
+                // Relative: the app resolves it against the manifest's address.
+                'image' => URL::temporarySignedRoute('labels.jobs.page', $expires, ['job' => $id, 'page' => $index], absolute: false),
                 'copies' => $row['copies'],
             ], $job['rows'], array_keys($job['rows'])),
         ];

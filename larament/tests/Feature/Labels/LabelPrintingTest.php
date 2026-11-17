@@ -12,6 +12,7 @@ use App\Models\LabelTemplate;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\FeatureService;
+use Illuminate\Support\Facades\URL;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -124,6 +125,26 @@ it('serves the manifest and page images over signed links only', function () {
     get($manifest['pages'][0]['image'])->assertOk()->assertHeader('Content-Type', 'image/png');
 
     getJson(route('labels.jobs.manifest', ['job' => $job]))->assertForbidden();
+});
+
+it('keeps signed links valid behind a proxy that changes scheme, host or port', function () {
+    $product = Product::factory()->create(['barcode' => '0001', 'price' => 10]);
+    $jobs = app(LabelPrintJobs::class);
+    $job = $jobs->forProducts(labelTemplate(), [$product->id => 1]);
+
+    // Signed as https://shop.example, served to PHP as http://127.0.0.1:8080.
+    URL::forceRootUrl('https://shop.example');
+    URL::forceScheme('https');
+    $url = $jobs->manifestUrl($job);
+    URL::forceRootUrl(null);
+    URL::forceScheme(null);
+    expect($url)->toStartWith('https://shop.example/labels/jobs/');
+
+    $path = (string) parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
+    $image = getJson('http://127.0.0.1:8080'.$path)->assertOk()->json('pages.0.image');
+
+    expect($image)->toStartWith('/labels/jobs/');
+    get('http://127.0.0.1:8080'.$image)->assertOk();
 });
 
 it('hides label jobs and designs while the feature is off', function () {

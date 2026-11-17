@@ -65,7 +65,7 @@ class LabelJobController extends Controller
         $pages = [];
         foreach ($data['rows'] as $index => $row) {
             $pages[] = [
-                'image' => URL::temporarySignedRoute('labels.jobs.page', $expires, ['job' => $job, 'page' => $index]),
+                'image' => URL::temporarySignedRoute('labels.jobs.page', $expires, ['job' => $job, 'page' => $index], absolute: false),
                 'copies' => $row['copies'],
             ];
         }
