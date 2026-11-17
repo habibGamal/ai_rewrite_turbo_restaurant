@@ -4,7 +4,9 @@ namespace App\Services\Orders;
 
 use App\Core\Events\OrderReturned;
 use App\Enums\OptionalFeature;
+use App\Enums\OrderStatus;
 use App\Enums\ReturnStatus;
+use App\Exceptions\OrderException;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
@@ -57,8 +59,11 @@ class OrderReturnService
         try {
             DB::beginTransaction();
 
-            // Load order with items and previous returns
-            $order->load(['items', 'fees', 'equipmentLines', 'returns.items']);
+            // Lock the order so two returns at once can't both refund it.
+            $order = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+            $order->load(['items', 'fees', 'equipmentLines', 'returns.items', 'payments']);
+
+            $this->assertReturnable($order);
 
             if ($returnItems === []) {
                 throw new Exception('يجب تحديد صنف واحد على الأقل للإرجاع');
@@ -145,6 +150,29 @@ class OrderReturnService
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Only a completed order the customer has fully paid can be returned. A
+     * return on an order still owing money would refund cash that was never
+     * collected while the debt stayed on the customer's account.
+     *
+     * @throws OrderException
+     */
+    private function assertReturnable(Order $order): void
+    {
+        if ($order->status !== OrderStatus::COMPLETED) {
+            throw new OrderException('لا يمكن إرجاع طلب غير مكتمل');
+        }
+
+        $paid = round((float) $order->payments->sum('amount'), 2);
+
+        if ($paid + 0.005 < round((float) $order->total, 2)) {
+            throw new OrderException(sprintf(
+                'لا يمكن إرجاع طلب لم يُسدَّد بالكامل (المتبقي %s ج.م). حصّل المتبقي أولاً ثم أجرِ المرتجع.',
+                number_format(round((float) $order->total, 2) - $paid, 2),
+            ));
         }
     }
 

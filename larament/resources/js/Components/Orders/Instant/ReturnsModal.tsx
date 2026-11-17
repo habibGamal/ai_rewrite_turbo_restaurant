@@ -215,7 +215,8 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
         }
         const tenders: Tenders = { ...ZERO_TENDERS };
         if (net > 0) {
-            tenders[payMethod] = Math.ceil(net);
+            // Cash rounds up (change is given back); a card pays the exact difference.
+            tenders[payMethod] = payMethod === "cash" ? Math.ceil(net) : Math.round(net * 100) / 100;
         }
         setSubmitting(true);
         try {

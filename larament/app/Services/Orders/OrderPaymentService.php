@@ -44,7 +44,7 @@ class OrderPaymentService
 
         $totalNewPayments = $tenders->total();
 
-        if (($totalPaid + $totalNewPayments) > $order->total) {
+        if (round($totalPaid + $totalNewPayments, 2) > round((float) $order->total, 2)) {
             throw new OrderException(
                 "إجمالي المدفوعات ({$totalPaid} + {$totalNewPayments} = ".($totalPaid + $totalNewPayments).
                 ') يتجاوز إجمالي الطلب ('.$order->total.')'

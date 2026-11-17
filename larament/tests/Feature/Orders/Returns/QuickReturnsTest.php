@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\OrderException;
 use App\Filament\Pages\Reports\ReturnsReport;
 use App\Filament\Widgets\Returns\ReturnedProductsTable;
 use App\Filament\Widgets\Returns\ReturnLinesTable;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\DailyComparisonReportService;
 use App\Services\Orders\Instant\InstantReturnService;
+use App\Services\Orders\OrderService;
 use App\Services\PeakHoursPerformanceReportService;
 use App\Services\ProductsSalesReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
@@ -308,4 +310,90 @@ it('prints the reference barcode on the receipt', function () {
     $html = view('print.receipt-reference', ['order' => $order])->render();
 
     expect($html)->toContain('<svg')->toContain('#'.$order->id);
+});
+
+it('refuses to return an order the customer has not fully paid', function () {
+    $order = quickSale();
+    // As if sold on credit: nothing collected yet.
+    $order->payments()->delete();
+    $order->update(['payment_status' => 'pending']);
+
+    $response = $this->postJson(route('pos.instant-returns.store'), [
+        'order_id' => $order->id,
+        'items' => [['order_item_id' => lineOf($order, $this->socks), 'quantity' => 1]],
+        'tenders' => [],
+    ])->assertStatus(422);
+    expect($response->json('message'))->toContain('لم يُسدَّد بالكامل');
+
+    expect(OrderReturn::query()->count())->toBe(0)
+        ->and(SafetyNet::stock($this->socks))->toBe(9.0);
+});
+
+it('refuses to cancel an order that has returns', function () {
+    $order = quickSale();
+    $this->postJson(route('pos.instant-returns.store'), [
+        'order_id' => $order->id,
+        'items' => [['order_item_id' => lineOf($order, $this->socks), 'quantity' => 1]],
+        'tenders' => [],
+    ])->assertOk();
+
+    expect(fn () => app(OrderService::class)->cancelOrder($order->id))
+        ->toThrow(OrderException::class, 'عليه مرتجعات');
+
+    expect($order->fresh()->payments()->count())->toBeGreaterThan(0);
+});
+
+it('takes a card for the exact difference of an exchange after a discounted return', function () {
+    // 3 socks (90) with 10 off = 80; one sock refunds 26.67.
+    $id = $this->postJson(route('pos.instant-sales.store'), [
+        'client_uuid' => (string) Str::uuid(),
+        'type' => 'instant_sale',
+        'items' => [['product_id' => $this->socks->id, 'quantity' => 3]],
+        'discount' => ['type' => 'value', 'value' => 10],
+        'tenders' => ['cash' => 80],
+    ])->assertOk()->json('order.id');
+    $order = Order::query()->with('items')->findOrFail($id);
+
+    // Swap it for a shirt (120): 93.33 left, paid by card exactly.
+    $response = $this->postJson(route('pos.instant-returns.store'), [
+        'order_id' => $order->id,
+        'items' => [['order_item_id' => lineOf($order, $this->socks), 'quantity' => 1]],
+        'exchange' => [
+            'client_uuid' => (string) Str::uuid(),
+            'type' => 'instant_sale',
+            'items' => [['product_id' => $this->shirt->id, 'quantity' => 1]],
+        ],
+        'tenders' => ['card' => 93.33],
+    ])->assertOk();
+
+    $exchange = Order::query()->findOrFail($response->json('exchange_order.order.id') ?? OrderReturn::query()->sole()->exchange_order_id);
+    expect(round((float) $exchange->payments()->sum('amount'), 2))->toBe(120.0)
+        ->and((float) $exchange->payments()->where('method', 'card')->sum('amount'))->toBe(93.33);
+});
+
+it('gives the extra back as cash when a rounded-up card amount and the refund credit go over', function () {
+    $id = $this->postJson(route('pos.instant-sales.store'), [
+        'client_uuid' => (string) Str::uuid(),
+        'type' => 'instant_sale',
+        'items' => [['product_id' => $this->socks->id, 'quantity' => 3]],
+        'discount' => ['type' => 'value', 'value' => 10],
+        'tenders' => ['cash' => 80],
+    ])->assertOk()->json('order.id');
+    $order = Order::query()->with('items')->findOrFail($id);
+
+    // Old clients sent the card amount rounded up (94 instead of 93.33).
+    $this->postJson(route('pos.instant-returns.store'), [
+        'order_id' => $order->id,
+        'items' => [['order_item_id' => lineOf($order, $this->socks), 'quantity' => 1]],
+        'exchange' => [
+            'client_uuid' => (string) Str::uuid(),
+            'type' => 'instant_sale',
+            'items' => [['product_id' => $this->shirt->id, 'quantity' => 1]],
+        ],
+        'tenders' => ['card' => 94],
+    ])->assertOk();
+
+    $exchange = Order::query()->findOrFail(OrderReturn::query()->sole()->exchange_order_id);
+    expect(round((float) $exchange->payments()->sum('amount'), 2))->toBe(120.0)
+        ->and((float) $exchange->payments()->where('method', 'card')->sum('amount'))->toBe(94.0);
 });
