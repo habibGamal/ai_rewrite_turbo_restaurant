@@ -68,6 +68,7 @@ Disabling a module or feature can be blocked while it still has open data, throu
 | Variants | `feature_variants_enabled` | Product groups (models) with sizes, colours and other axes. |
 | Outsourced orders | `feature_outsourced_orders_enabled` | The External sellers module switch. |
 | Multi-terminal drawers | `feature_multi_terminal_enabled` | Multiple drawers per shift, device binding, per-drawer receipt printers, drawer handovers and drawer scoping. |
+| Sales point separation | `feature_terminal_separation_enabled` | Needs multi-terminal. Each sales point works like a branch: own issue warehouse, owns its orders; web orders go to a chosen sales point. See [money](money.md#sales-point-separation-فصل-منافذ-البيع). |
 
 The cashier reads features through the Inertia shared prop `features` (for example `features.variants`, `features.multi_terminal`).
 

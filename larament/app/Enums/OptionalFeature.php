@@ -17,6 +17,7 @@ enum OptionalFeature: string
     case DOCUMENT_BARCODES = 'feature_document_barcodes_enabled';
     case DEFERRED_PAYMENT = 'feature_deferred_payment_enabled';
     case RETURNS = 'feature_returns_enabled';
+    case TERMINAL_SEPARATION = 'feature_terminal_separation_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -32,6 +33,7 @@ enum OptionalFeature: string
             self::DOCUMENT_BARCODES => SettingKey::FEATURE_DOCUMENT_BARCODES_ENABLED,
             self::DEFERRED_PAYMENT => SettingKey::FEATURE_DEFERRED_PAYMENT_ENABLED,
             self::RETURNS => SettingKey::FEATURE_RETURNS_ENABLED,
+            self::TERMINAL_SEPARATION => SettingKey::FEATURE_TERMINAL_SEPARATION_ENABLED,
         };
     }
 
@@ -73,6 +75,7 @@ enum OptionalFeature: string
             self::DOCUMENT_BARCODES => 'document_barcodes',
             self::DEFERRED_PAYMENT => 'deferred_payment',
             self::RETURNS => 'returns',
+            self::TERMINAL_SEPARATION => 'terminal_separation',
         };
     }
 
@@ -130,6 +133,7 @@ enum OptionalFeature: string
                 'print_labels',
             ],
             self::DOCUMENT_BARCODES => [],
+            self::TERMINAL_SEPARATION => [],
             self::DEFERRED_PAYMENT => [
                 'pos.tab.system.receivables',
             ],
@@ -169,6 +173,7 @@ enum OptionalFeature: string
             self::DOCUMENT_BARCODES => 'ميزة الباركود في المستندات غير مفعلة حالياً.',
             self::DEFERRED_PAYMENT => 'ميزة الدفع الآجل غير مفعلة حالياً.',
             self::RETURNS => 'ميزة المرتجعات غير مفعلة حالياً.',
+            self::TERMINAL_SEPARATION => 'ميزة فصل منافذ البيع غير مفعلة حالياً.',
         };
     }
 
@@ -194,6 +199,7 @@ enum OptionalFeature: string
             'document_barcodes' => self::DOCUMENT_BARCODES,
             'deferred_payment' => self::DEFERRED_PAYMENT,
             'returns' => self::RETURNS,
+            'terminal_separation' => self::TERMINAL_SEPARATION,
             default => null,
         };
     }

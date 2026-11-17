@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
 use App\Filament\Exports\CurrentShiftExpensesExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Models\Shift;
@@ -14,6 +15,7 @@ use Filament\Actions\ExportAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -22,6 +24,9 @@ use Illuminate\Support\HtmlString;
 
 class CurrentShiftExpensesTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected static ?string $pollingInterval = null;
@@ -39,6 +44,8 @@ class CurrentShiftExpensesTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {
@@ -56,6 +63,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                 ->leftJoin('expenses', function ($join) use ($currentShift) {
                     $join->on('expence_types.id', '=', 'expenses.expence_type_id')
                         ->where('expenses.shift_id', '=', $currentShift->id);
+                    $this->reportTerminal()->money($join, 'expenses.terminal_session_id');
                 })
                 ->groupBy('expence_types.id', 'expence_types.name', 'expence_types.avg_month_rate')
                 ->havingRaw('COUNT(expenses.id) > 0'); // Only show types that have expenses
@@ -83,6 +91,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                                 ->leftJoin('expenses', function ($join) use ($currentShift) {
                                     $join->on('expence_types.id', '=', 'expenses.expence_type_id')
                                         ->where('expenses.shift_id', '=', $currentShift->id);
+                                    $this->reportTerminal()->money($join, 'expenses.terminal_session_id');
                                 })
                                 ->groupBy('expence_types.id', 'expence_types.name', 'expence_types.avg_month_rate')
                                 ->havingRaw('COUNT(expenses.id) > 0');
@@ -101,7 +110,7 @@ class CurrentShiftExpensesTable extends BaseWidget
                     ->modifyQueryUsing(function (Builder $query) {
                         $currentShift = $this->getCurrentShift();
                         if ($currentShift) {
-                            return Expense::query()
+                            return $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                                 ->where('shift_id', $currentShift->id)
                                 ->with(['expenceType', 'shift'])
                                 ->orderBy('created_at', 'desc');
@@ -254,7 +263,7 @@ class CurrentShiftExpensesTable extends BaseWidget
             return collect();
         }
 
-        return Expense::where('shift_id', $currentShift->id)
+        return $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')->where('shift_id', $currentShift->id)
             ->where('expence_type_id', $expenseTypeId)
             ->with(['expenceType', 'shift'])
             ->orderBy('created_at', 'desc')

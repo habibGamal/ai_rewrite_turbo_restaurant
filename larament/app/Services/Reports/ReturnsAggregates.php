@@ -27,7 +27,10 @@ class ReturnsAggregates
         $scope = fn () => $shiftIds instanceof QueryBuilder ? clone $shiftIds : $shiftIds;
 
         return $this->summary(
-            DB::table('order_returns')->whereIn('order_returns.shift_id', $scope()),
+            app(ReportTerminalScope::class)->money(
+                DB::table('order_returns')->whereIn('order_returns.shift_id', $scope()),
+                'order_returns.terminal_session_id',
+            ),
         );
     }
 

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
 use App\Services\Reports\ReportOrderTypesService;
+use App\Services\Reports\ReportTerminalScope;
 use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,14 @@ use Illuminate\Support\Facades\DB;
 
 class ShiftsReportService
 {
+    /**
+     * The sales point tab picked on the report (null = all sales points).
+     */
+    private function terminal(): ReportTerminalScope
+    {
+        return app(ReportTerminalScope::class);
+    }
+
     /**
      * Get current active shift
      */
@@ -142,8 +151,8 @@ class ShiftsReportService
     public function calculateShiftStats(Shift $shift): array
     {
         // Get completed orders for this shift
-        $completedOrders = $shift->orders()
-            ->where('status', OrderStatus::COMPLETED)
+        $completedOrders = $this->terminal()->orders($shift->orders()
+            ->where('status', OrderStatus::COMPLETED))
             ->get();
 
         $sales = $completedOrders->sum('total');
@@ -156,7 +165,7 @@ class ShiftsReportService
         $cardPayments = 0;
         $talabatCardPayments = 0;
 
-        foreach (Payment::query()->where('shift_id', $shift->id)->get() as $payment) {
+        foreach ($this->terminal()->money(Payment::query()->where('shift_id', $shift->id))->get() as $payment) {
             if ($payment->method === PaymentMethod::CASH) {
                 $cashPayments += $payment->amount;
             } elseif ($payment->method === PaymentMethod::CARD) {
@@ -167,9 +176,10 @@ class ShiftsReportService
         }
 
         // Calculate expenses
-        $expenses = $shift->expenses()->sum('amount');
-        $externalCash = (float) DB::table('external_order_collections')->where('shift_id', $shift->id)->where('method', 'cash')->sum('amount');
-        $settlements = (float) DB::table('external_seller_settlements')->where('shift_id', $shift->id)->sum('amount');
+        $expenses = $this->terminal()->money($shift->expenses()->getQuery())->sum('amount');
+        $externalCash = (float) $this->terminal()->money(DB::table('external_order_collections')->where('shift_id', $shift->id)->where('method', 'cash'))->sum('amount');
+        $settlements = (float) $this->terminal()->money(DB::table('external_seller_settlements')->where('shift_id', $shift->id))->sum('amount');
+        $startCash = $this->terminal()->active() ? $this->terminal()->openingCash([$shift->id]) : (float) $shift->start_cash;
         $revenues = $this->revenueTotals([$shift->id]);
 
         // Refunds paid by this shift, whatever shift sold the order.
@@ -190,7 +200,7 @@ class ShiftsReportService
             'cashPayments' => $cashPayments,
             'externalCash' => $externalCash,
             'settlements' => $settlements,
-            'availableCash' => (float) $shift->start_cash + $cashPayments + $externalCash + $revenues['cashRevenues'] - $settlements - $expenses - $returns['cashRefunds'],
+            'availableCash' => $startCash + $cashPayments + $externalCash + $revenues['cashRevenues'] - $settlements - $expenses - $returns['cashRefunds'],
             'cardPayments' => $cardPayments,
             'talabatCardPayments' => $talabatCardPayments,
             'avgReceiptValue' => $avgReceiptValue,
@@ -215,8 +225,9 @@ class ShiftsReportService
             ->selectRaw('SUM(amount) as paid')
             ->whereIn('shift_id', $this->cloneScope($shiftIds))
             ->groupBy('order_id');
+        $this->terminal()->money($paidInScope, 'payments.terminal_session_id');
 
-        $uncollected = DB::table('orders')
+        $uncollected = $this->terminal()->orders(DB::table('orders'))
             ->leftJoinSub($paidInScope, 'scope_payments', 'scope_payments.order_id', '=', 'orders.id')
             ->whereIn('orders.shift_id', $this->cloneScope($shiftIds))
             ->where('orders.status', OrderStatus::COMPLETED->value)
@@ -224,7 +235,7 @@ class ShiftsReportService
             ->selectRaw('COUNT(*) as orders_count, COALESCE(SUM(orders.total - COALESCE(scope_payments.paid, 0)), 0) as amount')
             ->first();
 
-        $collections = DB::table('payments')
+        $collections = $this->terminal()->money(DB::table('payments'), 'payments.terminal_session_id')
             ->join('orders', 'orders.id', '=', 'payments.order_id')
             ->whereIn('payments.shift_id', $this->cloneScope($shiftIds))
             ->whereNotIn('orders.shift_id', $this->cloneScope($shiftIds))
@@ -249,7 +260,7 @@ class ShiftsReportService
      */
     public function revenueTotals(QueryBuilder|array $shiftIds): array
     {
-        $row = DB::table('revenues')
+        $row = $this->terminal()->money(DB::table('revenues'), 'revenues.terminal_session_id')
             ->whereIn('shift_id', $this->cloneScope($shiftIds))
             ->selectRaw("COALESCE(SUM(CASE WHEN method = 'cash' THEN amount ELSE 0 END), 0) as cash_amount")
             ->selectRaw("COALESCE(SUM(CASE WHEN method = 'card' THEN amount ELSE 0 END), 0) as card_amount")
@@ -292,8 +303,8 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'orders',
-                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
-                    ->where('orders.status', OrderStatus::COMPLETED)
+                fn ($join) => $this->terminal()->orders($join->on('shifts.id', '=', 'orders.shift_id')
+                    ->where('orders.status', OrderStatus::COMPLETED))
             )->first();
 
         $paymentsData = (clone $shiftsQuery)
@@ -304,9 +315,7 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'payments',
-                'shifts.id',
-                '=',
-                'payments.shift_id'
+                fn ($join) => $this->terminal()->money($join->on('shifts.id', '=', 'payments.shift_id'), 'payments.terminal_session_id')
             )->first();
 
         $expensesData = (clone $shiftsQuery)
@@ -315,14 +324,14 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'expenses',
-                'shifts.id',
-                '=',
-                'expenses.shift_id'
+                fn ($join) => $this->terminal()->money($join->on('shifts.id', '=', 'expenses.shift_id'), 'expenses.terminal_session_id')
             )->first();
 
-        $externalCash = (float) DB::table('external_order_collections')->whereIn('shift_id', clone $scope)->where('method', 'cash')->sum('amount');
-        $settlements = (float) DB::table('external_seller_settlements')->whereIn('shift_id', clone $scope)->sum('amount');
-        $startCash = (float) (clone $shiftsQuery)->sum('shifts.start_cash');
+        $externalCash = (float) $this->terminal()->money(DB::table('external_order_collections')->whereIn('shift_id', clone $scope)->where('method', 'cash'))->sum('amount');
+        $settlements = (float) $this->terminal()->money(DB::table('external_seller_settlements')->whereIn('shift_id', clone $scope))->sum('amount');
+        $startCash = $this->terminal()->active()
+            ? $this->terminal()->openingCash($scope)
+            : (float) (clone $shiftsQuery)->sum('shifts.start_cash');
         $returns = app(ReturnsAggregates::class)->forShifts(clone $scope);
         $revenues = $this->revenueTotals($scope);
         $totalStats = [
@@ -370,7 +379,7 @@ class ShiftsReportService
      */
     public function calculateOrderStats(Shift $shift): array
     {
-        $orders = $shift->orders()->get();
+        $orders = $this->terminal()->orders($shift->orders())->get();
 
         $stats = [];
         foreach (OrderStatus::cases() as $status) {
@@ -390,7 +399,7 @@ class ShiftsReportService
      */
     public function calculateOrderTypeStats(Shift $shift): array
     {
-        $query = Order::query()->where('orders.shift_id', $shift->id)->where('orders.status', OrderStatus::COMPLETED);
+        $query = $this->terminal()->orders(Order::query()->where('orders.shift_id', $shift->id)->where('orders.status', OrderStatus::COMPLETED));
 
         return $this->typeStats($query);
     }
@@ -435,7 +444,7 @@ class ShiftsReportService
             ])
             ->leftJoin(
                 'orders',
-                fn ($join) => $join->on('shifts.id', '=', 'orders.shift_id')
+                fn ($join) => $this->terminal()->orders($join->on('shifts.id', '=', 'orders.shift_id'))
             )
             ->groupBy('orders.status')
             ->get();
@@ -459,9 +468,9 @@ class ShiftsReportService
      */
     public function calculatePeriodOrderTypeStats(?string $startDate = null, ?string $endDate = null, ?array $shiftIds = null)
     {
-        $query = Order::query()
+        $query = $this->terminal()->orders(Order::query()
             ->where('orders.status', OrderStatus::COMPLETED)
-            ->whereIn('orders.shift_id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds));
+            ->whereIn('orders.shift_id', $this->shiftIdsQuery($startDate, $endDate, $shiftIds)));
 
         return $this->typeStats($query);
     }

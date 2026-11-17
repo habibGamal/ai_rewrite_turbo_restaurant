@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Expense;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -12,11 +13,15 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 class CurrentShiftExpensesDetailsTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
@@ -32,12 +37,14 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {
             $expenseQuery = Expense::query()->where('id', 0); // Empty query
         } else {
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->where('shift_id', $currentShift->id)
                 ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');

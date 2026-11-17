@@ -239,6 +239,7 @@ export interface FeatureFlags {
     equipment: boolean;
     variants: boolean;
     multi_terminal: boolean;
+    terminal_separation: boolean;
     deferred_payment?: boolean;
     returns?: boolean;
 }

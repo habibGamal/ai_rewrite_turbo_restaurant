@@ -326,6 +326,7 @@ class OrderReturnService
         // Create a temporary order with only returned items for stock calculation
         $tempOrder = new Order;
         $tempOrder->id = $order->id;
+        $tempOrder->terminal_id = $order->terminal_id;
         $tempOrder->setRelation('items', collect());
 
         foreach ($returnItems as $item) {

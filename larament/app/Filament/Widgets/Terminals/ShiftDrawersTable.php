@@ -2,12 +2,14 @@
 
 namespace App\Filament\Widgets\Terminals;
 
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\TerminalSession;
 use App\Services\FeatureService;
 use App\Terminals\TerminalSessionService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -19,6 +21,9 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 abstract class ShiftDrawersTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
@@ -40,9 +45,12 @@ abstract class ShiftDrawersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         return $table
             ->query(fn (): Builder => TerminalSession::query()
                 ->whereIn('shift_id', $this->shiftIds())
+                ->when($this->reportTerminal()->id(), fn (Builder $query, int $terminalId) => $query->where('terminal_id', $terminalId))
                 ->with(['terminal', 'user', 'closedBy'])
                 ->withCount('handovers'))
             ->defaultSort('opened_at')

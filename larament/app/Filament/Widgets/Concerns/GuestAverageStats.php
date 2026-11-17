@@ -5,6 +5,7 @@ namespace App\Filament\Widgets\Concerns;
 use App\Core\Orders\GuestStats;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Services\Reports\ReportTerminalScope;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
@@ -21,9 +22,9 @@ trait GuestAverageStats
     protected function guestAverageStats(QueryBuilder|array $shiftIds): array
     {
         $guests = GuestStats::fromQuery(
-            Order::query()
+            app(ReportTerminalScope::class)->orders(Order::query()
                 ->where('orders.status', OrderStatus::COMPLETED)
-                ->whereIn('orders.shift_id', $shiftIds)
+                ->whereIn('orders.shift_id', $shiftIds))
         );
 
         if (! $guests->hasGuests()) {

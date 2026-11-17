@@ -28,7 +28,7 @@ class EquipmentReportService
      */
     public function scopeLines(EloquentBuilder $lines, QueryBuilder|array $shiftIds, ?string $orderType = null): EloquentBuilder
     {
-        return $lines->whereHas('order', fn ($orders) => $orders
+        return $lines->whereHas('order', fn ($orders) => app(ReportTerminalScope::class)->orders($orders, 'orders.terminal_id')
             ->where('status', OrderStatus::COMPLETED)
             ->whereIn('shift_id', $shiftIds instanceof QueryBuilder ? clone $shiftIds : $shiftIds)
             ->when($orderType, fn ($query, $type) => $query->where('type', $type)));
@@ -64,7 +64,7 @@ class EquipmentReportService
      */
     public function refundLines(QueryBuilder|array $shiftIds, ?string $orderType = null): QueryBuilder
     {
-        return DB::table('order_return_items as ori')
+        return app(ReportTerminalScope::class)->money(DB::table('order_return_items as ori'), 'orr.terminal_session_id')
             ->join('order_returns as orr', 'orr.id', '=', 'ori.order_return_id')
             ->join('order_equipment as reqp', 'reqp.id', '=', 'ori.order_equipment_id')
             ->whereIn('orr.shift_id', $shiftIds instanceof QueryBuilder ? clone $shiftIds : $shiftIds)

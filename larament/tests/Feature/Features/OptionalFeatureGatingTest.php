@@ -330,6 +330,7 @@ it('retains historical external order details, accounting, receipts, and sync pa
                 'equipment' => false,
                 'variants' => false,
                 'multi_terminal' => false,
+                'terminal_separation' => false,
                 'deferred_payment' => false,
                 'returns' => false,
             ])

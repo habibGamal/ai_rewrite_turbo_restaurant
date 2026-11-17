@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
+use App\Services\StockWarehouseResolver;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -17,6 +18,13 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class PosVariantCatalogService
 {
+    private ?StockWarehouseResolver $warehouses = null;
+
+    private function warehouses(): StockWarehouseResolver
+    {
+        return $this->warehouses ??= app(StockWarehouseResolver::class);
+    }
+
     /**
      * Active groups that have at least one sellable SKU, keyed by category id.
      *
@@ -103,7 +111,7 @@ class PosVariantCatalogService
                     'legacy' => false,
                     'barcode' => $sku->barcode,
                     'option_value_ids' => $sku->optionValues->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
-                    'stock' => $stock[$sku->id.':'.$sku->stockWarehouseId()] ?? 0.0,
+                    'stock' => $stock[$sku->id.':'.$this->warehouses()->forCurrentDevice($sku)] ?? 0.0,
                 ])
                 ->values()
                 ->all(),

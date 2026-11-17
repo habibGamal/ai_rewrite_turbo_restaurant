@@ -2,13 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Shift;
 use App\Services\ShiftsReportService;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CurrentShiftOrdersStats extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -27,6 +32,8 @@ class CurrentShiftOrdersStats extends BaseWidget
 
     protected function getStats(): array
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {
