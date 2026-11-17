@@ -6,6 +6,7 @@ use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintReturnPurchaseInvoiceAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
 use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
@@ -16,6 +17,7 @@ use App\Models\Product;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -33,6 +35,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -119,6 +123,9 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ProductImporterAction::make('importProducts'),
                         ])
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, Set $set, Get $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
