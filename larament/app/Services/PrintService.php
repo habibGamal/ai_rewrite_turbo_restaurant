@@ -7,8 +7,10 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Terminal;
 use App\Orders\ReceiptPayment;
 use App\Orders\ReceiptView;
+use App\PrintAgent\AgentPrintConnector;
 use App\Services\PrintStrategies\PrintStrategyFactory;
 use App\Services\PrintStrategies\PrintStrategyInterface;
 use App\Terminals\TerminalSessionResolver;
@@ -16,6 +18,7 @@ use Exception;
 use Log;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
+use Mike42\Escpos\PrintConnectors\PrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
 
@@ -122,13 +125,35 @@ class PrintService
     }
 
     /**
+     * Where this device's receipts and drawer kicks go: the Turbo Label app
+     * on the drawer's computer when the drawer prints via it, else the
+     * printer address. Agent bytes are sent by sendIfAgent() once complete.
+     */
+    private function cashierConnector(string $kind): PrintConnector
+    {
+        $terminal = app(TerminalSessionResolver::class)->terminal();
+
+        if ($terminal !== null && $terminal->printsViaAgent()) {
+            return new AgentPrintConnector($terminal, $kind);
+        }
+
+        return $this->createConnector($this->cashierPrinter());
+    }
+
+    private function sendIfAgent(PrintConnector $connector): void
+    {
+        if ($connector instanceof AgentPrintConnector) {
+            $connector->send();
+        }
+    }
+
+    /**
      * Open the cashier drawer
      */
     public function openCashierDrawer(): void
     {
         try {
-            $printerIp = $this->cashierPrinter();
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('drawer');
             $printer = new Printer($connector);
 
             Log::info('Opening cashier drawer');
@@ -144,6 +169,8 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**
@@ -367,8 +394,8 @@ class PrintService
     public function testCashierPrinter(): void
     {
         try {
-            $printerIp = $this->cashierPrinter();
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('test');
+            $printerIp = $connector instanceof AgentPrintConnector ? 'Turbo Label' : $this->cashierPrinter();
             $printer = new Printer($connector);
 
             Log::info('Testing cashier printer connection');
@@ -396,6 +423,29 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
+    }
+
+    /**
+     * A test page on a drawer's printer through its Turbo Label app.
+     */
+    public function testThroughAgent(Terminal $terminal): void
+    {
+        $connector = new AgentPrintConnector($terminal, 'test');
+        $printer = new Printer($connector);
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
+        $printer->text("Turbo Label\n");
+        $printer->selectPrintMode();
+        $printer->text("------------------------\n");
+        $printer->text('Date: '.now()->format('Y-m-d H:i:s')."\n");
+        $printer->text("Printer test OK\n");
+        $printer->feed(3);
+        $printer->cut();
+        $printer->close();
+
+        $connector->send();
     }
 
     /**
@@ -405,8 +455,7 @@ class PrintService
     {
         try {
 
-            $printerIp = $this->cashierPrinter();
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('receipt');
             $printer = new Printer($connector);
 
             Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
@@ -488,6 +537,8 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**

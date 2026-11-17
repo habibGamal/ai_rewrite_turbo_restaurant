@@ -9,16 +9,24 @@ use App\Filament\Resources\Terminals\Pages\ListTerminals;
 use App\Filament\Traits\BelongsToModule;
 use App\Models\Terminal;
 use App\Modules\ModuleScreens;
+use App\PrintAgent\PrintAgentQueue;
+use App\Services\PrintService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -90,10 +98,39 @@ class TerminalResource extends Resource
                     ->required()
                     ->maxLength(100)
                     ->unique(ignoreRecord: true),
-                TextInput::make('receipt_printer')
-                    ->label('طابعة الفاتورة')
-                    ->helperText('عنوان IP أو اسم الطابعة المتوصل بيها درج الفلوس. لو فاضية بيستخدم طابعة الكاشير اللي في الإعدادات.')
-                    ->maxLength(255),
+                Section::make('طباعة الفاتورة ودرج الفلوس')
+                    ->columnSpanFull()
+                    ->schema([
+                        ToggleButtons::make('print_via')
+                            ->label('الطباعة عن طريق')
+                            ->options([
+                                Terminal::PRINT_VIA_SERVER => 'السيرفر (IP أو طابعة مشاركة)',
+                                Terminal::PRINT_VIA_AGENT => 'برنامج Turbo Label على جهاز الدرج',
+                            ])
+                            ->helperText('لو السيستم على سيرفر بعيد عن المحل (VPS)، اختار برنامج Turbo Label عشان يطبع على الطابعة المتوصلة بجهاز الكاشير.')
+                            ->default(Terminal::PRINT_VIA_SERVER)
+                            ->inline()
+                            ->live()
+                            ->required(),
+                        TextInput::make('receipt_printer')
+                            ->label('طابعة الفاتورة')
+                            ->helperText('عنوان IP أو اسم الطابعة المتوصل بيها درج الفلوس. لو فاضية بيستخدم طابعة الكاشير اللي في الإعدادات.')
+                            ->visible(fn (Get $get): bool => $get('print_via') !== Terminal::PRINT_VIA_AGENT)
+                            ->maxLength(255),
+                        Select::make('agent_printer')
+                            ->label('طابعة الفاتورة على جهاز الدرج')
+                            ->helperText('من الطابعات اللي البرنامج لقاها على الجهاز. لو فاضية بيستخدم الطابعة المختارة في البرنامج نفسه.')
+                            ->options(fn (?Terminal $record): array => collect($record?->agentPrinters() ?? [])
+                                ->when(filled($record?->agent_printer), fn ($c) => $c->push($record->agent_printer))
+                                ->unique()
+                                ->mapWithKeys(fn (string $name): array => [$name => $name])
+                                ->all())
+                            ->placeholder('طابعة البرنامج')
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => $get('print_via') === Terminal::PRINT_VIA_AGENT),
+                        Text::make(fn (?Terminal $record): string => self::agentStatus($record))
+                            ->visible(fn (Get $get): bool => $get('print_via') === Terminal::PRINT_VIA_AGENT),
+                    ]),
                 TextInput::make('sort')
                     ->label('الترتيب')
                     ->numeric()
@@ -114,13 +151,73 @@ class TerminalResource extends Resource
             ->defaultSort('sort')
             ->columns([
                 TextColumn::make('name')->label('اسم الدرج')->searchable()->sortable(),
-                TextColumn::make('receipt_printer')->label('طابعة الفاتورة')->placeholder('طابعة الإعدادات'),
+                TextColumn::make('receipt_printer')
+                    ->label('طابعة الفاتورة')
+                    ->state(fn (Terminal $record): ?string => $record->printsViaAgent()
+                        ? 'Turbo Label'.($record->agentPrinter() !== null ? ' · '.$record->agentPrinter() : '')
+                        : $record->receiptPrinter())
+                    ->description(fn (Terminal $record): ?string => $record->printsViaAgent() ? self::agentStatus($record) : null)
+                    ->placeholder('طابعة الإعدادات'),
                 IconColumn::make('is_active')->label('مفعل')->boolean(),
                 TextColumn::make('devices_count')->label('الأجهزة المربوطة')->counts('devices'),
                 TextColumn::make('sort')->label('الترتيب')->sortable(),
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('pairAgent')
+                    ->label(fn (Terminal $record): string => $record->agentPaired() ? 'كود ربط جديد للبرنامج' : 'ربط برنامج الطباعة')
+                    ->icon('heroicon-o-qr-code')
+                    ->color('gray')
+                    ->visible(fn (Terminal $record): bool => $record->printsViaAgent() && (auth()->user()?->can('update', $record) ?? false))
+                    ->requiresConfirmation()
+                    ->modalHeading('ربط برنامج Turbo Label بالدرج')
+                    ->modalDescription(fn (Terminal $record): string => $record->agentPaired()
+                        ? 'الكود الجديد هيلغي ربط البرنامج الحالي، ولازم تربطه تاني.'
+                        : 'افتح الصفحة دي من جهاز الدرج نفسه، وبعد ما يظهر الكود اضغط «ربط البرنامج» أو انسخ الكود في شاشة البرنامج.')
+                    ->modalSubmitActionLabel('اعمل كود الربط')
+                    ->action(function (Terminal $record): void {
+                        $code = app(PrintAgentQueue::class)->pair($record);
+
+                        Notification::make()
+                            ->success()
+                            ->persistent()
+                            ->title('كود ربط الدرج «'.$record->name.'»')
+                            ->body(new HtmlString(
+                                '<p>على جهاز الدرج، اضغط «ربط البرنامج»، أو افتح Turbo Label والصق الكود ده في «ربط بدرج»:</p>'
+                                .'<code dir="ltr" style="display:block;user-select:all;word-break:break-all;font-size:11px;margin-top:6px">'
+                                .e($code).'</code>'
+                            ))
+                            ->actions([
+                                Action::make('openAgent')
+                                    ->label('ربط البرنامج')
+                                    ->button()
+                                    ->url('turbo-label://pair?code='.urlencode($code)),
+                            ])
+                            ->send();
+                    }),
+                Action::make('testAgent')
+                    ->label('تجربة الطباعة')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->visible(fn (Terminal $record): bool => $record->printsViaAgent() && $record->agentPaired())
+                    ->action(function (Terminal $record): void {
+                        try {
+                            app(PrintService::class)->testThroughAgent($record);
+                            Notification::make()->success()->title('البرنامج طبع صفحة التجربة')->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->danger()->title('فشلت التجربة')->body($e->getMessage())->send();
+                        }
+                    }),
+                Action::make('unpairAgent')
+                    ->label('إلغاء ربط البرنامج')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Terminal $record): bool => $record->agentPaired() && (auth()->user()?->can('update', $record) ?? false))
+                    ->requiresConfirmation()
+                    ->action(function (Terminal $record): void {
+                        app(PrintAgentQueue::class)->unpair($record);
+                        Notification::make()->success()->title('تم إلغاء ربط البرنامج')->send();
+                    }),
                 Action::make('unbindDevices')
                     ->label('فك ربط الأجهزة')
                     ->icon('heroicon-o-link-slash')
@@ -133,6 +230,24 @@ class TerminalResource extends Resource
                         Notification::make()->success()->title('تم فك ربط الأجهزة')->send();
                     }),
             ]);
+    }
+
+    public static function agentStatus(?Terminal $record): string
+    {
+        if ($record === null || ! $record->agentPaired()) {
+            return 'البرنامج مش مربوط. احفظ الدرج واضغط «ربط برنامج الطباعة» من قائمة الأدراج.';
+        }
+
+        $info = $record->agent_info ?? [];
+        $machine = filled($info['machine'] ?? null) ? ' على '.$info['machine'] : '';
+
+        if (app(PrintAgentQueue::class)->online($record)) {
+            return 'البرنامج متصل'.$machine.'.';
+        }
+
+        return $record->agent_last_seen_at !== null
+            ? 'البرنامج مش متصل'.$machine.'، آخر اتصال '.$record->agent_last_seen_at->diffForHumans().'.'
+            : 'البرنامج مربوط لكن لسه ما اتصلش.';
     }
 
     public static function getPages(): array
