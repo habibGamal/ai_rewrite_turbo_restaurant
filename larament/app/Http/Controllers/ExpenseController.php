@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Core\Audit\AuditLogger;
 use App\Models\ExpenceType;
 use App\Models\Expense;
+use App\Models\TerminalSession;
+use App\Services\FeatureService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,6 +119,10 @@ class ExpenseController extends Controller
             return back()->withErrors(['message' => 'لا يمكن تعديل هذا المصروف']);
         }
 
+        if (! $this->belongsToThisDrawer($expense)) {
+            return back()->withErrors(['message' => 'لا يمكن تعديل مصروف منفذ بيع آخر أو منفذ بيع مغلق']);
+        }
+
         try {
             DB::transaction(function () use ($request, $expense) {
                 $oldExpenseType = $expense->expenceType;
@@ -180,6 +187,10 @@ class ExpenseController extends Controller
             return back()->withErrors(['message' => 'لا يمكن حذف هذا المصروف']);
         }
 
+        if (! $this->belongsToThisDrawer($expense)) {
+            return back()->withErrors(['message' => 'لا يمكن حذف مصروف منفذ بيع آخر أو منفذ بيع مغلق']);
+        }
+
         try {
             DB::transaction(function () use ($expense) {
                 $expenseData = [
@@ -205,5 +216,28 @@ class ExpenseController extends Controller
 
             return back()->withErrors(['message' => 'حدث خطأ أثناء حذف المصروف: '.$e->getMessage()]);
         }
+    }
+
+    /**
+     * With several drawers, an expense is changed only from the drawer that
+     * recorded it, while that drawer is still open: a closed drawer's expected
+     * cash is frozen.
+     */
+    private function belongsToThisDrawer(Expense $expense): bool
+    {
+        $sessionId = $expense->getAttribute('terminal_session_id');
+
+        if ($sessionId === null || ! app(FeatureService::class)->multiTerminalEnabled()) {
+            return true;
+        }
+
+        $session = TerminalSession::query()->find($sessionId);
+        if ($session === null || ! $session->isOpen()) {
+            return false;
+        }
+
+        $current = app(TerminalSessionResolver::class)->current();
+
+        return $current === null || (int) $current->getKey() === (int) $sessionId;
     }
 }

@@ -35,7 +35,16 @@ class TerminalSeparation
 
         $terminal = $id > 0 ? Terminal::query()->active()->find($id) : null;
 
-        return $terminal ?? Terminal::default();
+        if ($terminal !== null) {
+            return $terminal;
+        }
+
+        // Never route web orders to a switched-off sales point.
+        $default = Terminal::default();
+
+        return $default->is_active
+            ? $default
+            : (Terminal::query()->active()->orderBy('sort')->orderBy('id')->first() ?? $default);
     }
 
     /**
