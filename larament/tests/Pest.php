@@ -62,6 +62,19 @@ pest()->beforeEach(function (): void {
 );
 
 /*
+| Editing a closed shift's expenses and revenues is a vendor feature that
+| starts off. The shift money suite exercises it, so it runs with it on; the
+| off state is covered by tests/Feature/Features/ClosedShiftEditsGatingTest.php.
+*/
+pest()->beforeEach(function (): void {
+    app(FeatureService::class)->updateFeatures([
+        OptionalFeature::CLOSED_SHIFT_EDITS->value => true,
+    ]);
+})->in(
+    'Feature/Shifts/ShiftMoneyTest.php',
+);
+
+/*
 |--------------------------------------------------------------------------
 | Expectations
 |--------------------------------------------------------------------------

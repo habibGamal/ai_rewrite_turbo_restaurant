@@ -112,6 +112,15 @@ class FeatureService
     }
 
     /**
+     * The manager may reopen a closed shift's money (add, edit or delete its
+     * expenses and revenues) from the shift money page.
+     */
+    public function closedShiftEditsEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::CLOSED_SHIFT_EDITS);
+    }
+
+    /**
      * Sales points work as separate branches. Only takes effect while
      * multiple terminals are on.
      */
