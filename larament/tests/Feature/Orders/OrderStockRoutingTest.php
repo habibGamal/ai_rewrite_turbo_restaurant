@@ -1,10 +1,13 @@
 <?php
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\InventoryItemMovement;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Models\Shift;
@@ -19,7 +22,7 @@ uses(RefreshDatabase::class);
 
 function routingOrder(Product $product, float $quantity = 1): Order
 {
-    $order = Order::factory()->create();
+    $order = paidRoutingOrder(40 * $quantity);
     OrderItem::factory()->create([
         'order_id' => $order->id,
         'product_id' => $product->id,
@@ -30,6 +33,26 @@ function routingOrder(Product $product, float $quantity = 1): Order
     ]);
 
     return $order->load('items.product');
+}
+
+/** A completed, fully paid order whose header matches its lines, so it can be returned. */
+function paidRoutingOrder(float $total): Order
+{
+    $order = Order::factory()->create([
+        'status' => OrderStatus::COMPLETED,
+        'payment_status' => PaymentStatus::FULL_PAID,
+        'sub_total' => $total,
+        'total' => $total,
+        'discount' => 0,
+        'temp_discount_percent' => 0,
+        'service' => 0,
+        'tax' => 0,
+        'fees_total' => 0,
+        'equipment_total' => 0,
+    ]);
+    Payment::factory()->create(['order_id' => $order->id, 'shift_id' => $order->shift_id, 'amount' => $total, 'method' => 'cash']);
+
+    return $order;
 }
 
 function stockAt(int $productId, int $warehouseId): float
@@ -118,7 +141,7 @@ it('keeps the same product in two warehouses as two lines', function () {
     ProductComponent::create(['product_id' => $plate->id, 'component_id' => $bread->id, 'quantity' => 1]);
     ProductComponent::create(['product_id' => $drink->id, 'component_id' => $bread->id, 'quantity' => 0.5]);
 
-    $order = Order::factory()->create();
+    $order = paidRoutingOrder(55);
     OrderItem::factory()->create([
         'order_id' => $order->id,
         'product_id' => $plate->id,
@@ -232,7 +255,7 @@ it('partial return of a product split across warehouses uses the first sale move
     ProductComponent::create(['product_id' => $plate->id, 'component_id' => $bread->id, 'quantity' => 1]);
     ProductComponent::create(['product_id' => $drink->id, 'component_id' => $bread->id, 'quantity' => 1]);
 
-    $order = Order::factory()->create();
+    $order = paidRoutingOrder(55);
     OrderItem::factory()->create([
         'order_id' => $order->id,
         'product_id' => $plate->id,

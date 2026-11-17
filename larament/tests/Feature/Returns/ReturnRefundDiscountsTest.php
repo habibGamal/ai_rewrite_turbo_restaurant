@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\SettingKey;
-use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderTypeRow;
@@ -272,28 +271,4 @@ it('prices instant-sale returns with the item discount on its own line', functio
     ])->assertOk();
 
     expect((float) OrderReturn::query()->sole()->total_refund)->toBe(130.0);
-});
-
-it('fills the admin return form with the discounted unit refund and saves the server amount', function () {
-    $order = discountedOrder([
-        ['product_id' => $this->burger->id, 'quantity' => 2],
-        ['product_id' => $this->fries->id, 'quantity' => 1],
-    ], [25, 'fixed']);
-
-    $page = Pest\Livewire\livewire(CreateOrderReturn::class)
-        ->fillForm(['order_id' => $order->id]);
-
-    $items = collect($page->get('data.return_items'));
-    $burgerKey = $items->search(fn ($row) => $row['order_item_id'] === itemId($order, $this->burger));
-    expect((float) $items[$burgerKey]['unit_price'])->toBe(90.0)
-        ->and($items[$burgerKey]['explanation'])->toContain('نصيبه من خصم الفاتورة 20.00');
-
-    $distributionKey = array_key_first($page->get('data.refund_distribution'));
-    $page->fillForm([
-        "return_items.{$burgerKey}.quantity" => 1,
-        "refund_distribution.{$distributionKey}.amount" => 90,
-        'reason' => 'test',
-    ])->call('create')->assertHasNoFormErrors();
-
-    expect((float) $order->fresh()->returns()->sole()->total_refund)->toBe(90.0);
 });

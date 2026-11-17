@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\OrderReturns\Pages;
 
 use App\Filament\Resources\OrderReturns\OrderReturnResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListOrderReturns extends ListRecords
@@ -13,7 +12,6 @@ class ListOrderReturns extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->label('إرجاع طلب'),
         ];
     }
 }

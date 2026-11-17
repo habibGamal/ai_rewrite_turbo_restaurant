@@ -230,6 +230,12 @@ class OrderService
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
             }
 
+            // Cancelling deletes the payments but would keep the refunds, and it
+            // can't tell damaged returned units from unreturned ones.
+            if ($order->returns()->exists()) {
+                throw new OrderException('لا يمكن إلغاء طلب عليه مرتجعات');
+            }
+
             $order->load('payments.shift');
 
             $paidInClosedShift = $order->payments->contains(function (mixed $payment): bool {

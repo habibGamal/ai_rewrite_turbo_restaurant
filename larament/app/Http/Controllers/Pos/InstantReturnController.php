@@ -11,10 +11,13 @@ use App\Models\User;
 use App\Services\FeatureService;
 use App\Services\Orders\Instant\InstantReturnService;
 use App\Services\Orders\ReturnRules;
+use App\Services\PrintService;
 use App\Services\ShiftService;
 use App\Terminals\TerminalSeparation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * F10 on the instant-sale screen: return lines of a completed sale, with an
@@ -76,6 +79,7 @@ class InstantReturnController extends Controller
             ...InstantSaleRequest::itemRules('exchange.items', 'required_with:exchange'),
             ...InstantSaleRequest::tenderRules(),
             'refund_method' => ['nullable', 'in:cash,card'],
+            'print' => ['nullable', 'boolean'],
         ]);
 
         $user = $this->authorizeReturns($request);
@@ -112,6 +116,16 @@ class InstantReturnController extends Controller
             exchange: $exchange,
             refundMethod: $validated['refund_method'] ?? 'cash',
         );
+
+        // The exchange is a new sale: print its receipt like any instant sale.
+        if ($result['exchange'] !== null && $request->boolean('print', true)) {
+            $exchangeOrder = $result['exchange']->order;
+            try {
+                app(PrintService::class)->printOrderReceipt($exchangeOrder->load(['items.product', 'user', 'customer', 'payments']));
+            } catch (Throwable $e) {
+                Log::warning('Exchange receipt failed to print', ['order_id' => $exchangeOrder->id, 'error' => $e->getMessage()]);
+            }
+        }
 
         return response()->json([
             'return' => ['id' => $result['return']->id, 'total_refund' => $result['refund']],

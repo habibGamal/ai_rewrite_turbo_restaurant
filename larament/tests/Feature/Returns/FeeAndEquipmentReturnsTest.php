@@ -3,9 +3,7 @@
 use App\Enums\OptionalFeature;
 use App\Enums\ReturnStatus;
 use App\Enums\SettingKey;
-use App\Filament\Actions\ReturnOrderAction;
-use App\Filament\Forms\ReturnChargeLines;
-use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
+use App\Filament\Resources\OrderReturns\OrderReturnResource;
 use App\Models\Equipment;
 use App\Models\Order;
 use App\Models\OrderReturn;
@@ -189,52 +187,9 @@ it('sends the line kind and fee or equipment uuid in the return sync payload', f
         ->and($payload['items'][0]['order_item_uuid'])->toBeNull();
 });
 
-it('collects fee and equipment rows from the return form', function () {
-    $lines = ReturnChargeLines::fromFormData([
-        'return_fees' => [
-            ['order_fee_id' => $this->feeLine->id, 'refund_amount' => '12.5'],
-            ['order_fee_id' => 999, 'refund_amount' => 0],
-        ],
-        'return_equipment' => [
-            ['order_equipment_id' => $this->equipmentLine->id, 'quantity' => '1', 'refund_amount' => '50'],
-            ['order_equipment_id' => 999, 'quantity' => 0, 'refund_amount' => 0],
-        ],
-    ]);
-
-    expect($lines)->toBe([
-        ['order_fee_id' => $this->feeLine->id, 'refund_amount' => 12.5],
-        ['order_equipment_id' => $this->equipmentLine->id, 'quantity' => 1, 'refund_amount' => 50.0],
-    ]);
-
-    $defaults = ReturnChargeLines::defaults($this->order->fresh());
-    expect($defaults['return_fees'][0])->toMatchArray(['refundable' => 30.0])
-        ->and($defaults['return_equipment'][0])->toMatchArray(['available_quantity' => 2, 'unit_price' => 50.0]);
-    expect(ReturnOrderAction::make())->not->toBeNull();
-});
-
-it('refunds a fee and an equipment use from the admin create-return page', function () {
-    session(['current_shift_id' => $this->shift->id]);
-
-    $page = Pest\Livewire\livewire(CreateOrderReturn::class)
-        ->fillForm(['order_id' => $this->order->id]);
-
-    $fees = $page->get('data.return_fees');
-    $equipment = $page->get('data.return_equipment');
-    $feeKey = array_key_first($fees);
-    $equipmentKey = array_key_first($equipment);
-    $distributionKey = array_key_first($page->get('data.refund_distribution'));
-
-    $page->fillForm([
-        "return_fees.{$feeKey}.refund_amount" => 30,
-        "return_equipment.{$equipmentKey}.quantity" => 1,
-        "return_equipment.{$equipmentKey}.refund_amount" => 50,
-        "refund_distribution.{$distributionKey}.amount" => 80,
-        'reason' => 'لم تُستخدم',
-    ])->call('create')->assertHasNoFormErrors();
-
-    $return = $this->order->fresh()->returns()->sole();
-    expect((float) $return->total_refund)->toBe(80.0)
-        ->and($return->items->map->kind()->sort()->values()->all())->toBe(['equipment', 'fee']);
+it('has no admin create-return page: returns are made from the POS only', function () {
+    expect(OrderReturnResource::canCreate())->toBeFalse()
+        ->and(OrderReturnResource::getPages())->not->toHaveKey('create');
 });
 
 it('does not let two lines in one return over-refund the same fee or equipment', function () {
