@@ -4,6 +4,8 @@ namespace App\Filament\Resources\StockIssues;
 
 use App\Enums\ProductType;
 use App\Filament\Actions\ConfirmStockIssueAction;
+use App\Filament\Actions\PrintLabelsAction;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Resources\StockIssues\Pages\CreateStockIssue;
 use App\Filament\Resources\StockIssues\Pages\EditStockIssue;
 use App\Filament\Resources\StockIssues\Pages\ListStockIssues;
@@ -119,7 +121,10 @@ class StockIssueResource extends Resource
                                         $quantity = (float) ($get('quantity') ?? 1);
                                         $set('unit_cost', $cost);
                                         $set('total_cost', round($quantity * $cost, 2));
+                                        DocumentBarcodeField::fill($set, $state);
                                     }),
+
+                                ...DocumentBarcodeField::whenEnabled(),
 
                                 TextInput::make('quantity')
                                     ->label('الكمية')
@@ -308,6 +313,7 @@ class StockIssueResource extends Resource
             ])
             ->recordActions([
                 ConfirmStockIssueAction::table(),
+                PrintLabelsAction::document(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),

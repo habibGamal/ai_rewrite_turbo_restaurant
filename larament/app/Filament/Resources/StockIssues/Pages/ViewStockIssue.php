@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\StockIssues\Pages;
 
 use App\Filament\Actions\ConfirmStockIssueAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Resources\StockIssues\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\StockIssues\StockIssueResource;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class ViewStockIssue extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            PrintLabelsAction::document(),
             ConfirmStockIssueAction::make(),
             EditAction::make(),
         ];

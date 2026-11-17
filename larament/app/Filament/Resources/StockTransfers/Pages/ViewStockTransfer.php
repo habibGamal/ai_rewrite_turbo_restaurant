@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\StockTransfers\Pages;
 
 use App\Filament\Actions\ConfirmStockTransferAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Resources\StockTransfers\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\StockTransfers\StockTransferResource;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class ViewStockTransfer extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            PrintLabelsAction::document(),
             ConfirmStockTransferAction::make(),
             EditAction::make(),
         ];

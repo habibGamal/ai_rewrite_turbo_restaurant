@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PurchaseInvoices\RelationManagers;
 
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Models\Product;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -34,6 +35,11 @@ class ItemsRelationManager extends RelationManager
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('product.barcode')
+                    ->label('الباركود')
+                    ->placeholder('بدون باركود')
+                    ->searchable()
+                    ->visible(fn (): bool => DocumentBarcodeField::enabled()),
                 TextColumn::make('product.unit')
                     ->label('الوحدة')
                     ->formatStateUsing(fn (?string $state): string => Product::formatUnit($state))

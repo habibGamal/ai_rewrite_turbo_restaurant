@@ -10,6 +10,7 @@ use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintPurchaseInvoiceAction;
 use App\Filament\Components\Forms\BarcodeScanInput;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\EditPurchaseInvoice;
@@ -225,12 +226,12 @@ class PurchaseInvoiceResource extends Resource
     }
 
     /**
-     * The barcode column and generate button exist only while the vendor has
-     * switched purchase barcodes on.
+     * The barcode column exists while the vendor has switched purchase
+     * barcodes or document barcodes on.
      */
     public static function showsBarcodes(): bool
     {
-        return app(FeatureService::class)->purchaseBarcodesEnabled();
+        return app(FeatureService::class)->purchaseBarcodesEnabled() || DocumentBarcodeField::enabled();
     }
 
     public static function infolist(Schema $schema): Schema
@@ -389,11 +390,6 @@ class PurchaseInvoiceResource extends Resource
      */
     public static function printLabelsAction(): Action
     {
-        return PrintLabelsAction::make(
-            fn (PurchaseInvoice $record): array => $record->items()->get()
-                ->groupBy('product_id')
-                ->map(fn ($items): float => (float) $items->sum('quantity'))
-                ->all(),
-        );
+        return PrintLabelsAction::document();
     }
 }

@@ -4,7 +4,9 @@ namespace App\Filament\Resources\ReturnPurchaseInvoices;
 
 use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintReturnPurchaseInvoiceAction;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
@@ -122,9 +124,10 @@ class ReturnPurchaseInvoiceResource extends Resource
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                DocumentBarcodeField::enabled() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية')
@@ -133,7 +136,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
-                            ])
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
                                 TextInput::make('product_name')
@@ -147,6 +150,8 @@ class ReturnPurchaseInvoiceResource extends Resource
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                ...DocumentBarcodeField::whenEnabled(),
 
                                 TextInput::make('unit')
                                     ->label('الوحدة')
@@ -323,6 +328,7 @@ class ReturnPurchaseInvoiceResource extends Resource
             ->recordActions([
                 CloseReturnPurchaseInvoiceAction::table(),
                 PrintReturnPurchaseInvoiceAction::table(),
+                PrintLabelsAction::document(),
                 ViewAction::make(),
 
                 EditAction::make()
