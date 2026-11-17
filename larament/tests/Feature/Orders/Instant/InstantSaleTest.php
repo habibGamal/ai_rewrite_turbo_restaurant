@@ -66,6 +66,31 @@ it('creates a completed, fully paid order with stock removed and profit set in o
         ->assertJsonPath('duplicate', false);
 });
 
+it('saves the order note sent with the sale and leaves it empty when none is sent', function () {
+    $this->postJson(route('pos.instant-sales.store'), instantSale(['order_notes' => '  تغليف هدية  ']))->assertOk();
+    $this->postJson(route('pos.instant-sales.store'), instantSale(['order_notes' => '']))->assertOk();
+
+    $orders = Order::query()->orderBy('id')->get();
+
+    expect($orders[0]->order_notes)->toBe('تغليف هدية')
+        ->and($orders[1]->order_notes)->toBeNull();
+});
+
+it('rejects an order note longer than 1000 characters', function () {
+    $this->postJson(route('pos.instant-sales.store'), instantSale(['order_notes' => str_repeat('x', 1001)]))
+        ->assertStatus(422);
+
+    expect(Order::count())->toBe(0);
+});
+
+it('keeps the order note in a held sale', function () {
+    $this->postJson(route('pos.held-sales.store'), [
+        'type' => 'instant_sale',
+        'items' => [['product_id' => $this->shirt->id, 'quantity' => 1]],
+        'meta' => ['notes' => 'يستلمها لاحقا'],
+    ])->assertCreated()->assertJsonPath('data.meta.notes', 'يستلمها لاحقا');
+});
+
 it('returns the same order for a repeated client_uuid', function () {
     $payload = instantSale();
 

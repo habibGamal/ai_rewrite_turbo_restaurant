@@ -81,7 +81,10 @@ class InstantSaleService
             userId: $data->userId,
             customerId: $data->customerId,
         ));
-        $order->forceFill(['client_uuid' => $data->clientUuid])->save();
+        $order->forceFill([
+            'client_uuid' => $data->clientUuid,
+            'order_notes' => $data->orderNotes,
+        ])->save();
 
         $this->items->updateOrderItems($order, $this->pricer->price($data->items));
 
