@@ -126,6 +126,7 @@ export interface StoredCart {
     items: OrderItemData[];
     discount: InstantCartDiscount | null;
     customer: InstantCartCustomer | null;
+    notes: string;
     clientUuid: string;
     heldSaleId: number | null;
 }
@@ -134,6 +135,7 @@ export const emptyCart = (): StoredCart => ({
     items: [],
     discount: null,
     customer: null,
+    notes: "",
     clientUuid: newClientUuid(),
     heldSaleId: null,
 });
@@ -147,6 +149,7 @@ export const loadCart = (key: string): StoredCart => {
             items: Array.isArray(parsed.items) ? parsed.items : [],
             discount: parsed.discount ?? null,
             customer: parsed.customer ?? null,
+            notes: typeof parsed.notes === "string" ? parsed.notes : "",
             clientUuid: typeof parsed.clientUuid === "string" && parsed.clientUuid ? parsed.clientUuid : newClientUuid(),
             heldSaleId: typeof parsed.heldSaleId === "number" ? parsed.heldSaleId : null,
         };
@@ -157,7 +160,7 @@ export const loadCart = (key: string): StoredCart => {
 
 export const saveCart = (key: string, cart: StoredCart) => {
     try {
-        if (cart.items.length === 0 && !cart.discount && !cart.customer && !cart.heldSaleId) {
+        if (cart.items.length === 0 && !cart.discount && !cart.customer && !cart.notes && !cart.heldSaleId) {
             window.localStorage.removeItem(key);
             return;
         }

@@ -55,6 +55,7 @@ class InstantSaleController extends Controller
             customerId: $request->integer('customer_id') ?: null,
             heldSaleId: $request->integer('held_sale_id') ?: null,
             print: $request->boolean('print'),
+            orderNotes: trim((string) $request->input('order_notes', '')) ?: null,
         ));
 
         if (! $result->duplicate) {

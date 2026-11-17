@@ -25,6 +25,7 @@ class InstantSaleRequest extends FormRequest
             'discount.type' => ['required_with:discount', 'in:percent,value'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'held_sale_id' => ['nullable', 'integer'],
+            'order_notes' => ['nullable', 'string', 'max:1000'],
             ...self::tenderRules(),
             'print' => ['boolean'],
         ];

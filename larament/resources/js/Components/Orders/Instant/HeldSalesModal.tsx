@@ -19,7 +19,7 @@ export interface HeldSale {
     id: number;
     label: string | null;
     lines: HeldSaleLine[];
-    meta: { discount?: InstantCartDiscount | null; customer?: InstantCartCustomer | null } | null;
+    meta: { discount?: InstantCartDiscount | null; customer?: InstantCartCustomer | null; notes?: string | null } | null;
     total: number;
     user: { id: number; name: string } | null;
     created_at: string;

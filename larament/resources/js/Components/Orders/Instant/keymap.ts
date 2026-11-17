@@ -6,6 +6,7 @@ export type InstantAction =
     | 'focusSearch'
     | 'discount'
     | 'customer'
+    | 'notes'
     | 'hold'
     | 'heldList'
     | 'returns'
@@ -21,6 +22,7 @@ export const INSTANT_KEYMAP: Record<InstantAction, string> = {
     focusSearch: 'F2',
     discount: 'F4',
     customer: 'F6',
+    notes: 'F7',
     hold: 'F8',
     heldList: 'F9',
     returns: 'F10',
