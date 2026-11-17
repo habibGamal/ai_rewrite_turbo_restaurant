@@ -111,6 +111,7 @@ Contexts in use: `shift_money`, `pos_expense`, `order_fee`, `equipment_removed`.
 | `App\Core\Orders\SalesBreakdown` | Items / fees / equipment split of sales for a query or order. |
 | `App\Core\Orders\GuestStats` | Guest counts and average per guest. |
 | `App\Services\Reports\ReturnsAggregates` | Refunds per shift, period or grouping. |
+| `App\Services\Reports\ReportTerminalScope` | Sales point tab of the current-shift / shift-period reports (scoped per request). Widgets call `ScopesReportToTerminal::reportTerminal()` (reads `pageFilters['terminal']`); `ShiftsReportService`, `ReturnsAggregates::forShifts()`, `GuestAverageStats` and `EquipmentReportService` narrow orders by `orders.terminal_id` and money rows by `terminal_session_id`; opening cash = the sales point's drawer sessions. Tabs (`ReportTerminalTabs`) show only with 2+ sales points in scope. Exports stay whole-shift. |
 | `ExpensesRevenuesReportService` | Expenses, revenues and the computed «إيرادات الطلبات» line. |
 | `CustomFeesReportService`, `EquipmentReportService` | Fee and equipment reports, net of refunds. |
 

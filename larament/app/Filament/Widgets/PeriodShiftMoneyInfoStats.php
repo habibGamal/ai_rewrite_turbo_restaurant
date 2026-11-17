@@ -6,6 +6,7 @@ use App\Filament\Widgets\Concerns\CreditReconciliationStats;
 use App\Filament\Widgets\Concerns\GuestAverageStats;
 use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Services\FeatureService;
 use App\Services\Reports\EquipmentReportService;
 use App\Services\ShiftsReportService;
@@ -15,6 +16,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PeriodShiftMoneyInfoStats extends BaseWidget
 {
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -39,6 +42,8 @@ class PeriodShiftMoneyInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
+        $this->reportTerminal();
+
         $stats = $this->getPeriodStats();
 
         return [

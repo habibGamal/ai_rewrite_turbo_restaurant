@@ -48,6 +48,7 @@ use App\Orders\OrderBehaviorRegistry;
 use App\Orders\OrderTypeCatalog;
 use App\Policies\RolePolicy;
 use App\Services\FeatureService;
+use App\Services\Reports\ReportTerminalScope;
 use App\Sync\SyncOutboxObserver;
 use App\Terminals\TerminalSessionResolver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
@@ -96,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(OrderTypeCatalog::class);
         $this->app->scoped(CostHistoryRecorder::class);
         $this->app->scoped(TerminalSessionResolver::class);
+        $this->app->scoped(ReportTerminalScope::class);
         $this->app->bind(CostingStrategyResolver::class);
         $this->app->bind(CostingStrategy::class, fn ($app) => $app->make(CostingStrategyResolver::class)->resolve());
     }

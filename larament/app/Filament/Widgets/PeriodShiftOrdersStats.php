@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -9,6 +10,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PeriodShiftOrdersStats extends BaseWidget
 {
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -29,6 +32,8 @@ class PeriodShiftOrdersStats extends BaseWidget
 
     protected function getStats(): array
     {
+        $this->reportTerminal();
+
         $orderStats = $this->calculatePeriodOrderStats();
 
         return [

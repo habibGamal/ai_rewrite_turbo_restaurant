@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Expense;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 class PeriodShiftExpensesDetailsTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -36,11 +38,13 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
             $shiftIds = $this->pageFilters['shifts'] ?? [];
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
                 })
@@ -49,7 +53,7 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
         } else {
             $startDate = $this->pageFilters['startDate'];
             $endDate = $this->pageFilters['endDate'];
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('start_at', [
                         Carbon::parse($startDate)->startOfDay(),

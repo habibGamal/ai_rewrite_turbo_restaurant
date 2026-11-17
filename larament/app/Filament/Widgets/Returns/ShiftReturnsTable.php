@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Returns;
 
 use App\Filament\Resources\OrderReturns\OrderReturnResource;
 use App\Filament\Resources\Orders\OrderResource;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
@@ -25,6 +26,7 @@ class ShiftReturnsTable extends BaseWidget
 {
     use InteractsWithPageFilters;
     use InteractsWithReturnsScope;
+    use ScopesReportToTerminal;
 
     /** Element id the returns card scrolls to. */
     public const ANCHOR = 'shift_returns_table';
@@ -42,9 +44,11 @@ class ShiftReturnsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         return $table
             ->query(
-                OrderReturn::query()
+                $this->reportTerminal()->money(OrderReturn::query(), 'order_returns.terminal_session_id')
                     ->whereIn('shift_id', $this->shiftScope())
                     ->with(['user', 'order', 'refunds', 'items', ...array_map(fn (string $relation) => 'items.'.$relation, OrderReturnItem::LINE_NAME_RELATIONS)])
                     ->latest('id')

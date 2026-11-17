@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\PaymentMethod;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\FeatureService;
@@ -11,6 +12,7 @@ use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -21,6 +23,9 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 abstract class CreditCollectionsTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
@@ -46,9 +51,11 @@ abstract class CreditCollectionsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $scope = $this->reportScope();
 
-        $query = Payment::query()->with(['order.customer', 'order.shift', 'order.payments', 'shift']);
+        $query = $this->reportTerminal()->money(Payment::query(), 'payments.terminal_session_id')->with(['order.customer', 'order.shift', 'order.payments', 'shift']);
 
         if ($scope === null) {
             $query->whereRaw('1 = 0');

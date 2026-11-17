@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\PeriodShiftOrdersExporter;
 use App\Filament\Widgets\Concerns\ScopedOrderPayments;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Order;
 use App\Orders\OrderTypeCatalog;
 use App\Services\FeatureService;
@@ -26,6 +27,7 @@ class PeriodShiftOrdersTable extends BaseWidget
 {
     use InteractsWithPageFilters;
     use ScopedOrderPayments;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -55,12 +57,14 @@ class PeriodShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $terminal = $this->reportTerminal();
+
         [$startDate, $endDate, $shiftIds] = $this->shiftsReportService->scopeFromFilters($this->pageFilters);
         $scope = $this->shiftsReportService->shiftIdsQuery($startDate, $endDate, $shiftIds);
 
-        $query = Order::query()
+        $query = $terminal->orders(Order::query()
             ->with(['customer', 'user', 'terminal', 'shift', ...$this->scopedPaymentsEagerLoad($scope)])
-            ->whereIn('shift_id', clone $scope);
+            ->whereIn('shift_id', clone $scope));
 
         return $table
             ->query($query)

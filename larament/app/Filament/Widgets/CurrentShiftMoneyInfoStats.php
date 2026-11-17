@@ -6,10 +6,12 @@ use App\Filament\Widgets\Concerns\CreditReconciliationStats;
 use App\Filament\Widgets\Concerns\GuestAverageStats;
 use App\Filament\Widgets\Concerns\OtherRevenuesStats;
 use App\Filament\Widgets\Concerns\ReturnsStats;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Shift;
 use App\Services\FeatureService;
 use App\Services\Reports\EquipmentReportService;
 use App\Services\ShiftsReportService;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -17,8 +19,10 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
 {
     use CreditReconciliationStats;
     use GuestAverageStats;
+    use InteractsWithPageFilters;
     use OtherRevenuesStats;
     use ReturnsStats;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -38,6 +42,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {

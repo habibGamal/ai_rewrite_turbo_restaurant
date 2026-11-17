@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Enums\RevenueMethod;
 use App\Filament\Exports\PeriodShiftRevenuesDetailedExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Revenue;
 use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
@@ -22,6 +23,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 class PeriodShiftRevenuesDetailsTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -36,10 +38,12 @@ class PeriodShiftRevenuesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $shiftIds = app(ShiftsReportService::class)->shiftIdsQueryFromFilters($this->pageFilters);
 
         return $table
-            ->query(Revenue::query()->whereIn('shift_id', $shiftIds)->with(['revenueType', 'shift.user', 'user', 'terminalSession.terminal']))
+            ->query($this->reportTerminal()->money(Revenue::query(), 'revenues.terminal_session_id')->whereIn('shift_id', $shiftIds)->with(['revenueType', 'shift.user', 'user', 'terminalSession.terminal']))
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل الإيرادات')

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
+use App\Filament\Components\ReportTerminalTabs;
 use App\Filament\Pages\ShiftMoney\ShiftMoneyPage;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
@@ -69,14 +70,15 @@ class PeriodShiftReport extends BaseDashboard
     public function filtersForm(Schema $schema): Schema
     {
         return $schema
-            ->components(
-                PeriodWithShiftFilterFormComponent::make(
+            ->components([
+                ReportTerminalTabs::make(fn () => $this->shiftsReportService->shiftIdsQueryFromFilters($this->filters)),
+                ...PeriodWithShiftFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض تقارير الشفتات',
                     'اختر الشفتات المحددة',
                     'last_7_days',
                     6
-                )
-            );
+                ),
+            ]);
     }
 
     public function getWidgets(): array

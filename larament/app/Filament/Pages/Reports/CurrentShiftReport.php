@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Filament\Components\ReportTerminalTabs;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\CurrentShiftCreditCollectionsTable;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
@@ -18,6 +19,7 @@ use App\Models\Shift;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Schema;
 
 class CurrentShiftReport extends BaseDashboard
 {
@@ -40,6 +42,16 @@ class CurrentShiftReport extends BaseDashboard
     public function boot(): void
     {
         $this->shiftsReportService = app(ShiftsReportService::class);
+    }
+
+    /**
+     * Sales point tabs (with more than one sales point in the shift).
+     */
+    public function filtersForm(Schema $schema): Schema
+    {
+        return $schema->components([
+            ReportTerminalTabs::make(fn (): array => [$this->getCurrentShift()->id ?? 0]),
+        ]);
     }
 
     public function getWidgets(): array

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\CurrentShiftOrdersExporter;
 use App\Filament\Widgets\Concerns\ScopedOrderPayments;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Order;
 use App\Models\Shift;
 use App\Orders\OrderTypeCatalog;
@@ -19,12 +20,15 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 class CurrentShiftOrdersTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
     use ScopedOrderPayments;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -57,6 +61,8 @@ class CurrentShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $terminal = $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         $scope = $this->shiftsReportService->shiftIdsQuery(null, null, [$currentShift->id ?? 0]);
@@ -64,9 +70,9 @@ class CurrentShiftOrdersTable extends BaseWidget
         if (! $currentShift) {
             $query = Order::query()->where('id', 0); // Empty query
         } else {
-            $query = Order::query()
+            $query = $terminal->orders(Order::query()
                 ->where('shift_id', $currentShift->id)
-                ->with(['customer', 'user', 'terminal', ...$this->scopedPaymentsEagerLoad($scope)]);
+                ->with(['customer', 'user', 'terminal', ...$this->scopedPaymentsEagerLoad($scope)]));
         }
 
         return $table
@@ -82,8 +88,8 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->modifyQueryUsing(function (Builder $query) {
                         $currentShift = $this->getCurrentShift();
                         if ($currentShift) {
-                            return $query->where('shift_id', $currentShift->id)
-                                ->with(['customer', 'user', 'terminal', 'payments']);
+                            return $this->reportTerminal()->orders($query->where('shift_id', $currentShift->id)
+                                ->with(['customer', 'user', 'terminal', 'payments']));
                         }
 
                         return $query->where('id', 0);
