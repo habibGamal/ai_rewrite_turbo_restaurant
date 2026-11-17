@@ -3,15 +3,16 @@
 namespace App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts;
 
 use App\Enums\ProductType;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Components\Forms\ProductBarcodeFields;
-use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\CreateRawMaterialProduct;
-use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
-use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
-use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\ViewRawMaterialProduct;
 use App\Filament\Traits\BelongsToModule;
 use App\Models\Category;
 use App\Models\Printer;
 use App\Models\Product;
+use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\CreateRawMaterialProduct;
+use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\EditRawMaterialProduct;
+use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\ListRawMaterialProducts;
+use App\Modules\Manufacturing\Filament\Resources\RawMaterialProducts\Pages\ViewRawMaterialProduct;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -198,6 +199,7 @@ class RawMaterialProductResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    PrintLabelsAction::bulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

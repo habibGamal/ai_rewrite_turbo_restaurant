@@ -7,6 +7,7 @@ use App\Filament\Actions\Forms\GeneratePurchaseBarcodesAction;
 use App\Filament\Actions\Forms\GroupQuantityGridAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintPurchaseInvoiceAction;
 use App\Filament\Components\Forms\BarcodeScanInput;
 use App\Filament\Components\Forms\ProductSelector;
@@ -21,6 +22,7 @@ use App\Models\Warehouse;
 use App\Services\FeatureService;
 use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -347,6 +349,7 @@ class PurchaseInvoiceResource extends Resource
             ->recordActions([
                 ClosePurchaseInvoiceAction::table(),
                 PrintPurchaseInvoiceAction::table(),
+                self::printLabelsAction(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
@@ -377,5 +380,18 @@ class PurchaseInvoiceResource extends Resource
             'view' => ViewPurchaseInvoice::route('/{record}'),
             'edit' => EditPurchaseInvoice::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Labels for the invoice's products, as many as were bought.
+     */
+    public static function printLabelsAction(): Action
+    {
+        return PrintLabelsAction::make(
+            fn (PurchaseInvoice $record): array => $record->items()->get()
+                ->groupBy('product_id')
+                ->map(fn ($items): float => (float) $items->sum('quantity'))
+                ->all(),
+        );
     }
 }

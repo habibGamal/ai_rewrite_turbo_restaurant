@@ -7,6 +7,7 @@ use App\Filament\Pages\Auth\Login;
 use App\Http\Middleware\EnsureModuleScreenEnabled;
 use App\Http\Middleware\RejectBadgeSessions;
 use App\Modules\ModuleFilament;
+use App\Services\FeatureService;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -42,6 +43,12 @@ class AdminPanelProvider extends PanelProvider
                 fn (): HtmlString => new HtmlString(
                     '<div style="text-align:center;margin-top:1rem"><a href="'.e(route('badge.login')).'" style="text-decoration:underline">دخول نقطة البيع بالبادج</a></div>'
                 ),
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => app(FeatureService::class)->labelPrintingEnabled()
+                    ? view('filament.labels.print-script')->render()
+                    : '',
             )
             ->brandName(config('app.name', 'Turbo'))
             ->brandLogo('/images/turbo_logo.png')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ConsumableProducts;
 
 use App\Enums\ProductType;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
@@ -258,6 +259,7 @@ class ConsumableProductResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    PrintLabelsAction::bulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
