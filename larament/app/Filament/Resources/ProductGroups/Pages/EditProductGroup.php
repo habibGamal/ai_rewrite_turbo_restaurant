@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ProductGroups\Pages;
 
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -39,7 +40,7 @@ class EditProductGroup extends EditRecord
                 ->label('طباعة الملصقات')
                 ->icon('heroicon-o-qr-code')
                 ->color('gray')
-                ->visible(fn (ProductGroup $record): bool => $record->variants()->exists())
+                ->visible(fn (ProductGroup $record): bool => ! PrintLabelsAction::allowed() && $record->variants()->exists())
                 ->schema([
                     Radio::make('copies')
                         ->label('عدد الملصقات')
@@ -53,6 +54,12 @@ class EditProductGroup extends EditRecord
                 ->action(function (array $data, ProductGroup $record): void {
                     $this->js('window.open('.json_encode(route('labels.group', ['group' => $record, 'copies' => $data['copies']])).', \'_blank\')');
                 }),
+            // With label printing on: the shop's designs and the print app.
+            PrintLabelsAction::make(
+                fn (ProductGroup $record): array => $record->variants()->where('is_active', true)->orderBy('name')
+                    ->pluck('id')->mapWithKeys(fn ($id): array => [(int) $id => 1])->all(),
+                'printVariantLabels',
+            ),
             DeleteAction::make()
                 ->visible(fn (ProductGroup $record): bool => ! $record->variants()->exists()),
         ];

@@ -4,6 +4,7 @@ namespace App\Modules\Manufacturing\Filament\Resources\ManufacturedProducts;
 
 use App\Enums\ProductType;
 use App\Filament\Actions\Forms\ProductComponentsImporterAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Components\Forms\KitchenDisplayFields;
 use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Components\Forms\ProductComponentSelector;
@@ -352,6 +353,7 @@ class ManufacturedProductResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    PrintLabelsAction::bulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

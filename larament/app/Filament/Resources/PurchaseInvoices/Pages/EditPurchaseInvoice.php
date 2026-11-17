@@ -17,6 +17,7 @@ class EditPurchaseInvoice extends EditRecord
     {
         return [
             ClosePurchaseInvoiceAction::make(),
+            PurchaseInvoiceResource::printLabelsAction(),
             DeleteAction::make(),
         ];
     }
