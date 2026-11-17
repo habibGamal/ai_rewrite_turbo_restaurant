@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Concerns;
 
 use App\Filament\Widgets\Returns\ShiftReturnsTable;
+use App\Services\FeatureService;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
@@ -17,6 +18,10 @@ trait ReturnsStats
      */
     protected function returnsStats(array $stats): array
     {
+        if (! app(FeatureService::class)->returnsEnabled()) {
+            return [];
+        }
+
         $amount = (float) ($stats['returnsAmount'] ?? 0);
         $count = (int) ($stats['returnsCount'] ?? 0);
 

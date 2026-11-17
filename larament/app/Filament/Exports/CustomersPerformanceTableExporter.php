@@ -7,6 +7,7 @@ use App\Filament\Widgets\CustomersPerformanceTableWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Services\CustomersPerformanceReportService;
+use App\Services\FeatureService;
 use App\Services\Reports\ReportOrderTypesService;
 use Carbon\Carbon;
 use Filament\Actions\Exports\ExportColumn;
@@ -50,8 +51,8 @@ class CustomersPerformanceTableExporter extends Exporter
                 ->state($money('avg_order_value')),
             ExportColumn::make('total_discount')->label('الخصومات (ج.م)')
                 ->state($money('total_discount')),
-            ExportColumn::make('total_refunds')->label('المرتجعات (ج.م)')
-                ->state($money('total_refunds')),
+            ...(app(FeatureService::class)->returnsEnabled() ? [ExportColumn::make('total_refunds')->label('المرتجعات (ج.م)')
+                ->state($money('total_refunds'))] : []),
             ExportColumn::make('avg_days_between_orders')->label('متوسط الأيام بين الطلبات')
                 ->state(fn ($record) => CustomersPerformanceTableWidget::avgDaysBetweenOrders($record)),
             ExportColumn::make('last_order_date')->label('آخر طلب')

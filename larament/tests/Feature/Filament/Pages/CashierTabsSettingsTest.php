@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OptionalFeature;
 use App\Enums\SettingKey;
 use App\Filament\Pages\Settings;
 use App\Models\Setting;
@@ -29,6 +30,8 @@ beforeEach(function () {
 
     // A restaurant that takes web orders: the defaults leave that module off.
     app(FeatureService::class)->enableModule(Module::WEB_ORDERS);
+    // The defaults switch deferred payment off; these tests expect its tab.
+    app(FeatureService::class)->enable(OptionalFeature::DEFERRED_PAYMENT);
 });
 
 it('reorders and hides cashier tabs through the settings repeater', function () {

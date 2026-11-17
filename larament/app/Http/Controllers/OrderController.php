@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\Orders\CreateOrderDTO;
+use App\Enums\OptionalFeature;
 use App\Enums\OrderStatus;
 use App\Enums\ProductType;
 use App\Enums\SettingKey;
@@ -225,11 +226,7 @@ class OrderController extends Controller
             'heldCount' => HeldSale::query()->where('shift_id', $shift->id)
                 ->when(app(TerminalSessionResolver::class)->current()?->id, fn ($query, int $session) => $query->where('terminal_session_id', $session))
                 ->count(),
-            'credit' => [
-                'allow_partial_payment' => (bool) $row->allow_partial_payment,
-                'allow_pay_later' => (bool) $row->allow_pay_later,
-                'require_customer_for_credit' => (bool) $row->require_customer_for_credit,
-            ],
+            'credit' => $row->creditFlags(),
             'can' => [
                 'discount' => $user->can('order.apply_discount'),
                 'changeItems' => $user->can('order.change_items'),
@@ -272,11 +269,7 @@ class OrderController extends Controller
             'receiptPayment' => ReceiptPayment::forOrder($order)->toArray(),
             'kitchen_status' => $order->getKitchenStatus(),
             'kitchen_progress' => $order->getKitchenProgress(),
-            'credit' => [
-                'allow_partial_payment' => (bool) $order->typeRow()->allow_partial_payment,
-                'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
-                'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
-            ],
+            'credit' => $order->typeRow()->creditFlags(),
             'guests_mode' => $order->typeRow()->guestsMode()->value,
         ]);
 
@@ -343,11 +336,7 @@ class OrderController extends Controller
 
         return Inertia::render('Orders/ManageOrder', [
             'order' => $this->orderPayload($order, true),
-            'credit' => [
-                'allow_partial_payment' => (bool) $order->typeRow()->allow_partial_payment,
-                'allow_pay_later' => (bool) $order->typeRow()->allow_pay_later,
-                'require_customer_for_credit' => (bool) $order->typeRow()->require_customer_for_credit,
-            ],
+            'credit' => $order->typeRow()->creditFlags(),
             'orderDisplay' => $order->display()->toArray(),
             'changeTypeOptions' => $this->changeTypeOptions(),
             'categories' => $categories,
@@ -550,6 +539,8 @@ class OrderController extends Controller
      */
     public function collectRemaining(CompleteOrderRequest $request, Order $order)
     {
+        app(FeatureService::class)->abortUnlessEnabled(OptionalFeature::DEFERRED_PAYMENT, 404);
+
         try {
             $paymentsData = collect($request->validated())->except('print')->toArray();
             $paidBefore = (float) $order->payments()->sum('amount');

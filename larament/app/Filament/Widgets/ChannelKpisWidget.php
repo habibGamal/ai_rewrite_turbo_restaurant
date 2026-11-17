@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\ChannelPerformanceReportService;
+use App\Services\FeatureService;
 use App\Services\Reports\Channels\ChannelReportFilters;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -36,11 +37,12 @@ class ChannelKpisWidget extends BaseWidget
         $daily = $service->daily($filters);
         $sparkSales = array_column($daily, 'net_sales');
         $sparkOrders = array_map('floatval', array_column($daily, 'orders'));
+        $returns = app(FeatureService::class)->returnsEnabled();
         $sparkAvg = array_map(fn (array $day) => $day['orders'] > 0 ? round($day['net_sales'] / $day['orders'], 2) : 0.0, array_values($daily));
 
         return [
             $this->stat('صافي المبيعات', self::money($now['net_sales']), $before ? ChannelPerformanceReportService::change($now['net_sales'], $before['net_sales']) : null, '%', higherIsBetter: true,
-                fallback: 'بعد المرتجعات '.self::money($now['refunds']))
+                fallback: $returns ? 'بعد المرتجعات '.self::money($now['refunds']) : 'المبيعات المكتملة')
                 ->chart($sparkSales),
 
             $this->stat('الطلبات', number_format($now['orders']), $before ? ChannelPerformanceReportService::change($now['orders'], $before['orders']) : null, '%', higherIsBetter: true,
@@ -54,8 +56,8 @@ class ChannelKpisWidget extends BaseWidget
             $this->stat('هامش الربح', self::percent($now['margin']), $before ? round($now['margin'] - $before['margin'], 1) : null, ' نقطة', higherIsBetter: true,
                 fallback: 'مجمل الربح '.self::money($now['net_profit'])),
 
-            $this->stat('نسبة المرتجع', self::percent($now['refund_rate']), $before ? round($now['refund_rate'] - $before['refund_rate'], 2) : null, ' نقطة', higherIsBetter: false,
-                fallback: number_format($now['refunds_count']).' مرتجع بـ '.self::money($now['refunds'])),
+            ...($returns ? [$this->stat('نسبة المرتجع', self::percent($now['refund_rate']), $before ? round($now['refund_rate'] - $before['refund_rate'], 2) : null, ' نقطة', higherIsBetter: false,
+                fallback: number_format($now['refunds_count']).' مرتجع بـ '.self::money($now['refunds']))] : []),
 
             $this->stat('نسبة الإلغاء', self::percent($now['cancel_rate']), $before ? round($now['cancel_rate'] - $before['cancel_rate'], 1) : null, ' نقطة', higherIsBetter: false,
                 fallback: number_format($now['cancelled']).' طلب ملغي'),

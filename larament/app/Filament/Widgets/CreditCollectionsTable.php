@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
@@ -27,6 +28,11 @@ abstract class CreditCollectionsTable extends BaseWidget
     protected static ?string $heading = 'تحصيلات الآجل من شفتات أخرى';
 
     protected ShiftsReportService $shiftsReportService;
+
+    public static function canView(): bool
+    {
+        return app(FeatureService::class)->deferredPaymentEnabled() && parent::canView();
+    }
 
     public function boot(): void
     {

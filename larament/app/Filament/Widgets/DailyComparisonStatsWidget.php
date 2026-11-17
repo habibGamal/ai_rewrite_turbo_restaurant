@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Core\Orders\GuestStats;
 use App\Services\DailyComparisonReportService;
+use App\Services\FeatureService;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -35,6 +36,8 @@ class DailyComparisonStatsWidget extends BaseWidget
         $bestSales = $summary['best_sales_period'];
         $bestOrders = $summary['best_orders_period'];
 
+        $returns = app(FeatureService::class)->returnsEnabled();
+
         return [...[
             Stat::make('إجمالي الطلبات', number_format($summary['total_orders']).' طلب')
                 ->description('إجمالي الطلبات بالتاريخ الفعلي')
@@ -46,13 +49,13 @@ class DailyComparisonStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
                 ->color('success'),
 
-            Stat::make('المرتجعات', number_format($summary['total_refunds'], 2).' ج.م')
+            ...($returns ? [Stat::make('المرتجعات', number_format($summary['total_refunds'], 2).' ج.م')
                 ->description($summary['returns_count'].' مرتجع · صافي المبيعات '.number_format($summary['net_sales'], 2).' ج.م')
                 ->descriptionIcon('heroicon-m-arrow-uturn-left', IconPosition::Before)
-                ->color($summary['total_refunds'] > 0 ? 'danger' : 'gray'),
+                ->color($summary['total_refunds'] > 0 ? 'danger' : 'gray')] : []),
 
             Stat::make('إجمالي الأرباح', number_format($summary['total_profit'], 2).' ج.م')
-                ->description('هامش الربح: '.number_format($summary['profit_margin'], 1).'% · بعد المرتجعات '.number_format($summary['net_profit'], 2))
+                ->description('هامش الربح: '.number_format($summary['profit_margin'], 1).'%'.($returns ? ' · بعد المرتجعات '.number_format($summary['net_profit'], 2) : ''))
                 ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
                 ->color('warning'),
 

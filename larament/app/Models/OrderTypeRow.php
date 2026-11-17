@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\GuestsMode;
 use App\Enums\OrderBehavior;
 use App\Observers\OrderTypeRowObserver;
+use App\Services\FeatureService;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -48,24 +49,46 @@ class OrderTypeRow extends Model
         return $this->belongsToMany(Equipment::class, 'equipment_order_type', 'order_type_id', 'equipment_id');
     }
 
+    /**
+     * The credit switches below are what the cashier and the server obey:
+     * while the vendor keeps deferred payment off, every type behaves as
+     * "pay in full", whatever its stored columns say.
+     */
     public function allowsCredit(): bool
     {
-        return (bool) ($this->allow_partial_payment || $this->allow_pay_later);
+        return $this->allowsPartialPayment() || $this->allowsPayLater();
     }
 
     public function allowsPartialPayment(): bool
     {
-        return (bool) $this->allow_partial_payment;
+        return self::deferredPaymentOn() && (bool) $this->allow_partial_payment;
     }
 
     public function allowsPayLater(): bool
     {
-        return (bool) $this->allow_pay_later;
+        return self::deferredPaymentOn() && (bool) $this->allow_pay_later;
     }
 
     public function requiresCustomerForCredit(): bool
     {
-        return (bool) $this->require_customer_for_credit;
+        return self::deferredPaymentOn() && (bool) $this->require_customer_for_credit;
+    }
+
+    /**
+     * @return array{allow_partial_payment: bool, allow_pay_later: bool, require_customer_for_credit: bool}
+     */
+    public function creditFlags(): array
+    {
+        return [
+            'allow_partial_payment' => $this->allowsPartialPayment(),
+            'allow_pay_later' => $this->allowsPayLater(),
+            'require_customer_for_credit' => $this->requiresCustomerForCredit(),
+        ];
+    }
+
+    private static function deferredPaymentOn(): bool
+    {
+        return app(FeatureService::class)->deferredPaymentEnabled();
     }
 
     /**

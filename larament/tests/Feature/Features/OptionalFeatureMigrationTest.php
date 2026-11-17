@@ -43,6 +43,8 @@ it('defaults all four optional feature flags to false on a fresh install and rol
             'feature_purchase_barcodes_enabled' => false,
             'feature_label_printing_enabled' => false,
             'feature_document_barcodes_enabled' => false,
+            'feature_deferred_payment_enabled' => false,
+            'feature_returns_enabled' => false,
         ]);
 });
 

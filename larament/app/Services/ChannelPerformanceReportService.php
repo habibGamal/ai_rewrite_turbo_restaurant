@@ -231,7 +231,7 @@ class ChannelPerformanceReportService
                 'charges' => $totals['charges'] != 0.0,
                 'guests' => $totals['guests'] > 0,
                 'cancelled' => $totals['cancelled'] > 0,
-                'refunds' => $totals['refunds'] != 0.0,
+                'refunds' => $totals['refunds'] != 0.0 && app(FeatureService::class)->returnsEnabled(),
                 'customers' => $totals['customers'] > 0,
             ],
         ];

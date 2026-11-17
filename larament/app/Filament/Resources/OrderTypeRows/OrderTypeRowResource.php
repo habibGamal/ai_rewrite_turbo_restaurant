@@ -125,7 +125,8 @@ class OrderTypeRowResource extends Resource
                             ->default(true),
                     ])
                     ->columns(3)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->visible(fn (): bool => app(FeatureService::class)->deferredPaymentEnabled()),
 
                 Section::make('عدد الأفراد')
                     ->schema([
@@ -197,15 +198,18 @@ class OrderTypeRowResource extends Resource
 
                 IconColumn::make('allow_partial_payment')
                     ->label('السماح بالدفع الجزئي')
-                    ->boolean(),
+                    ->boolean()
+                    ->visible(fn (): bool => app(FeatureService::class)->deferredPaymentEnabled()),
 
                 IconColumn::make('allow_pay_later')
                     ->label('السماح بالإغلاق والدفع لاحقاً')
-                    ->boolean(),
+                    ->boolean()
+                    ->visible(fn (): bool => app(FeatureService::class)->deferredPaymentEnabled()),
 
                 IconColumn::make('require_customer_for_credit')
                     ->label('يتطلب ربط عميل')
-                    ->boolean(),
+                    ->boolean()
+                    ->visible(fn (): bool => app(FeatureService::class)->deferredPaymentEnabled()),
 
                 TextColumn::make('guests_mode')
                     ->label('عدد الأفراد')

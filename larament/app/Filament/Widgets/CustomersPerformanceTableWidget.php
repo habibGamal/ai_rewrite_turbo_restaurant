@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CustomersPerformanceTableExporter;
 use App\Services\CustomersPerformanceReportService;
+use App\Services\FeatureService;
 use App\Services\Reports\CustomerReportThresholds;
 use Carbon\Carbon;
 use Filament\Actions\ExportAction;
@@ -35,7 +36,7 @@ class CustomersPerformanceTableWidget extends BaseWidget
 
         return $table
             ->query($service->getCustomersPerformanceQuery($startDate, $endDate))
-            ->description('المبالغ صافية بعد الخصومات والمرتجعات')
+            ->description(app(FeatureService::class)->returnsEnabled() ? 'المبالغ صافية بعد الخصومات والمرتجعات' : 'المبالغ صافية بعد الخصومات')
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تقرير أداء العملاء')
@@ -101,7 +102,8 @@ class CustomersPerformanceTableWidget extends BaseWidget
                 TextColumn::make('total_refunds')
                     ->label('المرتجعات')
                     ->money('EGP')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
 
                 TextColumn::make('avg_days_between_orders')
                     ->label('متوسط الأيام بين الطلبات')

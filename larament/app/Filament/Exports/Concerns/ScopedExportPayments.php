@@ -5,6 +5,7 @@ namespace App\Filament\Exports\Concerns;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Exports\ExportColumn;
 use Illuminate\Support\Collection;
@@ -58,6 +59,14 @@ trait ScopedExportPayments
      */
     protected static function scopedPaymentExportColumns(): array
     {
+        if (! app(FeatureService::class)->deferredPaymentEnabled()) {
+            return [
+                ExportColumn::make('paid_in_scope')
+                    ->label('المدفوع في نطاق التقرير (جنيه)')
+                    ->state(fn (Order $record, array $options): string => number_format((float) self::scopedPayments($record, $options)->sum('amount'), 2, '.', '')),
+            ];
+        }
+
         return [
             ExportColumn::make('payment_status')
                 ->label('حالة الدفع الآن')

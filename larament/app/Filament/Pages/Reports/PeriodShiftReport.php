@@ -99,8 +99,8 @@ class PeriodShiftReport extends BaseDashboard
             // Drawers table only while multiple terminals are on.
             ...(PeriodShiftDrawersTable::canView() ? [PeriodShiftDrawersTable::class] : []),
             PeriodShiftOrdersTable::class,
-            ShiftReturnsTable::class,
-            PeriodShiftCreditCollectionsTable::class,
+            ...(ShiftReturnsTable::canView() ? [ShiftReturnsTable::class] : []),
+            ...(PeriodShiftCreditCollectionsTable::canView() ? [PeriodShiftCreditCollectionsTable::class] : []),
             PeriodShiftExpensesDetailsTable::class,
             PeriodShiftExpensesTable::class,
         ];

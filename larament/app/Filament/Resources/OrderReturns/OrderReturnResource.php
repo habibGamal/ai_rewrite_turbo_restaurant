@@ -9,6 +9,7 @@ use App\Filament\Resources\OrderReturns\Pages\CreateOrderReturn;
 use App\Filament\Resources\OrderReturns\Pages\ListOrderReturns;
 use App\Filament\Resources\OrderReturns\Pages\ViewOrderReturn;
 use App\Filament\Resources\OrderReturns\RelationManagers\ReturnedItemsRelationManager;
+use App\Filament\Traits\BelongsToModule;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
@@ -42,6 +43,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class OrderReturnResource extends Resource
 {
+    use BelongsToModule;
+
     protected static ?string $model = OrderReturn::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';

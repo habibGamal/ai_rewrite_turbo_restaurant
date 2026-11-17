@@ -60,8 +60,8 @@ class CurrentShiftReport extends BaseDashboard
             // Drawers table only while multiple terminals are on.
             ...(CurrentShiftDrawersTable::canView() ? [CurrentShiftDrawersTable::class] : []),
             CurrentShiftOrdersTable::class,
-            CurrentShiftReturnsTable::class,
-            CurrentShiftCreditCollectionsTable::class,
+            ...(CurrentShiftReturnsTable::canView() ? [CurrentShiftReturnsTable::class] : []),
+            ...(CurrentShiftCreditCollectionsTable::canView() ? [CurrentShiftCreditCollectionsTable::class] : []),
             CurrentShiftExpensesDetailsTable::class,
             CurrentShiftExpensesTable::class,
         ];

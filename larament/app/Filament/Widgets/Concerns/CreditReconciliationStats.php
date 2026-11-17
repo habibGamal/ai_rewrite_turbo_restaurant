@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets\Concerns;
 
+use App\Services\FeatureService;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
@@ -19,6 +20,19 @@ trait CreditReconciliationStats
         $uncollected = (float) ($stats['uncollectedCredit'] ?? 0);
         $previous = (float) ($stats['previousCollections'] ?? 0);
         $received = (float) $stats['cashPayments'] + (float) $stats['cardPayments'] + (float) $stats['talabatCardPayments'];
+
+        if (! app(FeatureService::class)->deferredPaymentEnabled()) {
+            return [
+                Stat::make('إجمالي المحصل', number_format($received, 2).' جنيه')
+                    ->description('كاش + فيزا + فيزا طلبات')
+                    ->descriptionIcon('heroicon-m-scale')
+                    ->extraAttributes([
+                        'class' => 'transition hover:scale-105 cursor-pointer',
+                        'x-on:click' => "document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })",
+                    ])
+                    ->color('success'),
+            ];
+        }
 
         return [
             Stat::make('آجل غير محصل', number_format($uncollected, 2).' جنيه')

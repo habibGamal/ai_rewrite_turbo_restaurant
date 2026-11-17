@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Enums\ProductType;
 use App\Filament\Exports\ProductsSalesTableExporter;
+use App\Services\FeatureService;
 use App\Services\ProductsSalesReportService;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
@@ -123,7 +124,8 @@ class ProductsSalesTableWidget extends BaseWidget
                         ? 'للمخزن '.(float) $record->restocked_quantity.' · تالف '.(float) $record->damaged_quantity
                         : null)
                     ->color(fn ($state) => (float) $state > 0 ? 'danger' : null)
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
 
                 TextColumn::make('net_quantity')
                     ->label('صافي الكمية')
@@ -133,7 +135,8 @@ class ProductsSalesTableWidget extends BaseWidget
                 TextColumn::make('total_refunds')
                     ->label('المرتجعات')
                     ->money('EGP')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
 
                 TextColumn::make('net_sales')
                     ->label('صافي المبيعات')

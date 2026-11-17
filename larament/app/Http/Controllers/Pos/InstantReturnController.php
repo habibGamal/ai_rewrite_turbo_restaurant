@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Pos;
 
+use App\Enums\OptionalFeature;
 use App\Exceptions\OrderException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InstantSaleRequest;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\FeatureService;
 use App\Services\Orders\Instant\InstantReturnService;
 use App\Services\Orders\ReturnRules;
 use App\Services\ShiftService;
@@ -25,6 +27,8 @@ class InstantReturnController extends Controller
      */
     public function lookup(Request $request, InstantReturnService $returns, ShiftService $shifts, ReturnRules $rules): JsonResponse
     {
+        app(FeatureService::class)->abortUnlessEnabled(OptionalFeature::RETURNS, 404);
+
         $this->authorizeReturns($request);
         $validated = $request->validate(['number' => ['required', 'string', 'max:32']]);
         $shiftId = $this->shift($shifts);
@@ -50,6 +54,8 @@ class InstantReturnController extends Controller
 
     public function store(Request $request, InstantReturnService $returns, ShiftService $shifts, ReturnRules $rules): JsonResponse
     {
+        app(FeatureService::class)->abortUnlessEnabled(OptionalFeature::RETURNS, 404);
+
         $validated = $request->validate([
             'order_id' => ['required', 'integer', 'exists:orders,id'],
             'reason' => ['nullable', 'string', 'max:255'],

@@ -239,6 +239,8 @@ export interface FeatureFlags {
     equipment: boolean;
     variants: boolean;
     multi_terminal: boolean;
+    deferred_payment?: boolean;
+    returns?: boolean;
 }
 
 export type ModuleKey =
