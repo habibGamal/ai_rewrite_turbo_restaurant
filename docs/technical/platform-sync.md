@@ -19,6 +19,13 @@ Admin page «ربط المنصة» (`PlatformConnectionPage`): enter «رابط 
 
 The day summary carries totals including `refunds_total`, `refunds_cash`, `fees_total`, `equipment_total`, `revenues_total`, `guests_total`. When a closed shift's money is edited, its day summary is queued again.
 
+### Drawer sessions in sync payload
+
+To support multiple terminals without breaking older platform versions, drawer data is added additively:
+- **Shift payload**: includes `terminal_sessions` list with `uuid`, `terminal_name`, `is_default`, cashier info, closing user, `opening_cash`, `expected_cash`, open/close timestamps, `close_note`, and nested `handovers` (`from`, `to`, `note`, `at`).
+- **Shift re-sync triggers**: opening a drawer, closing a drawer, or executing a cashier handover automatically queues a re-sync of the parent shift document.
+- **Related documents**: `expense`, `revenue`, and `order_return` documents carry `terminal_session_uuid`; `order` documents carry `terminal_name`.
+
 ::: warning Adding a field
 The receiving platform is not in this repository. A new document type or payload field also needs matching handling there.
 :::

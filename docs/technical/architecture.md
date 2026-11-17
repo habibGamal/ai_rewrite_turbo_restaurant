@@ -47,6 +47,9 @@ Frontend lives in `resources/js`: pages in `Pages/` (`Orders/Index`, `Orders/Man
 | URL | Who | What |
 |---|---|---|
 | `/admin` | Admin, viewer | Filament admin panel (products, inventory, reports, settings). |
+| `/admin/terminals` | Admin | Terminals and cash drawers management (`TerminalResource`). |
+| `/badge` | Cashier | Scan barcode badge for instant POS login (`user.badge_login`). |
+| `/terminals/open`, `/terminals/handover` | Cashier | Open drawer session or execute cashier handover. |
 | `/shifts/start` | Cashier | Open a shift with the opening cash. |
 | `/orders` | Cashier | Cashier home: order-type tabs, instant sale, expenses. |
 | `/orders/manage/{order}` | Cashier | Edit, pay and complete one order. |

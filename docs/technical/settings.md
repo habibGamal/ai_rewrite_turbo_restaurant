@@ -70,7 +70,8 @@ Not editable from the Settings page; set from the [vendor console](/technical/ve
 | `business_type` | Business profile (locked after first order). |
 | `enabled_modules` | JSON list of modules. |
 | `setup_completed` | First-run wizard done. |
-| `feature_revenues_enabled`, `feature_custom_fees_enabled`, `feature_equipment_enabled`, `feature_variants_enabled`, `feature_outsourced_orders_enabled` | Optional features. |
+| `feature_revenues_enabled`, `feature_custom_fees_enabled`, `feature_equipment_enabled`, `feature_variants_enabled`, `feature_outsourced_orders_enabled`, `feature_multi_terminal_enabled` | Optional features. |
+| `max_terminals` | Maximum active terminals/drawers allowed in the shop (1–50). |
 
 ## Environment (`.env`)
 

@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Validation\ValidationException;
 
 /**
+ * @property int $id
+ * @property string $name
  * @property int|null $parent_id
  * @property int|null $kitchen_station_id
  * @property int|null $warehouse_id

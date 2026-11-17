@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
  * @property string|float $quantity
  * @property string|float $unit_cost
  * @property string|float $total_cost
+ * @property string|float $price
+ * @property string|float $total
  * @property-read StockIssue|null $stockIssue
  * @property-read Product|null $product
  */
@@ -73,5 +76,27 @@ class StockIssueItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return Attribute<string|float, string|float>
+     */
+    public function price(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string|float => $this->unit_cost,
+            set: fn ($value): array => ['unit_cost' => $value],
+        );
+    }
+
+    /**
+     * @return Attribute<string|float, string|float>
+     */
+    public function total(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string|float => $this->total_cost,
+            set: fn ($value): array => ['total_cost' => $value],
+        );
     }
 }

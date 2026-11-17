@@ -34,6 +34,11 @@ class ItemsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('product.category.name')
+                    ->label('الفئة')
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('product.barcode')
                     ->label('الباركود')
                     ->placeholder('بدون باركود')

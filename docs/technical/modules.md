@@ -54,7 +54,7 @@ Each module has a provider extending `App\Modules\ModuleServiceProvider`:
 | Order types | `OrderTypeCatalog::available()/active()/options()` hide types whose behaviour belongs to an off module. `all()` still resolves old orders. |
 | Listeners | Return early via `enabledNow()`. |
 
-Disabling a module or feature can be blocked while it still has open data, through `FeatureService::registerModuleDisableBlocker()` (for example `CustomFeesDisableBlocker`, `EquipmentDisableBlocker`, `SellersDisableBlocker`).
+Disabling a module or feature can be blocked while it still has open data, through `FeatureService::registerModuleDisableBlocker()` (for example `CustomFeesDisableBlocker`, `EquipmentDisableBlocker`, `SellersDisableBlocker`, `MultiTerminalDisableBlocker`).
 
 ## Optional features
 
@@ -67,8 +67,9 @@ Disabling a module or feature can be blocked while it still has open data, throu
 | Equipment | `feature_equipment_enabled` | Equipment catalogue, equipment on orders, equipment report. |
 | Variants | `feature_variants_enabled` | Product groups (models) with sizes, colours and other axes. |
 | Outsourced orders | `feature_outsourced_orders_enabled` | The External sellers module switch. |
+| Multi-terminal drawers | `feature_multi_terminal_enabled` | Multiple drawers per shift, device binding, per-drawer receipt printers, drawer handovers and drawer scoping. |
 
-The cashier reads features through the Inertia shared prop `features` (for example `features.variants`).
+The cashier reads features through the Inertia shared prop `features` (for example `features.variants`, `features.multi_terminal`).
 
 ## Wording
 

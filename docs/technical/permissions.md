@@ -9,15 +9,21 @@ The seeder is **additive and re-runnable** (deploy runs it every time): it creat
 | Role | Default permissions |
 |---|---|
 | `admin` | Everything (except `vendor.*` and permissions of switched-off modules). |
-| `cashier` | `pos.access`, `shift.start`, `shift.end`, `order.create`, `order.complete`, `order.return`, `order.add_fees`, `order.add_equipment`, `customer.manage`, `driver.manage`, `cashier.open_drawer`, `web_order.manage`, `expense.create`, `invoice.print`, all cashier tab permissions. |
+| `cashier` | `pos.access`, `user.badge_login`, `shift.start`, `shift.end`, `terminal.open`, `terminal.close`, `order.create`, `order.complete`, `order.return`, `order.add_fees`, `order.add_equipment`, `customer.manage`, `driver.manage`, `cashier.open_drawer`, `web_order.manage`, `expense.create`, `invoice.print`, all cashier tab permissions. |
 | `kitchen` | `kitchen.access` |
-| `viewer` | Admin panel + all report permissions. |
+| `viewer` | Admin panel + all report permissions (including `view_inventory_movements_report`). |
 | `watcher` | Admin panel + orders, customers, inventory items and a few main reports. |
 
-## Cashier permissions worth knowing
+## Cashier & terminal permissions worth knowing
 
 | Permission | Arabic label |
 |---|---|
+| `user.badge_login` | الدخول لنقطة البيع بالبادج |
+| `terminal.open` | فتح واستلام الدرج |
+| `terminal.close` | قفل درجه |
+| `terminal.close_others` | قفل درج كاشير تاني نيابةً عنه |
+| `terminal.bind_device` | ربط الأجهزة بالأدراج |
+| `view_terminals` / `create_terminals` / `update_terminals` | عرض / إضافة / تعديل الأدراج |
 | `order.cancel` | إلغاء الطلبات |
 | `order.apply_discount` | تطبيق خصم على الطلبات والأصناف |
 | `order.change_items` | تعديل وحذف الأصناف بعد حفظ الطلب |
@@ -27,6 +33,7 @@ The seeder is **additive and re-runnable** (deploy runs it every time): it creat
 | `order.add_fees` / `order.remove_fees` | إضافة / حذف رسوم إضافية |
 | `order.add_equipment` / `order.remove_equipment` | إضافة / تقليل معدات |
 | `shift_money.manage` / `shift_money.edit_closed` | مصروفات وإيرادات الورديات / المغلقة |
+| `view_inventory_movements_report` | تقرير حركة المخزون |
 
 ## Tab permissions
 

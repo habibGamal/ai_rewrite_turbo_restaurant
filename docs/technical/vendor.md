@@ -33,7 +33,7 @@ Filament page «لوحة الدعم الفني» at `/admin/vendor-console` (`ve
 
 1. **نوع النشاط**: the business type (read-only once an order exists).
 2. **الوحدات**: module switches. Some refuse to turn off while they still have open data.
-3. **المميزات**: optional features (revenues, custom fees, equipment, variants).
+3. **المميزات**: optional features (revenues, custom fees, equipment, variants, outsourced orders, multi-terminal drawers). Multi-terminal also sets `max_terminals` (1-50) and registers a disable blocker refusing to switch off while any drawer has an open session.
 4. **Change log**: every switch with time, old and new value and the user (stored in `feature_flag_audits`).
 
 Vendor-owned settings (`SettingKey::isVendorOwned()`) are not shown, saved or reset by the shop's Settings page, and the `settings` artisan command refuses them.

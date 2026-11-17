@@ -91,7 +91,7 @@ class ProductSelector extends Select
                 }
 
                 // Prepare new item data
-                $price = $product->cost ?? $product->price;
+                $price = $product->cost ?? $product->price ?? 0;
                 $quantity = 1;
                 $total = $quantity * $price;
 
@@ -103,6 +103,9 @@ class ProductSelector extends Select
                     'quantity' => $quantity,
                     'price' => $price,
                     'total' => $total,
+                    'unit_cost' => $price,
+                    'total_cost' => $total,
+                    'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
                 ];
 
                 // Add additional props if callback is provided
@@ -118,9 +121,10 @@ class ProductSelector extends Select
                 // Recalculate total
                 $invoiceTotal = 0;
                 foreach ($currentItems as $item) {
-                    $invoiceTotal += $item['total'] ?? 0;
+                    $invoiceTotal += $item['total'] ?? $item['total_cost'] ?? 0;
                 }
                 $set('total', $invoiceTotal);
+                $set('total_cost', $invoiceTotal);
 
                 // Reset the select
                 $set('product_selector', null);
@@ -141,15 +145,18 @@ class ProductSelector extends Select
         foreach ($items as $key => $item) {
             if ((int) ($item['product_id'] ?? 0) === $product->id) {
                 $newQuantity = (float) ($item['quantity'] ?? 0) + $quantity;
+                $unitCost = (float) ($item['price'] ?? $item['unit_cost'] ?? 0);
+                $lineTotal = $newQuantity * $unitCost;
                 $items[$key]['quantity'] = $newQuantity;
-                $items[$key]['total'] = $newQuantity * (float) ($item['price'] ?? 0);
+                $items[$key]['total'] = $lineTotal;
+                $items[$key]['total_cost'] = $lineTotal;
                 $found = true;
                 break;
             }
         }
 
         if (! $found) {
-            $price = (float) ($product->cost ?? $product->price);
+            $price = (float) ($product->cost ?? $product->price ?? 0);
             $newItem = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
@@ -158,6 +165,9 @@ class ProductSelector extends Select
                 'quantity' => $quantity,
                 'price' => $price,
                 'total' => $quantity * $price,
+                'unit_cost' => $price,
+                'total_cost' => $quantity * $price,
+                'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
             ];
             if ($additionalProps) {
                 $newItem = array_merge($newItem, $additionalProps($product));
@@ -166,7 +176,9 @@ class ProductSelector extends Select
         }
 
         $set('items', $items);
-        $set('total', collect($items)->sum(fn ($item) => (float) ($item['total'] ?? 0)));
+        $totalSum = collect($items)->sum(fn ($item) => (float) ($item['total'] ?? $item['total_cost'] ?? 0));
+        $set('total', $totalSum);
+        $set('total_cost', $totalSum);
     }
 
     public static function make(?string $name = 'product_selector'): static

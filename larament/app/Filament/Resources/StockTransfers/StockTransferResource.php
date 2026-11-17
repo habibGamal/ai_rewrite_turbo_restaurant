@@ -2,10 +2,11 @@
 
 namespace App\Filament\Resources\StockTransfers;
 
-use App\Enums\ProductType;
 use App\Filament\Actions\ConfirmStockTransferAction;
+use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Components\Forms\DocumentBarcodeField;
+use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\StockTransfers\Pages\CreateStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\EditStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\ListStockTransfers;
@@ -14,24 +15,26 @@ use App\Models\Product;
 use App\Models\StockTransfer;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Resources\StockTransferCalculatorService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Validation\Rule;
 
 class StockTransferResource extends Resource
 {
@@ -50,32 +53,167 @@ class StockTransferResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('بيانات التحويل')->columns(2)->schema([
-                Select::make('from_warehouse_id')->label('من مخزن')->required()->searchable()
-                    ->options(fn () => Warehouse::active()->pluck('name', 'id')->all())
-                    ->default(fn () => Warehouse::default()->id),
-                Select::make('to_warehouse_id')->label('إلى مخزن')->required()->searchable()
-                    ->different('from_warehouse_id')
-                    ->options(fn () => Warehouse::active()->pluck('name', 'id')->all()),
-                Select::make('user_id')->label('المستخدم')->required()->searchable()
-                    ->options(fn () => User::query()->pluck('name', 'id')->all())->default(fn () => auth()->id()),
-                TextInput::make('total_cost')->label('إجمالي التكلفة (ج.م)')->disabled()->dehydrated(false)->default(0),
-                Textarea::make('notes')->label('ملاحظات')->columnSpanFull(),
-            ]),
-            Section::make('أصناف التحويل')->schema([
-                Repeater::make('items')->label('الأصناف')->relationship()->minItems(1)->defaultItems(1)
-                    ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null)
-                    ->columns(fn (): int => DocumentBarcodeField::enabled() ? 3 : 2)->schema([
-                        Select::make('product_id')->label('المنتج')->required()->searchable()
-                            ->options(fn () => Product::whereIn('type', [ProductType::RawMaterial, ProductType::Consumable])->pluck('name', 'id')->all())
-                            ->rules([Rule::exists('products', 'id')->whereIn('type', [ProductType::RawMaterial->value, ProductType::Consumable->value])])
-                            ->live()
-                            ->afterStateUpdated(fn (Set $set, $state) => DocumentBarcodeField::fill($set, $state)),
-                        ...DocumentBarcodeField::whenEnabled(),
-                        TextInput::make('quantity')->label('الكمية')->required()->numeric()->step(0.001)->minValue(0.001)->default(1),
-                    ]),
-            ]),
-        ]);
+            Section::make('معلومات إذن التحويل')
+                ->schema([
+                    Select::make('from_warehouse_id')
+                        ->label('من مخزن')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->options(fn () => Warehouse::active()->pluck('name', 'id')->all())
+                        ->default(fn () => Warehouse::default()->id)
+                        ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null),
+
+                    Select::make('to_warehouse_id')
+                        ->label('إلى مخزن')
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->different('from_warehouse_id')
+                        ->options(fn () => Warehouse::active()->pluck('name', 'id')->all())
+                        ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null),
+
+                    Select::make('user_id')
+                        ->label('المستخدم')
+                        ->required()
+                        ->searchable()
+                        ->options(fn () => User::query()->pluck('name', 'id')->all())
+                        ->default(fn () => auth()->id())
+                        ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null),
+
+                    TextInput::make('total_cost')
+                        ->label('إجمالي التكلفة (ج.م)')
+                        ->numeric()
+                        ->prefix('ج.م')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->default(0),
+
+                    Textarea::make('notes')
+                        ->label('ملاحظات')
+                        ->required(false)
+                        ->columnSpanFull()
+                        ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null),
+                ])
+                ->columns(2),
+
+            Section::make('أصناف التحويل')
+                ->extraAttributes([
+                    'x-init' => StockTransferCalculatorService::getJavaScriptCalculation(),
+                ])
+                ->schema([
+                    Actions::make([
+                        ProductImporterAction::make('importProducts')
+                            ->additionalProps(function (Product $product) {
+                                return [
+                                    'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
+                                ];
+                            }),
+                    ])
+                        ->alignStart(),
+
+                    ProductSelector::make()
+                        ->columnSpanFull(),
+
+                    Repeater::make('items')
+                        ->label('الأصناف')
+                        ->relationship('items', fn ($query) => $query->with('product.inventoryItem'))
+                        ->table(fn (): array => array_values(array_filter([
+                            TableColumn::make('المنتج')
+                                ->width('200px'),
+                            DocumentBarcodeField::enabled()
+                                ? TableColumn::make('الباركود')->width('140px')
+                                : null,
+                            TableColumn::make('الوحدة')
+                                ->width('100px'),
+                            TableColumn::make('الكمية الحالية')
+                                ->width('100px'),
+                            TableColumn::make('الكمية')
+                                ->width('100px'),
+                            TableColumn::make('سعر الوحدة (ج.م)')
+                                ->width('120px'),
+                            TableColumn::make('الإجمالي (ج.م)')
+                                ->width('120px'),
+                        ])))
+                        ->schema([
+                            Hidden::make('product_id'),
+
+                            TextInput::make('product_name')
+                                ->label('المنتج')
+                                ->formatStateUsing(function ($record, $state) {
+                                    return $state ?? ($record && $record->product ? $record->product->name : 'غير محدد');
+                                })
+                                ->dehydrated(false)
+                                ->disabled(),
+
+                            ...DocumentBarcodeField::whenEnabled(),
+
+                            TextInput::make('unit')
+                                ->label('الوحدة')
+                                ->formatStateUsing(function ($record, $state) {
+                                    return Product::formatUnit($state ?? ($record && $record->product ? $record->product->unit : null));
+                                })
+                                ->disabled()
+                                ->dehydrated(false),
+
+                            TextInput::make('stock_quantity')
+                                ->label('الكمية الحالية')
+                                ->formatStateUsing(function ($record) {
+                                    return $record && $record->product && $record->product->inventoryItem
+                                        ? (string) $record->product->inventoryItem->quantity
+                                        : 'غير محدد';
+                                })
+                                ->disabled(),
+
+                            TextInput::make('quantity')
+                                ->label('الكمية')
+                                ->numeric()
+                                ->step(0.001)
+                                ->required()
+                                ->default(1)
+                                ->minValue(0.001),
+
+                            TextInput::make('unit_cost')
+                                ->label('سعر الوحدة (ج.م)')
+                                ->numeric()
+                                ->prefix('ج.م')
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->formatStateUsing(function ($record, $state) {
+                                    if ($state !== null) {
+                                        return $state;
+                                    }
+
+                                    return $record ? ($record->unit_cost ?? ($record->product ? $record->product->cost : 0)) : 0;
+                                }),
+
+                            TextInput::make('total_cost')
+                                ->label('الإجمالي (ج.م)')
+                                ->numeric()
+                                ->prefix('ج.م')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->formatStateUsing(function ($record, $state) {
+                                    if ($state !== null) {
+                                        return $state;
+                                    }
+
+                                    return $record ? ($record->total_cost ?? 0) : 0;
+                                }),
+                        ])
+                        ->defaultItems(0)
+                        ->reorderableWithButtons()
+                        ->dehydrated(true)
+                        ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null)
+                        ->mutateRelationshipDataBeforeCreateUsing(function ($data) {
+                            return StockTransferCalculatorService::prepareItemData($data);
+                        })
+                        ->mutateRelationshipDataBeforeSaveUsing(function ($data) {
+                            return StockTransferCalculatorService::prepareItemData($data);
+                        })
+                        ->collapsible(),
+                ]),
+        ])->columns(1);
     }
 
     public static function infolist(Schema $schema): Schema

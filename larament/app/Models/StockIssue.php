@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,7 @@ use Illuminate\Validation\ValidationException;
  * @property int|null $closed_by
  * @property Carbon|null $business_date
  * @property string|float $total_cost
+ * @property string|float $total
  * @property-read Warehouse $warehouse
  * @property-read User|null $user
  * @property-read User|null $closedByUser
@@ -127,5 +129,16 @@ class StockIssue extends Model
     public function movements(): MorphMany
     {
         return $this->morphMany(InventoryItemMovement::class, 'referenceable');
+    }
+
+    /**
+     * @return Attribute<string|float, string|float>
+     */
+    public function total(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string|float => $this->total_cost,
+            set: fn ($value): array => ['total_cost' => $value],
+        );
     }
 }

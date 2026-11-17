@@ -25,6 +25,7 @@ use App\Services\ChannelPerformanceReportService;
 use App\Services\InventoryDailyAggregationService;
 use App\Services\ProductsSalesReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
+use App\Services\Resources\StockIssueCalculatorService;
 use App\Services\ShiftsReportService;
 use App\Services\StockIssueService;
 use App\Services\StockService;
@@ -493,4 +494,53 @@ it('refuses a second confirm of the same issue loaded before the first confirm',
         ->toThrow(ValidationException::class);
     expect(InventoryItemMovement::where('referenceable_id', $issue->id)
         ->where('reason', MovementReason::STOCK_ISSUE)->count())->toBe(1);
+});
+
+it('calculates stock issue totals using StockIssueCalculatorService', function () {
+    $rice = Product::factory()->create(['cost' => 20]);
+    $oil = Product::factory()->create(['cost' => 50]);
+
+    $items = [
+        ['product_id' => $rice->id, 'quantity' => 2, 'unit_cost' => 20],
+        ['product_id' => $oil->id, 'quantity' => 1.5, 'unit_cost' => 50],
+    ];
+
+    expect(StockIssueCalculatorService::calculateTotal($items))->toBe(115.0);
+
+    $prepared = StockIssueCalculatorService::prepareItemData([
+        'product_id' => $rice->id,
+        'quantity' => 3,
+        'unit_cost' => 20,
+        'price' => 20,
+        'product_name' => 'Rice',
+        'unit' => 'kg',
+        'stock_quantity' => 10,
+    ]);
+
+    expect($prepared)->toHaveKeys(['product_id', 'quantity', 'unit_cost', 'total_cost'])
+        ->and($prepared['total_cost'])->toBe(60.0)
+        ->and($prepared)->not->toHaveKey('product_name')
+        ->and($prepared)->not->toHaveKey('unit')
+        ->and($prepared)->not->toHaveKey('stock_quantity');
+});
+
+it('can add products to stock issue using product selector component', function () {
+    $admin = User::factory()->admin()->create();
+    actingAs($admin);
+
+    $rice = Product::factory()->create([
+        'name' => 'أرز',
+        'type' => ProductType::RawMaterial,
+        'cost' => 25,
+    ]);
+    openInventoryDay($rice);
+
+    livewire(CreateStockIssue::class)
+        ->set('data.warehouse_id', Warehouse::default()->id)
+        ->set('data.destination', 'المطبخ الرئيسي')
+        ->set('data.product_selector', $rice->id)
+        ->assertSet('data.items.0.product_id', $rice->id)
+        ->assertSet('data.items.0.quantity', 1)
+        ->assertSet('data.items.0.unit_cost', 25)
+        ->assertSet('data.total_cost', 25);
 });

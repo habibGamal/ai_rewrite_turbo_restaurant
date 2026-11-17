@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
  * @property int|null $warehouse_id
  * @property int|null $product_group_id
  * @property string|null $variant_label
  * @property string|null $sku
+ * @property string|null $product_ref
+ * @property ProductType|null $type
+ * @property Pivot|null $pivot
  * @property bool $has_custom_price
  * @property bool $is_active
  */
@@ -61,18 +65,21 @@ class Product extends Model
 
     public function getRawTypeAttribute(): string
     {
-        return $this->type?->value ?? '';
+        return $this->type instanceof ProductType ? $this->type->value : (string) ($this->type ?? '');
     }
 
     public function getComponentsHashAttribute(): string
     {
         return $this->components
-            ->map(fn ($component) => [$component->product_ref, $component->pivot->quantity])
+            ->map(fn (Product $component) => [$component->product_ref, $component->pivot ? $component->pivot->getAttribute('quantity') : null])
             ->sort()
             ->flatten()
             ->join('');
     }
 
+    /**
+     * @return BelongsTo<Category, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -146,6 +153,9 @@ class Product extends Model
         return $this->hasMany(ProductBarcode::class)->where('is_primary', false);
     }
 
+    /**
+     * @return HasOne<InventoryItem, $this>
+     */
     public function inventoryItem(): HasOne
     {
         return $this->hasOne(InventoryItem::class);
@@ -171,6 +181,7 @@ class Product extends Model
         return $this->hasMany(ReturnPurchaseInvoiceItem::class);
     }
 
+    /** @return BelongsToMany<Product, $this> */
     public function components(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'product_components', 'product_id', 'component_id')->withPivot('quantity');

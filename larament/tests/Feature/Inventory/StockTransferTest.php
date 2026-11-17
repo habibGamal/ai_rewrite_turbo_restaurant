@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Policies\StockTransferPolicy;
 use App\Services\InventoryDailyAggregationService;
+use App\Services\Resources\StockTransferCalculatorService;
 use App\Services\StockService;
 use App\Services\StockTransferService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -23,6 +24,7 @@ use Filament\Forms\Components\Repeater;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 use function Pest\Livewire\livewire;
@@ -210,10 +212,52 @@ it('manages transfer drafts and confirmation in Filament and respects update per
     livewire(ViewStockTransfer::class, ['record' => $transfer->id])->assertSuccessful()->assertActionHidden('confirm');
 });
 
+it('calculates stock transfer totals using StockTransferCalculatorService', function () {
+    $rice = Product::factory()->create(['cost' => 30]);
+    $meat = Product::factory()->create(['cost' => 150]);
+
+    $items = [
+        ['product_id' => $rice->id, 'quantity' => 5, 'unit_cost' => 30],
+        ['product_id' => $meat->id, 'quantity' => 2, 'unit_cost' => 150],
+    ];
+
+    expect(StockTransferCalculatorService::calculateTotal($items))->toBe(450.0);
+
+    $prepared = StockTransferCalculatorService::prepareItemData([
+        'product_id' => $rice->id,
+        'quantity' => 4,
+        'unit_cost' => 30,
+        'price' => 30,
+        'product_name' => 'Rice',
+        'unit' => 'kg',
+        'stock_quantity' => 20,
+    ]);
+
+    expect($prepared)->toHaveKeys(['product_id', 'quantity', 'unit_cost', 'total_cost'])
+        ->and($prepared['total_cost'])->toBe(120.0)
+        ->and($prepared)->not->toHaveKey('product_name')
+        ->and($prepared)->not->toHaveKey('unit')
+        ->and($prepared)->not->toHaveKey('stock_quantity');
+});
+
+it('can add products to stock transfer using product selector component', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    livewire(CreateStockTransfer::class)
+        ->set('data.from_warehouse_id', $this->prep->id)
+        ->set('data.to_warehouse_id', $this->grill->id)
+        ->set('data.product_selector', $this->product->id)
+        ->assertSet('data.items.0.product_id', $this->product->id)
+        ->assertSet('data.items.0.quantity', 1)
+        ->assertSet('data.items.0.unit_cost', 85)
+        ->assertSet('data.total_cost', 85);
+});
+
 it('reverses the transfer migration cleanly', function () {
     $migration = require database_path('migrations/2026_11_10_220001_create_stock_transfers_tables.php');
     $migration->down();
-    expect(\Illuminate\Support\Facades\Schema::hasTable('stock_transfers'))->toBeFalse();
+    expect(Schema::hasTable('stock_transfers'))->toBeFalse();
     $migration->up();
-    expect(\Illuminate\Support\Facades\Schema::hasTable('stock_transfer_items'))->toBeTrue();
+    expect(Schema::hasTable('stock_transfer_items'))->toBeTrue();
 });

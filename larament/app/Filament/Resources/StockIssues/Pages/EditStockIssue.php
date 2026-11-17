@@ -4,6 +4,7 @@ namespace App\Filament\Resources\StockIssues\Pages;
 
 use App\Filament\Actions\ConfirmStockIssueAction;
 use App\Filament\Resources\StockIssues\StockIssueResource;
+use App\Services\Resources\StockIssueCalculatorService;
 use App\Services\StockIssueService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -13,6 +14,17 @@ use Illuminate\Validation\ValidationException;
 class EditStockIssue extends EditRecord
 {
     protected static string $resource = StockIssueResource::class;
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (isset($data['items']) && is_array($data['items'])) {
+            $total = StockIssueCalculatorService::calculateTotal($data['items']);
+            $data['total_cost'] = $total;
+            $data['total'] = $total;
+        }
+
+        return $data;
+    }
 
     protected function getHeaderActions(): array
     {

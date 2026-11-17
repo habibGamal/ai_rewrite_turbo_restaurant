@@ -53,23 +53,37 @@ Flat price per use plus a cost (`OptionalFeature::EQUIPMENT`). Typical use: shis
 
 ## Returns
 
-`OrderReturnService` handles cashier quick returns and admin returns.
+`OrderReturnService` handles cashier quick returns and admin returns, supported by `ReturnRefundCalculator`:
 
+- **Proportional refund calculation**: a refunded line receives what the customer actually paid for it. An item discount stays on its line; order-level discounts are apportioned proportionally across lines based on post-item-discount value; dine-in service charge and taxes are refunded by proportional share; flat delivery fees are excluded; total rounding is shared. Partial quantities round to 0.01 with the final unit absorbing remainder.
+- `OrderReturnService` caps line refunds at this calculated maximum and populates it automatically. Both POS instant returns and admin return forms display the full calculation breakdown.
 - Receipts print `#<order id>` as a Code128 barcode. Scanning it finds the order; bare digits search the current shift then older shifts (within `returns_max_days`).
 - Each line has **restocked**: `true` returns the quantity to stock, `false` records it as damaged with no stock move.
 - Fee and equipment lines can be refunded too (`order_fee_id` / `order_equipment_id` on `order_return_items`).
 - An exchange is a return plus a new instant sale in the same transaction; the refund is first applied as a credit tender.
-- Refunds count in the shift that **paid** them (shift reports) or on the refund date (date reports).
+- Refunds count in the shift that **paid** them (shift reports) or on the refund date (date reports). Current and period shift reports feature a dedicated returns table.
 - Permissions: `order.return`, `order.return_without_restock`, `order.return_any_age`, `view_returns_report`.
 - Report helpers: `App\Services\Reports\ReturnsAggregates`.
+
+## Multiple terminals & drawer sessions
+
+When `OptionalFeature::MULTI_TERMINAL` is enabled, shifts contain independent drawer sessions (`terminal_sessions` table):
+
+- **Architecture**: A shift starts when the first drawer opens. Subsequent drawers register under the same open shift with their own opening cash. One cashier operates one drawer session at a time.
+- **Handovers**: A newcomer can take over an open drawer session without closing the shift; `terminal_session_handovers` records `from_user_id`, `to_user_id`, `notes`, and timestamps.
+- **Financial breakdown**: `TerminalSessionService::breakdown()` computes cash by kind per drawer (opening cash, cash sales, cash revenues/in, expenses/out, expected cash).
+- **Scoping**: Payments, expenses, revenues, returns, external collections, and seller settlements are stamped with `terminal_session_id`. Orders are stamped with `terminal_id`.
+- **Closure**: A cashier closes their own drawer (`terminal.close`) recording expected cash. Managers can close another's drawer (`terminal.close_others`) with a mandatory reason. The shift ends once all drawers are closed.
 
 ## Revenues and expenses
 
 - Revenues (`OptionalFeature::REVENUES`): `revenue_types` and `revenues` (`amount`, `method` cash|card, `notes`, per shift). Admin only; the cashier never sees them.
 - Expenses: the cashier adds shift expenses from the POS (`pos.tab.system.expenses`); the admin `ExpenseResource` is read-only.
 - **Shift money page** (`/admin/shift-money`, «مصروفات وإيرادات الورديات»): pick any shift and add, edit or delete its expenses and revenues through `ShiftMoneyService`.
+  - Counted cash and shortage inputs are removed (physical counting belongs to shift closing/reports).
+  - With multiple terminals active, adding or editing an expense or revenue requires selecting which drawer of that shift it belongs to.
   - Needs `shift_money.manage`; closed shifts also need `shift_money.edit_closed` and a written reason.
-  - Editing a closed shift recomputes `end_cash`, `losses_amount` and `has_deficit` (the counted `real_cash` is untouched) and stamps `money_edited_at` / `money_edited_count`.
+  - Editing a closed shift recomputes `end_cash` (and closed drawer expected cash), `losses_amount` and `has_deficit` (the counted `real_cash` is untouched) and stamps `money_edited_at` / `money_edited_count`.
 
 ## Audit log
 

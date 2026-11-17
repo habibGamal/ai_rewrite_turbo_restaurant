@@ -191,14 +191,14 @@ const OrdersIndex: React.FC<IndexProps> = ({
 
                     {terminal ? (
                         <div className="flex items-center gap-4" data-testid="drawer-bar">
-                            <span>
+                            <span className="whitespace-nowrap">
                                 <strong>{terminal.name}</strong>
                                 {terminal.cashier ? ` · ${terminal.cashier}` : ''}
                                 {terminal.openedAt
                                     ? ` · من ${new Date(terminal.openedAt).toLocaleTimeString('ar-EG')}`
                                     : ''}
                             </span>
-                            <span className="inline-flex items-center gap-2">
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
                                 <Switch size="small" checked={deviceOnly} onChange={setDeviceOnly} />
                                 طلبات هذا الجهاز
                             </span>

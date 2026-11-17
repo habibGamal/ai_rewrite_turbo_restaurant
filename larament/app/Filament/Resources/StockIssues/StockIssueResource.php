@@ -2,31 +2,35 @@
 
 namespace App\Filament\Resources\StockIssues;
 
-use App\Enums\ProductType;
 use App\Filament\Actions\ConfirmStockIssueAction;
+use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Components\Forms\DocumentBarcodeField;
+use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\StockIssues\Pages\CreateStockIssue;
 use App\Filament\Resources\StockIssues\Pages\EditStockIssue;
 use App\Filament\Resources\StockIssues\Pages\ListStockIssues;
 use App\Filament\Resources\StockIssues\Pages\ViewStockIssue;
 use App\Models\Product;
 use App\Models\StockIssue;
-use App\Models\StockIssueItem;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Resources\StockIssueCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -54,38 +58,33 @@ class StockIssueResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $stockProductOptions = fn (): array => Product::query()
-            ->whereIn('type', [
-                ProductType::RawMaterial->value,
-                ProductType::Consumable->value,
-            ])
-            ->pluck('name', 'id')
-            ->all();
-
         return $schema
             ->components([
-                Section::make('بيانات إذن الصرف')
+                Section::make('معلومات إذن الصرف')
                     ->schema([
                         Select::make('warehouse_id')
                             ->label('المخزن')
                             ->options(fn (): array => Warehouse::active()->pluck('name', 'id')->all())
                             ->searchable()
                             ->required()
-                            ->default(fn (): int => Warehouse::default()->id),
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->disabled(fn (?StockIssue $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('destination')
                             ->label('جهة الصرف')
                             ->required()
                             ->maxLength(255)
                             ->datalist(fn (): array => StockIssue::distinctDestinations())
-                            ->dehydrateStateUsing(fn (?string $state): string => trim((string) $state)),
+                            ->dehydrateStateUsing(fn (?string $state): string => trim((string) $state))
+                            ->disabled(fn (?StockIssue $record): bool => $record?->closed_at !== null),
 
                         Select::make('user_id')
                             ->label('المستخدم')
                             ->options(fn (): array => User::query()->pluck('name', 'id')->all())
                             ->searchable()
                             ->required()
-                            ->default(fn (): ?int => auth()->id()),
+                            ->default(fn (): ?int => auth()->id())
+                            ->disabled(fn (?StockIssue $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('total_cost')
                             ->label('إجمالي التكلفة (ج.م)')
@@ -97,67 +96,100 @@ class StockIssueResource extends Resource
 
                         Textarea::make('notes')
                             ->label('ملاحظات')
-                            ->columnSpanFull(),
+                            ->required(false)
+                            ->columnSpanFull()
+                            ->disabled(fn (?StockIssue $record): bool => $record?->closed_at !== null),
                     ])
                     ->columns(2),
 
                 Section::make('أصناف الصرف')
+                    ->extraAttributes([
+                        'x-init' => StockIssueCalculatorService::getJavaScriptCalculation(),
+                    ])
                     ->schema([
+                        Actions::make([
+                            ProductImporterAction::make('importProducts')
+                                ->additionalProps(function (Product $product) {
+                                    return [
+                                        'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
+                                    ];
+                                }),
+                        ])
+                            ->alignStart(),
+
+                        ProductSelector::make()
+                            ->columnSpanFull(),
+
                         Repeater::make('items')
                             ->label('الأصناف')
-                            ->relationship('items', fn ($query) => $query->with('product'))
-                            ->minItems(1)
-                            ->defaultItems(1)
-                            ->disabled(fn (?StockIssue $record): bool => $record !== null && $record->closed_at !== null)
+                            ->relationship('items', fn ($query) => $query->with('product.inventoryItem'))
+                            ->table(fn (): array => array_values(array_filter([
+                                TableColumn::make('المنتج')
+                                    ->width('200px'),
+                                DocumentBarcodeField::enabled()
+                                    ? TableColumn::make('الباركود')->width('140px')
+                                    : null,
+                                TableColumn::make('الوحدة')
+                                    ->width('100px'),
+                                TableColumn::make('الكمية الحالية')
+                                    ->width('100px'),
+                                TableColumn::make('الكمية')
+                                    ->width('100px'),
+                                TableColumn::make('سعر الوحدة (ج.م)')
+                                    ->width('120px'),
+                                TableColumn::make('الإجمالي (ج.م)')
+                                    ->width('120px'),
+                            ])))
                             ->schema([
-                                Select::make('product_id')
+                                Hidden::make('product_id'),
+
+                                TextInput::make('product_name')
                                     ->label('المنتج')
-                                    ->options($stockProductOptions)
-                                    ->searchable()
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                        $cost = $state ? (float) (Product::whereKey($state)->value('cost') ?? 0) : 0.0;
-                                        $quantity = (float) ($get('quantity') ?? 1);
-                                        $set('unit_cost', $cost);
-                                        $set('total_cost', round($quantity * $cost, 2));
-                                        DocumentBarcodeField::fill($set, $state);
-                                    }),
+                                    ->formatStateUsing(function ($record, $state) {
+                                        return $state ?? ($record && $record->product ? $record->product->name : 'غير محدد');
+                                    })
+                                    ->dehydrated(false)
+                                    ->disabled(),
 
                                 ...DocumentBarcodeField::whenEnabled(),
+
+                                TextInput::make('unit')
+                                    ->label('الوحدة')
+                                    ->formatStateUsing(function ($record, $state) {
+                                        return Product::formatUnit($state ?? ($record && $record->product ? $record->product->unit : null));
+                                    })
+                                    ->disabled()
+                                    ->dehydrated(false),
+
+                                TextInput::make('stock_quantity')
+                                    ->label('الكمية الحالية')
+                                    ->formatStateUsing(function ($record) {
+                                        return $record && $record->product && $record->product->inventoryItem
+                                            ? (string) $record->product->inventoryItem->quantity
+                                            : 'غير محدد';
+                                    })
+                                    ->disabled(),
 
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
                                     ->step(0.001)
-                                    ->minValue(0.001)
-                                    ->default(1)
                                     ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                        $productId = $get('product_id');
-                                        $cost = $productId ? (float) (Product::whereKey($productId)->value('cost') ?? 0) : 0.0;
-                                        $quantity = (float) ($state ?? 0);
-                                        $set('unit_cost', $cost);
-                                        $set('total_cost', round($quantity * $cost, 2));
-                                    }),
+                                    ->default(1)
+                                    ->minValue(0.001),
 
                                 TextInput::make('unit_cost')
-                                    ->label('تكلفة الوحدة الحالية (ج.م)')
+                                    ->label('سعر الوحدة (ج.م)')
                                     ->numeric()
                                     ->prefix('ج.م')
                                     ->disabled()
-                                    ->dehydrated(false)
-                                    ->formatStateUsing(function (?StockIssueItem $record, callable $get): float {
-                                        if ($record !== null && $record->stockIssue !== null && $record->stockIssue->closed_at !== null) {
-                                            return (float) $record->unit_cost;
+                                    ->dehydrated(true)
+                                    ->formatStateUsing(function ($record, $state) {
+                                        if ($state !== null) {
+                                            return $state;
                                         }
-                                        if ($record !== null && $record->product !== null) {
-                                            return (float) $record->product->cost;
-                                        }
-                                        $productId = $get('product_id');
 
-                                        return $productId ? (float) (Product::whereKey($productId)->value('cost') ?? 0) : 0.0;
+                                        return $record ? ($record->unit_cost ?? ($record->product ? $record->product->cost : 0)) : 0;
                                     }),
 
                                 TextInput::make('total_cost')
@@ -166,19 +198,24 @@ class StockIssueResource extends Resource
                                     ->prefix('ج.م')
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->formatStateUsing(function (?StockIssueItem $record, callable $get): float {
-                                        if ($record !== null && $record->stockIssue !== null && $record->stockIssue->closed_at !== null) {
-                                            return (float) $record->total_cost;
+                                    ->formatStateUsing(function ($record, $state) {
+                                        if ($state !== null) {
+                                            return $state;
                                         }
-                                        $quantity = (float) ($record !== null ? $record->quantity : ($get('quantity') ?? 0));
-                                        $unitCost = $record !== null && $record->product !== null
-                                            ? (float) $record->product->cost
-                                            : ($get('product_id') ? (float) (Product::whereKey($get('product_id'))->value('cost') ?? 0) : 0.0);
 
-                                        return round($quantity * $unitCost, 2);
+                                        return $record ? ($record->total_cost ?? 0) : 0;
                                     }),
                             ])
-                            ->columns(4)
+                            ->defaultItems(0)
+                            ->reorderableWithButtons()
+                            ->dehydrated(true)
+                            ->disabled(fn (?StockIssue $record): bool => $record?->closed_at !== null)
+                            ->mutateRelationshipDataBeforeCreateUsing(function ($data) {
+                                return StockIssueCalculatorService::prepareItemData($data);
+                            })
+                            ->mutateRelationshipDataBeforeSaveUsing(function ($data) {
+                                return StockIssueCalculatorService::prepareItemData($data);
+                            })
                             ->collapsible(),
                     ]),
             ])
