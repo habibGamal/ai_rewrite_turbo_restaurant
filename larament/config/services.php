@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Draws receipts and barcode labels as images. Empty = the usual install places.
+    'wkhtmltoimage' => [
+        'path' => env('WKHTMLTOIMAGE_PATH', ''),
+    ],
+
 ];

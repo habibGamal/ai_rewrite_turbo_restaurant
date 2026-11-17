@@ -169,14 +169,16 @@ class PurchaseInvoiceResource extends Resource
                                     ->disabled(),
 
                                 // Read-only: filled from the product, or by «توليد باركود للأصناف».
-                                TextInput::make('barcode')
+                                // Left out (not just hidden) when off: a hidden field still
+                                // takes a cell in the table repeater and shifts the columns.
+                                ...(self::showsBarcodes() ? [TextInput::make('barcode')
                                     ->label('الباركود')
                                     ->formatStateUsing(fn ($record, $state) => $state ?? $record?->product?->barcode)
                                     ->placeholder('بدون باركود')
                                     ->extraInputAttributes(['dir' => 'ltr'])
                                     ->disabled()
-                                    ->dehydrated(false)
-                                    ->visible(fn (): bool => self::showsBarcodes()),
+                                    ->dehydrated(false),
+                                ] : []),
 
                                 TextInput::make('unit')
                                     ->label('الوحدة')

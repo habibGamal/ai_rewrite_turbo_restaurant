@@ -23,7 +23,8 @@ public sealed class LabelPrinter : IDisposable
     /// <returns>How many labels were sent to the printer.</returns>
     public async Task<int> PrintAsync(Uri manifestUrl, string printerName, CancellationToken cancel = default)
     {
-        var job = await _http.GetFromJsonAsync<LabelJob>(manifestUrl, cancel)
+        using var manifestResponse = await Fetch(manifestUrl, cancel);
+        var job = await manifestResponse.Content.ReadFromJsonAsync<LabelJob>(cancel)
             ?? throw new LabelPrintException("مهمة الطباعة فاضية.");
 
         if (job.Pages.Count == 0 || job.Page.WidthMm <= 0 || job.Page.HeightMm <= 0)
@@ -42,9 +43,9 @@ public sealed class LabelPrinter : IDisposable
                     throw new LabelPrintException("رابط صورة الملصق من موقع مختلف.");
                 }
 
-                await using var stream = await _http.GetStreamAsync(imageUrl, cancel);
+                using var imageResponse = await Fetch(imageUrl, cancel);
                 using var memory = new MemoryStream();
-                await stream.CopyToAsync(memory, cancel);
+                await imageResponse.Content.CopyToAsync(memory, cancel);
                 memory.Position = 0;
                 // GDI+ needs a bitmap's stream for its whole life; copy it free.
                 using var loaded = new Bitmap(memory);
@@ -70,6 +71,27 @@ public sealed class LabelPrinter : IDisposable
         }
 
         return job.TotalLabels;
+    }
+
+    /// <summary>
+    /// GET that turns a failed answer into the server's own message (the POS
+    /// explains in plain text why a label could not be drawn).
+    /// </summary>
+    private async Task<HttpResponseMessage> Fetch(Uri url, CancellationToken cancel)
+    {
+        var response = await _http.GetAsync(url, cancel);
+        if (response.IsSuccessStatusCode)
+        {
+            return response;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancel);
+        response.Dispose();
+        var message = body.TrimStart().StartsWith('<') || body.Length > 400
+            ? $"السيرفر رد بخطأ {(int)response.StatusCode}."
+            : body.Trim();
+
+        throw new LabelPrintException(message);
     }
 
     public static bool SameOrigin(Uri a, Uri b)
