@@ -5,6 +5,7 @@ use App\Http\Controllers\BadgePrintController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
+use App\Http\Controllers\LabelJobController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderEquipmentController;
 use App\Http\Controllers\Pos\CustomerDisplayController;
@@ -135,6 +136,8 @@ Route::middleware('auth')->group(function () {
 
     // Barcode labels for a product group's variants
     Route::get('/print/labels/group/{group}', [ProductLabelController::class, 'group'])->name('labels.group');
+    // Label print job in the browser (PC without the Windows print app)
+    Route::get('/print/labels/jobs/{job}', [LabelJobController::class, 'browser'])->whereUuid('job')->name('labels.jobs.browser');
 
     // Invoice Print Routes
     Route::get('/print/invoice/{type}/{id}', [InvoicePrintController::class, 'show'])
@@ -144,6 +147,12 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Label print jobs fetched by the Windows print app: signed links, no login.
+Route::middleware('signed')->group(function () {
+    Route::get('/labels/jobs/{job}', [LabelJobController::class, 'manifest'])->whereUuid('job')->name('labels.jobs.manifest');
+    Route::get('/labels/jobs/{job}/pages/{page}', [LabelJobController::class, 'page'])->whereUuid('job')->whereNumber('page')->name('labels.jobs.page');
+});
 
 // Simple test event
 Route::get('/test-simple', function () {

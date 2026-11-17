@@ -46,6 +46,7 @@ enum SettingKey: string
     case FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
     case FEATURE_MULTI_TERMINAL_ENABLED = 'feature_multi_terminal_enabled';
     case FEATURE_PURCHASE_BARCODES_ENABLED = 'feature_purchase_barcodes_enabled';
+    case FEATURE_LABEL_PRINTING_ENABLED = 'feature_label_printing_enabled';
     case PURCHASE_BARCODE_PREFIX = 'purchase_barcode_prefix';
     case PURCHASE_BARCODE_DIGITS = 'purchase_barcode_digits';
     case PURCHASE_BARCODE_NEXT_NUMBER = 'purchase_barcode_next_number';
@@ -97,6 +98,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'false',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'false',
             self::FEATURE_PURCHASE_BARCODES_ENABLED => 'false',
+            self::FEATURE_LABEL_PRINTING_ENABLED => 'false',
             self::PURCHASE_BARCODE_PREFIX => '',
             self::PURCHASE_BARCODE_DIGITS => '4',
             self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
@@ -152,6 +154,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_MULTI_TERMINAL_ENABLED => self::storedBooleanRules(),
             self::FEATURE_PURCHASE_BARCODES_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_LABEL_PRINTING_ENABLED => self::storedBooleanRules(),
             self::PURCHASE_BARCODE_PREFIX => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]*$/'],
             self::PURCHASE_BARCODE_DIGITS => ['required', 'integer', 'min:1', 'max:12'],
             self::PURCHASE_BARCODE_NEXT_NUMBER => ['required', 'integer', 'min:0', 'max:999999999999'],
@@ -206,6 +209,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل المقاسات والألوان (متغيرات المنتجات)',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل أكثر من درج (كاشير) في الوردية',
             self::FEATURE_PURCHASE_BARCODES_ENABLED => 'تفعيل توليد الباركود من فاتورة الشراء',
+            self::FEATURE_LABEL_PRINTING_ENABLED => 'تفعيل تصميم وطباعة ملصقات الباركود',
             self::PURCHASE_BARCODE_PREFIX => 'بادئة الباركود المولد',
             self::PURCHASE_BARCODE_DIGITS => 'عدد أرقام المسلسل',
             self::PURCHASE_BARCODE_NEXT_NUMBER => 'الرقم التالي في المسلسل',
@@ -260,6 +264,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تجميع المنتجات في موديلات لها خيارات (مقاس، لون، ...) لكل تركيبة منها مخزون وباركود وسعر.',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'كل جهاز كاشير له درج بفلوس فتح خاصة وطابعة خاصة داخل نفس الوردية، والتقارير تقدر تفلتر بالدرج.',
             self::FEATURE_PURCHASE_BARCODES_ENABLED => 'زر في فاتورة الشراء يعطي الأصناف التي ليس لها باركود باركوداً مسلسلاً (مثال: 0001، 0002، ...). البداية والبادئة وعدد الأرقام من شاشة الإعدادات.',
+            self::FEATURE_LABEL_PRINTING_ENABLED => 'تصميمات ملصقات بمقاسات المحل، وطباعتها على أي طابعة ملصقات من خلال برنامج الطباعة على الويندوز أو من المتصفح.',
             self::PURCHASE_BARCODE_PREFIX => 'حروف أو أرقام اختيارية قبل المسلسل (مثال: CL يعطي CL0001). اتركها فارغة لباركود أرقام فقط.',
             self::PURCHASE_BARCODE_DIGITS => 'يُكمل المسلسل بأصفار على اليسار لهذا العدد (4 تعني 0001).',
             self::PURCHASE_BARCODE_NEXT_NUMBER => 'رقم أول باركود سيتم توليده. يزيد تلقائياً بعد كل توليد، والأرقام المستخدمة بالفعل يتم تخطيها.',
@@ -314,6 +319,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل',
             self::FEATURE_PURCHASE_BARCODES_ENABLED => 'تفعيل',
+            self::FEATURE_LABEL_PRINTING_ENABLED => 'تفعيل',
             self::PURCHASE_BARCODE_PREFIX => 'بدون بادئة',
             self::PURCHASE_BARCODE_DIGITS => '4',
             self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
@@ -358,6 +364,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED,
             self::FEATURE_MULTI_TERMINAL_ENABLED,
             self::FEATURE_PURCHASE_BARCODES_ENABLED => self::isStoredBoolean($value),
+            self::FEATURE_LABEL_PRINTING_ENABLED => self::isStoredBoolean($value),
             self::PURCHASE_BARCODE_PREFIX => $value === null || (is_string($value) && preg_match('/^[A-Za-z0-9]{0,10}$/', $value) === 1),
             self::PURCHASE_BARCODE_DIGITS => self::isIntInRange($value, 1, 12),
             self::PURCHASE_BARCODE_NEXT_NUMBER => self::isIntInRange($value, 0, 999_999_999_999),
@@ -390,6 +397,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED,
             self::FEATURE_MULTI_TERMINAL_ENABLED,
             self::FEATURE_PURCHASE_BARCODES_ENABLED,
+            self::FEATURE_LABEL_PRINTING_ENABLED,
             self::SETUP_COMPLETED => true,
             default => false,
         };
@@ -405,6 +413,7 @@ enum SettingKey: string
             self::FEATURE_VARIANTS_ENABLED,
             self::FEATURE_MULTI_TERMINAL_ENABLED,
             self::FEATURE_PURCHASE_BARCODES_ENABLED => true,
+            self::FEATURE_LABEL_PRINTING_ENABLED => true,
             default => false,
         };
     }

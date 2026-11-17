@@ -13,6 +13,7 @@ enum OptionalFeature: string
     case VARIANTS = 'feature_variants_enabled';
     case MULTI_TERMINAL = 'feature_multi_terminal_enabled';
     case PURCHASE_BARCODES = 'feature_purchase_barcodes_enabled';
+    case LABEL_PRINTING = 'feature_label_printing_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -24,6 +25,7 @@ enum OptionalFeature: string
             self::VARIANTS => SettingKey::FEATURE_VARIANTS_ENABLED,
             self::MULTI_TERMINAL => SettingKey::FEATURE_MULTI_TERMINAL_ENABLED,
             self::PURCHASE_BARCODES => SettingKey::FEATURE_PURCHASE_BARCODES_ENABLED,
+            self::LABEL_PRINTING => SettingKey::FEATURE_LABEL_PRINTING_ENABLED,
         };
     }
 
@@ -61,6 +63,7 @@ enum OptionalFeature: string
             self::VARIANTS => 'variants',
             self::MULTI_TERMINAL => 'multi_terminal',
             self::PURCHASE_BARCODES => 'purchase_barcodes',
+            self::LABEL_PRINTING => 'label_printing',
         };
     }
 
@@ -110,6 +113,13 @@ enum OptionalFeature: string
             ],
             self::VARIANTS => [],
             self::PURCHASE_BARCODES => [],
+            self::LABEL_PRINTING => [
+                'view_label_templates',
+                'create_label_templates',
+                'update_label_templates',
+                'delete_label_templates',
+                'print_labels',
+            ],
             self::MULTI_TERMINAL => [
                 'terminal.open',
                 'terminal.close',
@@ -132,6 +142,7 @@ enum OptionalFeature: string
             self::VARIANTS => 'ميزة المقاسات والألوان (متغيرات المنتجات) غير مفعلة حالياً.',
             self::MULTI_TERMINAL => 'ميزة الأدراج المتعددة غير مفعلة حالياً.',
             self::PURCHASE_BARCODES => 'ميزة توليد الباركود من فاتورة الشراء غير مفعلة حالياً.',
+            self::LABEL_PRINTING => 'ميزة طباعة ملصقات الباركود غير مفعلة حالياً.',
         };
     }
 
@@ -153,6 +164,7 @@ enum OptionalFeature: string
             'variants' => self::VARIANTS,
             'multi_terminal' => self::MULTI_TERMINAL,
             'purchase_barcodes' => self::PURCHASE_BARCODES,
+            'label_printing' => self::LABEL_PRINTING,
             default => null,
         };
     }

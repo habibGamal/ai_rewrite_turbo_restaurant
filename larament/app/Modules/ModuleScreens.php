@@ -6,6 +6,7 @@ use App\Enums\OptionalFeature;
 use App\Filament\Pages\Reports\CustomFeesReport;
 use App\Filament\Pages\Reports\EquipmentReport;
 use App\Filament\Resources\Equipment\EquipmentResource;
+use App\Filament\Resources\LabelTemplates\LabelTemplateResource;
 use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Filament\Resources\RevenueTypes\RevenueTypeResource;
 use App\Filament\Resources\Terminals\TerminalResource;
@@ -37,6 +38,7 @@ final class ModuleScreens
             EquipmentReport::class => OptionalFeature::EQUIPMENT,
             CustomFeesReport::class => OptionalFeature::CUSTOM_FEES,
             TerminalResource::class => OptionalFeature::MULTI_TERMINAL,
+            LabelTemplateResource::class => OptionalFeature::LABEL_PRINTING,
         ];
     }
 

@@ -78,6 +78,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 'view_terminals' => 'عرض الأدراج',
                 'create_terminals' => 'إضافة درج',
                 'update_terminals' => 'تعديل درج',
+
+                'view_label_templates' => 'عرض تصميمات الملصقات',
+                'create_label_templates' => 'إضافة تصميم ملصق',
+                'update_label_templates' => 'تعديل تصميم ملصق',
+                'delete_label_templates' => 'حذف تصميم ملصق',
+                'print_labels' => 'طباعة ملصقات الباركود',
             ],
             'المشتريات والمخزون' => [
                 'view_suppliers' => 'عرض الموردين',
