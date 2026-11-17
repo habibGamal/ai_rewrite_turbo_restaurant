@@ -44,6 +44,7 @@ use App\Services\Products\PosVariantCatalogService;
 use App\Services\SettingsService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSeparation;
 use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -78,10 +79,11 @@ class OrderController extends Controller
         }
 
         $user = $this->deskUser();
+        $separation = app(TerminalSeparation::class);
 
         $orders = [];
         foreach ($this->orderService->getShiftOrders($currentShift->id) as $order) {
-            if (! $order instanceof Order || ! $this->orderVisibleOnDesk($order, $user)) {
+            if (! $order instanceof Order || ! $this->orderVisibleOnDesk($order, $user) || ! $separation->canAct($order)) {
                 continue;
             }
 
@@ -91,6 +93,9 @@ class OrderController extends Controller
         $receivables = [];
         if ($user->canSeeTab('system:receivables')) {
             foreach ($this->orderRepository->receivablesForTypes($this->catalog->creditCodes()) as $order) {
+                if (! $separation->canAct($order)) {
+                    continue;
+                }
                 $receivables[] = $this->receivablePayload($order);
             }
         }

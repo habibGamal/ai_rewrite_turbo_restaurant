@@ -12,6 +12,7 @@ use App\Services\FeatureService;
 use App\Services\Orders\Instant\InstantReturnService;
 use App\Services\Orders\ReturnRules;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSeparation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,7 +34,13 @@ class InstantReturnController extends Controller
         $validated = $request->validate(['number' => ['required', 'string', 'max:32']]);
         $shiftId = $this->shift($shifts);
 
-        $candidates = $returns->candidates($validated['number'], $shiftId);
+        $found = $returns->candidates($validated['number'], $shiftId);
+        $separation = app(TerminalSeparation::class);
+        $candidates = array_values(array_filter($found, fn (Order $order): bool => $separation->canAct($order)));
+
+        if ($candidates === [] && $found !== []) {
+            return response()->json(['message' => $separation->denialMessage($found[0])], 403);
+        }
 
         if ($candidates === []) {
             return response()->json(['message' => 'لا يوجد طلب مكتمل بهذا الرقم'], 404);
@@ -87,6 +94,8 @@ class InstantReturnController extends Controller
         }
 
         $order = Order::query()->findOrFail($validated['order_id']);
+        $separation = app(TerminalSeparation::class);
+        abort_unless($separation->canAct($order), 403, $separation->denialMessage($order));
         $rules->assertAgeAllowed($order, $user);
 
         $result = $returns->process(

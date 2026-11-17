@@ -3,6 +3,7 @@
 namespace App\Terminals;
 
 use App\Enums\SettingKey;
+use App\Models\Order;
 use App\Models\Terminal;
 use App\Models\TerminalSession;
 use App\Services\FeatureService;
@@ -61,5 +62,29 @@ class TerminalSeparation
         }
 
         return $terminal->id;
+    }
+
+    /**
+     * Whether the current device may see or act on an order: always while
+     * sales points are not separated; otherwise only from the order's own
+     * sales point. Requests with no bound device (admin panel, jobs) are not
+     * limited.
+     */
+    public function canAct(Order $order): bool
+    {
+        if ($order->terminal_id === null || ! $this->enabled()) {
+            return true;
+        }
+
+        $terminal = app(TerminalSessionResolver::class)->terminal();
+
+        return $terminal === null || $terminal->id === (int) $order->terminal_id;
+    }
+
+    public function denialMessage(Order $order): string
+    {
+        $name = Terminal::query()->whereKey($order->terminal_id)->value('name');
+
+        return 'هذا الطلب يتبع منفذ البيع «'.($name ?? '—').'»، ولا يمكن التعامل معه من منفذ بيع آخر.';
     }
 }
