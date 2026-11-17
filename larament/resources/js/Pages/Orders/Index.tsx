@@ -200,10 +200,10 @@ const OrdersIndex: React.FC<IndexProps> = ({
                             </span>
                             <span className="inline-flex items-center gap-2">
                                 <Switch size="small" checked={deviceOnly} onChange={setDeviceOnly} />
-                                طلبات الجهاز ده
+                                طلبات هذا الجهاز
                             </span>
                             <Button onClick={() => setSwitchOpen(true)}>تبديل الكاشير</Button>
-                            <Button onClick={() => setCloseDrawerOpen(true)}>قفل الدرج</Button>
+                            <Button onClick={() => setCloseDrawerOpen(true)}>إغلاق منفذ البيع</Button>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
                     <Modal
                         open={closeDrawerOpen}
                         onCancel={() => setCloseDrawerOpen(false)}
-                        title={terminal ? `قفل «${terminal.name}»` : ''}
+                        title={terminal ? `إغلاق «${terminal.name}»` : ''}
                         footer={null}
                         destroyOnHidden
                     >
@@ -245,7 +245,7 @@ const OrdersIndex: React.FC<IndexProps> = ({
                                 <Input.TextArea rows={2} maxLength={1000} />
                             </Form.Item>
                             <Button htmlType="submit" type="primary" danger>
-                                قفل الدرج
+                                إغلاق منفذ البيع
                             </Button>
                         </Form>
                     </Modal>
@@ -259,11 +259,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
                         <Form onFinish={endShift} layout="vertical" form={form}>
                             <Form.Item
                                 name="real_end_cash"
-                                label="النقدية في الدرج"
+                                label="النقدية الفعلية"
                                 rules={[
                                     {
                                         required: true,
-                                        message: 'النقدية في الدرج مطلوبة',
+                                        message: 'النقدية الفعلية مطلوبة',
                                     },
                                 ]}
                             >

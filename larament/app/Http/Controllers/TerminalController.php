@@ -67,7 +67,7 @@ class TerminalController extends Controller
         $terminal = Terminal::query()->active()->findOrFail($data['terminal_id']);
         $cookie = $this->devices->bind($request, $terminal, $request->user());
 
-        $this->logging->logAction('ربط جهاز بدرج', ['terminal' => $terminal->name]);
+        $this->logging->logAction('ربط جهاز بمنفذ بيع', ['terminal' => $terminal->name]);
 
         return redirect()->route('terminals.open')
             ->with('success', 'تم ربط الجهاز بـ «'.$terminal->name.'»')
@@ -148,7 +148,7 @@ class TerminalController extends Controller
             ]);
         }
 
-        $this->logging->logAction('فتح الدرج', [
+        $this->logging->logAction('فتح منفذ البيع', [
             'terminal' => $terminal->name,
             'opening_cash' => $data['opening_cash'],
         ]);
@@ -196,7 +196,7 @@ class TerminalController extends Controller
             return back()->withErrors(['error' => $e->getMessage()]);
         }
 
-        $this->logging->logAction('تسليم الدرج', [
+        $this->logging->logAction('تسليم منفذ البيع', [
             'terminal' => $session->terminal->name,
             'from' => $from,
             'to' => $request->user()->name,
@@ -213,11 +213,11 @@ class TerminalController extends Controller
 
         $session = $this->resolver()->current();
         if ($session === null || $session->user_id !== $request->user()->getKey()) {
-            return back()->withErrors(['error' => 'الدرج ده مش معاك.']);
+            return back()->withErrors(['error' => 'منفذ البيع هذا ليس في عهدتك.']);
         }
 
         $this->sessions->close($session, $request->user(), $data['note'] ?? null);
-        $this->logging->logAction('قفل الدرج', ['terminal' => $session->terminal->name]);
+        $this->logging->logAction('إغلاق منفذ البيع', ['terminal' => $session->terminal->name]);
 
         return redirect()->route('terminals.open')->with('success', 'تم قفل «'.$session->terminal->name.'»');
     }
@@ -229,11 +229,11 @@ class TerminalController extends Controller
         $data = $request->validate(['note' => ['required', 'string', 'max:1000']]);
 
         if (! $session->isOpen()) {
-            return back()->withErrors(['error' => 'الدرج ده اتقفل بالفعل.']);
+            return back()->withErrors(['error' => 'منفذ البيع هذا مغلق بالفعل.']);
         }
 
         $this->sessions->close($session, $request->user(), $data['note']);
-        $this->logging->logAction('قفل درج نيابةً', [
+        $this->logging->logAction('إغلاق منفذ بيع نيابةً', [
             'terminal' => $session->terminal->name,
             'cashier' => $session->user?->name,
             'reason' => $data['note'],

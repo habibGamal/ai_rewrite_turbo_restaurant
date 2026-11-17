@@ -79,16 +79,16 @@ class TerminalSessionService
             $shift = Shift::query()->lockForUpdate()->findOrFail($shift->getKey());
 
             if (! $terminal->is_active) {
-                throw new TerminalException('الدرج ده موقوف.');
+                throw new TerminalException('منفذ البيع هذا موقوف.');
             }
 
             if ($this->openSessionOn($shift, $terminal) !== null) {
-                throw new TerminalException('الدرج ده مفتوح بالفعل.');
+                throw new TerminalException('منفذ البيع هذا مفتوح بالفعل.');
             }
 
             $elsewhere = $this->openSessionOf($shift, $user);
             if ($elsewhere !== null) {
-                throw new TerminalException('أنت فاتح درج تاني ('.$elsewhere->terminal->name.'). اقفله الأول.');
+                throw new TerminalException('لديك منفذ بيع آخر مفتوح ('.$elsewhere->terminal->name.'). أغلقه أولاً.');
             }
 
             $session = $this->openOn($shift, $terminal, $user, $openingCash);
@@ -111,7 +111,7 @@ class TerminalSessionService
             $session = TerminalSession::query()->lockForUpdate()->with('terminal')->findOrFail($session->getKey());
 
             if (! $session->isOpen()) {
-                throw new TerminalException('الدرج ده اتقفل.');
+                throw new TerminalException('منفذ البيع هذا مغلق.');
             }
 
             $elsewhere = TerminalSession::query()
@@ -122,7 +122,7 @@ class TerminalSessionService
                 ->with('terminal')
                 ->first();
             if ($elsewhere !== null) {
-                throw new TerminalException('أنت فاتح درج تاني ('.$elsewhere->terminal->name.'). اقفله الأول.');
+                throw new TerminalException('لديك منفذ بيع آخر مفتوح ('.$elsewhere->terminal->name.'). أغلقه أولاً.');
             }
 
             $handover = $session->handovers()->create([

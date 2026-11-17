@@ -23,7 +23,7 @@ abstract class ShiftDrawersTable extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'الأدراج';
+    protected static ?string $heading = 'منافذ البيع';
 
     /** @var array<int, array<string, float>> */
     private array $breakdowns = [];
@@ -47,7 +47,7 @@ abstract class ShiftDrawersTable extends BaseWidget
                 ->withCount('handovers'))
             ->defaultSort('opened_at')
             ->columns([
-                TextColumn::make('terminal.name')->label('الدرج')->weight('medium'),
+                TextColumn::make('terminal.name')->label('منفذ البيع')->weight('medium'),
                 TextColumn::make('shift_id')->label('الوردية')->sortable(),
                 TextColumn::make('user.name')->label('الكاشير')->placeholder('—')
                     ->description(fn (TerminalSession $record): ?string => $record->handovers_count > 0 ? 'اتسلم '.$record->handovers_count.' مرة' : null),
@@ -68,10 +68,10 @@ abstract class ShiftDrawersTable extends BaseWidget
                     ->toggleable(),
             ])
             ->filters([
-                SelectFilter::make('terminal_id')->label('الدرج')->relationship('terminal', 'name'),
+                SelectFilter::make('terminal_id')->label('منفذ البيع')->relationship('terminal', 'name'),
             ])
             ->paginated(false)
-            ->emptyStateHeading('مفيش أدراج')
+            ->emptyStateHeading('لا توجد منافذ بيع')
             ->recordAction(null)
             ->recordUrl(null);
     }

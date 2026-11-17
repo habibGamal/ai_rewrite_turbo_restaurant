@@ -227,7 +227,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->toggleable(),
 
                 TextColumn::make('terminal.name')
-                    ->label('الدرج')
+                    ->label('منفذ البيع')
                     ->color('gray')
                     ->placeholder('—')
                     ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
@@ -250,7 +250,7 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
                 SelectFilter::make('terminal_id')
-                    ->label('الدرج')
+                    ->label('منفذ البيع')
                     ->relationship('terminal', 'name')
                     ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled()),
 

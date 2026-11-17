@@ -57,7 +57,7 @@ class PrintAgentJob extends Model
     {
         return match ($this->kind) {
             'receipt' => 'فاتورة',
-            'drawer' => 'فتح الدرج',
+            'drawer' => 'فتح درج النقود',
             'test' => 'تجربة طباعة',
             default => $this->kind,
         };

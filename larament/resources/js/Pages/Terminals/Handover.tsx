@@ -17,12 +17,12 @@ const Handover: React.FC<HandoverProps> = ({ terminal, holder, openedAt, canOpen
 
     return (
         <CashierLayout>
-            <Head title="استلام الدرج" />
+            <Head title="استلام منفذ البيع" />
 
             <div className="grid place-items-center w-full min-h-[50vh] p-4">
                 <Card title={`«${terminal.name}» مفتوح`} className="w-full max-w-[500px]">
                     <p className="mb-4">
-                        الدرج مفتوح مع <strong>{holder ?? 'كاشير تاني'}</strong> من{' '}
+                        منفذ البيع مفتوح مع <strong>{holder ?? 'كاشير آخر'}</strong> منذ{' '}
                         {new Date(openedAt).toLocaleString('ar-EG')}.
                     </p>
 
@@ -32,14 +32,14 @@ const Handover: React.FC<HandoverProps> = ({ terminal, holder, openedAt, canOpen
                                 <Input.TextArea rows={2} maxLength={500} />
                             </Form.Item>
                             <Button type="primary" htmlType="submit" size="large" className="w-full">
-                                استلام الدرج من {holder ?? 'الكاشير'}
+                                استلام منفذ البيع من {holder ?? 'الكاشير'}
                             </Button>
                             <p className="mt-2 text-xs text-gray-500">
-                                الدرج بيكمل بنفس الفلوس، والتسليم بيتسجل كملاحظة في سجل الوردية.
+                                يستمر منفذ البيع بالرصيد نفسه، ويُسجَّل التسليم ملاحظةً في سجل الوردية.
                             </p>
                         </Form>
                     ) : (
-                        <Alert type="warning" showIcon message="مش مسموح لك تستلم الدرج." />
+                        <Alert type="warning" showIcon message="غير مسموح لك باستلام منفذ البيع." />
                     )}
                 </Card>
             </div>

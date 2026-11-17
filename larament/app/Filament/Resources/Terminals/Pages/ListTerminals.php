@@ -13,7 +13,7 @@ class ListTerminals extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'المفعل '.Terminal::query()->active()->count().' من '.TerminalResource::maxActive().' أدراج مسموحة.';
+        return 'المفعل '.Terminal::query()->active()->count().' من '.TerminalResource::maxActive().' منافذ بيع مسموحة.';
     }
 
     protected function getHeaderActions(): array

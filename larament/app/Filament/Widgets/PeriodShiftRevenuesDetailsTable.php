@@ -51,7 +51,7 @@ class PeriodShiftRevenuesDetailsTable extends BaseWidget
             ->columns([
                 TextColumn::make('revenueType.name')->label('بند الإيراد')->sortable(),
                 TextColumn::make('terminalSession.terminal.name')
-                    ->label('الدرج')
+                    ->label('منفذ البيع')
                     ->placeholder('—')
                     ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
                     ->toggleable(),

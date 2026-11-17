@@ -164,7 +164,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Enabled = answer.Enabled;
         state.Status = answer.Enabled
             ? "متصل وجاهز لطباعة الفواتير"
-            : "متصل، لكن الدرج مضبوط على الطباعة من الخادم لا من البرنامج";
+            : "متصل، لكن منفذ البيع مضبوط على الطباعة من الخادم لا من البرنامج";
     }
 
     private async Task Print(PosConnection connection, ConnectionState state, AgentJob job)
@@ -175,7 +175,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
 
         if (string.IsNullOrWhiteSpace(printerName))
         {
-            error = "لم تُختر طابعة فواتير في برنامج Turbo Label على جهاز الدرج.";
+            error = "لم تُختر طابعة فواتير في برنامج Turbo Label على جهاز منفذ البيع.";
             ui.Notify("اختر طابعة الفواتير", "افتح Turbo Label واختر طابعة الفواتير من «الطابعات».", error: true);
         }
         else
@@ -239,7 +239,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Online = false;
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            state.Status = "أُلغي الربط من النظام. أنشئ رمز ربط جديداً من «الأدراج».";
+            state.Status = "أُلغي الربط من النظام. أنشئ رمز ربط جديداً من «منافذ البيع».";
             state.RetryAt = DateTime.Now.AddSeconds(30);
         }
         else

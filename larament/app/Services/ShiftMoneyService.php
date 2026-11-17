@@ -79,7 +79,7 @@ class ShiftMoneyService
         $exists = TerminalSession::query()->where('shift_id', $shift->id)->whereKey((int) $id)->exists();
 
         if (! $exists) {
-            throw ValidationException::withMessages(['terminal_session_id' => 'الدرج ده مش من الوردية دي.']);
+            throw ValidationException::withMessages(['terminal_session_id' => 'منفذ البيع هذا لا يتبع هذه الوردية.']);
         }
 
         return (int) $id;

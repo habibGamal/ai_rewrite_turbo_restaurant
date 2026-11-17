@@ -28,7 +28,7 @@ final class MultiTerminalDisableBlocker
         if ($nonDefault > 0 || $open->count() > 1) {
             $count = max($nonDefault, $open->count());
 
-            return ["لا يمكن إيقاف ميزة الأدراج المتعددة لوجود {$count} درج مفتوح. اقفل الأدراج وأنهِ الوردية الأول."];
+            return ["لا يمكن إيقاف ميزة منافذ البيع المتعددة لوجود {$count} منفذ بيع مفتوح. أغلق منافذ البيع وأنهِ الوردية أولاً."];
         }
 
         return [];
