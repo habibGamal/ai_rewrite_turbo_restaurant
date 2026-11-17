@@ -18,6 +18,7 @@ enum OptionalFeature: string
     case DEFERRED_PAYMENT = 'feature_deferred_payment_enabled';
     case RETURNS = 'feature_returns_enabled';
     case TERMINAL_SEPARATION = 'feature_terminal_separation_enabled';
+    case CLOSED_SHIFT_EDITS = 'feature_closed_shift_edits_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -34,6 +35,7 @@ enum OptionalFeature: string
             self::DEFERRED_PAYMENT => SettingKey::FEATURE_DEFERRED_PAYMENT_ENABLED,
             self::RETURNS => SettingKey::FEATURE_RETURNS_ENABLED,
             self::TERMINAL_SEPARATION => SettingKey::FEATURE_TERMINAL_SEPARATION_ENABLED,
+            self::CLOSED_SHIFT_EDITS => SettingKey::FEATURE_CLOSED_SHIFT_EDITS_ENABLED,
         };
     }
 
@@ -76,6 +78,7 @@ enum OptionalFeature: string
             self::DEFERRED_PAYMENT => 'deferred_payment',
             self::RETURNS => 'returns',
             self::TERMINAL_SEPARATION => 'terminal_separation',
+            self::CLOSED_SHIFT_EDITS => 'closed_shift_edits',
         };
     }
 
@@ -134,6 +137,9 @@ enum OptionalFeature: string
             ],
             self::DOCUMENT_BARCODES => [],
             self::TERMINAL_SEPARATION => [],
+            self::CLOSED_SHIFT_EDITS => [
+                'shift_money.edit_closed',
+            ],
             self::DEFERRED_PAYMENT => [
                 'pos.tab.system.receivables',
             ],
@@ -174,6 +180,7 @@ enum OptionalFeature: string
             self::DEFERRED_PAYMENT => 'ميزة الدفع الآجل غير مفعلة حالياً.',
             self::RETURNS => 'ميزة المرتجعات غير مفعلة حالياً.',
             self::TERMINAL_SEPARATION => 'ميزة فصل منافذ البيع غير مفعلة حالياً.',
+            self::CLOSED_SHIFT_EDITS => 'ميزة تعديل الورديات المغلقة غير مفعلة حالياً.',
         };
     }
 
@@ -200,6 +207,7 @@ enum OptionalFeature: string
             'deferred_payment' => self::DEFERRED_PAYMENT,
             'returns' => self::RETURNS,
             'terminal_separation' => self::TERMINAL_SEPARATION,
+            'closed_shift_edits' => self::CLOSED_SHIFT_EDITS,
             default => null,
         };
     }

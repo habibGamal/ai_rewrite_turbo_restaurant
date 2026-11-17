@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Core\Audit\AuditLogger;
+use App\Enums\OptionalFeature;
 use App\Models\Expense;
 use App\Models\PlatformConnection;
 use App\Models\Revenue;
@@ -57,7 +58,21 @@ class ShiftMoneyService
             return false;
         }
 
-        return ! $this->isClosed($shift) || $user->can(self::PERMISSION_EDIT_CLOSED);
+        return ! $this->isClosed($shift) || $this->canEditClosed($user);
+    }
+
+    /**
+     * Closed shifts are editable only while the vendor feature is on and the
+     * user holds shift_money.edit_closed (the permission is also gated by
+     * the feature, so it disappears from roles when off).
+     */
+    public function canEditClosed(?User $user = null): bool
+    {
+        $user ??= Auth::user();
+
+        return $user !== null
+            && app(FeatureService::class)->closedShiftEditsEnabled()
+            && $user->can(self::PERMISSION_EDIT_CLOSED);
     }
 
     /**
@@ -239,6 +254,10 @@ class ShiftMoneyService
 
         if (! $this->canManage($user)) {
             throw new AuthorizationException('غير مسموح بإدارة مصروفات وإيرادات الورديات');
+        }
+
+        if ($closed && ! app(FeatureService::class)->closedShiftEditsEnabled()) {
+            throw new AuthorizationException(OptionalFeature::CLOSED_SHIFT_EDITS->disabledErrorMessage());
         }
 
         if ($closed && ! $user->can(self::PERMISSION_EDIT_CLOSED)) {

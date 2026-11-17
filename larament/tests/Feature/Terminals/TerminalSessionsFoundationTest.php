@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\OptionalFeature;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\RevenueMethod;
@@ -13,6 +14,7 @@ use App\Models\Shift;
 use App\Models\Terminal;
 use App\Models\TerminalSession;
 use App\Models\User;
+use App\Services\FeatureService;
 use App\Services\ShiftMoneyService;
 use App\Services\ShiftService;
 use App\Services\ShiftsReportService;
@@ -150,6 +152,7 @@ describe('drawer sessions while multiple terminals are off', function () {
         $session = app(TerminalSessionService::class)->openDefault($shift);
         expect($session->isOpen())->toBeFalse();
 
+        app(FeatureService::class)->enable(OptionalFeature::CLOSED_SHIFT_EDITS);
         app(ShiftMoneyService::class)->addRevenue($shift, [
             'revenue_type_id' => RevenueType::factory()->create()->id,
             'amount' => 40,
