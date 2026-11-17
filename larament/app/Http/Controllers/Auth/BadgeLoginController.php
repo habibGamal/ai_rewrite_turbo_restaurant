@@ -22,6 +22,11 @@ class BadgeLoginController extends Controller
 {
     private const MAX_ATTEMPTS = 10;
 
+    /** Wrong PINs allowed per user before that badge is locked for a while. */
+    private const MAX_PIN_ATTEMPTS = 5;
+
+    private const PIN_LOCK_SECONDS = 900;
+
     public function __construct(private readonly BadgeService $badges) {}
 
     public function create(): Response
@@ -77,7 +82,7 @@ class BadgeLoginController extends Controller
 
         if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
             throw ValidationException::withMessages([
-                'badge' => 'محاولات كتير. استنى '.RateLimiter::availableIn($key).' ثانية.',
+                'badge' => 'محاولات كثيرة. انتظر '.RateLimiter::availableIn($key).' ثانية.',
             ]);
         }
 
@@ -86,22 +91,33 @@ class BadgeLoginController extends Controller
         if ($user === null || ! $user->can('user.badge_login') || ! $user->can('pos.access')) {
             RateLimiter::hit($key);
 
-            throw ValidationException::withMessages(['badge' => 'البادج ده مش شغال.']);
+            throw ValidationException::withMessages(['badge' => 'هذا البادج غير مفعل.']);
         }
 
         if ($this->badges->requiresPin($user)) {
+            // PIN guesses are counted per user, so scanning another badge
+            // successfully never resets them.
+            $pinKey = 'badge-pin:'.$user->getKey();
+
+            if (RateLimiter::tooManyAttempts($pinKey, self::MAX_PIN_ATTEMPTS)) {
+                throw ValidationException::withMessages([
+                    'pin' => 'تم إيقاف هذا البادج مؤقتاً بسبب تكرار الرقم السري الخاطئ. حاول بعد '.ceil(RateLimiter::availableIn($pinKey) / 60).' دقيقة.',
+                ]);
+            }
+
             if (($data['pin'] ?? null) === null) {
-                throw ValidationException::withMessages(['pin' => 'اكتب الرقم السري (PIN) بتاعك.']);
+                throw ValidationException::withMessages(['pin' => 'أدخل الرقم السري (PIN) الخاص بك.']);
             }
 
             if (! $this->badges->checkPin($user, $data['pin'])) {
                 RateLimiter::hit($key);
+                RateLimiter::hit($pinKey, self::PIN_LOCK_SECONDS);
 
-                throw ValidationException::withMessages(['pin' => 'الرقم السري غلط.']);
+                throw ValidationException::withMessages(['pin' => 'الرقم السري غير صحيح.']);
             }
-        }
 
-        RateLimiter::clear($key);
+            RateLimiter::clear($pinKey);
+        }
 
         return $user;
     }

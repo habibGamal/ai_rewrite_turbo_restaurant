@@ -1,11 +1,8 @@
 <?php
 
 use App\Http\Middleware\VerifyApiKey;
-use App\Models\Order;
-use App\Modules\WebOrders\Events\WebOrderReceived;
 use App\Modules\WebOrders\Http\Controllers\Api\WebOrdersController;
 use App\Modules\WebOrders\Http\Controllers\WebOrderController;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,40 +28,4 @@ Route::prefix('api')->middleware(['api', VerifyApiKey::class])->group(function (
     Route::post('/web-orders/place-order', [WebOrdersController::class, 'createOrder']);
     Route::get('/can-accept-order', [WebOrdersController::class, 'canAcceptOrder']);
     Route::get('/get-shift-id', [WebOrdersController::class, 'getShiftId']);
-});
-
-Route::middleware('web')->group(function () {
-    // Test route for broadcasting
-    Route::get('/test-broadcast', function () {
-        // Get the latest order or create a dummy one for testing
-        $order = Order::with(['customer', 'items'])->latest()->first();
-
-        if (! $order) {
-            return response()->json(['error' => 'No orders found. Create an order first.']);
-        }
-
-        // Log for debugging
-        Log::info('Broadcasting test event for order: '.$order->id);
-        Log::info('Broadcasting connection: '.config('broadcasting.default'));
-        Log::info('Reverb config: ', config('broadcasting.connections.reverb'));
-
-        // Dispatch the event
-        $event = new WebOrderReceived($order);
-        Log::info('Event created: '.get_class($event));
-        Log::info('Broadcast channels: ', $event->broadcastOn());
-        Log::info('Broadcast as: '.$event->broadcastAs());
-        Log::info('Broadcast with: ', $event->broadcastWith());
-
-        event($event);
-
-        Log::info('Event dispatched');
-
-        return response()->json([
-            'message' => 'Event dispatched successfully',
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-            'broadcast_connection' => config('broadcasting.default'),
-            'reverb_config' => config('broadcasting.connections.reverb'),
-        ]);
-    });
 });
