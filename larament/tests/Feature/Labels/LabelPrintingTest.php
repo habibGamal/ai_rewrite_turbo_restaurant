@@ -196,3 +196,27 @@ it('cuts the rendered image to exact size in pure black and white', function () 
         ->and(imagecolorsforindex($out, imagecolorat($out, 1, 1))['red'])->toBe(0)
         ->and(imagecolorsforindex($out, imagecolorat($out, 0, 0))['red'])->toBe(255);
 });
+
+it('explains in plain text when a label image cannot be drawn', function () {
+    app()->instance(LabelImageMaker::class, new class extends LabelImageMaker
+    {
+        public function png(LabelTemplate $template, string $html): string
+        {
+            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على السيرفر');
+        }
+    });
+    $jobs = app(LabelPrintJobs::class);
+    $job = $jobs->sample(labelTemplate());
+    $page = getJson($jobs->manifestUrl($job))->json('pages.0.image');
+
+    get($page)
+        ->assertStatus(500)
+        ->assertHeader('Content-Type', 'text/plain; charset=utf-8')
+        ->assertSee('تعذر رسم الملصق على السيرفر: برنامج wkhtmltoimage غير موجود على السيرفر');
+});
+
+it('looks for wkhtmltoimage in the configured path first', function () {
+    config(['services.wkhtmltoimage.path' => '/opt/custom/wkhtmltoimage']);
+
+    expect(LabelImageMaker::candidates()[0])->toBe('/opt/custom/wkhtmltoimage');
+});

@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * Label print jobs. The manifest and page images are fetched by the
@@ -31,7 +32,14 @@ class LabelJobController extends Controller
     {
         abort_unless(app(FeatureService::class)->labelPrintingEnabled(), 404);
 
-        $png = $jobs->pagePng($job, $page);
+        try {
+            $png = $jobs->pagePng($job, $page);
+        } catch (Throwable $e) {
+            report($e);
+
+            // Plain text so the print app can show why.
+            return response('تعذر رسم الملصق على السيرفر: '.$e->getMessage(), 500, ['Content-Type' => 'text/plain; charset=utf-8']);
+        }
         abort_if($png === null, 404);
 
         return response($png, 200, [

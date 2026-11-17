@@ -19,13 +19,18 @@ class LabelImageMaker
         $width = $template->dots($template->rowWidthMm());
         $height = $template->dots($template->height_mm);
 
+        $binary = self::binary();
+        if ($binary === null) {
+            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على السيرفر (المكان المتوقع: '.implode(' أو ', self::candidates()).'). هو نفس البرنامج اللي بيرسم الفواتير.');
+        }
+
         $htmlPath = tempnam(sys_get_temp_dir(), 'label_').'.html';
         $pngPath = tempnam(sys_get_temp_dir(), 'label_').'.png';
         file_put_contents($htmlPath, $html);
 
         try {
             $result = Process::run([
-                self::binary(),
+                $binary,
                 '--width', (string) $width,
                 '--height', (string) $height,
                 '--format', 'png',
@@ -49,11 +54,31 @@ class LabelImageMaker
         }
     }
 
-    public static function binary(): string
+    /**
+     * The first wkhtmltoimage found: WKHTMLTOIMAGE_PATH in .env, then the
+     * usual install places.
+     */
+    public static function binary(): ?string
     {
-        return PHP_OS_FAMILY === 'Windows'
-            ? 'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltoimage.exe'
-            : '/usr/local/bin/wkhtmltoimage';
+        foreach (self::candidates() as $path) {
+            if (is_file($path) && (PHP_OS_FAMILY === 'Windows' || is_executable($path))) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function candidates(): array
+    {
+        $configured = (string) config('services.wkhtmltoimage.path', '');
+
+        return array_values(array_filter(PHP_OS_FAMILY === 'Windows'
+            ? [$configured, 'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltoimage.exe']
+            : [$configured, '/usr/local/bin/wkhtmltoimage', '/usr/bin/wkhtmltoimage']));
     }
 
     /**
@@ -61,6 +86,12 @@ class LabelImageMaker
      */
     public function monochrome(string $png, int $width, int $height, int $threshold = 160): string
     {
+        // Without PHP's GD extension the image goes as it is; the printer
+        // driver then turns grey into dots itself.
+        if (! function_exists('imagecreatefromstring')) {
+            return $png;
+        }
+
         $source = @imagecreatefromstring($png);
         if ($source === false) {
             throw new RuntimeException('صورة الملصق غير صالحة.');
