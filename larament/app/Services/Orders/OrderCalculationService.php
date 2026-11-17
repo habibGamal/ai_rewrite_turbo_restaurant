@@ -114,12 +114,13 @@ class OrderCalculationService
             return (float) $order->items->sum('item_discount');
         }
 
-        // Use order-level discount if no item discounts
+        // Use order-level discount if no item discounts, never more than the items:
+        // fees and equipment can't be discounted away.
         if ($order->temp_discount_percent > 0) {
-            return ($order->temp_discount_percent / 100) * $subtotal;
+            return min(max(0.0, (float) $order->temp_discount_percent), 100.0) / 100 * $subtotal;
         }
 
-        return $order->discount ?? 0;
+        return min(max(0.0, (float) ($order->discount ?? 0)), max(0.0, $subtotal));
     }
 
     /**

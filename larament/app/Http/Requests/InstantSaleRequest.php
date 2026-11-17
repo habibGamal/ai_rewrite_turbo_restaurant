@@ -86,4 +86,20 @@ class InstantSaleRequest extends FormRequest
 
         return $kept;
     }
+
+    /**
+     * Whether any line carries its own discount (amount or percent).
+     *
+     * @param  array<int, mixed>  $items
+     */
+    public static function hasLineDiscount(array $items): bool
+    {
+        foreach ($items as $item) {
+            if (is_array($item) && ((float) ($item['item_discount'] ?? 0) > 0 || (float) ($item['item_discount_percent'] ?? 0) > 0)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

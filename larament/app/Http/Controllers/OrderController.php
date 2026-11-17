@@ -491,8 +491,11 @@ class OrderController extends Controller
      */
     public function saveOrder(SaveOrderRequest $request, Order $order)
     {
+        $items = $request->validated('items') ?: [];
+        $this->assertItemChangesAllowed($request->user(), $order, $items);
+
         try {
-            $this->orderService->updateOrderItems($order->id, $request->validated('items') ?: []);
+            $this->orderService->updateOrderItems($order->id, $items);
 
             return back()->with('success', 'تم حفظ الطلب بنجاح');
         } catch (Exception $e) {
@@ -502,6 +505,42 @@ class OrderController extends Controller
             ], 'error');
 
             return back()->withErrors(['error' => 'حدث خطأ أثناء حفظ الطلب: '.$e->getMessage()]);
+        }
+    }
+
+    /**
+     * The POS hides these controls, but the server must hold the same rules:
+     * without order.change_items a saved line can't be lowered or removed, and
+     * without order.apply_discount no line discount can be added or changed.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    private function assertItemChangesAllowed(?User $user, Order $order, array $items): void
+    {
+        abort_unless($user instanceof User, 403);
+
+        $saved = $order->items()->get(['product_id', 'quantity', 'item_discount', 'item_discount_type', 'item_discount_percent'])->keyBy('product_id');
+        $incoming = collect($items)->groupBy(fn (array $item): int => (int) $item['product_id']);
+
+        if (! $user->canChangeOrderItems()) {
+            foreach ($saved as $productId => $line) {
+                $quantity = (float) ($incoming->get($productId)?->sum(fn (array $item): float => (float) $item['quantity']) ?? 0);
+                abort_if($quantity + 0.0001 < (float) $line->quantity, 403, 'غير مسموح لك بتقليل أو حذف أصناف محفوظة');
+            }
+        }
+
+        if (! $user->canApplyDiscounts()) {
+            foreach ($incoming as $productId => $lines) {
+                $line = $lines->first();
+                $was = $saved->get($productId);
+                $discount = round((float) $lines->sum(fn (array $item): float => (float) ($item['item_discount'] ?? 0)), 2);
+                // A percent discount set earlier by a manager may scale with the quantity.
+                $samePercent = $was !== null
+                    && ($line['item_discount_type'] ?? null) === 'percent'
+                    && $was->item_discount_type === 'percent'
+                    && abs((float) ($line['item_discount_percent'] ?? 0) - (float) $was->item_discount_percent) < 0.001;
+                abort_if($discount > round((float) ($was->item_discount ?? 0), 2) + 0.01 && ! $samePercent, 403, 'غير مسموح لك بتطبيق خصم');
+            }
         }
     }
 
