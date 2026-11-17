@@ -23,6 +23,7 @@ use App\Services\Orders\OrderCategoryBlockService;
 use App\Services\SettingsService;
 use App\Sync\DocumentType;
 use App\Sync\Outbox;
+use App\Terminals\TerminalSeparation;
 use Closure;
 use Exception;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -245,6 +246,7 @@ class WebApiService
 
         $created = $customer->orders()->create([
             'shift_id' => $data['order']['shiftId'],
+            'terminal_id' => app(TerminalSeparation::class)->assignWebOrder((int) $data['order']['shiftId']),
             'status' => OrderStatus::PENDING,
             'type' => $data['order']['type'],
             'order_number' => $data['order']['orderNumber'],

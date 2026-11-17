@@ -8,8 +8,10 @@ use App\Filament\Resources\Terminals\Pages\EditTerminal;
 use App\Filament\Resources\Terminals\Pages\ListTerminals;
 use App\Filament\Traits\BelongsToModule;
 use App\Models\Terminal;
+use App\Models\Warehouse;
 use App\Modules\ModuleScreens;
 use App\PrintAgent\PrintAgentQueue;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -98,6 +100,14 @@ class TerminalResource extends Resource
                     ->required()
                     ->maxLength(100)
                     ->unique(ignoreRecord: true),
+                Select::make('warehouse_id')
+                    ->label('مخزن الصرف')
+                    ->helperText('منافذ البيع مفصولة: يُصرف مخزون كل طلبات هذا المنفذ من هذا المخزن، ويظهر رصيده في شاشة البيع.')
+                    ->relationship('warehouse', 'name', fn ($query) => $query->where('is_active', true))
+                    ->default(fn (): int => Warehouse::default()->id)
+                    ->native(false)
+                    ->required()
+                    ->visible(fn (): bool => app(FeatureService::class)->terminalSeparationEnabled()),
                 Section::make('طباعة الفاتورة ودرج النقود')
                     ->columnSpanFull()
                     ->schema([
@@ -151,6 +161,10 @@ class TerminalResource extends Resource
             ->defaultSort('sort')
             ->columns([
                 TextColumn::make('name')->label('اسم منفذ البيع')->searchable()->sortable(),
+                TextColumn::make('issue_warehouse')
+                    ->label('مخزن الصرف')
+                    ->state(fn (Terminal $record): ?string => Warehouse::query()->find($record->issueWarehouseId())?->name)
+                    ->visible(fn (): bool => app(FeatureService::class)->terminalSeparationEnabled()),
                 TextColumn::make('receipt_printer')
                     ->label('طابعة الفاتورة')
                     ->state(fn (Terminal $record): ?string => $record->printsViaAgent()

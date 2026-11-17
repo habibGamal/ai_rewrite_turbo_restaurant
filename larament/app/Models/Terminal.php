@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -14,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property bool $is_active
  * @property bool $is_default
+ * @property int|null $warehouse_id
  * @property string|null $receipt_printer
  * @property string $print_via server | agent
  * @property string|null $agent_printer
@@ -35,6 +37,7 @@ class Terminal extends Model
         'name',
         'is_active',
         'is_default',
+        'warehouse_id',
         'receipt_printer',
         'print_via',
         'agent_printer',
@@ -56,6 +59,7 @@ class Terminal extends Model
         'is_active' => 'boolean',
         'is_default' => 'boolean',
         'sort' => 'integer',
+        'warehouse_id' => 'integer',
         'agent_paired_at' => 'datetime',
         'agent_last_seen_at' => 'datetime',
         'agent_info' => 'array',
@@ -91,6 +95,28 @@ class Terminal extends Model
     }
 
     /** @return HasMany<TerminalDevice, $this> */
+    /** @return BelongsTo<Warehouse, $this> */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * The warehouse this sales point issues stock from while sales points
+     * are separated: its own warehouse when active, else the default one.
+     */
+    public function issueWarehouseId(): int
+    {
+        if ($this->warehouse_id !== null) {
+            $this->loadMissing('warehouse');
+            if ($this->warehouse instanceof Warehouse && $this->warehouse->is_active) {
+                return (int) $this->warehouse_id;
+            }
+        }
+
+        return Warehouse::default()->id;
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(TerminalDevice::class);

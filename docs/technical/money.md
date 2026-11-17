@@ -75,6 +75,13 @@ When `OptionalFeature::MULTI_TERMINAL` is enabled, shifts contain independent dr
 - **Scoping**: Payments, expenses, revenues, returns, external collections, and seller settlements are stamped with `terminal_session_id`. Orders are stamped with `terminal_id`.
 - **Closure**: A cashier closes their own drawer (`terminal.close`) recording expected cash. Managers can close another's drawer (`terminal.close_others`) with a mandatory reason. The shift ends once all drawers are closed.
 
+### Sales point separation («فصل منافذ البيع»)
+
+`OptionalFeature::TERMINAL_SEPARATION` (`feature_terminal_separation_enabled`), vendor only, effective only while multiple terminals are on (`FeatureService::terminalSeparationEnabled()`). **Separated sales points behave like separate branches of the same brand on one system.**
+
+- **Stock**: `terminals.warehouse_id` is the sales point's issue warehouse. `App\Services\StockWarehouseResolver` picks the warehouse of every sold line: separated → `Terminal::issueWarehouseId()` of `orders.terminal_id` (stopped or missing warehouse → default warehouse); not separated, or an order with no terminal → `Product::stockWarehouseId()` (product → main category → default). Manufactured components follow the sold item; returns go back to the original sale movement's warehouse, so changing the mode never moves old stock. POS variant stock uses `forCurrentDevice()`.
+- **Web orders**: `SettingKey::WEB_ORDERS_TERMINAL_ID` (vendor console, empty = default terminal). `TerminalSeparation::assignWebOrder()` stamps it on the new web order and points the resolver at that terminal's open session of the shift, so web payments land in its drawer.
+
 ## Revenues and expenses
 
 - Revenues (`OptionalFeature::REVENUES`): `revenue_types` and `revenues` (`amount`, `method` cash|card, `notes`, per shift). Admin only; the cashier never sees them.

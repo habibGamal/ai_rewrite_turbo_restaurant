@@ -10,14 +10,21 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Services\StockService;
+use App\Services\StockWarehouseResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class OrderStockConversionService
 {
     public function __construct(
-        private readonly StockService $stockService
+        private readonly StockService $stockService,
+        private ?StockWarehouseResolver $warehouses = null,
     ) {}
+
+    private function warehouses(): StockWarehouseResolver
+    {
+        return $this->warehouses ??= app(StockWarehouseResolver::class);
+    }
 
     /**
      * Convert order items to stock items for stock reduction
@@ -36,7 +43,7 @@ class OrderStockConversionService
         foreach ($order->items as $orderItem) {
             /** @var Product $product */
             $product = $orderItem->product;
-            $warehouseId = $product->stockWarehouseId();
+            $warehouseId = $this->warehouses()->forOrder($product, $order);
 
             switch ($product->type) {
                 case ProductType::Manufactured:

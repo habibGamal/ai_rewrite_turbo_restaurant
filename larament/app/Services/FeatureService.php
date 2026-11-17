@@ -112,6 +112,15 @@ class FeatureService
     }
 
     /**
+     * Sales points work as separate branches. Only takes effect while
+     * multiple terminals are on.
+     */
+    public function terminalSeparationEnabled(): bool
+    {
+        return $this->multiTerminalEnabled() && $this->isEnabled(OptionalFeature::TERMINAL_SEPARATION);
+    }
+
+    /**
      * @return array<string, bool>
      */
     public function all(): array
@@ -127,7 +136,7 @@ class FeatureService
     /**
      * Shared Inertia props for optional features using typed short keys.
      *
-     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool, multi_terminal: bool, deferred_payment: bool, returns: bool}
+     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool, multi_terminal: bool, terminal_separation: bool, deferred_payment: bool, returns: bool}
      */
     public function toInertiaProps(): array
     {
@@ -138,6 +147,7 @@ class FeatureService
             'equipment' => $this->equipmentEnabled(),
             'variants' => $this->variantsEnabled(),
             'multi_terminal' => $this->multiTerminalEnabled(),
+            'terminal_separation' => $this->terminalSeparationEnabled(),
             'deferred_payment' => $this->deferredPaymentEnabled(),
             'returns' => $this->returnsEnabled(),
         ];

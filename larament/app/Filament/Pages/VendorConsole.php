@@ -6,6 +6,7 @@ use App\Enums\OptionalFeature;
 use App\Enums\SettingKey;
 use App\Exceptions\BusinessTypeLockedException;
 use App\Models\FeatureFlagAudit;
+use App\Models\Terminal;
 use App\Modules\BusinessType;
 use App\Modules\Module;
 use App\Services\FeatureService;
@@ -91,6 +92,8 @@ class VendorConsole extends Page implements HasForms, HasTable
         }
 
         $state['max_terminals'] = (int) app(SettingsService::class)->get(SettingKey::MAX_TERMINALS->value, SettingKey::MAX_TERMINALS->defaultValue());
+        $webTerminal = (string) app(SettingsService::class)->get(SettingKey::WEB_ORDERS_TERMINAL_ID->value, '');
+        $state['web_orders_terminal_id'] = $webTerminal === '' ? null : (int) $webTerminal;
 
         $this->form->fill($state);
     }
@@ -151,8 +154,12 @@ class VendorConsole extends Page implements HasForms, HasTable
                             fn (OptionalFeature $feature): Toggle => Toggle::make('features.'.$feature->value)
                                 ->label($feature->label())
                                 ->helperText($feature->helperText())
-                                ->inline(false),
-                            OptionalFeature::standalone(),
+                                ->inline(false)
+                                ->live($feature === OptionalFeature::MULTI_TERMINAL),
+                            array_values(array_filter(
+                                OptionalFeature::standalone(),
+                                fn (OptionalFeature $feature): bool => $feature !== OptionalFeature::TERMINAL_SEPARATION,
+                            )),
                         )),
                         TextInput::make('max_terminals')
                             ->label(SettingKey::MAX_TERMINALS->label())
@@ -163,6 +170,19 @@ class VendorConsole extends Page implements HasForms, HasTable
                             ->maxValue(50)
                             ->required()
                             ->visible(fn (Get $get): bool => (bool) $get('features.'.OptionalFeature::MULTI_TERMINAL->value)),
+                        Toggle::make('features.'.OptionalFeature::TERMINAL_SEPARATION->value)
+                            ->label(OptionalFeature::TERMINAL_SEPARATION->label())
+                            ->helperText(OptionalFeature::TERMINAL_SEPARATION->helperText())
+                            ->inline(false)
+                            ->live()
+                            ->visible(fn (Get $get): bool => (bool) $get('features.'.OptionalFeature::MULTI_TERMINAL->value)),
+                        Select::make('web_orders_terminal_id')
+                            ->label(SettingKey::WEB_ORDERS_TERMINAL_ID->label())
+                            ->helperText(SettingKey::WEB_ORDERS_TERMINAL_ID->helperText().' عند تركه فارغاً تتبع المنفذ الافتراضي.')
+                            ->options(fn (): array => Terminal::query()->where('is_active', true)->orderBy('sort')->orderBy('id')->pluck('name', 'id')->all())
+                            ->native(false)
+                            ->visible(fn (Get $get): bool => (bool) $get('features.'.OptionalFeature::MULTI_TERMINAL->value)
+                                && (bool) $get('features.'.OptionalFeature::TERMINAL_SEPARATION->value)),
                     ]),
             ])
             ->statePath('data');
@@ -193,6 +213,13 @@ class VendorConsole extends Page implements HasForms, HasTable
 
                 if (isset($data['max_terminals'])) {
                     app(SettingsService::class)->set(SettingKey::MAX_TERMINALS->value, (string) (int) $data['max_terminals']);
+                }
+
+                if (array_key_exists('web_orders_terminal_id', $data)) {
+                    app(SettingsService::class)->set(
+                        SettingKey::WEB_ORDERS_TERMINAL_ID->value,
+                        $data['web_orders_terminal_id'] ? (string) (int) $data['web_orders_terminal_id'] : '',
+                    );
                 }
             });
         } catch (BusinessTypeLockedException $e) {
