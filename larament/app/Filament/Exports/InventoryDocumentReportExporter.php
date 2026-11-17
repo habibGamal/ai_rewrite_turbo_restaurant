@@ -3,6 +3,7 @@
 namespace App\Filament\Exports;
 
 use App\Costing\CostingMethod;
+use Carbon\Carbon;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -29,10 +30,10 @@ abstract class InventoryDocumentReportExporter extends Exporter
                 $column->formatStateUsing(fn (?CostingMethod $state) => $state?->label());
             }
             if ($type === 'date') {
-                $column->formatStateUsing(fn ($state) => $state ? \Carbon\Carbon::parse($state)->toDateString() : null);
+                $column->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->toDateString() : null);
             }
             if ($type === 'datetime') {
-                $column->formatStateUsing(fn ($state) => $state ? \Carbon\Carbon::parse($state)->toDateTimeString() : null);
+                $column->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->toDateTimeString() : null);
             }
             $columns[] = $column;
         }

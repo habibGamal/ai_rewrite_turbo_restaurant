@@ -15,6 +15,7 @@ use App\Filament\Resources\StockIssues\Pages\CreateStockIssue;
 use App\Filament\Resources\StockIssues\Pages\ViewStockIssue;
 use App\Filament\Resources\StockTransfers\Pages\CreateStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\ViewStockTransfer;
+use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Labels\LabelImageMaker;
 use App\Labels\LabelPrintJobs;
 use App\Labels\LabelRenderer;
@@ -199,14 +200,34 @@ it('renders the document forms with the barcode field', function (string $page) 
     CreateReturnPurchaseInvoice::class,
     CreateStockIssue::class,
     CreateStockTransfer::class,
+    CreateWaste::class,
 ]);
 
-it('fills the barcode when a product is picked on a stock transfer line', function () {
+it('adds a product by scanning its barcode on every stock document', function (string $page) {
+    $product = Product::factory()->create(['barcode' => 'SCAN-77', 'type' => 'consumable']);
+
+    $items = livewire($page)
+        ->set('data.barcode_scan', 'SCAN-77')
+        ->get('data.items');
+
+    $line = collect($items)->firstWhere('product_id', $product->id);
+    expect($line)->not->toBeNull()
+        ->and((float) $line['quantity'])->toBe(1.0)
+        ->and($line['barcode'])->toBe('SCAN-77');
+})->with([
+    CreatePurchaseInvoice::class,
+    CreateReturnPurchaseInvoice::class,
+    CreateStockIssue::class,
+    CreateStockTransfer::class,
+    CreateWaste::class,
+]);
+
+it('shows the barcode of a product picked from the list on a stock transfer', function () {
     $product = Product::factory()->create(['barcode' => 'TR-9', 'type' => 'consumable']);
 
-    $component = livewire(CreateStockTransfer::class);
-    $key = array_key_first($component->get('data.items'));
+    $items = livewire(CreateStockTransfer::class)
+        ->set('data.product_selector', $product->id)
+        ->get('data.items');
 
-    $component->set("data.items.{$key}.product_id", $product->id)
-        ->assertSet("data.items.{$key}.barcode", 'TR-9');
+    expect(collect($items)->firstWhere('product_id', $product->id)['barcode'])->toBe('TR-9');
 });

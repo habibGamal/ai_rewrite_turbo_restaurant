@@ -2,7 +2,12 @@
 
 namespace App\Filament\Exports;
 
+use App\Enums\OrderStatus;
+use App\Filament\Widgets\ProductsSalesTableWidget;
+use App\Models\Order;
 use App\Models\Product;
+use App\Services\ProductsSalesReportService;
+use App\Services\Reports\ReportOrderTypesService;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -14,10 +19,10 @@ class ProductsSalesTableExporter extends Exporter
     public static function getColumns(): array
     {
         $component = app('livewire')->current();
-        $filters = $component instanceof \App\Filament\Widgets\ProductsSalesTableWidget ? ($component->pageFilters ?? []) : null;
+        $filters = $component instanceof ProductsSalesTableWidget ? ($component->pageFilters ?? []) : null;
         $types = $filters === null
-            ? app(\App\Services\Reports\ReportOrderTypesService::class)->forQuery(\App\Models\Order::query()->where('status', \App\Enums\OrderStatus::COMPLETED))
-            : app(\App\Services\ProductsSalesReportService::class)->getReportOrderTypes($filters['startDate'] ?? now()->subDays(30)->toDateString(), $filters['endDate'] ?? now()->toDateString(), ($filters['filterType'] ?? 'period') === 'shifts' ? ($filters['shifts'] ?? []) : null);
+            ? app(ReportOrderTypesService::class)->forQuery(Order::query()->where('status', OrderStatus::COMPLETED))
+            : app(ProductsSalesReportService::class)->getReportOrderTypes($filters['startDate'] ?? now()->subDays(30)->toDateString(), $filters['endDate'] ?? now()->toDateString(), ($filters['filterType'] ?? 'period') === 'shifts' ? ($filters['shifts'] ?? []) : null);
 
         return [
             ExportColumn::make('name')

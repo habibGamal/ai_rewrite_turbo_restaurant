@@ -1,13 +1,10 @@
 <?php
 
 use App\Enums\OptionalFeature;
-use App\Filament\Actions\Forms\GroupQuantityGridAction;
 use App\Filament\Resources\ProductGroups\Pages\ProductGroupStock;
-use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Models\User;
 use App\Services\FeatureService;
 use App\Services\Products\ProductGroupGridService;
-use Filament\Actions\Testing\TestAction;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
@@ -67,36 +64,4 @@ it('shows the stock matrix with row and column totals', function () {
 
     $page->set('rowOptionId', $matrix['col']->id)->set('colOptionId', $matrix['row']->id);
     expect($page->instance()->matrix()['row']->name)->toBe('اللون');
-});
-
-it('adds a size x colour grid of quantities to a purchase invoice at one cost', function () {
-    $group = gridGroup(['المقاس' => ['S', 'M'], 'اللون' => ['أسود', 'أبيض']]);
-    actingAs(User::factory()->admin()->create());
-    $sBlack = gridSku($group, 'S / أسود');
-    $mWhite = gridSku($group, 'M / أبيض');
-
-    $page = livewire(CreatePurchaseInvoice::class)
-        ->callAction(TestAction::make('groupQuantityGrid')->schemaComponent('purchaseImportActions', 'form'), [
-            'group_id' => $group->id,
-            'cost' => 75,
-            'qty' => [$sBlack => 4, $mWhite => 2],
-        ])
-        ->assertHasNoActionErrors();
-
-    $items = collect($page->get('data.items'))->keyBy('product_id');
-    expect($items)->toHaveCount(2)
-        ->and((float) $items[$sBlack]['quantity'])->toBe(4.0)
-        ->and((float) $items[$sBlack]['price'])->toBe(75.0)
-        ->and((float) $items[$mWhite]['quantity'])->toBe(2.0)
-        ->and((float) $page->get('data.total'))->toBe(450.0);
-});
-
-it('hides the purchase grid while variants are off', function () {
-    app(FeatureService::class)->disable(OptionalFeature::VARIANTS);
-    actingAs(User::factory()->admin()->create());
-
-    expect(GroupQuantityGridAction::make()->isVisible())->toBeFalse();
-
-    app(FeatureService::class)->enable(OptionalFeature::VARIANTS);
-    expect(GroupQuantityGridAction::make()->isVisible())->toBeTrue();
 });

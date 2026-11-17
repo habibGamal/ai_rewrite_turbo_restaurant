@@ -6,6 +6,8 @@ use App\Enums\WasteReason;
 use App\Filament\Actions\CloseWasteAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintWasteAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
@@ -15,6 +17,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\Waste;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\WasteCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -32,6 +35,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -112,14 +117,18 @@ class WasteResource extends Resource
                         ])
                             ->alignStart(),
 
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, Set $set, Get $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product.inventoryItem'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                DocumentBarcodeField::enabled() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية الحالية')
@@ -132,7 +141,7 @@ class WasteResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('السبب')
                                     ->width('170px'),
-                            ])
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
 
@@ -143,6 +152,8 @@ class WasteResource extends Resource
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                ...DocumentBarcodeField::whenEnabled(),
 
                                 TextInput::make('unit')
                                     ->label('الوحدة')

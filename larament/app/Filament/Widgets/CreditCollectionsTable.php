@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\ShiftsReportService;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -87,7 +88,7 @@ abstract class CreditCollectionsTable extends BaseWidget
                     ->color('success')
                     ->weight('bold')
                     ->alignCenter()
-                    ->summarize(\Filament\Tables\Columns\Summarizers\Sum::make()->label('الإجمالي')->numeric(decimalPlaces: 2)),
+                    ->summarize(Sum::make()->label('الإجمالي')->numeric(decimalPlaces: 2)),
 
                 TextColumn::make('method')
                     ->label('طريقة الدفع')

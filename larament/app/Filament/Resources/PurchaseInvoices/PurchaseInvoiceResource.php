@@ -4,7 +4,6 @@ namespace App\Filament\Resources\PurchaseInvoices;
 
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
 use App\Filament\Actions\Forms\GeneratePurchaseBarcodesAction;
-use App\Filament\Actions\Forms\GroupQuantityGridAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintLabelsAction;
@@ -128,7 +127,6 @@ class PurchaseInvoiceResource extends Resource
                         Actions::make([
                             ProductImporterAction::make('importProducts'),
                             LowStockImporterAction::make('importLowStock'),
-                            GroupQuantityGridAction::make('groupQuantityGrid'),
                             GeneratePurchaseBarcodesAction::make('generatePurchaseBarcodes'),
                         ])
                             ->key('purchaseImportActions')

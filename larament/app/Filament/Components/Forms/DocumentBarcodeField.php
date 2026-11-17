@@ -9,7 +9,7 @@ use Filament\Schemas\Components\Utilities\Set;
 
 /**
  * Read-only «الباركود» of a document line's product (purchase invoices,
- * purchase returns, stock issues, stock transfers), shown while the vendor
+ * purchase returns, stock issues, stock transfers, waste), shown while the vendor
  * has switched document barcodes on.
  *
  * Add it to a schema only when enabled() (spread it in, never ->visible()):
