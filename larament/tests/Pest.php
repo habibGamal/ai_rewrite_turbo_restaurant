@@ -1,5 +1,15 @@
 <?php
 
+use App\Enums\OptionalFeature;
+use App\Models\InventoryItemMovementDaily;
+use App\Models\PlatformConnection;
+use App\Models\Product;
+use App\Models\Warehouse;
+use App\Services\FeatureService;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -11,9 +21,45 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
+
+/*
+| Deferred payment and sales returns are vendor features that start off on a
+| fresh install. These suites exercise the features themselves (or flows that
+| pass through them), so they run with both switched on. The off state is
+| covered by tests/Feature/Features/DeferredPaymentAndReturnsGatingTest.php.
+*/
+pest()->beforeEach(function (): void {
+    app(FeatureService::class)->updateFeatures([
+        OptionalFeature::DEFERRED_PAYMENT->value => true,
+        OptionalFeature::RETURNS->value => true,
+    ]);
+})->in(
+    'Feature/Orders/Returns',
+    'Feature/Returns',
+    'Feature/Orders/OrderTypeCreditSettingsTest.php',
+    'Feature/Orders/CompaniesPartialPaymentTest.php',
+    'Feature/Reports/PayLaterShiftReconciliationTest.php',
+    'Feature/SafetyNet/ExternalSellerAndReturnTest.php',
+    'Feature/SafetyNet/OrderLifecycleTest.php',
+    'Feature/Orders/OrderStockRoutingTest.php',
+    'Feature/Filament/Pages/CompaniesAccountsTest.php',
+    'Feature/Modules/ExternalSellers/ExternalOrderTest.php',
+    'Feature/Orders/Instant/InstantSaleTest.php',
+    'Feature/Orders/OrderControllerFeatureTest.php',
+    'Feature/Filament/Pages/ChannelPerformanceReportTest.php',
+    'Feature/Filament/Pages/Reports/CurrentShiftReportTest.php',
+    'Feature/Filament/Pages/Reports/PeriodShiftReportTest.php',
+    'Feature/Filament/Resources/OrderResourceTest.php',
+    'Feature/Filament/Resources/OrderTypeRowResourceTest.php',
+    'Feature/Orders/CashierTabLayoutTest.php',
+    'Feature/Orders/CashierTabsTest.php',
+    'Feature/Orders/ClosedDayOrderCancellationAndReturnTest.php',
+    'Feature/Orders/OrderDomainEventsTest.php',
+    'Unit/Actions/Orders/CompleteOrderActionTest.php',
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -46,14 +92,14 @@ function something()
     // ..
 }
 
-function openInventoryDay(?\App\Models\Product $product = null, ?\Carbon\Carbon $date = null): \App\Models\InventoryItemMovementDaily
+function openInventoryDay(?Product $product = null, ?Carbon $date = null): InventoryItemMovementDaily
 {
-    $date = $date ?? \Carbon\Carbon::today();
-    $product = $product ?? \App\Models\Product::first() ?? \App\Models\Product::factory()->create();
+    $date = $date ?? Carbon::today();
+    $product = $product ?? Product::first() ?? Product::factory()->create();
 
-    $daily = \App\Models\InventoryItemMovementDaily::firstOrNew([
+    $daily = InventoryItemMovementDaily::firstOrNew([
         'product_id' => $product->id,
-        'warehouse_id' => \App\Models\Warehouse::default()->id,
+        'warehouse_id' => Warehouse::default()->id,
         'date' => $date->toDateString(),
     ]);
 
@@ -71,11 +117,11 @@ function openInventoryDay(?\App\Models\Product $product = null, ?\Carbon\Carbon 
     return $daily;
 }
 
-function pairPlatform(string $token = 'test-token'): \App\Models\PlatformConnection
+function pairPlatform(string $token = 'test-token'): PlatformConnection
 {
-    \App\Models\PlatformConnection::flushCache();
+    PlatformConnection::flushCache();
 
-    $connection = \App\Models\PlatformConnection::create([
+    $connection = PlatformConnection::create([
         'url' => 'https://platform.test',
         'branch_uuid' => '01930c11-0000-7000-8000-000000000001',
         'token' => $token,
@@ -85,7 +131,7 @@ function pairPlatform(string $token = 'test-token'): \App\Models\PlatformConnect
         'paired_at' => now(),
     ]);
 
-    \App\Models\PlatformConnection::flushCache();
+    PlatformConnection::flushCache();
 
     return $connection;
 }

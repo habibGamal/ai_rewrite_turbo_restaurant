@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\CustomFees;
 
 use App\Orders\OrderTypeCatalog;
 use App\Services\CustomFeesReportService;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
@@ -35,7 +36,7 @@ class CustomFeesLinesTable extends BaseWidget
                 TextColumn::make('name')->label('اسم الرسوم')->searchable(),
                 TextColumn::make('amount')->label('القيمة')->money('EGP')->sortable()
                     ->summarize(Sum::make()->label('الإجمالي')->money('EGP')),
-                TextColumn::make('refunded')->label('المرتجع')->money('EGP')->placeholder('-')->color('danger'),
+                TextColumn::make('refunded')->label('المرتجع')->money('EGP')->placeholder('-')->color('danger')->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
                 TextColumn::make('order.order_number')->label('رقم الطلب'),
                 TextColumn::make('order.type')->label('نوع الطلب')
                     ->formatStateUsing(fn (?string $state): string => $state ? $catalog->display($state)->label : '-'),

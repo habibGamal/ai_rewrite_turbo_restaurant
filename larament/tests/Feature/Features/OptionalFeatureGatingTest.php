@@ -330,6 +330,8 @@ it('retains historical external order details, accounting, receipts, and sync pa
                 'equipment' => false,
                 'variants' => false,
                 'multi_terminal' => false,
+                'deferred_payment' => false,
+                'returns' => false,
             ])
             ->where('canAddExternalOrder', false)
             ->where('sellers', [])

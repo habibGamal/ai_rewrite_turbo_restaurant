@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderTypeRow;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\FeatureService;
 use App\Services\SettingsService;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -189,6 +190,13 @@ final class CashierTabLayout
         $inactive = [];
 
         foreach ($stored as $entry) {
+            if ($entry['kind'] === 'system' && ! $this->systemTabAvailable($entry['name'])) {
+                // A system tab of a switched-off feature is not in the editor; keep its place.
+                $inactive[] = $entry;
+
+                continue;
+            }
+
             if ($entry['kind'] !== 'type') {
                 continue;
             }
@@ -248,7 +256,7 @@ final class CashierTabLayout
         ?Shift $shift,
     ): ?array {
         if ($kind === 'system') {
-            return $this->systemEntry($name, $visible);
+            return $this->systemTabAvailable($name) ? $this->systemEntry($name, $visible) : null;
         }
 
         $row = $typeRows->get($name);
@@ -294,6 +302,14 @@ final class CashierTabLayout
             'visible' => $visible,
             'forcedVisible' => $forcedVisible,
         ];
+    }
+
+    /**
+     * «تحصيل الآجل» exists only while the vendor keeps deferred payment on.
+     */
+    private function systemTabAvailable(string $name): bool
+    {
+        return $name !== 'receivables' || app(FeatureService::class)->deferredPaymentEnabled();
     }
 
     /**

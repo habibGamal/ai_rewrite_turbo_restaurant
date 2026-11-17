@@ -1,4 +1,4 @@
-import { Order, OrderItemData } from "@/types";
+import { FeatureFlags, Order, OrderItemData } from "@/types";
 import { Code128Barcode } from "@/utils/code128";
 import { usePage } from "@inertiajs/react";
 import ExternalReceipt from "./ExternalReceipt";
@@ -14,6 +14,8 @@ export default function ReceiptTemplate({
     receiptFooter: string;
 }) {
     const terms = useTerms();
+    // The scannable reference only serves the returns screen.
+    const returnsEnabled = Boolean((usePage().props as { features?: FeatureFlags }).features?.returns);
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
             <img
@@ -189,7 +191,7 @@ export default function ReceiptTemplate({
             </table>
             <ExternalReceipt receipt={order.receiptView} />
             <div className="mt-4">
-                <Code128Barcode code={`#${order.id}`} />
+                {returnsEnabled && <Code128Barcode code={`#${order.id}`} />}
                 <p className="text-center">
                     الرقم المرجعي: <span dir="ltr">#{order.id}</span>
                 </p>

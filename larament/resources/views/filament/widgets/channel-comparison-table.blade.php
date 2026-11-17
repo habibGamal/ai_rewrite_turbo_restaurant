@@ -41,7 +41,7 @@
 @endphp
 <x-filament-widgets::widget>
     <x-filament::section heading="جدول مقارنة القنوات"
-        :description="$hasComparison ? 'التغير مقارنة بـ '.$comparison->label() : ($emptyComparison ? 'لا توجد مبيعات في فترة المقارنة ('.$emptyComparison->label().')' : 'صافي المبيعات = إجمالي الطلبات المكتملة بعد خصم المرتجعات')">
+        :description="$hasComparison ? 'التغير مقارنة بـ '.$comparison->label() : ($emptyComparison ? 'لا توجد مبيعات في فترة المقارنة ('.$emptyComparison->label().')' : ($columns['refunds'] ? 'صافي المبيعات = إجمالي الطلبات المكتملة بعد خصم المرتجعات' : 'صافي المبيعات = إجمالي الطلبات المكتملة'))">
         <div class="overflow-x-auto">
             <table class="w-full text-sm whitespace-nowrap" data-testid="channel-comparison-table">
                 <thead>

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Services\FeatureService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -56,7 +57,8 @@ trait ScopedOrderPayments
                 ->label('حالة الدفع الآن')
                 ->badge()
                 ->tooltip('حالة الطلب اليوم، شاملة أي تحصيل تم في شفت لاحق')
-                ->toggleable(),
+                ->toggleable()
+                ->visible(fn (): bool => self::deferredPaymentOn()),
 
             TextColumn::make('paid_in_scope')
                 ->label('المدفوع في '.$scopeLabel)
@@ -73,7 +75,8 @@ trait ScopedOrderPayments
                 ->suffix(' جنيه')
                 ->color(fn (Order $record): string => self::uncollectedInScope($record) > 0 ? 'danger' : 'gray')
                 ->weight(fn (Order $record): ?string => self::uncollectedInScope($record) > 0 ? 'bold' : null)
-                ->alignCenter(),
+                ->alignCenter()
+                ->visible(fn (): bool => self::deferredPaymentOn()),
         ];
     }
 
@@ -109,13 +112,24 @@ trait ScopedOrderPayments
                 true: fn (Builder $query) => $condition($query, '>'),
                 false: fn (Builder $query) => $condition($query, '<='),
                 blank: fn (Builder $query) => $query,
-            );
+            )
+            ->visible(fn (): bool => self::deferredPaymentOn());
     }
 
     protected function paymentStatusFilter(): SelectFilter
     {
         return SelectFilter::make('payment_status')
             ->label('حالة الدفع الآن')
-            ->options(PaymentStatus::class);
+            ->options(PaymentStatus::class)
+            ->visible(fn (): bool => self::deferredPaymentOn());
+    }
+
+    /**
+     * Payment status and the uncollected column only tell a story when
+     * orders may close unpaid, so they follow the deferred payment switch.
+     */
+    protected static function deferredPaymentOn(): bool
+    {
+        return app(FeatureService::class)->deferredPaymentEnabled();
     }
 }

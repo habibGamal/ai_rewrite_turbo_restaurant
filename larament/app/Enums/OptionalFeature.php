@@ -15,6 +15,8 @@ enum OptionalFeature: string
     case PURCHASE_BARCODES = 'feature_purchase_barcodes_enabled';
     case LABEL_PRINTING = 'feature_label_printing_enabled';
     case DOCUMENT_BARCODES = 'feature_document_barcodes_enabled';
+    case DEFERRED_PAYMENT = 'feature_deferred_payment_enabled';
+    case RETURNS = 'feature_returns_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -28,6 +30,8 @@ enum OptionalFeature: string
             self::PURCHASE_BARCODES => SettingKey::FEATURE_PURCHASE_BARCODES_ENABLED,
             self::LABEL_PRINTING => SettingKey::FEATURE_LABEL_PRINTING_ENABLED,
             self::DOCUMENT_BARCODES => SettingKey::FEATURE_DOCUMENT_BARCODES_ENABLED,
+            self::DEFERRED_PAYMENT => SettingKey::FEATURE_DEFERRED_PAYMENT_ENABLED,
+            self::RETURNS => SettingKey::FEATURE_RETURNS_ENABLED,
         };
     }
 
@@ -67,6 +71,8 @@ enum OptionalFeature: string
             self::PURCHASE_BARCODES => 'purchase_barcodes',
             self::LABEL_PRINTING => 'label_printing',
             self::DOCUMENT_BARCODES => 'document_barcodes',
+            self::DEFERRED_PAYMENT => 'deferred_payment',
+            self::RETURNS => 'returns',
         };
     }
 
@@ -124,6 +130,19 @@ enum OptionalFeature: string
                 'print_labels',
             ],
             self::DOCUMENT_BARCODES => [],
+            self::DEFERRED_PAYMENT => [
+                'pos.tab.system.receivables',
+            ],
+            self::RETURNS => [
+                'view_order_returns',
+                'create_order_returns',
+                'update_order_returns',
+                'delete_order_returns',
+                'view_returns_report',
+                'order.return',
+                'order.return_without_restock',
+                'order.return_any_age',
+            ],
             self::MULTI_TERMINAL => [
                 'terminal.open',
                 'terminal.close',
@@ -148,6 +167,8 @@ enum OptionalFeature: string
             self::PURCHASE_BARCODES => 'ميزة توليد الباركود من فاتورة الشراء غير مفعلة حالياً.',
             self::LABEL_PRINTING => 'ميزة طباعة ملصقات الباركود غير مفعلة حالياً.',
             self::DOCUMENT_BARCODES => 'ميزة الباركود في المستندات غير مفعلة حالياً.',
+            self::DEFERRED_PAYMENT => 'ميزة الدفع الآجل غير مفعلة حالياً.',
+            self::RETURNS => 'ميزة المرتجعات غير مفعلة حالياً.',
         };
     }
 
@@ -171,6 +192,8 @@ enum OptionalFeature: string
             'purchase_barcodes' => self::PURCHASE_BARCODES,
             'label_printing' => self::LABEL_PRINTING,
             'document_barcodes' => self::DOCUMENT_BARCODES,
+            'deferred_payment' => self::DEFERRED_PAYMENT,
+            'returns' => self::RETURNS,
             default => null,
         };
     }

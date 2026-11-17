@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\CustomFees;
 
 use App\Services\CustomFeesReportService;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -30,7 +31,7 @@ class CustomFeesSummaryTable extends BaseWidget
                 TextColumn::make('count')->label('عدد المرات')->alignCenter()->color('info'),
                 TextColumn::make('amount')->label('الإجمالي')->money('EGP')->alignCenter()->weight('bold'),
                 TextColumn::make('average')->label('متوسط القيمة')->money('EGP')->alignCenter(),
-                TextColumn::make('refunded')->label('المرتجع')->money('EGP')->alignCenter()->color('danger'),
+                TextColumn::make('refunded')->label('المرتجع')->money('EGP')->alignCenter()->color('danger')->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
                 TextColumn::make('net')->label('الصافي')->money('EGP')->alignCenter()->weight('bold')->color('success'),
                 TextColumn::make('share')->label('النسبة')->suffix('%')->alignCenter(),
             ])

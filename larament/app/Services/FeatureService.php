@@ -101,6 +101,16 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::DOCUMENT_BARCODES);
     }
 
+    public function deferredPaymentEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::DEFERRED_PAYMENT);
+    }
+
+    public function returnsEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::RETURNS);
+    }
+
     /**
      * @return array<string, bool>
      */
@@ -117,7 +127,7 @@ class FeatureService
     /**
      * Shared Inertia props for optional features using typed short keys.
      *
-     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool, multi_terminal: bool}
+     * @return array{revenues: bool, custom_fees: bool, outsourced_orders: bool, equipment: bool, variants: bool, multi_terminal: bool, deferred_payment: bool, returns: bool}
      */
     public function toInertiaProps(): array
     {
@@ -128,6 +138,8 @@ class FeatureService
             'equipment' => $this->equipmentEnabled(),
             'variants' => $this->variantsEnabled(),
             'multi_terminal' => $this->multiTerminalEnabled(),
+            'deferred_payment' => $this->deferredPaymentEnabled(),
+            'returns' => $this->returnsEnabled(),
         ];
     }
 

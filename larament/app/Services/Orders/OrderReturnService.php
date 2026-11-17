@@ -3,11 +3,13 @@
 namespace App\Services\Orders;
 
 use App\Core\Events\OrderReturned;
+use App\Enums\OptionalFeature;
 use App\Enums\ReturnStatus;
 use App\Models\Order;
 use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
+use App\Services\FeatureService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +52,7 @@ class OrderReturnService
         bool $reverseStock = true
     ): OrderReturn {
         shouldDayBeOpen();
+        app(FeatureService::class)->assertEnabled(OptionalFeature::RETURNS);
 
         try {
             DB::beginTransaction();

@@ -189,6 +189,7 @@ class Settings extends Page implements HasForms
                                                     ->numeric()
                                                     ->required()
                                                     ->rules(SettingKey::RETURNS_MAX_DAYS->validationRules())
+                                                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled())
                                                     ->placeholder(SettingKey::RETURNS_MAX_DAYS->placeholder()),
                                             ]),
 

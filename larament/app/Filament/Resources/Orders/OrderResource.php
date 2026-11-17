@@ -295,7 +295,8 @@ class OrderResource extends Resource
                         TextEntry::make('remaining_amount')
                             ->label('المبلغ المتبقي')
                             ->money('EGP')
-                            ->color(fn ($record) => $record->remaining_amount > 0 ? 'danger' : 'success'),
+                            ->color(fn ($record) => $record->remaining_amount > 0 ? 'danger' : 'success')
+                            ->visible(fn ($record): bool => app(FeatureService::class)->deferredPaymentEnabled() || $record->remaining_amount > 0.005),
 
                         TextEntry::make('profit')
                             ->label('الربح')
@@ -305,7 +306,7 @@ class OrderResource extends Resource
                             ->label('إجمالي المرتجع')
                             ->money('EGP')
                             ->color('danger')
-                            ->visible(fn ($record) => $record->total_refunded > 0),
+                            ->visible(fn ($record) => $record->total_refunded > 0 && app(FeatureService::class)->returnsEnabled()),
                     ])
                     ->columns(3),
 

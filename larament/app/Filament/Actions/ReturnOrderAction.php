@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Filament\Forms\ReturnChargeLines;
 use App\Models\Order;
+use App\Services\FeatureService;
 use App\Services\Orders\OrderReturnService;
 use Exception;
 use Filament\Actions\Action;
@@ -29,7 +30,7 @@ class ReturnOrderAction
             ->label('إرجاع الطلب')
             ->icon('heroicon-o-arrow-uturn-left')
             ->color('warning')
-            ->visible(fn (Order $record): bool => $record->status === OrderStatus::COMPLETED)
+            ->visible(fn (Order $record): bool => $record->status === OrderStatus::COMPLETED && app(FeatureService::class)->returnsEnabled())
             ->schema(fn (Order $record) => self::getFormSchema($record))
             ->action(function (Order $record, array $data) {
                 try {

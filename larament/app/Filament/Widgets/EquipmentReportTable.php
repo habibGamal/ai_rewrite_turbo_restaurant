@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Services\FeatureService;
 use App\Services\Reports\EquipmentReportService;
 use App\Services\ShiftsReportService;
 use Filament\Tables\Columns\TextColumn;
@@ -54,7 +55,8 @@ class EquipmentReportTable extends BaseWidget
                     ->money('EGP')
                     ->alignCenter()
                     ->color('danger')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
                 TextColumn::make('net_revenue')
                     ->label('صافي الإيراد')
                     ->state(fn ($record): float => (float) ($record->revenue ?? 0) - (float) ($record->refunded ?? 0))

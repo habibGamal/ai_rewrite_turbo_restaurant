@@ -8,6 +8,7 @@ use App\Models\OrderReturn;
 use App\Models\OrderReturnItem;
 use App\Models\Refund;
 use App\Models\User;
+use App\Services\FeatureService;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -33,6 +34,11 @@ class ShiftReturnsTable extends BaseWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'المرتجعات';
+
+    public static function canView(): bool
+    {
+        return app(FeatureService::class)->returnsEnabled() && parent::canView();
+    }
 
     public function table(Table $table): Table
     {
