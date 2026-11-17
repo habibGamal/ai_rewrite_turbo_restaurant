@@ -189,9 +189,13 @@ class LabelPrintJobs
 
         $cacheKey = 'labels:png:'.md5(json_encode([$template->id, $template->updated_at?->getTimestamp(), $row['labels']]) ?: '');
 
-        return Cache::remember($cacheKey, now()->addMinutes(self::TTL_MINUTES), function () use ($template, $job, $row): string {
-            return $this->images->png($template, $this->renderer->rowHtml($template, $this->rowData($job, $row['labels'])));
+        // Base64: the database cache store keeps values in a text column,
+        // which raw PNG bytes would break on MySQL.
+        $encoded = Cache::remember($cacheKey, now()->addMinutes(self::TTL_MINUTES), function () use ($template, $job, $row): string {
+            return base64_encode($this->images->png($template, $this->renderer->rowHtml($template, $this->rowData($job, $row['labels']))));
         });
+
+        return (string) base64_decode((string) $encoded, true);
     }
 
     /**
