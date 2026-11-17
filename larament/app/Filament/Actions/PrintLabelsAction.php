@@ -36,6 +36,23 @@ final class PrintLabelsAction
     }
 
     /**
+     * For a document with product lines (purchase invoice, purchase return,
+     * stock issue, stock transfer): as many labels as each line's quantity.
+     * Shown only while the vendor has switched document barcodes on.
+     */
+    public static function document(string $name = 'printLabels'): Action
+    {
+        return self::make(
+            // Every document here has an items() relation of product lines.
+            fn (Model $record): array => $record->getRelationValue('items')
+                ->groupBy('product_id')
+                ->map(fn ($items): float => (float) $items->sum('quantity'))
+                ->all(),
+            $name,
+        )->visible(fn (): bool => self::allowed() && app(FeatureService::class)->documentBarcodesEnabled());
+    }
+
+    /**
      * For a table's selected products: one label each to start.
      */
     public static function bulk(string $name = 'printLabels'): BulkAction

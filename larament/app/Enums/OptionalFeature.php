@@ -14,6 +14,7 @@ enum OptionalFeature: string
     case MULTI_TERMINAL = 'feature_multi_terminal_enabled';
     case PURCHASE_BARCODES = 'feature_purchase_barcodes_enabled';
     case LABEL_PRINTING = 'feature_label_printing_enabled';
+    case DOCUMENT_BARCODES = 'feature_document_barcodes_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -26,6 +27,7 @@ enum OptionalFeature: string
             self::MULTI_TERMINAL => SettingKey::FEATURE_MULTI_TERMINAL_ENABLED,
             self::PURCHASE_BARCODES => SettingKey::FEATURE_PURCHASE_BARCODES_ENABLED,
             self::LABEL_PRINTING => SettingKey::FEATURE_LABEL_PRINTING_ENABLED,
+            self::DOCUMENT_BARCODES => SettingKey::FEATURE_DOCUMENT_BARCODES_ENABLED,
         };
     }
 
@@ -64,6 +66,7 @@ enum OptionalFeature: string
             self::MULTI_TERMINAL => 'multi_terminal',
             self::PURCHASE_BARCODES => 'purchase_barcodes',
             self::LABEL_PRINTING => 'label_printing',
+            self::DOCUMENT_BARCODES => 'document_barcodes',
         };
     }
 
@@ -120,6 +123,7 @@ enum OptionalFeature: string
                 'delete_label_templates',
                 'print_labels',
             ],
+            self::DOCUMENT_BARCODES => [],
             self::MULTI_TERMINAL => [
                 'terminal.open',
                 'terminal.close',
@@ -143,6 +147,7 @@ enum OptionalFeature: string
             self::MULTI_TERMINAL => 'ميزة الأدراج المتعددة غير مفعلة حالياً.',
             self::PURCHASE_BARCODES => 'ميزة توليد الباركود من فاتورة الشراء غير مفعلة حالياً.',
             self::LABEL_PRINTING => 'ميزة طباعة ملصقات الباركود غير مفعلة حالياً.',
+            self::DOCUMENT_BARCODES => 'ميزة الباركود في المستندات غير مفعلة حالياً.',
         };
     }
 
@@ -165,6 +170,7 @@ enum OptionalFeature: string
             'multi_terminal' => self::MULTI_TERMINAL,
             'purchase_barcodes' => self::PURCHASE_BARCODES,
             'label_printing' => self::LABEL_PRINTING,
+            'document_barcodes' => self::DOCUMENT_BARCODES,
             default => null,
         };
     }

@@ -96,6 +96,11 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::LABEL_PRINTING);
     }
 
+    public function documentBarcodesEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::DOCUMENT_BARCODES);
+    }
+
     /**
      * @return array<string, bool>
      */

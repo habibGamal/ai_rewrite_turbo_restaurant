@@ -4,6 +4,8 @@ namespace App\Filament\Resources\StockTransfers;
 
 use App\Enums\ProductType;
 use App\Filament\Actions\ConfirmStockTransferAction;
+use App\Filament\Actions\PrintLabelsAction;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Resources\StockTransfers\Pages\CreateStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\EditStockTransfer;
 use App\Filament\Resources\StockTransfers\Pages\ListStockTransfers;
@@ -22,6 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -62,10 +65,13 @@ class StockTransferResource extends Resource
             Section::make('أصناف التحويل')->schema([
                 Repeater::make('items')->label('الأصناف')->relationship()->minItems(1)->defaultItems(1)
                     ->disabled(fn (?StockTransfer $record): bool => $record?->closed_at !== null)
-                    ->columns(2)->schema([
+                    ->columns(fn (): int => DocumentBarcodeField::enabled() ? 3 : 2)->schema([
                         Select::make('product_id')->label('المنتج')->required()->searchable()
                             ->options(fn () => Product::whereIn('type', [ProductType::RawMaterial, ProductType::Consumable])->pluck('name', 'id')->all())
-                            ->rules([Rule::exists('products', 'id')->whereIn('type', [ProductType::RawMaterial->value, ProductType::Consumable->value])]),
+                            ->rules([Rule::exists('products', 'id')->whereIn('type', [ProductType::RawMaterial->value, ProductType::Consumable->value])])
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, $state) => DocumentBarcodeField::fill($set, $state)),
+                        ...DocumentBarcodeField::whenEnabled(),
                         TextInput::make('quantity')->label('الكمية')->required()->numeric()->step(0.001)->minValue(0.001)->default(1),
                     ]),
             ]),
@@ -103,7 +109,7 @@ class StockTransferResource extends Resource
             SelectFilter::make('from_warehouse_id')->label('من مخزن')->relationship('fromWarehouse', 'name'),
             SelectFilter::make('to_warehouse_id')->label('إلى مخزن')->relationship('toWarehouse', 'name'),
         ])->recordActions([
-            ConfirmStockTransferAction::table(), ViewAction::make(), EditAction::make(), DeleteAction::make(),
+            ConfirmStockTransferAction::table(), PrintLabelsAction::document(), ViewAction::make(), EditAction::make(), DeleteAction::make(),
         ])->defaultSort('id', 'desc');
     }
 
