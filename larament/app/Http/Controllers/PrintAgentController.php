@@ -82,7 +82,7 @@ class PrintAgentController extends Controller
     {
         $terminal = $this->queue->terminalForToken($request->bearerToken());
 
-        abort_if($terminal === null, 401, 'كود الربط غير صحيح أو اتلغى. اربط البرنامج بالدرج تاني.');
+        abort_if($terminal === null, 401, 'رمز الربط غير صحيح أو أُلغي. اربط البرنامج بالدرج من جديد.');
 
         return $terminal;
     }

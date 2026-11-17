@@ -57,13 +57,13 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             _status = $"جاهز للطباعة (المنفذ {_config.Port})";
             if (string.IsNullOrWhiteSpace(_config.Printer))
             {
-                Notify("Turbo Label", "اضغط على الأيقونة دي واختار طابعة الملصقات.", error: false);
+                Notify("Turbo Label", "اضغط على هذه الأيقونة واختر طابعة الملصقات.", error: false);
             }
         }
         catch (Exception e)
         {
             _status = "لم يعمل: " + e.Message;
-            Notify("Turbo Label لم يعمل", $"المنفذ {_config.Port} مستخدم أو مقفول: {e.Message}", error: true);
+            Notify("Turbo Label لم يعمل", $"المنفذ {_config.Port} مستخدم أو مغلق: {e.Message}", error: true);
         }
     }
 
@@ -108,7 +108,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
         }
         menu.Items.Add(receipts);
 
-        var autoStart = new ToolStripMenuItem("تشغيل مع الويندوز") { Checked = _config.AutoStart };
+        var autoStart = new ToolStripMenuItem("التشغيل مع بدء ويندوز") { Checked = _config.AutoStart };
         autoStart.Click += (_, _) =>
         {
             _config.AutoStart = !_config.AutoStart;
@@ -129,7 +129,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
         _ui.BeginInvoke(() =>
         {
             var result = MessageBox.Show(
-                $"السيستم على العنوان:\n{origin}\nعايز يطبع ملصقات على طابعات الجهاز ده.\n\nتسمح له؟",
+                $"النظام على العنوان:\n{origin}\nيطلب طباعة ملصقات على طابعات هذا الجهاز.\n\nهل تسمح له؟",
                 "Turbo Label",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
@@ -167,7 +167,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             var parsed = PairingCode.Parse(code);
             if (parsed is null)
             {
-                MessageBox.Show("كود الربط مش صحيح. انسخه تاني من السيستم («الأدراج» ← «ربط برنامج الطباعة»).", "Turbo Label",
+                MessageBox.Show("رمز الربط غير صحيح. انسخه من جديد من النظام («الأدراج» ← «ربط برنامج الطباعة»).", "Turbo Label",
                     MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1,
                     MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading | MessageBoxOptions.DefaultDesktopOnly);
 
@@ -175,7 +175,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             }
 
             var answer = MessageBox.Show(
-                $"ربط الجهاز ده بالدرج «{parsed.Terminal}»\nعلى السيستم: {parsed.Server}\n\nفواتير الدرج ده وفتح درج الفلوس هيطبعوا على طابعة الجهاز ده. موافق؟",
+                $"ربط هذا الجهاز بالدرج «{parsed.Terminal}»\nعلى النظام: {parsed.Server}\n\nستُطبع فواتير هذا الدرج ويُفتح درج النقود عبر طابعة هذا الجهاز. هل توافق؟",
                 "Turbo Label",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
@@ -191,7 +191,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             _log.Add("ربط", $"{parsed.Terminal} ← {parsed.Server}", ok: true);
             if (string.IsNullOrWhiteSpace(_config.ReceiptPrinter))
             {
-                Notify("اختار طابعة الفواتير", "اتربط الجهاز بالدرج. اختار طابعة الفواتير من «الطابعات» لو الدرج في السيستم مش محدد له طابعة.", error: false);
+                Notify("اختر طابعة الفواتير", "رُبط الجهاز بالدرج. اختر طابعة الفواتير من «الطابعات» إذا لم تُحدَّد للدرج طابعة في النظام.", error: false);
             }
 
             ShowWindow();

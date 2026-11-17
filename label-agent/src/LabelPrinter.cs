@@ -34,11 +34,11 @@ public sealed class LabelPrinter : IDisposable
     {
         using var manifestResponse = await Fetch(manifestUrl, cancel);
         var job = await manifestResponse.Content.ReadFromJsonAsync<LabelJob>(cancel)
-            ?? throw new LabelPrintException("مهمة الطباعة فاضية.");
+            ?? throw new LabelPrintException("مهمة الطباعة فارغة.");
 
         if (job.Pages.Count == 0 || job.Page.WidthMm <= 0 || job.Page.HeightMm <= 0)
         {
-            throw new LabelPrintException("مهمة الطباعة فاضية.");
+            throw new LabelPrintException("مهمة الطباعة فارغة.");
         }
 
         var images = new List<Bitmap>();
@@ -97,7 +97,7 @@ public sealed class LabelPrinter : IDisposable
         var body = await response.Content.ReadAsStringAsync(cancel);
         response.Dispose();
         var message = body.TrimStart().StartsWith('<') || body.Length > 400
-            ? $"السيرفر رد بخطأ {(int)response.StatusCode}."
+            ? $"ردّ الخادم بالخطأ {(int)response.StatusCode}."
             : body.Trim();
 
         throw new LabelPrintException(message);
@@ -120,7 +120,7 @@ public sealed class LabelPrinter : IDisposable
         document.PrinterSettings.PrinterName = printerName;
         if (!document.PrinterSettings.IsValid)
         {
-            throw new LabelPrintException($"الطابعة «{printerName}» مش موجودة على الجهاز ده.");
+            throw new LabelPrintException($"الطابعة «{printerName}» غير موجودة على هذا الجهاز.");
         }
 
         var paper = new PaperSize("Turbo Label", width, height);
@@ -177,7 +177,7 @@ public sealed class LabelPrinter : IDisposable
         document.PrinterSettings.PrinterName = printerName;
         if (!document.PrinterSettings.IsValid)
         {
-            throw new LabelPrintException($"الطابعة «{printerName}» مش موجودة على الجهاز ده.");
+            throw new LabelPrintException($"الطابعة «{printerName}» غير موجودة على هذا الجهاز.");
         }
 
         var paper = new PaperSize("Turbo Label", width, height);

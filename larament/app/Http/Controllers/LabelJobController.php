@@ -38,7 +38,7 @@ class LabelJobController extends Controller
             report($e);
 
             // Plain text so the print app can show why.
-            return response('تعذر رسم الملصق على السيرفر: '.$e->getMessage(), 500, ['Content-Type' => 'text/plain; charset=utf-8']);
+            return response('تعذر رسم الملصق على الخادم: '.$e->getMessage(), 500, ['Content-Type' => 'text/plain; charset=utf-8']);
         }
         abort_if($png === null, 404);
 

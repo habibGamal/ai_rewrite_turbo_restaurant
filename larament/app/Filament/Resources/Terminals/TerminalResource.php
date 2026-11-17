@@ -83,7 +83,7 @@ class TerminalResource extends Resource
 
         if ($count >= self::maxActive()) {
             throw ValidationException::withMessages([
-                'data.is_active' => 'وصلت لأقصى عدد أدراج مفعلة ('.self::maxActive().'). كلم الدعم الفني لزيادته.',
+                'data.is_active' => 'وصلت إلى الحد الأقصى للأدراج المفعلة ('.self::maxActive().'). تواصل مع الدعم الفني لزيادته.',
             ]);
         }
     }
@@ -98,28 +98,28 @@ class TerminalResource extends Resource
                     ->required()
                     ->maxLength(100)
                     ->unique(ignoreRecord: true),
-                Section::make('طباعة الفاتورة ودرج الفلوس')
+                Section::make('طباعة الفاتورة ودرج النقود')
                     ->columnSpanFull()
                     ->schema([
                         ToggleButtons::make('print_via')
                             ->label('الطباعة عن طريق')
                             ->options([
-                                Terminal::PRINT_VIA_SERVER => 'السيرفر (IP أو طابعة مشاركة)',
+                                Terminal::PRINT_VIA_SERVER => 'الخادم (IP أو طابعة مشتركة)',
                                 Terminal::PRINT_VIA_AGENT => 'برنامج Turbo Label على جهاز الدرج',
                             ])
-                            ->helperText('لو السيستم على سيرفر بعيد عن المحل (VPS)، اختار برنامج Turbo Label عشان يطبع على الطابعة المتوصلة بجهاز الكاشير.')
+                            ->helperText('إذا كان النظام على خادم بعيد عن المتجر (VPS)، فاختر برنامج Turbo Label ليطبع على الطابعة المتصلة بجهاز الكاشير.')
                             ->default(Terminal::PRINT_VIA_SERVER)
                             ->inline()
                             ->live()
                             ->required(),
                         TextInput::make('receipt_printer')
                             ->label('طابعة الفاتورة')
-                            ->helperText('عنوان IP أو اسم الطابعة المتوصل بيها درج الفلوس. لو فاضية بيستخدم طابعة الكاشير اللي في الإعدادات.')
+                            ->helperText('عنوان IP أو اسم الطابعة المتصل بها درج النقود. إذا تُركت فارغة تُستخدم طابعة الكاشير المحددة في الإعدادات.')
                             ->visible(fn (Get $get): bool => $get('print_via') !== Terminal::PRINT_VIA_AGENT)
                             ->maxLength(255),
                         Select::make('agent_printer')
                             ->label('طابعة الفاتورة على جهاز الدرج')
-                            ->helperText('من الطابعات اللي البرنامج لقاها على الجهاز. لو فاضية بيستخدم الطابعة المختارة في البرنامج نفسه.')
+                            ->helperText('من الطابعات التي عثر عليها البرنامج في الجهاز. إذا تُركت فارغة تُستخدم الطابعة المختارة في البرنامج نفسه.')
                             ->options(fn (?Terminal $record): array => collect($record?->agentPrinters() ?? [])
                                 ->when(filled($record?->agent_printer), fn ($c) => $c->push($record->agent_printer))
                                 ->unique()
@@ -140,7 +140,7 @@ class TerminalResource extends Resource
                     ->required(),
                 Toggle::make('is_active')
                     ->label('مفعل')
-                    ->helperText('الدرج الموقوف مايقدرش يتفتح، ويفضل في التقارير القديمة.')
+                    ->helperText('لا يمكن فتح الدرج الموقوف، ويبقى ظاهراً في التقارير السابقة.')
                     ->default(true),
             ]);
     }
@@ -165,25 +165,25 @@ class TerminalResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 Action::make('pairAgent')
-                    ->label(fn (Terminal $record): string => $record->agentPaired() ? 'كود ربط جديد للبرنامج' : 'ربط برنامج الطباعة')
+                    ->label(fn (Terminal $record): string => $record->agentPaired() ? 'رمز ربط جديد للبرنامج' : 'ربط برنامج الطباعة')
                     ->icon('heroicon-o-qr-code')
                     ->color('gray')
                     ->visible(fn (Terminal $record): bool => $record->printsViaAgent() && (auth()->user()?->can('update', $record) ?? false))
                     ->requiresConfirmation()
                     ->modalHeading('ربط برنامج Turbo Label بالدرج')
                     ->modalDescription(fn (Terminal $record): string => $record->agentPaired()
-                        ? 'الكود الجديد هيلغي ربط البرنامج الحالي، ولازم تربطه تاني.'
-                        : 'افتح الصفحة دي من جهاز الدرج نفسه، وبعد ما يظهر الكود اضغط «ربط البرنامج» أو انسخ الكود في شاشة البرنامج.')
-                    ->modalSubmitActionLabel('اعمل كود الربط')
+                        ? 'سيُلغي الرمز الجديد ربط البرنامج الحالي، ويجب ربطه من جديد.'
+                        : 'افتح هذه الصفحة من جهاز الدرج نفسه، وبعد ظهور الرمز اضغط «ربط البرنامج» أو انسخ الرمز في نافذة البرنامج.')
+                    ->modalSubmitActionLabel('إنشاء رمز الربط')
                     ->action(function (Terminal $record): void {
                         $code = app(PrintAgentQueue::class)->pair($record);
 
                         Notification::make()
                             ->success()
                             ->persistent()
-                            ->title('كود ربط الدرج «'.$record->name.'»')
+                            ->title('رمز ربط الدرج «'.$record->name.'»')
                             ->body(new HtmlString(
-                                '<p>على جهاز الدرج، اضغط «ربط البرنامج»، أو افتح Turbo Label والصق الكود ده في «ربط بدرج»:</p>'
+                                '<p>على جهاز الدرج، اضغط «ربط البرنامج»، أو افتح Turbo Label والصق هذا الرمز في «ربط بدرج»:</p>'
                                 .'<code dir="ltr" style="display:block;user-select:all;word-break:break-all;font-size:11px;margin-top:6px">'
                                 .e($code).'</code>'
                             ))
@@ -203,7 +203,7 @@ class TerminalResource extends Resource
                     ->action(function (Terminal $record): void {
                         try {
                             app(PrintService::class)->testThroughAgent($record);
-                            Notification::make()->success()->title('البرنامج طبع صفحة التجربة')->send();
+                            Notification::make()->success()->title('طبع البرنامج صفحة التجربة')->send();
                         } catch (\Throwable $e) {
                             Notification::make()->danger()->title('فشلت التجربة')->body($e->getMessage())->send();
                         }
@@ -223,7 +223,7 @@ class TerminalResource extends Resource
                     ->icon('heroicon-o-link-slash')
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->modalDescription('الأجهزة المربوطة بالدرج ده هتطلب الربط تاني من أول مرة تفتح فيها نقطة البيع.')
+                    ->modalDescription('ستطلب الأجهزة المربوطة بهذا الدرج الربط من جديد عند أول فتح لنقطة البيع.')
                     ->visible(fn (Terminal $record): bool => $record->devices()->exists() && (auth()->user()?->can('update', $record) ?? false))
                     ->action(function (Terminal $record): void {
                         $record->devices()->delete();
@@ -235,7 +235,7 @@ class TerminalResource extends Resource
     public static function agentStatus(?Terminal $record): string
     {
         if ($record === null || ! $record->agentPaired()) {
-            return 'البرنامج مش مربوط. احفظ الدرج واضغط «ربط برنامج الطباعة» من قائمة الأدراج.';
+            return 'البرنامج غير مربوط. احفظ الدرج ثم اضغط «ربط برنامج الطباعة» من قائمة الأدراج.';
         }
 
         $info = $record->agent_info ?? [];
@@ -246,8 +246,8 @@ class TerminalResource extends Resource
         }
 
         return $record->agent_last_seen_at !== null
-            ? 'البرنامج مش متصل'.$machine.'، آخر اتصال '.$record->agent_last_seen_at->diffForHumans().'.'
-            : 'البرنامج مربوط لكن لسه ما اتصلش.';
+            ? 'البرنامج غير متصل'.$machine.'، آخر اتصال '.$record->agent_last_seen_at->diffForHumans().'.'
+            : 'البرنامج مربوط لكنه لم يتصل بعد.';
     }
 
     public static function getPages(): array

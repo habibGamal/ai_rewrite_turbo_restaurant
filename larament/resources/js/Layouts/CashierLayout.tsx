@@ -230,7 +230,7 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                 <Alert
                     type="warning"
                     banner
-                    message="برنامج الطباعة Turbo Label مقفول على الجهاز ده، والفواتير ودرج الفلوس مش هيشتغلوا من غيره."
+                    message="برنامج الطباعة Turbo Label مغلق على هذا الجهاز، ولن تعمل طباعة الفواتير وفتح درج النقود بدونه."
                     action={
                         <Button
                             size="small"

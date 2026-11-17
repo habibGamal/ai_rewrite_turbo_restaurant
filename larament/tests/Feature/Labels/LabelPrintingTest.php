@@ -223,7 +223,7 @@ it('explains in plain text when a label image cannot be drawn', function () {
     {
         public function png(LabelTemplate $template, string $html): string
         {
-            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على السيرفر');
+            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على الخادم');
         }
     });
     $jobs = app(LabelPrintJobs::class);
@@ -233,7 +233,7 @@ it('explains in plain text when a label image cannot be drawn', function () {
     get($page)
         ->assertStatus(500)
         ->assertHeader('Content-Type', 'text/plain; charset=utf-8')
-        ->assertSee('تعذر رسم الملصق على السيرفر: برنامج wkhtmltoimage غير موجود على السيرفر');
+        ->assertSee('تعذر رسم الملصق على الخادم: برنامج wkhtmltoimage غير موجود على الخادم');
 });
 
 it('looks for wkhtmltoimage in the configured path first', function () {
