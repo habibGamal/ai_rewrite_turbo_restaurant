@@ -77,7 +77,10 @@ class HandleInertiaRequests extends Middleware
      * The drawer of this device, for the cashier screen's bottom bar. Null
      * while multiple terminals are off, so nothing about drawers shows.
      *
-     * @return array{id: int, name: string, sessionId: int|null, cashier: string|null, openedAt: string|null}|null
+     * printAgent: receipts of this drawer go through the Turbo Label app on
+     * this PC, so the cashier screen keeps the app running.
+     *
+     * @return array{id: int, name: string, sessionId: int|null, cashier: string|null, openedAt: string|null, printAgent: bool}|null
      */
     private function terminalProps(FeatureService $features): ?array
     {
@@ -100,6 +103,7 @@ class HandleInertiaRequests extends Middleware
             'sessionId' => $session?->id,
             'cashier' => $session?->user?->name,
             'openedAt' => $session?->opened_at->toIso8601String(),
+            'printAgent' => $terminal->printsViaAgent(),
         ];
     }
 }

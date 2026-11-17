@@ -146,7 +146,15 @@ describe('with multiple drawers on', function () {
             ->get(route('orders.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('terminal.id', $this->front->id)
-                ->where('terminal.name', 'كاشير ١'));
+                ->where('terminal.name', 'كاشير ١')
+                ->where('terminal.printAgent', false));
+
+        // A drawer printing through Turbo Label tells the cashier screen to keep the app running.
+        $this->front->update(['print_via' => Terminal::PRINT_VIA_AGENT]);
+        app()->forgetScopedInstances();
+        $this->withCookie(TerminalDeviceService::COOKIE, $token)
+            ->get(route('orders.index'))
+            ->assertInertia(fn ($page) => $page->where('terminal.printAgent', true));
 
         $session = TerminalSession::query()->open()->sole();
         $resolver = app(TerminalSessionResolver::class);
