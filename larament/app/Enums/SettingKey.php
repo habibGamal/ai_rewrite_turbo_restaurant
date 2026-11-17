@@ -45,6 +45,10 @@ enum SettingKey: string
     case FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
     case FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
     case FEATURE_MULTI_TERMINAL_ENABLED = 'feature_multi_terminal_enabled';
+    case FEATURE_PURCHASE_BARCODES_ENABLED = 'feature_purchase_barcodes_enabled';
+    case PURCHASE_BARCODE_PREFIX = 'purchase_barcode_prefix';
+    case PURCHASE_BARCODE_DIGITS = 'purchase_barcode_digits';
+    case PURCHASE_BARCODE_NEXT_NUMBER = 'purchase_barcode_next_number';
     case MAX_TERMINALS = 'max_terminals';
     case BUSINESS_TYPE = 'business_type';
     case ENABLED_MODULES = 'enabled_modules';
@@ -92,6 +96,10 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'false',
             self::FEATURE_VARIANTS_ENABLED => 'false',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'false',
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => 'false',
+            self::PURCHASE_BARCODE_PREFIX => '',
+            self::PURCHASE_BARCODE_DIGITS => '4',
+            self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
             self::MAX_TERMINALS => '2',
             self::BUSINESS_TYPE => BusinessType::RESTAURANT->value,
             self::ENABLED_MODULES => self::enabledModulesDefault(),
@@ -143,6 +151,10 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => self::storedBooleanRules(),
             self::FEATURE_VARIANTS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_MULTI_TERMINAL_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => self::storedBooleanRules(),
+            self::PURCHASE_BARCODE_PREFIX => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]*$/'],
+            self::PURCHASE_BARCODE_DIGITS => ['required', 'integer', 'min:1', 'max:12'],
+            self::PURCHASE_BARCODE_NEXT_NUMBER => ['required', 'integer', 'min:0', 'max:999999999999'],
             self::MAX_TERMINALS => ['required', 'integer', 'min:1', 'max:50'],
             self::BUSINESS_TYPE => ['required', Rule::enum(BusinessType::class)],
             self::ENABLED_MODULES => ['nullable', 'json'],
@@ -193,6 +205,10 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل المعدات وتأجيرها على الطلبات',
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل المقاسات والألوان (متغيرات المنتجات)',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل أكثر من درج (كاشير) في الوردية',
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => 'تفعيل توليد الباركود من فاتورة الشراء',
+            self::PURCHASE_BARCODE_PREFIX => 'بادئة الباركود المولد',
+            self::PURCHASE_BARCODE_DIGITS => 'عدد أرقام المسلسل',
+            self::PURCHASE_BARCODE_NEXT_NUMBER => 'الرقم التالي في المسلسل',
             self::MAX_TERMINALS => 'أقصى عدد للأدراج',
             self::BUSINESS_TYPE => 'نوع النشاط',
             self::ENABLED_MODULES => 'الوحدات المفعلة',
@@ -243,6 +259,10 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'متابعة المعدات والأدوات وتأجيرها على الطلبات وإرجاعها أو تسجيل التالف منها.',
             self::FEATURE_VARIANTS_ENABLED => 'تجميع المنتجات في موديلات لها خيارات (مقاس، لون، ...) لكل تركيبة منها مخزون وباركود وسعر.',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'كل جهاز كاشير له درج بفلوس فتح خاصة وطابعة خاصة داخل نفس الوردية، والتقارير تقدر تفلتر بالدرج.',
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => 'زر في فاتورة الشراء يعطي الأصناف التي ليس لها باركود باركوداً مسلسلاً (مثال: 0001، 0002، ...). البداية والبادئة وعدد الأرقام من شاشة الإعدادات.',
+            self::PURCHASE_BARCODE_PREFIX => 'حروف أو أرقام اختيارية قبل المسلسل (مثال: CL يعطي CL0001). اتركها فارغة لباركود أرقام فقط.',
+            self::PURCHASE_BARCODE_DIGITS => 'يُكمل المسلسل بأصفار على اليسار لهذا العدد (4 تعني 0001).',
+            self::PURCHASE_BARCODE_NEXT_NUMBER => 'رقم أول باركود سيتم توليده. يزيد تلقائياً بعد كل توليد، والأرقام المستخدمة بالفعل يتم تخطيها.',
             self::MAX_TERMINALS => 'عدد الأدراج المفعلة اللي يقدر المدير يضيفها في شاشة «الأدراج».',
             self::BUSINESS_TYPE => 'يحدده الدعم الفني قبل أول طلب ولا يمكن تغييره بعد ذلك.',
             self::ENABLED_MODULES => 'الوحدات التي يفعلها الدعم الفني لهذه النسخة.',
@@ -293,6 +313,10 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED => 'تفعيل',
             self::FEATURE_VARIANTS_ENABLED => 'تفعيل',
             self::FEATURE_MULTI_TERMINAL_ENABLED => 'تفعيل',
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => 'تفعيل',
+            self::PURCHASE_BARCODE_PREFIX => 'بدون بادئة',
+            self::PURCHASE_BARCODE_DIGITS => '4',
+            self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
             self::MAX_TERMINALS => '2',
             self::BUSINESS_TYPE => 'restaurant',
             self::ENABLED_MODULES => '[]',
@@ -332,7 +356,11 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
             self::FEATURE_VARIANTS_ENABLED,
-            self::FEATURE_MULTI_TERMINAL_ENABLED => self::isStoredBoolean($value),
+            self::FEATURE_MULTI_TERMINAL_ENABLED,
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => self::isStoredBoolean($value),
+            self::PURCHASE_BARCODE_PREFIX => $value === null || (is_string($value) && preg_match('/^[A-Za-z0-9]{0,10}$/', $value) === 1),
+            self::PURCHASE_BARCODE_DIGITS => self::isIntInRange($value, 1, 12),
+            self::PURCHASE_BARCODE_NEXT_NUMBER => self::isIntInRange($value, 0, 999_999_999_999),
             self::MAX_TERMINALS => self::isIntInRange($value, 1, 50),
             self::BUSINESS_TYPE => is_string($value) && BusinessType::tryFrom($value) !== null,
             self::ENABLED_MODULES => self::isModuleList($value),
@@ -361,6 +389,7 @@ enum SettingKey: string
             self::FEATURE_EQUIPMENT_ENABLED,
             self::FEATURE_VARIANTS_ENABLED,
             self::FEATURE_MULTI_TERMINAL_ENABLED,
+            self::FEATURE_PURCHASE_BARCODES_ENABLED,
             self::SETUP_COMPLETED => true,
             default => false,
         };
@@ -374,7 +403,8 @@ enum SettingKey: string
             self::FEATURE_OUTSOURCED_ORDERS_ENABLED,
             self::FEATURE_EQUIPMENT_ENABLED,
             self::FEATURE_VARIANTS_ENABLED,
-            self::FEATURE_MULTI_TERMINAL_ENABLED => true,
+            self::FEATURE_MULTI_TERMINAL_ENABLED,
+            self::FEATURE_PURCHASE_BARCODES_ENABLED => true,
             default => false,
         };
     }

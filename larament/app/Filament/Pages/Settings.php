@@ -199,6 +199,45 @@ class Settings extends Page implements HasForms
                                             ->rows(3)
                                             ->maxLength(500),
                                     ]),
+
+                                // Shown only while the vendor has switched purchase barcodes on.
+                                Section::make('باركود فواتير الشراء')
+                                    ->description('المسلسل الذي يستخدمه زر «توليد باركود للأصناف» في فاتورة الشراء.')
+                                    ->visible(fn (): bool => app(FeatureService::class)->purchaseBarcodesEnabled())
+                                    ->schema([
+                                        Grid::make(3)
+                                            ->schema([
+                                                TextInput::make(SettingKey::PURCHASE_BARCODE_PREFIX->value)
+                                                    ->label(SettingKey::PURCHASE_BARCODE_PREFIX->label())
+                                                    ->helperText(SettingKey::PURCHASE_BARCODE_PREFIX->helperText())
+                                                    ->placeholder(SettingKey::PURCHASE_BARCODE_PREFIX->placeholder())
+                                                    ->rules(SettingKey::PURCHASE_BARCODE_PREFIX->validationRules())
+                                                    ->maxLength(10)
+                                                    ->live(onBlur: true),
+
+                                                TextInput::make(SettingKey::PURCHASE_BARCODE_DIGITS->value)
+                                                    ->label(SettingKey::PURCHASE_BARCODE_DIGITS->label())
+                                                    ->helperText(SettingKey::PURCHASE_BARCODE_DIGITS->helperText())
+                                                    ->placeholder(SettingKey::PURCHASE_BARCODE_DIGITS->placeholder())
+                                                    ->numeric()
+                                                    ->integer()
+                                                    ->minValue(1)
+                                                    ->maxValue(12)
+                                                    ->required()
+                                                    ->live(onBlur: true),
+
+                                                TextInput::make(SettingKey::PURCHASE_BARCODE_NEXT_NUMBER->value)
+                                                    ->label(SettingKey::PURCHASE_BARCODE_NEXT_NUMBER->label())
+                                                    ->helperText(fn (Get $get): string => SettingKey::PURCHASE_BARCODE_NEXT_NUMBER->helperText()
+                                                        .' أول باركود: '.self::purchaseBarcodeExample($get))
+                                                    ->placeholder(SettingKey::PURCHASE_BARCODE_NEXT_NUMBER->placeholder())
+                                                    ->numeric()
+                                                    ->integer()
+                                                    ->minValue(0)
+                                                    ->required()
+                                                    ->live(onBlur: true),
+                                            ]),
+                                    ]),
                             ]),
 
                         Tabs\Tab::make(Wording::text('إعدادات المطعم'))
@@ -566,6 +605,18 @@ class Settings extends Page implements HasForms
                     ->columnSpanFull(),
             ])
             ->statePath('data');
+    }
+
+    /**
+     * The code the purchase barcode settings on screen would produce first.
+     */
+    private static function purchaseBarcodeExample(Get $get): string
+    {
+        $prefix = trim((string) $get(SettingKey::PURCHASE_BARCODE_PREFIX->value));
+        $digits = min(12, max(1, (int) $get(SettingKey::PURCHASE_BARCODE_DIGITS->value)));
+        $next = max(0, (int) $get(SettingKey::PURCHASE_BARCODE_NEXT_NUMBER->value));
+
+        return $prefix.str_pad((string) $next, $digits, '0', STR_PAD_LEFT);
     }
 
     private function tabErrorCount(Tabs\Tab $tab): ?int

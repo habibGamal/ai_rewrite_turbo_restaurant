@@ -40,6 +40,7 @@ it('defaults all four optional feature flags to false on a fresh install and rol
             // Added later (variants, 2026-11-17) with no settings row: falls back to its default.
             'feature_variants_enabled' => false,
             'feature_multi_terminal_enabled' => false,
+            'feature_purchase_barcodes_enabled' => false,
         ]);
 });
 
