@@ -12,8 +12,17 @@ namespace TurboLabel;
 /// </summary>
 public sealed class LabelPrinter : IDisposable
 {
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(60) };
+    private readonly HttpClient _http = NewClient();
     private readonly SemaphoreSlim _oneAtATime = new(1, 1);
+
+    private static HttpClient NewClient()
+    {
+        var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        // Some hosting firewalls refuse requests with no User-Agent.
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"TurboLabel/{AgentServer.Version}");
+
+        return http;
+    }
 
     public static IReadOnlyList<string> InstalledPrinters()
     {
@@ -148,6 +157,49 @@ public sealed class LabelPrinter : IDisposable
             }
 
             e.HasMorePages = pageIndex < images.Count;
+        };
+
+        document.Print();
+    }
+
+    /// <summary>
+    /// A test label drawn here (no POS needed): a frame, the app name and
+    /// the time, at the given label size.
+    /// </summary>
+    public static void PrintTestLabel(string printerName, double widthMm, double heightMm)
+    {
+        var width = (int)Math.Round(widthMm / 25.4 * 100);
+        var height = (int)Math.Round(heightMm / 25.4 * 100);
+
+        using var document = new PrintDocument();
+        document.DocumentName = "Turbo Label - test";
+        document.PrintController = new StandardPrintController();
+        document.PrinterSettings.PrinterName = printerName;
+        if (!document.PrinterSettings.IsValid)
+        {
+            throw new LabelPrintException($"الطابعة «{printerName}» مش موجودة على الجهاز ده.");
+        }
+
+        var paper = new PaperSize("Turbo Label", width, height);
+        document.DefaultPageSettings.PaperSize = paper;
+        document.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+        document.QueryPageSettings += (_, e) =>
+        {
+            e.PageSettings.PaperSize = paper;
+            e.PageSettings.Margins = new Margins(0, 0, 0, 0);
+        };
+        document.PrintPage += (_, e) =>
+        {
+            var graphics = e.Graphics!;
+            graphics.TranslateTransform(-e.PageSettings.HardMarginX, -e.PageSettings.HardMarginY);
+            using var pen = new Pen(Color.Black, 2);
+            graphics.DrawRectangle(pen, 4, 4, width - 8, height - 8);
+            using var big = new Font("Arial", 10, FontStyle.Bold);
+            using var small = new Font("Arial", 7);
+            var centre = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            graphics.DrawString("Turbo Label", big, Brushes.Black, new RectangleF(0, 0, width, height * 0.55f), centre);
+            graphics.DrawString($"{widthMm}×{heightMm} mm  {DateTime.Now:HH:mm:ss}", small, Brushes.Black, new RectangleF(0, height * 0.45f, width, height * 0.5f), centre);
+            e.HasMorePages = false;
         };
 
         document.Print();
