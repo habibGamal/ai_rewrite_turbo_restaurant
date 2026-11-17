@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\TestEvent;
 use App\Http\Controllers\BadgePrintController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
@@ -33,9 +32,12 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // A badge login is POS-only: it can't change the account's e-mail or delete it.
+    Route::middleware(RejectBadgeSessions::class)->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
 
     // Shift Management Routes
     Route::prefix('shifts')->name('shifts.')->group(function () {
@@ -153,19 +155,4 @@ require __DIR__.'/auth.php';
 Route::middleware('signed:relative')->group(function () {
     Route::get('/labels/jobs/{job}', [LabelJobController::class, 'manifest'])->whereUuid('job')->name('labels.jobs.manifest');
     Route::get('/labels/jobs/{job}/pages/{page}', [LabelJobController::class, 'page'])->whereUuid('job')->whereNumber('page')->name('labels.jobs.page');
-});
-
-// Simple test event
-Route::get('/test-simple', function () {
-    Log::info('Dispatching simple test event');
-
-    $event = new TestEvent('This is a test message');
-    event($event);
-
-    Log::info('Simple test event dispatched');
-
-    return response()->json([
-        'message' => 'Simple test event dispatched',
-        'timestamp' => now()->format('H:i:s'),
-    ]);
 });

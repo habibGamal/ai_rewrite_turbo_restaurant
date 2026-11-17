@@ -151,3 +151,43 @@ it('hashes the badge PIN set from the user form', function () {
     expect($user->getAttributes()['badge_pin'])->not->toBe('1234')
         ->and(app(BadgeService::class)->checkPin($user, '1234'))->toBeTrue();
 });
+
+it('locks a manager badge after repeated wrong PINs, even if another badge logs in between', function () {
+    $admin = User::factory()->admin()->create(['badge_pin' => '4321']);
+    $code = app(BadgeService::class)->issue($admin);
+    $cashier = User::factory()->cashier()->create();
+    $cashierCode = app(BadgeService::class)->issue($cashier);
+
+    foreach (['0000', '0001', '0002'] as $pin) {
+        $this->post(route('badge.login.store'), ['badge' => $code, 'pin' => $pin])->assertSessionHasErrors('pin');
+    }
+
+    // A good scan of another badge must not reset the manager's PIN counter.
+    $this->post(route('badge.login.store'), ['badge' => $cashierCode])->assertRedirect(route('orders.index'));
+    auth()->guard('web')->logout();
+
+    foreach (['0003', '0004'] as $pin) {
+        $this->post(route('badge.login.store'), ['badge' => $code, 'pin' => $pin])->assertSessionHasErrors('pin');
+    }
+
+    // Locked now: even the right PIN is refused.
+    $this->post(route('badge.login.store'), ['badge' => $code, 'pin' => '4321'])->assertSessionHasErrors('pin');
+    $this->assertGuest();
+});
+
+it('keeps badge sessions away from the profile page', function () {
+    $admin = User::factory()->admin()->create(['badge_pin' => '4321', 'email' => 'boss@example.com']);
+    $code = app(BadgeService::class)->issue($admin);
+
+    $this->post(route('badge.login.store'), ['badge' => $code, 'pin' => '4321']);
+
+    $this->get('/profile')->assertRedirect(route('orders.index'));
+    $this->patch('/profile', ['name' => 'x', 'email' => 'attacker@example.com'])->assertRedirect(route('orders.index'));
+
+    expect($admin->fresh()->email)->toBe('boss@example.com');
+});
+
+it('has no public broadcast test routes', function () {
+    $this->get('/test-broadcast')->assertNotFound();
+    $this->get('/test-simple')->assertNotFound();
+});
