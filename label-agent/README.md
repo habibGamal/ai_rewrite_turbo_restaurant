@@ -2,7 +2,8 @@
 
 A small Windows tray app that prints barcode labels from the POS on any
 label printer installed on the PC (USB or network), through the printer's
-Windows driver. The POS draws every label as an image at the printer's
+Windows driver. It also prints a drawer's receipts and opens its cash
+drawer when the POS is hosted away from the shop (see «Receipts» below). The POS draws every label as an image at the printer's
 resolution; this app only prints what it is sent, so label designs are
 changed in the POS («تصميمات الملصقات»), never here.
 
@@ -28,6 +29,44 @@ The server listens on 127.0.0.1 only, so nothing else on the network can
 reach it. The manifest and its images must come from the same address as
 the page that asked.
 
+## Receipts and the cash drawer (multi-terminal, hosted POS)
+
+A POS on a VPS can't reach a USB or LAN receipt printer at the counter.
+A drawer («الأدراج» in the POS) set to print «عن طريق برنامج Turbo Label»
+queues its ESC/POS bytes on the server instead (receipt, drawer kick, test
+page). The app on that drawer's PC is paired with the drawer and asks the
+POS for them every 1.5 s, sends them to the printer as RAW, and reports
+back; the cashier sees the printer's error, or that the app isn't
+connected.
+
+| POS endpoint (Bearer = the drawer's token) | |
+| --- | --- |
+| `POST /api/print-agent/hello` | `{version, machine, printers}`, every minute |
+| `GET /api/print-agent/jobs` | waiting jobs `[{id, kind, label, printer, data(base64)}]` |
+| `POST /api/print-agent/jobs/{id}` | `{ok, error?}` |
+
+Pairing: in the POS, «الأدراج» → «ربط برنامج الطباعة» shows a code
+(`TL1.` + base64url `{s: server, t: token, n: drawer}`) and a «ربط البرنامج»
+button that opens `turbo-label://pair?code=...`. Opened on the drawer's PC,
+the app asks once and pairs. The code can also be pasted in the window
+(«ربط بدرج...»). A new code or «إلغاء ربط البرنامج» in the POS stops the
+old one.
+
+The receipt printer is the one chosen for the drawer in the POS, else the
+app's «طابعة الفواتير». It must take ESC/POS (thermal receipt printers);
+the "Generic / Text Only" driver always works for RAW printing.
+
+## The window
+
+Double-click the tray icon (or open the exe again) for:
+
+- «الأدراج والفواتير»: paired drawers with their status, pair / unpair.
+- «الطابعات»: label printer and receipt printer, test label (any size),
+  test receipt, open the cash drawer.
+- «المواقع المسموحة»: POS sites allowed to print labels; remove them.
+- «السجل»: the last 300 prints and failures.
+- «الإعدادات»: start with Windows, port, settings folder.
+
 ## Setup on a PC
 
 1. Install the label printer's Windows driver and set its paper size to
@@ -35,8 +74,8 @@ the page that asked.
    size on every job).
 2. Run `TurboLabel.exe` (no installer, no admin rights). It starts with
    Windows from then on (switch off from the tray menu).
-3. Right-click the icon next to the clock → «طابعة الملصقات» → pick the
-   printer.
+3. Double-click the icon next to the clock → «الطابعات» → pick the label
+   printer (and the receipt printer for a drawer PC).
 4. Print a label from the POS and press «نعم» when asked to allow it.
 
 ## Build

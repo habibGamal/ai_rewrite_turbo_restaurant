@@ -15,6 +15,10 @@ namespace TurboLabel;
 /// GET  /status    {ok, version, printer, allowed}
 /// GET  /printers  {printers: [...], default}
 /// POST /print     {manifest, printer?} -> {ok, labels} or {ok:false, error}
+/// POST /pair      {code}   from a second copy of the app (turbo-label://pair link)
+/// POST /show               from a second copy of the app: open the window
+/// /pair and /show only answer requests with no Origin, which browsers
+/// always send, so web pages can't use them.
 /// </summary>
 public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgentUi ui)
 {
@@ -78,23 +82,43 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
             {
                 var labels = await printer.PrintAsync(manifest, printerName);
                 ui.Notify("تمت الطباعة", $"اتبعت {labels} ملصق للطابعة {printerName}.", error: false);
+                ui.Record("ملصقات", $"{labels} ملصق → {printerName}", ok: true);
 
                 return Results.Json(new { ok = true, labels, printer = printerName });
             }
             catch (LabelPrintException e)
             {
+                ui.Record("ملصقات", e.Message, ok: false);
+
                 return Error(e.Message);
             }
             catch (HttpRequestException e)
             {
+                ui.Record("ملصقات", e.Message, ok: false);
+
                 return Error("تعذر تحميل الملصقات من السيستم: " + e.Message);
             }
             catch (Exception e)
             {
                 ui.Notify("فشلت الطباعة", e.Message, error: true);
+                ui.Record("ملصقات", e.Message, ok: false);
 
                 return Error("فشلت الطباعة: " + e.Message);
             }
+        });
+
+        app.MapPost("/pair", (PairRequest request) =>
+        {
+            ui.Pair(request.Code);
+
+            return Results.Json(new { ok = true });
+        });
+
+        app.MapPost("/show", () =>
+        {
+            ui.ShowWindow();
+
+            return Results.Json(new { ok = true });
         });
 
         _app = app;
@@ -120,15 +144,25 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
         var origin = Origin(context);
         if (!Uri.TryCreate(origin, UriKind.Absolute, out _))
         {
-            // /status may be opened by hand (http://127.0.0.1:47123/status) to check the app.
-            // Everything else comes from POS pages, which always send Origin.
-            if (HttpMethods.IsGet(context.Request.Method) && context.Request.Path == "/status")
+            // /status may be opened by hand (http://127.0.0.1:47123/status) to check the app;
+            // /pair and /show come from a second copy of the app. Everything else comes
+            // from POS pages, which always send Origin.
+            var path = context.Request.Path;
+            if ((HttpMethods.IsGet(context.Request.Method) && path == "/status")
+                || (HttpMethods.IsPost(context.Request.Method) && (path == "/pair" || path == "/show")))
             {
                 await next();
 
                 return;
             }
 
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+            return;
+        }
+
+        if (context.Request.Path == "/pair" || context.Request.Path == "/show")
+        {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
             return;
@@ -208,4 +242,14 @@ public interface IAgentUi
     Task<bool> AskToAllow(string origin);
 
     void Notify(string title, string message, bool error);
+
+    /// <summary>Add a line to the window's log.</summary>
+    void Record(string kind, string detail, bool ok);
+
+    /// <summary>A pairing code or turbo-label://pair link: ask, then pair this PC's drawer.</summary>
+    void Pair(string? code);
+
+    void ShowWindow();
 }
+
+public sealed record PairRequest(string? Code);
