@@ -240,6 +240,8 @@
             </tbody>
         </table>
 
+        @include('print.receipt-charges')
+
         <table>
             <tbody>
                 <tr>
@@ -258,6 +260,18 @@
                     <td>الضريبة</td>
                     <td class="number-cell">{{ number_format($order->tax, 2) }}</td>
                 </tr>
+                @if ((float) $order->equipment_total > 0)
+                    <tr>
+                        <td>المعدات</td>
+                        <td class="number-cell">{{ number_format($order->equipment_total, 2) }}</td>
+                    </tr>
+                @endif
+                @if ((float) $order->fees_total > 0)
+                    <tr>
+                        <td>رسوم إضافية</td>
+                        <td class="number-cell">{{ number_format($order->fees_total, 2) }}</td>
+                    </tr>
+                @endif
                 <tr>
                     <td>الاجمالي النهائي</td>
                     <td class="number-cell">{{ number_format($receiptView['restaurant_total'], 2) }}</td>
