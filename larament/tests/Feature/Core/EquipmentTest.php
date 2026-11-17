@@ -19,6 +19,7 @@ use App\Models\Shift;
 use App\Models\User;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderEquipmentService;
+use App\Services\Orders\OrderFeeService;
 use App\Services\Orders\OrderService;
 use App\Services\Reports\EquipmentReportService;
 use App\Sync\Builders\OrderBuilder;
@@ -282,4 +283,26 @@ it('lists allowed equipment in the order type panel only while the feature is on
 
     app(FeatureService::class)->disable(OptionalFeature::EQUIPMENT);
     get($url)->assertOk()->assertDontSee('المعدات التي يمكن للكاشير إضافتها');
+});
+
+it('shows equipment and custom fee lines on the printed receipt', function () {
+    app(FeatureService::class)->enable(OptionalFeature::CUSTOM_FEES);
+    $order = equipmentOrder();
+    equipmentService()->sync($order->id, [test()->shisha->id => 2]);
+    app(OrderFeeService::class)->add($order->id, [['name' => 'رسوم توصيل', 'amount' => 30]]);
+    $order = $order->fresh(['items', 'payments', 'user']);
+
+    expect($order->total)->toBe('230.00');
+
+    foreach (['print.receipt-template', 'print.receipt-footer'] as $view) {
+        $html = view($view, ['order' => $order])->render();
+
+        expect($html)->toContain('المعدات')
+            ->toContain('شيشة')
+            ->toContain('100.00')
+            ->toContain('رسوم إضافية')
+            ->toContain('رسوم توصيل')
+            ->toContain('30.00')
+            ->toContain('230.00');
+    }
 });

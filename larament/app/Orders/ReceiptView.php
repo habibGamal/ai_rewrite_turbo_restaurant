@@ -43,8 +43,14 @@ final class ReceiptView
             'total' => (float) $line->getAttribute('total'),
         ])->all();
 
+        $fees = $order->fees()->get()->map(fn ($fee) => [
+            'name' => $fee->getAttribute('name'),
+            'amount' => (float) $fee->getAttribute('amount'),
+        ])->all();
+
         return [
             'equipment_lines' => $equipment,
+            'fee_lines' => $fees,
             'restaurant_total' => (float) $order->total,
             'restaurant_lines' => $restaurantLines,
             'external_orders' => $blocks,

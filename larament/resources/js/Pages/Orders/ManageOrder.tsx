@@ -63,11 +63,7 @@ import IfModule from "@/Components/IfModule";
 import { useModule } from "@/hooks/useModule";
 import { useTerms } from "@/lib/wording";
 import axios from "axios";
-import { useSymbologyScanner } from "@use-symbology-scanner/react";
-import {
-    STANDARD_SYMBOLOGY_KEYS,
-    StandardSymbologyKey,
-} from "@use-symbology-scanner/core/symbologies";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 
 export default function ManageOrder({
     order,
@@ -134,15 +130,9 @@ export default function ManageOrder({
             }
         }
     };
-    const symbologies = ["EAN 13"] as StandardSymbologyKey[];
-    useSymbologyScanner(barcodeScanner, {
-        // symbologies,
-        scannerOptions: {
-            prefix: "",
-            suffix: "",
-            maxDelay: 50,
-        },
-    });
+    // Only fast scanner bursts on the order screen itself; typing in fields
+    // or dialogs (fees, notes, discounts...) is never a scan.
+    useBarcodeScanner(barcodeScanner, { maxDelay: 50 });
 
     // Names of items already on the order still resolve after a type change hides their category.
     const products = productsForOrder(categories, order.type, true);
