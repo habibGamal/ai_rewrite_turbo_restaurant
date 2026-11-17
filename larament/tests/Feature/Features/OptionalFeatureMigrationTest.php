@@ -41,6 +41,7 @@ it('defaults all four optional feature flags to false on a fresh install and rol
             'feature_variants_enabled' => false,
             'feature_multi_terminal_enabled' => false,
             'feature_purchase_barcodes_enabled' => false,
+            'feature_label_printing_enabled' => false,
         ]);
 });
 
