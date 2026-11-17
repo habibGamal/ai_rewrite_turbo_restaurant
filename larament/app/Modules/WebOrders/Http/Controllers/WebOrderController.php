@@ -3,14 +3,13 @@
 namespace App\Modules\WebOrders\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-
 use App\Models\Category;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Region;
+use App\Modules\WebOrders\Services\WebApiService;
 use App\Services\Orders\OrderService;
 use App\Services\ShiftLoggingService;
-use App\Modules\WebOrders\Services\WebApiService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -243,6 +242,8 @@ class WebOrderController extends Controller
      */
     public function applyDiscount(Order $order, Request $request)
     {
+        abort_unless($request->user()?->canApplyDiscounts(), 403, 'غير مسموح لك بتطبيق خصم');
+
         $request->validate([
             'discount' => 'required|numeric|min:0',
             'discountType' => 'required|in:percent,value',

@@ -32,7 +32,7 @@ class InstantSaleController extends Controller
         abort_unless($user->can('order.complete'), 403, 'غير مسموح لك بإنهاء الطلبات');
 
         $discount = $request->input('discount');
-        if (is_array($discount) && (float) ($discount['value'] ?? 0) > 0) {
+        if ((is_array($discount) && (float) ($discount['value'] ?? 0) > 0) || InstantSaleRequest::hasLineDiscount((array) $request->input('items'))) {
             abort_unless($user->can('order.apply_discount'), 403, 'غير مسموح لك بتطبيق الخصم');
         }
 

@@ -90,6 +90,7 @@ class InstantReturnController extends Controller
         $exchange = null;
         if (! empty($validated['exchange']['items'])) {
             abort_unless($user->canSeeTab('type:'.$validated['exchange']['type']), 403);
+            abort_if(InstantSaleRequest::hasLineDiscount($validated['exchange']['items']) && ! $user->can('order.apply_discount'), 403, 'غير مسموح لك بتطبيق الخصم');
             $exchange = [
                 'client_uuid' => $validated['exchange']['client_uuid'],
                 'type' => $validated['exchange']['type'],
