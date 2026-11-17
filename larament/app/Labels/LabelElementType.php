@@ -20,7 +20,7 @@ enum LabelElementType: string
     public function label(): string
     {
         return match ($this) {
-            self::SHOP_NAME => 'اسم المحل',
+            self::SHOP_NAME => 'اسم المتجر',
             self::PRODUCT_NAME => 'اسم الصنف',
             self::VARIANT => 'المقاس / اللون',
             self::BARCODE => 'الباركود (الخطوط)',

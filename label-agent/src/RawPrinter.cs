@@ -59,14 +59,14 @@ public static class RawPrinter
         {
             if (!OpenPrinter(printerName, out var printer, IntPtr.Zero))
             {
-                throw new LabelPrintException($"الطابعة «{printerName}» مش موجودة على الجهاز ده ({LastError()}).");
+                throw new LabelPrintException($"الطابعة «{printerName}» غير موجودة على هذا الجهاز ({LastError()}).");
             }
 
             try
             {
                 if (StartDocPrinter(printer, 1, new DocInfo { DocName = documentName }) == 0)
                 {
-                    throw new LabelPrintException($"الطابعة «{printerName}» رفضت الطباعة المباشرة ({LastError()}). جرب درايفر الطابعة الأصلي أو «Generic / Text Only».");
+                    throw new LabelPrintException($"الطابعة «{printerName}» رفضت الطباعة المباشرة ({LastError()}). جرّب تعريف الطابعة الأصلي أو «Generic / Text Only».");
                 }
 
                 try
@@ -77,7 +77,7 @@ public static class RawPrinter
 
                     if (!ok || written != bytes.Length)
                     {
-                        throw new LabelPrintException($"مقدرتش أبعت الفاتورة كاملة للطابعة «{printerName}» ({LastError()}).");
+                        throw new LabelPrintException($"تعذر إرسال الفاتورة كاملة إلى الطابعة «{printerName}» ({LastError()}).");
                     }
                 }
                 finally

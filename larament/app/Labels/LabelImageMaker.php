@@ -21,7 +21,7 @@ class LabelImageMaker
 
         $binary = self::binary();
         if ($binary === null) {
-            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على السيرفر (المكان المتوقع: '.implode(' أو ', self::candidates()).'). هو نفس البرنامج اللي بيرسم الفواتير.');
+            throw new RuntimeException('برنامج wkhtmltoimage غير موجود على الخادم (المسار المتوقع: '.implode(' أو ', self::candidates()).'). وهو البرنامج نفسه الذي يرسم الفواتير.');
         }
 
         $htmlPath = tempnam(sys_get_temp_dir(), 'label_').'.html';

@@ -64,7 +64,7 @@ class LabelTemplateResource extends Resource
     {
         return $schema->components([
             Section::make('المقاس')
-                ->description('مقاس الملصق الواحد بالمللي كما هو مكتوب على رول الملصقات.')
+                ->description('مقاس الملصق الواحد بالمليمتر كما هو مدوّن على بكرة الملصقات.')
                 ->columns(3)
                 ->columnSpanFull()
                 ->schema([
@@ -108,7 +108,7 @@ class LabelTemplateResource extends Resource
                         ->live(onBlur: true),
                     Select::make('dpi')
                         ->label('دقة الطابعة')
-                        ->helperText('مكتوبة في مواصفات الطابعة. أغلب طابعات الملصقات 203.')
+                        ->helperText('مذكورة في مواصفات الطابعة، وأغلب طابعات الملصقات بدقة 203.')
                         ->options(LabelTemplate::DPI_OPTIONS)
                         ->default(203)
                         ->required()
@@ -123,7 +123,7 @@ class LabelTemplateResource extends Resource
                 ->columnSpanFull()
                 ->schema([
                     Section::make('العناصر')
-                        ->description('المكان بالمللي من الركن العلوي الشمال للملصق.')
+                        ->description('الموضع بالمليمتر من الركن العلوي الأيسر للملصق.')
                         ->columnSpan(3)
                         ->schema([
                             Repeater::make('elements')
@@ -138,7 +138,7 @@ class LabelTemplateResource extends Resource
                                 ->schema(self::elementSchema()),
                         ]),
                     Section::make('المعاينة')
-                        ->description('بالمقاس الحقيقي على دقة الطابعة، ببيانات صنف تجريبي.')
+                        ->description('بالمقاس الحقيقي وبدقة الطابعة، ببيانات صنف تجريبي.')
                         ->columnSpan(2)
                         ->schema([
                             View::make('filament.labels.template-preview')
@@ -176,7 +176,7 @@ class LabelTemplateResource extends Resource
                 ->columnSpan(2),
             Select::make('align')
                 ->label('المحاذاة')
-                ->options(['right' => 'يمين', 'center' => 'وسط', 'left' => 'شمال'])
+                ->options(['right' => 'يمين', 'center' => 'وسط', 'left' => 'يسار'])
                 ->default('center')
                 ->selectablePlaceholder(false)
                 ->live(),
@@ -190,8 +190,8 @@ class LabelTemplateResource extends Resource
                 ->default(7)
                 ->hidden($isBarcode)
                 ->live(onBlur: true),
-            $mm('x', 'من الشمال', 200),
-            $mm('y', 'من فوق', 200),
+            $mm('x', 'من اليسار', 200),
+            $mm('y', 'من الأعلى', 200),
             $mm('width', 'العرض', 200)->default(30),
             $mm('height', 'الارتفاع', 200)->default(4),
             Toggle::make('bold')
@@ -200,7 +200,7 @@ class LabelTemplateResource extends Resource
                 ->live(),
             TextInput::make('text')
                 ->label('النص')
-                ->helperText('ممكن تستخدم {name} {variant} {barcode} {price} {shop}')
+                ->helperText('يمكن استخدام {name} {variant} {barcode} {price} {shop}')
                 ->maxLength(200)
                 ->visible(fn (Get $get): bool => $get('type') === LabelElementType::TEXT->value)
                 ->live(onBlur: true)

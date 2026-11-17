@@ -94,7 +94,7 @@ it('tells the cashier when the app is not connected', function () {
     app(TerminalSessionResolver::class)->setTerminal($this->terminal->fresh());
 
     expect(fn () => app(PrintService::class)->openCashierDrawer())
-        ->toThrow(PrintAgentException::class, 'مش متصل');
+        ->toThrow(PrintAgentException::class, 'غير متصل');
 });
 
 it('reports the app failure to the cashier', function () {

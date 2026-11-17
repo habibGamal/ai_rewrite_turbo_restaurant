@@ -18,14 +18,14 @@ public sealed class MainWindow : Form
     private readonly Action<string?> _pair;
 
     private readonly Label _serverLabel = new() { AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(4, 8, 4, 8) };
-    private readonly ListView _connections = NewList(("المحل", 140), ("الدرج", 120), ("السيستم", 220), ("الحالة", 300), ("آخر اتصال", 90));
+    private readonly ListView _connections = NewList(("المتجر", 140), ("الدرج", 120), ("النظام", 220), ("الحالة", 300), ("آخر اتصال", 90));
     private readonly ComboBox _labelPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly ComboBox _receiptPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly NumericUpDown _testWidth = new() { Minimum = 10, Maximum = 200, Value = 38, DecimalPlaces = 0, Width = 60 };
     private readonly NumericUpDown _testHeight = new() { Minimum = 10, Maximum = 300, Value = 25, DecimalPlaces = 0, Width = 60 };
     private readonly ListBox _sites = new() { Dock = DockStyle.Fill, IntegralHeight = false };
     private readonly ListView _activity = NewList(("الوقت", 140), ("النوع", 110), ("التفاصيل", 520), ("النتيجة", 80));
-    private readonly CheckBox _autoStart = new() { Text = "تشغيل مع الويندوز", AutoSize = true };
+    private readonly CheckBox _autoStart = new() { Text = "التشغيل مع بدء ويندوز", AutoSize = true };
     private readonly NumericUpDown _port = new() { Minimum = 1024, Maximum = 65535, Width = 90 };
     private readonly System.Windows.Forms.Timer _refresh = new() { Interval = 1000 };
     private bool _loading;
@@ -111,7 +111,7 @@ public sealed class MainWindow : Form
             Dock = DockStyle.Top,
             AutoSize = false,
             Height = 44,
-            Text = "عشان الجهاز ده يطبع فواتير الدرج ويفتح درج الفلوس: من السيستم افتح «الأدراج»، خلي الطباعة «برنامج Turbo Label»، واضغط «ربط برنامج الطباعة» من الجهاز ده، أو الصق الكود هنا.",
+            Text = "ليطبع هذا الجهاز فواتير الدرج ويفتح درج النقود: افتح «الأدراج» في النظام، واجعل الطباعة عن طريق «برنامج Turbo Label»، ثم اضغط «ربط برنامج الطباعة» من هذا الجهاز، أو الصق رمز الربط هنا.",
         };
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
@@ -140,17 +140,17 @@ public sealed class MainWindow : Form
             _testHeight,
             MakeButton("طباعة ملصق تجربة", (_, _) => TestLabel())));
 
-        layout.Controls.Add(Heading("طابعة الفواتير ودرج الفلوس"));
+        layout.Controls.Add(Heading("طابعة الفواتير ودرج النقود"));
         layout.Controls.Add(new Label
         {
             AutoSize = true,
             MaximumSize = new Size(760, 0),
-            Text = "بتستخدم لو الدرج في السيستم مش محدد له طابعة. لازم تكون طابعة فواتير حرارية (ESC/POS) ودرج الفلوس متوصل بيها.",
+            Text = "تُستخدم إذا لم تُحدَّد للدرج طابعة في النظام. يجب أن تكون طابعة فواتير حرارية (ESC/POS) ودرج النقود متصل بها.",
         });
         layout.Controls.Add(Row(_receiptPrinter));
         layout.Controls.Add(Row(
             MakeButton("طباعة فاتورة تجربة", (_, _) => TestReceipt()),
-            MakeButton("فتح درج الفلوس", (_, _) => KickDrawer())));
+            MakeButton("فتح درج النقود", (_, _) => KickDrawer())));
 
         layout.Controls.Add(Row(MakeButton("تحديث قائمة الطابعات", (_, _) =>
         {
@@ -181,7 +181,7 @@ public sealed class MainWindow : Form
     private TabPage SitesTab()
     {
         var page = new TabPage("المواقع المسموحة") { Padding = new Padding(8) };
-        var help = new Label { Dock = DockStyle.Top, Height = 30, Text = "مواقع السيستم اللي سمحت لها تطبع ملصقات على الجهاز ده." };
+        var help = new Label { Dock = DockStyle.Top, Height = 30, Text = "مواقع النظام المسموح لها بطباعة الملصقات على هذا الجهاز." };
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
         buttons.Controls.Add(MakeButton("إلغاء السماح للمحدد", (_, _) =>
         {
@@ -235,7 +235,7 @@ public sealed class MainWindow : Form
             MakeButton("حفظ", (_, _) =>
             {
                 _config.Update(c => c.Port = (int)_port.Value);
-                MessageBox.Show(this, "اقفل البرنامج وافتحه تاني عشان المنفذ الجديد يشتغل. السيستم بيكلم المنفذ 47123، فماتغيروش غير لو الدعم الفني طلب.", "Turbo Label",
+                MessageBox.Show(this, "أغلق البرنامج وافتحه من جديد ليعمل المنفذ الجديد. يتصل النظام بالمنفذ 47123، فلا تغيّره إلا بطلب من الدعم الفني.", "Turbo Label",
                     MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
             })));
         layout.Controls.Add(Row(MakeButton("فتح مجلد الإعدادات", (_, _) =>
@@ -321,7 +321,7 @@ public sealed class MainWindow : Form
 
         if (connections.Count == 0)
         {
-            _connections.Items.Add(new ListViewItem(new[] { "", "", "الجهاز ده مش مربوط بأي درج", "", "" }) { ForeColor = Color.Gray });
+            _connections.Items.Add(new ListViewItem(new[] { "", "", "هذا الجهاز غير مربوط بأي درج", "", "" }) { ForeColor = Color.Gray });
         }
 
         _connections.EndUpdate();
@@ -360,7 +360,7 @@ public sealed class MainWindow : Form
             MinimizeBox = false,
             Font = Font,
         };
-        var label = new Label { Dock = DockStyle.Top, Height = 40, Text = "الصق كود الربط اللي ظهر في السيستم بعد «ربط برنامج الطباعة»:" };
+        var label = new Label { Dock = DockStyle.Top, Height = 40, Text = "الصق رمز الربط الذي ظهر في النظام بعد «ربط برنامج الطباعة»:" };
         var input = new TextBox { Dock = DockStyle.Fill, Multiline = true, RightToLeft = RightToLeft.No };
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true };
         var ok = new Button { Text = "ربط", DialogResult = DialogResult.OK, AutoSize = true };
@@ -391,7 +391,7 @@ public sealed class MainWindow : Form
             return;
         }
 
-        if (Ask($"إلغاء ربط الجهاز ده بدرج السيستم:\n{server}\n\nالفواتير مش هتطبع هنا تاني لحد ما تربطه."))
+        if (Ask($"إلغاء ربط هذا الجهاز بدرج النظام:\n{server}\n\nلن تُطبع الفواتير هنا حتى تربطه من جديد."))
         {
             _config.RemoveConnection(server);
             RefreshStatus();
@@ -402,7 +402,7 @@ public sealed class MainWindow : Form
     {
         if (_labelPrinter.SelectedItem is not string printer)
         {
-            Say("اختار طابعة الملصقات الأول.", error: true);
+            Say("اختر طابعة الملصقات أولاً.", error: true);
 
             return;
         }
@@ -414,7 +414,7 @@ public sealed class MainWindow : Form
     {
         if (_receiptPrinter.SelectedItem is not string printer)
         {
-            Say("اختار طابعة الفواتير الأول.", error: true);
+            Say("اختر طابعة الفواتير أولاً.", error: true);
 
             return;
         }
@@ -426,7 +426,7 @@ public sealed class MainWindow : Form
     {
         if (_receiptPrinter.SelectedItem is not string printer)
         {
-            Say("اختار طابعة الفواتير الأول.", error: true);
+            Say("اختر طابعة الفواتير أولاً.", error: true);
 
             return;
         }

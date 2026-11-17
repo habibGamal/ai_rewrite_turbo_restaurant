@@ -35,7 +35,7 @@ final class LabelData
     public static function sample(): self
     {
         return new self(
-            shopName: self::shopName() ?: 'اسم المحل',
+            shopName: self::shopName() ?: 'اسم المتجر',
             productName: 'قميص كتان كلاسيك',
             variant: 'L / أزرق',
             barcode: '0001',

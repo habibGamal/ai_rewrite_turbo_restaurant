@@ -164,7 +164,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Enabled = answer.Enabled;
         state.Status = answer.Enabled
             ? "متصل وجاهز لطباعة الفواتير"
-            : "متصل، لكن الدرج مضبوط يطبع من السيرفر مش من البرنامج";
+            : "متصل، لكن الدرج مضبوط على الطباعة من الخادم لا من البرنامج";
     }
 
     private async Task Print(PosConnection connection, ConnectionState state, AgentJob job)
@@ -175,8 +175,8 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
 
         if (string.IsNullOrWhiteSpace(printerName))
         {
-            error = "مفيش طابعة فواتير متختارة في برنامج Turbo Label على جهاز الدرج.";
-            ui.Notify("اختار طابعة الفواتير", "افتح Turbo Label واختار طابعة الفواتير من «الطابعات».", error: true);
+            error = "لم تُختر طابعة فواتير في برنامج Turbo Label على جهاز الدرج.";
+            ui.Notify("اختر طابعة الفواتير", "افتح Turbo Label واختر طابعة الفواتير من «الطابعات».", error: true);
         }
         else
         {
@@ -225,7 +225,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         catch (Exception e) when (!_stop.IsCancellationRequested)
         {
             state.Online = false;
-            state.Status = "مش قادر يوصل للسيستم: " + e.Message;
+            state.Status = "تعذر الوصول إلى النظام: " + e.Message;
             state.RetryAt = DateTime.Now.AddSeconds(5);
 
             return null;
@@ -239,12 +239,12 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Online = false;
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            state.Status = "الربط اتلغى من السيستم. اعمل كود ربط جديد من «الأدراج».";
+            state.Status = "أُلغي الربط من النظام. أنشئ رمز ربط جديداً من «الأدراج».";
             state.RetryAt = DateTime.Now.AddSeconds(30);
         }
         else
         {
-            state.Status = $"السيستم رد بخطأ {(int)response.StatusCode}";
+            state.Status = $"ردّ النظام بالخطأ {(int)response.StatusCode}";
             state.RetryAt = DateTime.Now.AddSeconds(5);
         }
 

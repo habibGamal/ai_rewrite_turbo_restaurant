@@ -228,7 +228,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'order.remove_equipment' => 'حذف أو تقليل معدات من الطلب',
                 'terminal.open' => 'فتح واستلام الدرج',
                 'terminal.close' => 'قفل درجه',
-                'terminal.close_others' => 'قفل درج كاشير تاني نيابةً عنه',
+                'terminal.close_others' => 'إغلاق درج كاشير آخر نيابةً عنه',
                 'terminal.bind_device' => 'ربط الأجهزة بالأدراج',
             ],
             'شاشة المطبخ' => [

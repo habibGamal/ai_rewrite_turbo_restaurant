@@ -73,15 +73,15 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
             var printerName = string.IsNullOrWhiteSpace(request.Printer) ? config.Printer : request.Printer;
             if (string.IsNullOrWhiteSpace(printerName))
             {
-                ui.Notify("اختار طابعة الملصقات", "اضغط على أيقونة Turbo Label جنب الساعة واختار طابعة الملصقات.", error: true);
+                ui.Notify("اختر طابعة الملصقات", "افتح Turbo Label من الأيقونة المجاورة للساعة واختر طابعة الملصقات.", error: true);
 
-                return Error("لم يتم اختيار طابعة الملصقات في برنامج الطباعة. اختارها من أيقونة البرنامج جنب الساعة.");
+                return Error("لم تُختر طابعة الملصقات في برنامج الطباعة. اخترها من أيقونة البرنامج المجاورة للساعة.");
             }
 
             try
             {
                 var labels = await printer.PrintAsync(manifest, printerName);
-                ui.Notify("تمت الطباعة", $"اتبعت {labels} ملصق للطابعة {printerName}.", error: false);
+                ui.Notify("تمت الطباعة", $"أُرسل {labels} ملصق إلى الطابعة {printerName}.", error: false);
                 ui.Record("ملصقات", $"{labels} ملصق → {printerName}", ok: true);
 
                 return Results.Json(new { ok = true, labels, printer = printerName });
@@ -96,7 +96,7 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
             {
                 ui.Record("ملصقات", e.Message, ok: false);
 
-                return Error("تعذر تحميل الملصقات من السيستم: " + e.Message);
+                return Error("تعذر تحميل الملصقات من النظام: " + e.Message);
             }
             catch (Exception e)
             {
@@ -228,7 +228,7 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
 
     private static IResult Forbidden()
     {
-        return Results.Json(new { ok = false, error = "الموقع ده غير مسموح له بالطباعة على الجهاز ده." }, statusCode: StatusCodes.Status403Forbidden);
+        return Results.Json(new { ok = false, error = "هذا الموقع غير مسموح له بالطباعة على هذا الجهاز." }, statusCode: StatusCodes.Status403Forbidden);
     }
 
     private static IResult Error(string message)

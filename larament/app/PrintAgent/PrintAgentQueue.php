@@ -51,7 +51,7 @@ class PrintAgentQueue
             }
 
             if ($job->status === PrintAgentJob::FAILED) {
-                throw new PrintAgentException('برنامج Turbo Label مقدرش يطبع: '.$job->error);
+                throw new PrintAgentException('تعذرت الطباعة في برنامج Turbo Label: '.$job->error);
             }
 
             if (microtime(true) >= $deadline) {
@@ -65,7 +65,7 @@ class PrintAgentQueue
 
         if (! $this->online($terminal)) {
             throw new PrintAgentException(sprintf(
-                'برنامج Turbo Label على جهاز «%s» مش متصل. شغّله، ولو اشتغل خلال دقيقتين هيطبع.',
+                'برنامج Turbo Label على جهاز «%s» غير متصل. شغّله، وإذا عمل خلال دقيقتين فستُطبع.',
                 $terminal->name,
             ));
         }
@@ -91,7 +91,7 @@ class PrintAgentQueue
             ->where('created_at', '<', now()->subSeconds(self::EXPIRE_SECONDS))
             ->update([
                 'status' => PrintAgentJob::FAILED,
-                'error' => 'انتهت المهلة قبل ما البرنامج يستلمها',
+                'error' => 'انتهت المهلة قبل أن يستلمها البرنامج',
                 'finished_at' => now(),
             ]);
 

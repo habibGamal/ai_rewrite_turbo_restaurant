@@ -23,7 +23,7 @@
         <strong>{{ $total }} ملصق</strong>
         <span>{{ $template->name }} ({{ $template->sizeLabel() }})</span>
         <button type="button" onclick="window.print()">طباعة</button>
-        <span>في نافذة الطباعة: اختار طابعة الملصقات، والهوامش «بدون»، والحجم 100%.</span>
+        <span>في نافذة الطباعة: اختر طابعة الملصقات، واجعل الهوامش «بلا» والحجم 100%.</span>
     </div>
 
     @foreach ($pages as $page)
