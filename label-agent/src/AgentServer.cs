@@ -39,7 +39,7 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
             ok = true,
             version = Version,
             printer = config.Printer,
-            allowed = config.IsAllowed(Origin(context)),
+            allowed = Origin(context) != "" && config.IsAllowed(Origin(context)),
         }));
 
         app.MapGet("/printers", async (HttpContext context) =>
@@ -120,7 +120,15 @@ public sealed class AgentServer(AgentConfig config, LabelPrinter printer, IAgent
         var origin = Origin(context);
         if (!Uri.TryCreate(origin, UriKind.Absolute, out _))
         {
-            // Only web pages talk to this app, and they always send Origin.
+            // /status may be opened by hand (http://127.0.0.1:47123/status) to check the app.
+            // Everything else comes from POS pages, which always send Origin.
+            if (HttpMethods.IsGet(context.Request.Method) && context.Request.Path == "/status")
+            {
+                await next();
+
+                return;
+            }
+
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
             return;
