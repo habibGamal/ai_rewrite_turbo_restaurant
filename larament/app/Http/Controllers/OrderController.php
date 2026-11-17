@@ -103,8 +103,11 @@ class OrderController extends Controller
         $expenses = [];
         $expenseTypes = [];
         if ($user->canSeeTab('system:expenses')) {
+            $drawer = app(TerminalSessionResolver::class)->current();
             $expenses = Expense::with('expenceType')
                 ->where('shift_id', $currentShift->id)
+                // With several drawers each one lists its own expenses.
+                ->when($drawer !== null && app(FeatureService::class)->multiTerminalEnabled(), fn ($query) => $query->where('terminal_session_id', $drawer->getKey()))
                 ->orderBy('created_at', 'desc')
                 ->get();
 

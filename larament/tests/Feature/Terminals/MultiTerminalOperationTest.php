@@ -3,6 +3,9 @@
 use App\Enums\SettingKey;
 use App\Filament\Pages\VendorConsole;
 use App\Filament\Resources\Terminals\Pages\CreateTerminal;
+use App\Filament\Resources\Terminals\Pages\EditTerminal;
+use App\Models\ExpenceType;
+use App\Models\Expense;
 use App\Models\HeldSale;
 use App\Models\Order;
 use App\Models\Shift;
@@ -17,6 +20,7 @@ use App\Services\SettingsService;
 use App\Services\ShiftService;
 use App\Terminals\MultiTerminalDisableBlocker;
 use App\Terminals\TerminalDeviceService;
+use App\Terminals\TerminalSeparation;
 use App\Terminals\TerminalSessionResolver;
 use App\Terminals\TerminalSessionService;
 use Illuminate\Support\Facades\Cookie;
@@ -319,6 +323,51 @@ describe('with multiple drawers on', function () {
             ->assertHasFormErrors(['is_active']);
 
         expect(Terminal::query()->active()->count())->toBe(3);
+    });
+
+    it('blocks switching the feature off after drawers closed while the shift is still open', function () {
+        $shift = app(ShiftService::class)->startShift(0, $this->admin, $this->front);
+        $session = $shift->terminalSessions()->sole();
+        app(TerminalSessionService::class)->close($session, $this->admin, 'x');
+
+        expect(TerminalSession::query()->open()->count())->toBe(0)
+            ->and((new MultiTerminalDisableBlocker)())->not->toBeEmpty();
+    });
+
+    it('lets only the drawer that recorded an expense change it, while that drawer is open', function () {
+        $shift = app(ShiftService::class)->startShift(0, $this->admin, $this->front);
+        $front = $shift->terminalSessions()->sole();
+        $back = app(TerminalSessionService::class)->openDrawer($this->back, User::factory()->cashier()->create(), 0);
+        $type = ExpenceType::query()->create(['name' => 'نثريات']);
+        $expense = Expense::query()->create([
+            'shift_id' => $shift->id, 'expence_type_id' => $type->id, 'amount' => 20, 'notes' => 'شاي', 'terminal_session_id' => $back->id,
+        ]);
+
+        $token = bindDrawer($this->front, $this->admin);
+        app()->forgetScopedInstances();
+
+        $this->withCookie(TerminalDeviceService::COOKIE, $token)
+            ->put(route('expenses.update', $expense), ['amount' => 5, 'expenseTypeId' => $type->id, 'description' => 'x'])
+            ->assertSessionHasErrors('message');
+        $this->withCookie(TerminalDeviceService::COOKIE, $token)
+            ->delete(route('expenses.destroy', $expense))
+            ->assertSessionHasErrors('message');
+
+        expect((float) $expense->fresh()->amount)->toBe(20.0);
+    });
+
+    it('never deactivates the default sales point and never sends web orders to an inactive one', function () {
+        $default = Terminal::default();
+        $default->update(['is_active' => false]);
+
+        expect(app(TerminalSeparation::class)->webOrdersTerminal()->is_active)->toBeTrue();
+
+        $default->update(['is_active' => true]);
+        Livewire::test(EditTerminal::class, ['record' => $default->getKey()])
+            ->fillForm(['is_active' => false])
+            ->call('save');
+
+        expect($default->fresh()->is_active)->toBeTrue();
     });
 
     it('blocks switching the feature off while a drawer is open', function () {

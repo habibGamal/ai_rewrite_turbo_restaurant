@@ -129,9 +129,17 @@ class PrintService
      * on the drawer's computer when the drawer prints via it, else the
      * printer address. Agent bytes are sent by sendIfAgent() once complete.
      */
-    private function cashierConnector(string $kind): PrintConnector
+    /**
+     * The printer of the device that pressed print; from the admin panel (no
+     * device) the order's sales point; with a single sales point the default
+     * one. A sales point set to print through Turbo Label gets an agent job,
+     * anything else prints from the server.
+     */
+    private function cashierConnector(string $kind, ?Terminal $fallback = null): PrintConnector
     {
-        $terminal = app(TerminalSessionResolver::class)->terminal();
+        $terminal = app(TerminalSessionResolver::class)->terminal()
+            ?? $fallback
+            ?? (app(FeatureService::class)->multiTerminalEnabled() ? null : Terminal::default());
 
         if ($terminal !== null && $terminal->printsViaAgent()) {
             return new AgentPrintConnector($terminal, $kind);
@@ -455,7 +463,7 @@ class PrintService
     {
         try {
 
-            $connector = $this->cashierConnector('receipt');
+            $connector = $this->cashierConnector('receipt', $order->terminal_id !== null ? Terminal::query()->find($order->terminal_id) : null);
             $printer = new Printer($connector);
 
             Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
