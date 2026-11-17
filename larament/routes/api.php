@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\ManagementController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PrintAgentController;
 use App\Http\Middleware\VerifyApiKey;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,13 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// Turbo Label app on a drawer's computer (Bearer = the drawer's pairing token)
+Route::prefix('print-agent')->name('print-agent.')->middleware('throttle:900,1')->group(function () {
+    Route::post('/hello', [PrintAgentController::class, 'hello'])->name('hello');
+    Route::get('/jobs', [PrintAgentController::class, 'jobs'])->name('jobs');
+    Route::post('/jobs/{job}', [PrintAgentController::class, 'finish'])->whereNumber('job')->name('finish');
+});
 
 // Health check endpoints
 Route::get('/check', [ApiController::class, 'check']);
