@@ -1,5 +1,7 @@
 <?php
 
+use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderCompleted;
 use App\Enums\OrderStatus;
 use App\Events\Orders\OrderCancelledBroadcast;
 use App\Events\Orders\OrderCompletedBroadcast;
@@ -118,4 +120,19 @@ it('rolls a web order status change back when the website notification fails', f
     'reject' => ['rejectOrder', OrderStatus::PENDING],
     'out for delivery' => ['outForDelivery', OrderStatus::PROCESSING],
     'complete' => ['completeOrder', OrderStatus::OUT_FOR_DELIVERY],
+]);
+
+it('tells the website without firing the cancel or complete event twice', function (string $method, OrderStatus $already, string $event) {
+    Http::fake();
+    Event::fake([$event]);
+    $order = Order::factory()->create(['status' => $already, 'type' => 'web_delivery']);
+
+    app(WebApiService::class)->{$method}($order->id);
+
+    Event::assertNotDispatched($event);
+    Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/api/order-status')
+        && $request['status'] === $already->value);
+})->with([
+    'reject after POS cancel' => ['rejectOrder', OrderStatus::CANCELLED, OrderCancelled::class],
+    'complete after POS complete' => ['completeOrder', OrderStatus::COMPLETED, OrderCompleted::class],
 ]);

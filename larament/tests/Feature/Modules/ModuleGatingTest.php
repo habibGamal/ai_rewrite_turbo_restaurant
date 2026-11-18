@@ -1,7 +1,12 @@
 <?php
 
+use App\Enums\OptionalFeature;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Filament\Resources\OrderTypeRows\OrderTypeRowResource;
 use App\Filament\Resources\Roles\RoleResource;
+use App\Models\Order;
+use App\Models\Shift;
 use App\Models\User;
 use App\Modules\BusinessType;
 use App\Modules\Delivery\Filament\Resources\Drivers\DriverResource;
@@ -16,6 +21,7 @@ use App\Orders\TabPermissions;
 use App\Services\FeatureService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
@@ -120,4 +126,26 @@ it('renames restaurant settings for a shop and hides the KDS tab', function () {
     get('/admin/settings')->assertOk()
         ->assertSee('إعدادات المتجر')
         ->assertDontSee('شاشة المطبخ (KDS)');
+});
+
+it('refuses to switch a module off while an order of its types is open', function () {
+    $shift = Shift::factory()->active()->create(['user_id' => $this->admin->id]);
+    Order::factory()->create(['type' => 'delivery', 'status' => OrderStatus::PROCESSING, 'shift_id' => $shift->id]);
+
+    expect(fn () => gatingFeatures()->disableModule(Module::DELIVERY))
+        ->toThrow(ValidationException::class);
+
+    expect(gatingFeatures()->moduleEnabled(Module::DELIVERY))->toBeTrue();
+});
+
+it('refuses to switch deferred payment off while customers still owe money', function () {
+    $features = app(FeatureService::class);
+    $features->enable(OptionalFeature::DEFERRED_PAYMENT);
+    Order::factory()->create([
+        'status' => OrderStatus::COMPLETED,
+        'payment_status' => PaymentStatus::PARTIAL_PAID,
+    ]);
+
+    expect(fn () => $features->disable(OptionalFeature::DEFERRED_PAYMENT))
+        ->toThrow(ValidationException::class);
 });

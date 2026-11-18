@@ -25,6 +25,7 @@ class InstantSaleRequest extends FormRequest
             'discount.type' => ['required_with:discount', 'in:percent,value'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'held_sale_id' => ['nullable', 'integer'],
+            'order_notes' => ['nullable', 'string', 'max:1000'],
             ...self::tenderRules(),
             'print' => ['boolean'],
         ];
@@ -84,5 +85,21 @@ class InstantSaleRequest extends FormRequest
         }
 
         return $kept;
+    }
+
+    /**
+     * Whether any line carries its own discount (amount or percent).
+     *
+     * @param  array<int, mixed>  $items
+     */
+    public static function hasLineDiscount(array $items): bool
+    {
+        foreach ($items as $item) {
+            if (is_array($item) && ((float) ($item['item_discount'] ?? 0) > 0 || (float) ($item['item_discount_percent'] ?? 0) > 0)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

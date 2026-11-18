@@ -190,6 +190,11 @@ describe('Order Management Integration', function () {
         });
 
         it('applies different discount types', function () {
+            // A discount is capped at the items, so the order needs some.
+            $this->orderService->updateOrderItems($this->order->id, [
+                ['product_id' => $this->product->id, 'quantity' => 2, 'price' => $this->product->price],
+            ]);
+
             // Percentage discount
             $order = $this->orderService->applyDiscount($this->order->id, 15.0, 'percentage');
             $percentageDiscount = $order->discount;

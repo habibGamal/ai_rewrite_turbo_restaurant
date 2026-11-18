@@ -150,7 +150,10 @@ class TerminalResource extends Resource
                     ->required(),
                 Toggle::make('is_active')
                     ->label('مفعل')
-                    ->helperText('لا يمكن فتح منفذ البيع الموقوف، ويبقى ظاهراً في التقارير السابقة.')
+                    ->helperText(fn (?Terminal $record): string => $record?->is_default
+                        ? 'منفذ البيع الافتراضي لا يُوقف: تُسجَّل عليه طلبات الموقع والحركات من خارج نقطة البيع.'
+                        : 'لا يمكن فتح منفذ البيع الموقوف، ويبقى ظاهراً في التقارير السابقة.')
+                    ->disabled(fn (?Terminal $record): bool => (bool) $record?->is_default)
                     ->default(true),
             ]);
     }

@@ -67,7 +67,8 @@ class ProductBarcodeService
 
         if ($existing !== null) {
             // The new primary was one of this product's extra barcodes: promote it.
-            $existing->update(['is_primary' => true]);
+            // A primary barcode is always one unit, even if it was a pack code.
+            $existing->update(['is_primary' => true, 'pack_quantity' => 1]);
 
             return;
         }

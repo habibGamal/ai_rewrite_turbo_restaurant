@@ -20,6 +20,7 @@ import {
     CheckCircleOutlined,
     ClearOutlined,
     DesktopOutlined,
+    EditOutlined,
     FolderOpenOutlined,
     PauseCircleOutlined,
     PercentageOutlined,
@@ -48,6 +49,7 @@ import VariantPickerModal from "@/Components/Orders/VariantPickerModal";
 import OrderItem from "@/Components/Orders/OrderItem";
 import CustomerModal from "@/Components/Orders/CustomerModal";
 import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
+import OrderNotesModal from "@/Components/Orders/OrderNotesModal";
 import PaymentModal, { PaymentTenders } from "@/Components/Orders/PaymentModal";
 import HeldSalesModal, { HeldSale } from "@/Components/Orders/Instant/HeldSalesModal";
 import ReturnsModal, { ReturnResult } from "@/Components/Orders/Instant/ReturnsModal";
@@ -153,6 +155,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     const [items, dispatch] = useReducer(orderItemsReducer, initialCart.items);
     const [discount, setDiscount] = useState<InstantCartDiscount | null>(initialCart.discount);
     const [customer, setCustomer] = useState<InstantCartCustomer | null>(initialCart.customer);
+    const [notes, setNotes] = useState<string>(initialCart.notes);
     const [clientUuid, setClientUuid] = useState<string>(initialCart.clientUuid);
     const [heldSaleId, setHeldSaleId] = useState<number | null>(initialCart.heldSaleId);
     const [selectedId, setSelectedId] = useState<number | null>(
@@ -160,8 +163,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     );
 
     useEffect(() => {
-        saveCart(storageKey, { items, discount, customer, clientUuid, heldSaleId });
-    }, [storageKey, items, discount, customer, clientUuid, heldSaleId]);
+        saveCart(storageKey, { items, discount, customer, notes, clientUuid, heldSaleId });
+    }, [storageKey, items, discount, customer, notes, clientUuid, heldSaleId]);
 
     // ---- Server-fed state, refreshed by Index's partial reloads ----
     const [lastSale, setLastSale] = useState<InstantLastSale | null>(instant.lastSale ?? null);
@@ -177,6 +180,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
 
     // ---- Modals ----
     const [customerOpen, setCustomerOpen] = useState(false);
+    const [notesOpen, setNotesOpen] = useState(false);
     const [discountOpen, setDiscountOpen] = useState(false);
     const [heldOpen, setHeldOpen] = useState(false);
     const [returnsOpen, setReturnsOpen] = useState(false);
@@ -255,10 +259,9 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     const [swapLine, setSwapLine] = useState<OrderItemData | null>(null);
     const swapVariant = (sku: VariantSku) => {
         if (!swapLine) return;
-        const quantity = Number(swapLine.quantity) || 1;
         if (sku.id !== swapLine.product_id) {
-            dispatch({ type: "delete", id: swapLine.product_id, user });
-            addProductToCart(sku, quantity);
+            dispatch({ type: "swap", id: swapLine.product_id, product: sku, user });
+            setSelectedId(sku.id);
         }
         setSwapLine(null);
         focusScan();
@@ -281,6 +284,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         dispatch({ type: "init", orderItems: [], user });
         setDiscount(null);
         setCustomer(null);
+        setNotes("");
         setHeldSaleId(null);
         setClientUuid(newClientUuid());
         setSelectedId(null);
@@ -313,7 +317,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 label: customer?.name || undefined,
                 type: typeCode,
                 items: itemsForApi(items),
-                meta: { discount, customer },
+                meta: { discount, customer, notes: notes || null },
             });
             let count = heldCount + 1;
             if (heldSaleId) {
@@ -369,6 +373,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
         dispatch({ type: "init", orderItems: lines, user });
         setDiscount(held.meta?.discount ?? null);
         setCustomer(held.meta?.customer ?? null);
+        setNotes(held.meta?.notes ?? "");
         setHeldSaleId(held.id);
         setClientUuid(newClientUuid());
         setSelectedId(lines.length ? lines[lines.length - 1].product_id : null);
@@ -445,6 +450,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
             items: itemsForApi(items),
             discount: discount ?? undefined,
             customer_id: customer?.id ?? null,
+            order_notes: notes || null,
             tenders,
             print,
             held_sale_id: heldSaleId,
@@ -524,6 +530,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 return openDiscount();
             case "customer":
                 return setCustomerOpen(true);
+            case "notes":
+                return setNotesOpen(true);
             case "hold":
                 return void holdSale();
             case "heldList":
@@ -721,6 +729,21 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                             العميل: {customer.name} {customer.phone}
                         </Tag>
                     )}
+                    {notes && (
+                        <Tag
+                            color="gold"
+                            closable
+                            className="max-w-[320px] truncate"
+                            title={notes}
+                            onClose={(e) => {
+                                e.preventDefault();
+                                setNotes("");
+                                focusScan();
+                            }}
+                        >
+                            ملاحظات: {notes}
+                        </Tag>
+                    )}
                     {heldSaleId && <Tag color="orange">فاتورة معلقة مستكملة</Tag>}
                     <Button type="link" icon={<DesktopOutlined />} onClick={openCustomerDisplay}>
                         شاشة العميل
@@ -737,15 +760,13 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                         <Button size="large" icon={<PauseCircleOutlined />} disabled={items.length === 0} onClick={holdSale}>
                             {buttonLabel("تعليق البيع", "hold")}
                         </Button>
-                        <Button
-                            size="large"
-                            className="col-span-2"
-                            icon={<UserAddOutlined />}
-                            onClick={() => setCustomerOpen(true)}
-                        >
+                        <Button size="large" icon={<UserAddOutlined />} onClick={() => setCustomerOpen(true)}>
                             {buttonLabel("بيانات العميل", "customer")}
                         </Button>
-                        {/* Slot 4: salesperson (future). Hidden for now; customer spans both columns meanwhile. */}
+                        <Button size="large" icon={<EditOutlined />} onClick={() => setNotesOpen(true)}>
+                            {buttonLabel("ملاحظات الطلب", "notes")}
+                        </Button>
+                        {/* Salesperson slot (future) will sit beside the customer and notes buttons. */}
                         <Button
                             size="large"
                             className={canReturn ? "" : "col-span-2"}
@@ -876,6 +897,15 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                 }}
                 cartCustomer={customer}
                 onSelectCustomer={setCustomer}
+            />
+            <OrderNotesModal
+                open={notesOpen}
+                onCancel={() => {
+                    setNotesOpen(false);
+                    focusScan();
+                }}
+                cartNotes={notes}
+                onApply={setNotes}
             />
             <OrderDiscountModal
                 open={discountOpen}

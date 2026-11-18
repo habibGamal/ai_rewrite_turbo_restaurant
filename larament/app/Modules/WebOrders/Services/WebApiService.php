@@ -19,6 +19,7 @@ use App\Modules\WebOrders\DTOs\PlacedWebOrder;
 use App\Modules\WebOrders\Events\WebOrderReceived;
 use App\Modules\WebOrders\Exceptions\WebOrderConflictException;
 use App\Orders\OrderTypeCatalog;
+use App\Services\Orders\OrderCalculationService;
 use App\Services\Orders\OrderCategoryBlockService;
 use App\Services\SettingsService;
 use App\Sync\DocumentType;
@@ -452,6 +453,12 @@ class WebApiService
     public function rejectOrder(int $orderId): void
     {
         $this->changeStatusLocked($orderId, function (Order $order): void {
+            // The POS side (OrderService::cancelOrder) usually cancelled it
+            // already and fired the event: then only the website is told.
+            if ($order->status === OrderStatus::CANCELLED) {
+                return;
+            }
+
             $order->status = OrderStatus::CANCELLED;
             $order->save();
 
@@ -480,6 +487,11 @@ class WebApiService
     public function completeOrder(int $orderId): Order
     {
         return $this->changeStatusLocked($orderId, function (Order $order): void {
+            // Completed by OrderService already (event fired there): only tell the website.
+            if ($order->status === OrderStatus::COMPLETED) {
+                return;
+            }
+
             $order->status = OrderStatus::COMPLETED;
             $order->save();
 
@@ -509,18 +521,21 @@ class WebApiService
     }
 
     /**
-     * Apply discount to order
+     * Apply a discount to an open web order. Totals go through the same
+     * calculator as POS orders (fees, equipment, rounding, profit, capped at
+     * the items' subtotal).
      */
-    public function applyDiscount(int $orderId, float $discount, string $discountType): void
+    public function applyDiscount(int $orderId, float $discount, string $discountType): Order
     {
-        $order = Order::findOrFail($orderId);
+        return DB::transaction(function () use ($orderId, $discount, $discountType): Order {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
 
-        $order->discount = $discountType === 'percent'
-            ? $order->sub_total * ($discount / 100)
-            : $discount;
+            if (in_array($order->status, [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true)) {
+                throw new Exception('لا يمكن تطبيق الخصم على طلب منتهٍ أو ملغى');
+            }
 
-        $order->total = $order->sub_total + $order->tax + $order->service - $order->discount;
-        $order->save();
+            return app(OrderCalculationService::class)->applyDiscount($order, $discount, $discountType);
+        });
     }
 
     /**

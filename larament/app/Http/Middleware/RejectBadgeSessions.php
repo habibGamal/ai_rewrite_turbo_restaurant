@@ -17,7 +17,7 @@ class RejectBadgeSessions
     {
         if ($request->hasSession() && $request->session()->get(BadgeService::SESSION_KEY) === true) {
             return redirect()->route('orders.index')
-                ->withErrors(['error' => 'الدخول بالبادج لنقطة البيع بس. للوحة التحكم اخرج وادخل بالإيميل وكلمة السر.']);
+                ->withErrors(['error' => 'الدخول بالبادج لنقطة البيع فقط. للوحة التحكم سجّل الخروج ثم ادخل بالبريد الإلكتروني وكلمة المرور.']);
         }
 
         return $next($request);

@@ -17,7 +17,10 @@ use App\Core\Listeners\BroadcastOrderCreated;
 use App\Core\Listeners\BroadcastOrderTypeChanged;
 use App\Core\Listeners\BroadcastPaymentProcessed;
 use App\Core\Orders\CustomFeesDisableBlocker;
+use App\Core\Orders\DeferredPaymentDisableBlocker;
+use App\Core\Orders\ModuleOpenOrdersBlocker;
 use App\Enums\OptionalFeature;
+use App\Modules\Module;
 use App\Services\FeatureService;
 use App\Terminals\MultiTerminalDisableBlocker;
 use Illuminate\Support\Facades\Event;
@@ -61,6 +64,18 @@ class CoreServiceProvider extends ServiceProvider
         // Custom fees cannot be switched off while an open order carries fee lines.
         $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
             $features->registerDisableBlocker(OptionalFeature::CUSTOM_FEES, new CustomFeesDisableBlocker);
+        });
+
+        // Deferred payment cannot be switched off while customers still owe money.
+        $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
+            $features->registerDisableBlocker(OptionalFeature::DEFERRED_PAYMENT, new DeferredPaymentDisableBlocker);
+        });
+
+        // A module cannot be switched off while an order of its types is open.
+        $this->callAfterResolving(FeatureService::class, function (FeatureService $features): void {
+            foreach ([Module::RESTAURANT, Module::DELIVERY, Module::WEB_ORDERS] as $module) {
+                $features->registerModuleDisableBlocker($module, new ModuleOpenOrdersBlocker($module));
+            }
         });
     }
 

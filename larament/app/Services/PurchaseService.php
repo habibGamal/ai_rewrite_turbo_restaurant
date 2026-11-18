@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\MovementReason;
 use App\Models\PurchaseInvoice;
 use App\Models\ReturnPurchaseInvoice;
+use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -68,6 +69,7 @@ class PurchaseService
 
             // Mark invoice as closed
             $locked->update([
+                'total' => PurchaseInvoiceCalculatorService::calculateInvoiceTotal($items),
                 'closed_at' => now(),
                 'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
             ]);

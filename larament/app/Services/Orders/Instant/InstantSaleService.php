@@ -81,7 +81,10 @@ class InstantSaleService
             userId: $data->userId,
             customerId: $data->customerId,
         ));
-        $order->forceFill(['client_uuid' => $data->clientUuid])->save();
+        $order->forceFill([
+            'client_uuid' => $data->clientUuid,
+            'order_notes' => $data->orderNotes,
+        ])->save();
 
         $this->items->updateOrderItems($order, $this->pricer->price($data->items));
 
@@ -101,6 +104,7 @@ class InstantSaleService
         if ($credit > 0) {
             $tenders[$data->creditMethod] = ($tenders[$data->creditMethod] ?? 0) + $credit;
         }
+        $tenders = $this->trimCashOverpayment($tenders, (float) $order->total);
 
         $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
         $completed = $this->orders->finishCompletion($locked, $tenders, $data->print);
@@ -147,5 +151,27 @@ class InstantSaleService
         if (! $row->is_active || ! $this->catalog->behaviorFor($code) instanceof InstantSaleBehavior) {
             throw new OrderException('هذا النوع لا يدعم البيع المباشر');
         }
+    }
+
+    /**
+     * Split tenders may not add up to more than the total. When they do (a
+     * rounded-up card amount plus a refund credit, for example), the extra
+     * comes off the cash part: the cashier hands it back as change.
+     *
+     * @param  array<string, float|int>  $tenders
+     * @return array<string, float|int>
+     */
+    private function trimCashOverpayment(array $tenders, float $total): array
+    {
+        $methods = array_filter($tenders, fn ($amount): bool => (float) $amount > 0);
+        $over = round(array_sum($methods) - $total, 2);
+
+        if (count($methods) < 2 || $over <= 0 || ! isset($methods['cash'])) {
+            return $tenders;
+        }
+
+        $tenders['cash'] = max(0.0, round((float) $tenders['cash'] - $over, 2));
+
+        return $tenders;
     }
 }

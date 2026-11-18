@@ -10,7 +10,8 @@ export const orderItemsReducer = (
     if (
         action.type !== "add" &&
         action.type !== "init" &&
-        action.type !== "addScanned"
+        action.type !== "addScanned" &&
+        action.type !== "swap"
     ) {
         const isAdmin = Boolean(action.user.isAdmin || action.user.roles?.includes("admin"));
         const canChangeItems = isAdmin || Boolean(action.user.permissions?.includes("order.change_items"));
@@ -131,6 +132,39 @@ export const orderItemsReducer = (
                 product: product,
             };
             return [...state, newItem];
+        }
+
+        case "swap": {
+            // Another size/colour of the same line: same place, quantity, notes and discount.
+            const product = action.product;
+            const line = state.find((item) => item.product_id === action.id);
+            if (!line || product.id === action.id) return state;
+            if (state.some((item) => item.product_id === product.id)) {
+                // Already in the cart: merge into that line.
+                return state
+                    .filter((item) => item.product_id !== action.id)
+                    .map((item) =>
+                        item.product_id === product.id ? { ...item, quantity: item.quantity + line.quantity } : item
+                    );
+            }
+            const lineTotal = Number(product.price) * Number(line.quantity);
+            const discount =
+                line.item_discount_type === "percent" && line.item_discount_percent
+                    ? Math.round(lineTotal * Number(line.item_discount_percent)) / 100
+                    : Math.min(Number(line.item_discount ?? 0), lineTotal);
+            return state.map((item) =>
+                item.product_id === action.id
+                    ? {
+                          ...item,
+                          product_id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          product,
+                          initial_quantity: undefined,
+                          item_discount: line.item_discount ? discount : line.item_discount,
+                      }
+                    : item
+            );
         }
 
         default:

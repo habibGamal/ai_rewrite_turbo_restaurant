@@ -7,7 +7,6 @@ use App\Filament\Resources\PurchaseInvoices\PurchaseInvoiceResource;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Database\Eloquent\Model;
 
 class EditPurchaseInvoice extends EditRecord
 {
@@ -22,12 +21,16 @@ class EditPurchaseInvoice extends EditRecord
         ];
     }
 
-    protected function handleRecordUpdate(Model $record, array $data): Model
+    /**
+     * The items repeater is saved after the record, so the total is worked
+     * out once the edited lines are in the database.
+     */
+    protected function afterSave(): void
     {
-        $data['total'] = PurchaseInvoiceCalculatorService::calculateInvoiceTotal($record->items);
-        $record->update($data);
-
-        return $record;
+        $record = $this->getRecord();
+        $record->update([
+            'total' => PurchaseInvoiceCalculatorService::calculateInvoiceTotal($record->items()->get()),
+        ]);
     }
 
     protected function getRedirectUrl(): string
