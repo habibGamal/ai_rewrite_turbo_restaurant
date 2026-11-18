@@ -3,10 +3,14 @@
 namespace App\Modules\ExternalSellers\Filament\Resources\ExternalSellers\RelationManagers;
 
 use App\Services\FeatureService;
+use App\Services\OutsourceProductImportService;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -67,6 +71,47 @@ class ProductsRelationManager extends RelationManager
             TextColumn::make('name')->label('الاسم')->searchable()->sortable(),
             TextColumn::make('price')->label('السعر')->money('EGP'),
             IconColumn::make('is_active')->label('نشط')->boolean(),
-        ])->headerActions([CreateAction::make()])->recordActions([EditAction::make()])->defaultSort('name');
+        ])->headerActions([
+            CreateAction::make(),
+            Action::make('importProducts')
+                ->label('استيراد أصناف من ملف')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('success')
+                ->form([
+                    FileUpload::make('file')
+                        ->label('ملف JSON أو Excel')
+                        ->acceptedFileTypes([
+                            'application/json',
+                            'text/json',
+                            'text/plain',
+                            'text/x-json',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'application/vnd.ms-excel',
+                        ])
+                        ->required()
+                        ->directory('outsource-imports'),
+                ])
+                ->action(function (array $data, RelationManager $livewire): void {
+                    $file = is_array($data['file']) ? array_values($data['file'])[0] : $data['file'];
+                    $service = new OutsourceProductImportService;
+                    $result = $service->importData($file, (int) $livewire->getOwnerRecord()->getKey());
+
+                    if ($result['success']) {
+                        Notification::make()
+                            ->title('تم الاستيراد بنجاح')
+                            ->body("تم استيراد {$result['imported_count']} صنف بنجاح.")
+                            ->success()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('فشل الاستيراد')
+                            ->body($result['error'] ?? 'حدث خطأ أثناء الاستيراد')
+                            ->danger()
+                            ->send();
+                    }
+                }),
+        ])->recordActions([
+            EditAction::make(),
+        ])->defaultSort('name');
     }
 }
