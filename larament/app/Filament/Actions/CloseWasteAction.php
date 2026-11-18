@@ -24,7 +24,10 @@ class CloseWasteAction
             ->modalCancelActionLabel('إلغاء')
             ->action(function (Waste $record, $livewire) {
                 try {
-                    $livewire->save(true);
+                    // From the edit page save the form first; the view page has nothing to save.
+                    if (method_exists($livewire, 'save')) {
+                        $livewire->save(true);
+                    }
                     $wasteService = app(WasteService::class);
                     $wasteService->closeWaste($record);
 

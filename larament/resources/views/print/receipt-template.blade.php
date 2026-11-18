@@ -174,7 +174,7 @@
         <p class="order-number">Order #{{ $order->order_number }}</p>
 
         <p>الكاشير : {{ $order->user?->email }}</p>
-        <p>تمت الطباعة بواسطة : {{ auth()->user()->email }}</p>
+        <p>تمت الطباعة بواسطة : {{ auth()->user()?->email ?? $order->user?->email }}</p>
         <p>تاريخ الطلب : {{ $orderDate }}</p>
         <p>تاريخ الطباعة : {{ $printDate }}</p>
         <p>نوع الطلب : {{ $display->label }} </p>

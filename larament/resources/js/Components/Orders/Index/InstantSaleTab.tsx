@@ -259,10 +259,9 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     const [swapLine, setSwapLine] = useState<OrderItemData | null>(null);
     const swapVariant = (sku: VariantSku) => {
         if (!swapLine) return;
-        const quantity = Number(swapLine.quantity) || 1;
         if (sku.id !== swapLine.product_id) {
-            dispatch({ type: "delete", id: swapLine.product_id, user });
-            addProductToCart(sku, quantity);
+            dispatch({ type: "swap", id: swapLine.product_id, product: sku, user });
+            setSelectedId(sku.id);
         }
         setSwapLine(null);
         focusScan();

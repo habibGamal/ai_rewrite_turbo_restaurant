@@ -65,7 +65,8 @@ describe('primary barcode sync', function () {
         $rows = ProductBarcode::where('product_id', $product->id)->get();
         expect($rows)->toHaveCount(1)
             ->and($rows->first()->barcode)->toBe('999')
-            ->and($rows->first()->is_primary)->toBeTrue();
+            ->and($rows->first()->is_primary)->toBeTrue()
+            ->and((float) $rows->first()->pack_quantity)->toBe(1.0);
     });
 
     it('does not steal a barcode that belongs to another product', function () {
@@ -283,4 +284,11 @@ describe('back office scanning', function () {
             ->and($extra->is_primary)->toBeFalse()
             ->and((float) $extra->pack_quantity)->toBe(24.0);
     });
+});
+
+it('finds a retired (inactive) SKU only when a stock document asks for it', function () {
+    $product = barcodeProduct(['barcode' => '7007', 'is_active' => false]);
+
+    expect(app(ProductLookupService::class)->lookup('7007'))->toBeNull()
+        ->and(app(ProductLookupService::class)->lookup('7007', includeInactive: true)?->product->id)->toBe($product->id);
 });

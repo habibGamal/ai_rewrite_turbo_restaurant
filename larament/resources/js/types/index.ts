@@ -391,6 +391,7 @@ export type OrderItemAction =
   | { type: 'changeItemDiscount'; id: number; discount: number; discountType: string; discountPercent?: number; user: User }
   | { type: 'delete'; id: number; user: User }
   | { type: 'addScanned'; product: Product; quantity: number; user: User }
+  | { type: 'swap'; id: number; product: Product; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
 export interface FeatureFlags {

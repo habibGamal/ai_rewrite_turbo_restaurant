@@ -62,7 +62,7 @@ class BarcodeScanInput extends TextInput
                     return;
                 }
 
-                $result = app(ProductLookupService::class)->lookup($state, $component->productTypes);
+                $result = app(ProductLookupService::class)->lookup($state, $component->productTypes, includeInactive: true);
                 $set($component->getName(), null);
 
                 if ($result === null) {
