@@ -34,15 +34,16 @@ class ProductLookupService
 
     /**
      * @param  list<ProductType|string>|null  $types  limit to these product types (null = any)
+     * @param  bool  $includeInactive  stock documents (stocktaking, transfers, waste…) still handle retired SKUs
      */
-    public function lookup(?string $code, ?array $types = null): ?ProductLookupResult
+    public function lookup(?string $code, ?array $types = null, bool $includeInactive = false): ?ProductLookupResult
     {
         $code = ProductBarcode::normalize($code);
         if ($code === null) {
             return null;
         }
 
-        $match = $this->findBarcode($code, $types);
+        $match = $this->findBarcode($code, $types, $includeInactive);
         if ($match !== null) {
             $pack = (float) $match->pack_quantity;
 
@@ -55,13 +56,13 @@ class ProductLookupService
             );
         }
 
-        return $this->lookupScale($code, $types);
+        return $this->lookupScale($code, $types, $includeInactive);
     }
 
     /**
      * @param  list<ProductType|string>|null  $types
      */
-    private function lookupScale(string $code, ?array $types): ?ProductLookupResult
+    private function lookupScale(string $code, ?array $types, bool $includeInactive = false): ?ProductLookupResult
     {
         $prefix = (string) $this->settings->getScaleBarcodePrefix();
 
@@ -73,7 +74,7 @@ class ProductLookupService
         }
 
         $plu = substr($code, 0, self::SCALE_PLU_LENGTH);
-        $match = $this->findBarcode($plu, $types);
+        $match = $this->findBarcode($plu, $types, $includeInactive);
         if ($match === null) {
             return null;
         }
@@ -93,13 +94,14 @@ class ProductLookupService
     /**
      * @param  list<ProductType|string>|null  $types
      */
-    private function findBarcode(string $barcode, ?array $types): ?ProductBarcode
+    private function findBarcode(string $barcode, ?array $types, bool $includeInactive = false): ?ProductBarcode
     {
-        // Inactive products (e.g. a retired variant SKU) are never resolved from a scan.
+        // Inactive products (e.g. a retired variant SKU) are never sold from a scan;
+        // stock documents ask for them explicitly.
         return ProductBarcode::query()
             ->where('barcode', $barcode)
             ->whereHas('product', fn ($product) => $product
-                ->where('is_active', true)
+                ->when(! $includeInactive, fn ($product) => $product->where('is_active', true))
                 ->when($types !== null, fn ($product) => $product->whereIn(
                     'type',
                     array_map(fn ($type) => $type instanceof ProductType ? $type->value : $type, $types ?? []),

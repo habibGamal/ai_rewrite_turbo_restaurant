@@ -26,7 +26,9 @@ class CloseStocktakingAction
             ->modalCancelActionLabel('إلغاء')
             ->action(function (Stocktaking $record, $livewire) {
                 try {
-                    $livewire->save(true);
+                    if (method_exists($livewire, 'save')) {
+                        $livewire->save(true);
+                    }
                     $stocktakingService = app(StocktakingService::class);
                     $stocktakingService->closeStocktaking($record);
 

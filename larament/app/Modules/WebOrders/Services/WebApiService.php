@@ -453,6 +453,12 @@ class WebApiService
     public function rejectOrder(int $orderId): void
     {
         $this->changeStatusLocked($orderId, function (Order $order): void {
+            // The POS side (OrderService::cancelOrder) usually cancelled it
+            // already and fired the event: then only the website is told.
+            if ($order->status === OrderStatus::CANCELLED) {
+                return;
+            }
+
             $order->status = OrderStatus::CANCELLED;
             $order->save();
 
@@ -481,6 +487,11 @@ class WebApiService
     public function completeOrder(int $orderId): Order
     {
         return $this->changeStatusLocked($orderId, function (Order $order): void {
+            // Completed by OrderService already (event fired there): only tell the website.
+            if ($order->status === OrderStatus::COMPLETED) {
+                return;
+            }
+
             $order->status = OrderStatus::COMPLETED;
             $order->save();
 

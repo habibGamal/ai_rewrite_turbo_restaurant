@@ -507,3 +507,19 @@ it('can create supplier inline from purchase invoice form', function () {
     livewire(CreatePurchaseInvoice::class)
         ->assertSchemaComponentExists('supplier_id');
 });
+
+it('recalculates the total from the edited items when an open invoice is saved', function () {
+    $record = PurchaseInvoice::factory()->create(['closed_at' => null, 'total' => 0]);
+    $product = Product::factory()->create();
+
+    livewire(EditPurchaseInvoice::class, ['record' => $record->getRouteKey()])
+        ->fillForm([
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 4, 'price' => 25.00],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect((float) $record->fresh()->total)->toBe(100.0);
+});
