@@ -1,6 +1,4 @@
-import { soundForReason } from '@/Components/Kitchen/kitchenActions';
 import { playKdsSound } from '@/Components/Kitchen/sounds';
-import { ticketNeedsAttention } from '@/Components/Kitchen/ticketModel';
 import type { KdsBroadcastPayload, KdsSettings, KdsSound, KdsTicket } from '@/types/kitchen';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -34,16 +32,14 @@ export function useKdsSounds(options: {
     const unlockedRef = useRef(false);
     const mutedRef = useRef(muted);
     const settingsRef = useRef(settings);
-    const attentionRef = useRef(attentionTickets);
     const ctxRef = useRef<AudioContext | null>(null);
     const queuedRef = useRef<KdsSound | null>(null);
-    const knownIds = useRef<Set<number> | null>(null);
-    const announced = useRef<Set<number>>(new Set());
+    const knownItemIds = useRef<Set<number> | null>(null);
+    const knownTicketIds = useRef<Set<number> | null>(null);
     const sentinelRef = useRef<WakeLockSentinelLike | null>(null);
 
     mutedRef.current = muted;
     settingsRef.current = settings;
-    attentionRef.current = attentionTickets;
 
     const getCtx = useCallback((): AudioContext => {
         if (!ctxRef.current) {
@@ -83,13 +79,9 @@ export function useKdsSounds(options: {
         [playNow],
     );
 
-    const playPayload = useCallback(
-        (payload: KdsBroadcastPayload) => {
-            announced.current.add(payload.ticket_id);
-            play(soundForReason(payload.reason, settingsRef.current));
-        },
-        [play],
-    );
+    // Broadcast events trigger a reload; sound decisions run once the reloaded
+    // items arrive so non-item updates (done, undo, rush, ack, cancel, reductions) stay silent.
+    const playPayload = useCallback((_payload: KdsBroadcastPayload) => {}, []);
 
     const unlock = useCallback(() => {
         unlockedRef.current = true;
@@ -122,46 +114,57 @@ export function useKdsSounds(options: {
     }, [unlocked]);
 
     useEffect(() => {
-        const previous = knownIds.current;
-        const next = new Set(tickets.map((ticket) => ticket.id));
-        if (previous == null) {
-            knownIds.current = next;
-            return;
-        }
-        const attentionIds = new Set(attentionTickets.map((ticket) => ticket.id));
-        for (const ticket of tickets) {
-            if (previous.has(ticket.id) || announced.current.has(ticket.id)) {
-                continue;
-            }
-            if (!attentionIds.has(ticket.id)) {
-                continue;
-            }
-            if (ticket.status === 'cancelled') {
-                play(settings.cancel_sound);
-            } else if (ticket.status === 'active') {
-                play(settings.new_order_sound);
-            }
-            announced.current.add(ticket.id);
-        }
-        knownIds.current = next;
-    }, [tickets, attentionTickets, play, settings.cancel_sound, settings.new_order_sound]);
+        const previousItems = knownItemIds.current;
+        const previousTickets = knownTicketIds.current;
 
-    useEffect(() => {
-        if (!unlocked || muted || settings.reminder_seconds <= 0) {
+        if (previousItems == null || previousTickets == null) {
+            const initialItems = new Set<number>();
+            const initialTickets = new Set<number>();
+            for (const ticket of tickets) {
+                initialTickets.add(ticket.id);
+                for (const item of ticket.items) {
+                    initialItems.add(item.id);
+                }
+            }
+            knownItemIds.current = initialItems;
+            knownTicketIds.current = initialTickets;
             return;
         }
-        const id = window.setInterval(() => {
-            if (mutedRef.current) {
-                return;
+
+        let hasNewTicketItems = false;
+        let hasAddedTicketItems = false;
+
+        for (const ticket of attentionTickets) {
+            if (ticket.status !== 'active') {
+                continue;
             }
-            const waiting = attentionRef.current.some(ticketNeedsAttention);
-            if (!waiting) {
-                return;
+            const hasNewPendingItem = ticket.items.some(
+                (item) => item.status === 'pending' && !previousItems.has(item.id),
+            );
+            if (!hasNewPendingItem) {
+                continue;
             }
-            play(settingsRef.current.new_order_sound);
-        }, settings.reminder_seconds * 1000);
-        return () => window.clearInterval(id);
-    }, [unlocked, muted, settings.reminder_seconds, play]);
+            if (!previousTickets.has(ticket.id)) {
+                hasNewTicketItems = true;
+            } else {
+                hasAddedTicketItems = true;
+            }
+        }
+
+        for (const ticket of tickets) {
+            previousTickets.add(ticket.id);
+            for (const item of ticket.items) {
+                previousItems.add(item.id);
+            }
+        }
+
+        if (hasNewTicketItems) {
+            play(settings.new_order_sound);
+        } else if (hasAddedTicketItems) {
+            const sound = settings.change_sound !== 'none' ? settings.change_sound : settings.new_order_sound;
+            play(sound);
+        }
+    }, [tickets, attentionTickets, play, settings.change_sound, settings.new_order_sound]);
 
     useEffect(() => {
         return () => {

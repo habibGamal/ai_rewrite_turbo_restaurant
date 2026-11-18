@@ -97,7 +97,10 @@ export default function PrintInKitchenModal({
 
             message.success('تم إرسال الطلب للمطبخ بنجاح');
         } catch (error) {
-            message.error('حدث خطأ أثناء إرسال الطلب للمطبخ');
+            const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+                ? error.response?.data?.message
+                : undefined;
+            message.error(serverMessage || 'حدث خطأ أثناء إرسال الطلب للمطبخ');
         }
     };
 

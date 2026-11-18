@@ -37,7 +37,7 @@ class ProductsSalesPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء المنتجات في المبيعات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 8;
 
     protected ProductsSalesReportService $productsReportService;
 

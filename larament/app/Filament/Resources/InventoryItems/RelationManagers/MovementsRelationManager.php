@@ -4,11 +4,8 @@ namespace App\Filament\Resources\InventoryItems\RelationManagers;
 
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
-use App\Models\Order;
-use App\Models\PurchaseInvoice;
-use App\Models\ReturnPurchaseInvoice;
-use App\Models\Stocktaking;
-use App\Models\Waste;
+use App\Models\InventoryItemMovement;
+use App\Services\Reports\Inventory\ItemLedgerReportService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -45,6 +42,7 @@ class MovementsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('user'))
             ->columns([
                 TextColumn::make('operation')
                     ->label('نوع العملية')
@@ -53,14 +51,30 @@ class MovementsRelationManager extends RelationManager
                     ->label('الكمية')
                     ->numeric(decimalPlaces: 3)
                     ->sortable(),
+                TextColumn::make('unit_cost')
+                    ->label('تكلفة الوحدة')
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('total_cost')
+                    ->label('إجمالي التكلفة')
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('reason')
                     ->label('السبب')
                     ->badge(),
                 TextColumn::make('referenceable_type')
                     ->label('نوع المرجع')
+                    ->formatStateUsing(fn (?string $state, InventoryItemMovement $record): string => ItemLedgerReportService::documentTypeLabel($state, $record->reason))
                     ->badge(),
                 TextColumn::make('referenceable_id')
-                    ->label('رقم المرجع'),
+                    ->label('رقم المرجع')
+                    ->placeholder('—'),
+                TextColumn::make('user.name')
+                    ->label('المستخدم')
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('created_at')
                     ->label('تاريخ الإنشاء')
                     ->dateTime()
@@ -95,14 +109,8 @@ class MovementsRelationManager extends RelationManager
                 Action::make('view_reference')
                     ->label('عرض المرجع')
                     ->icon('heroicon-o-eye')
-                    ->url(fn ($record) => match ($record->referenceable_type) {
-                        Order::class => route('filament.admin.resources.orders.view', ['record' => $record->referenceable_id]),
-                        PurchaseInvoice::class => route('filament.admin.resources.purchase-invoices.view', ['record' => $record->referenceable_id]),
-                        ReturnPurchaseInvoice::class => route('filament.admin.resources.return-purchase-invoices.view', ['record' => $record->referenceable_id]),
-                        Waste::class => route('filament.admin.resources.wastes.view', ['record' => $record->referenceable_id]),
-                        Stocktaking::class => route('filament.admin.resources.stocktakings.view', ['record' => $record->referenceable_id]),
-                        default => null,
-                    })
+                    ->visible(fn (InventoryItemMovement $record): bool => ItemLedgerReportService::documentUrl($record->referenceable_type, $record->referenceable_id) !== null)
+                    ->url(fn (InventoryItemMovement $record): ?string => ItemLedgerReportService::documentUrl($record->referenceable_type, $record->referenceable_id))
                     ->openUrlInNewTab()
                     ->color('primary'),
             ])

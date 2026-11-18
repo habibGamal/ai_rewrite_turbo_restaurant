@@ -23,7 +23,7 @@ class RestaurantPosController extends Controller
     /**
      * Print kitchen order with multiple printers
      */
-    public function printInKitchen(Request $request): RedirectResponse
+    public function printInKitchen(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'orderId' => 'required|integer|exists:orders,id',
@@ -37,6 +37,8 @@ class RestaurantPosController extends Controller
             'items.*.delta' => 'nullable|numeric',
             'items.*.notes' => 'nullable|string|max:500',
         ]);
+
+        $wantsJson = $request->expectsJson() && ! $request->header('X-Inertia');
 
         try {
             $type = $validated['type'] ?? 'normal';
@@ -53,9 +55,25 @@ class RestaurantPosController extends Controller
                 );
             }
 
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'تم إرسال الطلب للمطبخ بنجاح',
+                ]);
+            }
+
             return back()->with('success', 'تم إرسال الطلب للمطبخ بنجاح');
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب المطبخ: '.$e->getMessage()]);
+            $message = 'حدث خطأ أثناء طباعة طلب المطبخ: '.$e->getMessage();
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => $message,
+                ], 422);
+            }
+
+            return back()->withErrors(['error' => $message]);
         }
     }
 

@@ -37,7 +37,7 @@ class CustomersPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء العملاء في المبيعات';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 12;
 
     protected CustomersPerformanceReportService $customersReportService;
 

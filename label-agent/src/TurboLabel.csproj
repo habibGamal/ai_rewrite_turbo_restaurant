@@ -8,9 +8,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>TurboLabel</AssemblyName>
     <RootNamespace>TurboLabel</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Turbo Label</Product>
-    <Description>Prints barcode labels, receipts and opens the cash drawer from the POS on the printers of this PC.</Description>
+    <Description>Prints barcode labels, receipts, kitchen tickets and opens the cash drawer from the POS on the printers of this PC.</Description>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- Lets the project build (not run) on Linux CI too. -->

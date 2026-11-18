@@ -4,9 +4,9 @@ namespace App\Modules\Delivery\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Modules\Delivery\Filament\Widgets\DriverPerformanceStatsWidget;
 use App\Modules\Delivery\Filament\Widgets\DriverPerformanceTable;
-use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
@@ -26,7 +26,7 @@ class DriverPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء السائقين';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 14;
 
     protected ShiftsReportService $shiftsReportService;
 

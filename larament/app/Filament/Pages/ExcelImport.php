@@ -15,9 +15,10 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
+/**
+ * @property Schema $form
+ */
 class ExcelImport extends Page implements HasForms
 {
     use InteractsWithForms;
@@ -29,9 +30,9 @@ class ExcelImport extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-up-tray';
 
-    protected static ?string $navigationLabel = 'رفع ملف Excel';
+    protected static ?string $navigationLabel = 'رفع ملف Excel / JSON';
 
-    protected static ?string $title = 'رفع ملف Excel';
+    protected static ?string $title = 'رفع ملف Excel / JSON';
 
     protected string $view = 'filament.pages.excel-import';
 
@@ -49,29 +50,36 @@ class ExcelImport extends Page implements HasForms
     }
 
     /**
-     * Helper method to safely get file path from form data
+     * Helper method to safely get the uploaded file or path from form data.
      */
-    private function getFilePath(): ?string
+    private function getUploadedFile(): mixed
     {
-        $filePath = $this->data['excel_file'] ?? null;
+        $file = $this->data['excel_file'] ?? null;
 
-        if (is_array($filePath)) {
-            return array_values($filePath)[0] ?? null;
+        if (is_array($file)) {
+            return array_values($file)[0] ?? null;
         }
 
-        return $filePath;
+        return $file;
     }
 
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Section::make('رفع ملف Excel')
-                    ->description('اختر ملف Excel (.xlsx) لرفعه وتحليل بياناته')
+                Section::make('رفع ملف Excel / JSON')
+                    ->description('اختر ملف Excel (.xlsx) أو ملف JSON (.json) لرفعه وتحليل بياناته')
                     ->schema([
                         FileUpload::make('excel_file')
-                            ->label('ملف Excel')
-                            ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
+                            ->label('ملف Excel أو JSON')
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                                'application/json',
+                                'text/json',
+                                'text/plain',
+                                'text/x-json',
+                            ])
                             ->maxSize(10240) // 10MB
                             ->directory('excel-imports')
                             ->preserveFilenames()
@@ -133,12 +141,12 @@ class ExcelImport extends Page implements HasForms
     {
         $this->validate();
 
-        $filePath = $this->getFilePath();
+        $file = $this->getUploadedFile();
 
-        if (! $filePath) {
+        if (! $file) {
             Notification::make()
                 ->title('خطأ')
-                ->body('يرجى اختيار ملف Excel أولاً')
+                ->body('يرجى اختيار ملف أولاً')
                 ->danger()
                 ->send();
 
@@ -147,7 +155,7 @@ class ExcelImport extends Page implements HasForms
 
         try {
             $service = new SpecificDataImportService;
-            $this->analysisResult = $service->analyzeExcelStructure(array_values($this->data['excel_file'])[0]);
+            $this->analysisResult = $service->analyzeStructure($file);
 
             if ($this->analysisResult['success']) {
                 Notification::make()
@@ -158,7 +166,7 @@ class ExcelImport extends Page implements HasForms
             } else {
                 Notification::make()
                     ->title('خطأ في التحليل')
-                    ->body($this->analysisResult['error'])
+                    ->body($this->analysisResult['error'] ?? 'خطأ غير معروف أثناء تحليل الملف')
                     ->danger()
                     ->send();
             }
@@ -173,12 +181,12 @@ class ExcelImport extends Page implements HasForms
 
     public function importData(): void
     {
-        $filePath = $this->getFilePath();
+        $file = $this->getUploadedFile();
 
-        if (! $filePath) {
+        if (! $file) {
             Notification::make()
                 ->title('خطأ')
-                ->body('يرجى اختيار ملف Excel أولاً')
+                ->body('يرجى اختيار ملف أولاً')
                 ->danger()
                 ->send();
 
@@ -186,11 +194,8 @@ class ExcelImport extends Page implements HasForms
         }
 
         try {
-            // $fullPath = Storage::path($filePath);
-            // $uploadedFile = new UploadedFile($fullPath, basename($filePath));
-
             $service = new SpecificDataImportService;
-            $this->importResult = $service->importExcelData(array_values($this->data['excel_file'])[0]);
+            $this->importResult = $service->importData($file);
 
             if ($this->importResult['success']) {
                 $imported = $this->importResult['imported_count'];
@@ -204,7 +209,7 @@ class ExcelImport extends Page implements HasForms
             } else {
                 Notification::make()
                     ->title('خطأ في الاستيراد')
-                    ->body($this->importResult['error'])
+                    ->body($this->importResult['error'] ?? 'خطأ غير معروف أثناء استيراد البيانات')
                     ->danger()
                     ->send();
             }

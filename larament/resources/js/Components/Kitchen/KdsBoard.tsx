@@ -5,12 +5,14 @@ import { FRAGMENT_GAP, type PackedPage } from '@/Components/Kitchen/packTickets'
 import { measureKey, ticketBlockKeys } from '@/Components/Kitchen/ticketModel';
 import type { KdsTicket } from '@/types/kitchen';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { useEffect, useLayoutEffect, useRef, type TouchEvent } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, type TouchEvent } from 'react';
 
 export interface PageEdgeStats {
     count: number;
     hasLate: boolean;
 }
+
+export type BoardEmptyKind = 'shift' | 'station' | 'filter' | 'none' | null;
 
 interface KdsBoardProps {
     tickets: KdsTicket[];
@@ -25,14 +27,15 @@ interface KdsBoardProps {
     previous: PageEdgeStats;
     next: PageEdgeStats;
     keyboardEnabled: boolean;
-    empty: 'shift' | 'station' | 'none' | null;
+    empty: BoardEmptyKind;
+    onResetStation?: () => void;
+    onResetFilter?: () => void;
 }
 
-export default function KdsBoard({
+const KdsBoard = memo(function KdsBoard({
     tickets,
     pages,
     pageIndex,
-    columnCount,
     columnWidth,
     clock,
     onMeasure,
@@ -42,6 +45,8 @@ export default function KdsBoard({
     next,
     keyboardEnabled,
     empty,
+    onResetStation,
+    onResetFilter,
 }: KdsBoardProps) {
     const measureRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLDivElement>(null);
@@ -135,11 +140,16 @@ export default function KdsBoard({
     };
 
     return (
-        <div className="relative min-h-0 flex-1 p-2" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="relative min-h-0 flex-1 overflow-hidden p-2.5" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             {empty ? (
-                <EmptyState kind={empty} clock={clock} />
+                <EmptyState
+                    kind={empty}
+                    clock={clock}
+                    onResetStation={onResetStation}
+                    onResetFilter={onResetFilter}
+                />
             ) : (
-                <div ref={rowRef} className="flex h-full" style={{ gap: FRAGMENT_GAP }}>
+                <div ref={rowRef} className="flex h-full overflow-hidden" style={{ gap: FRAGMENT_GAP }}>
                     {(page?.columns ?? []).map((column, index) => (
                         <div
                             key={index}
@@ -193,7 +203,9 @@ export default function KdsBoard({
             </div>
         </div>
     );
-}
+});
+
+export default KdsBoard;
 
 function PageButton({
     side,
@@ -213,24 +225,27 @@ function PageButton({
             disabled={disabled}
             onClick={onClick}
             aria-label={`${label}، ${stats.count} طلبات`}
-            className={`kds-press absolute top-1/2 z-20 flex h-16 w-12 -translate-y-1/2 flex-col items-center justify-center rounded-xl border-0 text-white ${
-                disabled ? 'pointer-events-none opacity-30' : ''
+            className={`kds-press absolute top-1/2 z-20 flex h-16 w-12 -translate-y-1/2 flex-col items-center justify-center rounded-2xl border-0 text-white backdrop-blur-sm ${
+                disabled ? 'pointer-events-none opacity-25' : ''
             }`}
             style={{
-                ...(side === 'previous' ? { right: 6 } : { left: 6 }),
-                background: 'rgba(16, 20, 28, 0.88)',
-                boxShadow: `0 0 0 1px ${kdsTokens.line}`,
+                ...(side === 'previous' ? { right: 8 } : { left: 8 }),
+                background: 'rgba(15, 20, 30, 0.90)',
+                boxShadow: `0 4px 16px rgba(0,0,0,0.45), inset 0 0 0 1px ${kdsTokens.lineStrong}`,
             }}
         >
             {stats.hasLate && (
                 <span
-                    className="absolute -top-1 h-3.5 w-3.5 rounded-full"
+                    className="kds-late-timer absolute -top-1 h-3.5 w-3.5 rounded-full"
                     style={{ background: kdsTokens.danger, ...(side === 'previous' ? { left: -2 } : { right: -2 }) }}
                 />
             )}
             {side === 'previous' ? <RightOutlined /> : <LeftOutlined />}
             {stats.count > 0 && (
-                <span className={`text-sm font-black tabular-nums ${stats.hasLate ? '' : ''}`} style={{ color: stats.hasLate ? kdsTokens.timerLate : kdsTokens.text }}>
+                <span
+                    className="text-sm font-black tabular-nums"
+                    style={{ color: stats.hasLate ? kdsTokens.timerLate : kdsTokens.text }}
+                >
                     {stats.count}
                 </span>
             )}
@@ -238,33 +253,82 @@ function PageButton({
     );
 }
 
-function EmptyState({ kind, clock }: { kind: 'shift' | 'station' | 'none'; clock: string }) {
+function EmptyState({
+    kind,
+    clock,
+    onResetStation,
+    onResetFilter,
+}: {
+    kind: Exclude<BoardEmptyKind, null>;
+    clock: string;
+    onResetStation?: () => void;
+    onResetFilter?: () => void;
+}) {
     const title =
         kind === 'shift'
             ? 'لا يوجد وردية نشطة'
             : kind === 'station'
               ? 'لا توجد طلبات لهذه المحطة'
-              : 'لا توجد طلبات حالياً';
+              : kind === 'filter'
+                ? 'لا توجد طلبات مطابقة للتصفية'
+                : 'لا توجد طلبات حالياً';
+
     const detail =
         kind === 'shift'
             ? 'يرجى بدء وردية جديدة من شاشة الكاشير'
             : kind === 'station'
-              ? 'غيّر المحطة من الإعدادات لعرض الكل'
-              : null;
+              ? 'ستظهر طلبات هذه المحطة فور إرسالها أو يمكنك عرض كل المحطات'
+              : kind === 'filter'
+                ? 'جرّب تغيير التصفية لعرض باقي الطلبات النشطة'
+                : 'ستظهر الطلبات الجديدة هنا تلقائياً فور وصولها';
 
     return (
-        <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-                <div dir="ltr" className="text-6xl font-black tabular-nums tracking-wide">
+        <div className="flex h-full w-full flex-col items-center justify-center px-6 text-center">
+            <div
+                className="mb-4 rounded-2xl px-6 py-3"
+                style={{
+                    background: kdsTokens.card,
+                    boxShadow: `inset 0 0 0 1px ${kdsTokens.line}`,
+                }}
+            >
+                <div dir="ltr" className="text-5xl font-black leading-none tabular-nums" style={{ color: kdsTokens.textSoft }}>
                     {clock}
                 </div>
-                <div className="mt-6 text-3xl font-black">{title}</div>
-                {detail && (
-                    <div className="mt-2 text-xl font-bold" style={{ color: kdsTokens.textDim }}>
-                        {detail}
-                    </div>
-                )}
             </div>
+            <div className="text-3xl font-black" style={{ color: kdsTokens.text }}>
+                {title}
+            </div>
+            <div className="mt-2 max-w-md text-lg font-bold" style={{ color: kdsTokens.textDim }}>
+                {detail}
+            </div>
+            {kind === 'station' && onResetStation && (
+                <button
+                    type="button"
+                    onClick={onResetStation}
+                    className="kds-press mt-6 h-12 rounded-xl border-0 px-6 text-base font-black"
+                    style={{
+                        background: kdsTokens.cardAlt,
+                        color: kdsTokens.text,
+                        boxShadow: `inset 0 0 0 1px ${kdsTokens.lineStrong}`,
+                    }}
+                >
+                    عرض كل المحطات
+                </button>
+            )}
+            {kind === 'filter' && onResetFilter && (
+                <button
+                    type="button"
+                    onClick={onResetFilter}
+                    className="kds-press mt-6 h-12 rounded-xl border-0 px-6 text-base font-black"
+                    style={{
+                        background: kdsTokens.cardAlt,
+                        color: kdsTokens.text,
+                        boxShadow: `inset 0 0 0 1px ${kdsTokens.lineStrong}`,
+                    }}
+                >
+                    عرض كل الطلبات
+                </button>
+            )}
         </div>
     );
 }

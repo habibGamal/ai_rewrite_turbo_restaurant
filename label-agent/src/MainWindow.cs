@@ -18,7 +18,7 @@ public sealed class MainWindow : Form
     private readonly Action<string?> _pair;
 
     private readonly Label _serverLabel = new() { AutoSize = true, Dock = DockStyle.Top, Padding = new Padding(4, 8, 4, 8) };
-    private readonly ListView _connections = NewList(("المتجر", 140), ("منفذ البيع", 120), ("النظام", 220), ("الحالة", 300), ("آخر اتصال", 90));
+    private readonly ListView _connections = NewList(("المتجر", 140), ("المنفذ / الطابعة", 140), ("النظام", 220), ("الحالة", 290), ("آخر اتصال", 90));
     private readonly ComboBox _labelPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly ComboBox _receiptPrinter = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 320 };
     private readonly NumericUpDown _testWidth = new() { Minimum = 10, Maximum = 200, Value = 38, DecimalPlaces = 0, Width = 60 };
@@ -104,18 +104,18 @@ public sealed class MainWindow : Form
 
     private TabPage DrawersTab()
     {
-        var page = new TabPage("منافذ البيع والفواتير") { Padding = new Padding(8) };
+        var page = new TabPage("منافذ البيع والطابعات") { Padding = new Padding(8) };
 
         var help = new Label
         {
             Dock = DockStyle.Top,
             AutoSize = false,
             Height = 44,
-            Text = "ليطبع هذا الجهاز فواتير منفذ البيع ويفتح درج النقود: افتح «منافذ البيع» في النظام، واجعل الطباعة عن طريق «برنامج Turbo Label»، ثم اضغط «ربط برنامج الطباعة» من هذا الجهاز، أو الصق رمز الربط هنا.",
+            Text = "ليطبع هذا الجهاز فواتير منفذ البيع أو طلبات المطبخ ويفتح درج النقود: افتح «منافذ البيع» أو «الطابعات» في النظام، واجعل الطباعة عن طريق «برنامج Turbo Label»، ثم اضغط «ربط برنامج الطباعة» من هذا الجهاز، أو الصق رمز الربط هنا.",
         };
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
-        buttons.Controls.Add(MakeButton("ربط بمنفذ بيع...", (_, _) => AskForCode()));
+        buttons.Controls.Add(MakeButton("ربط بمنفذ بيع أو طابعة...", (_, _) => AskForCode()));
         buttons.Controls.Add(MakeButton("إلغاء ربط المحدد", (_, _) => RemoveSelected()));
 
         page.Controls.Add(_connections);
@@ -302,7 +302,7 @@ public sealed class MainWindow : Form
         _connections.Items.Clear();
         foreach (var connection in connections)
         {
-            var state = _poller.State(connection.Server);
+            var state = _poller.State(connection.Token);
             var item = new ListViewItem(new[]
             {
                 state.Shop,
@@ -312,16 +312,16 @@ public sealed class MainWindow : Form
                 state.LastSeen?.ToString("HH:mm:ss") ?? "-",
             })
             {
-                Tag = connection.Server,
+                Tag = connection.Token,
                 ForeColor = state.Online && state.Enabled ? Color.DarkGreen : Color.Firebrick,
             };
             _connections.Items.Add(item);
-            item.Selected = connection.Server == selected;
+            item.Selected = connection.Token == selected;
         }
 
         if (connections.Count == 0)
         {
-            _connections.Items.Add(new ListViewItem(new[] { "", "", "هذا الجهاز غير مربوط بأي منفذ بيع", "", "" }) { ForeColor = Color.Gray });
+            _connections.Items.Add(new ListViewItem(new[] { "", "", "هذا الجهاز غير مربوط بأي منفذ بيع أو طابعة", "", "" }) { ForeColor = Color.Gray });
         }
 
         _connections.EndUpdate();
@@ -350,7 +350,7 @@ public sealed class MainWindow : Form
     {
         using var dialog = new Form
         {
-            Text = "ربط بمنفذ بيع",
+            Text = "ربط بمنفذ بيع أو طابعة",
             RightToLeft = RightToLeft.Yes,
             RightToLeftLayout = true,
             StartPosition = FormStartPosition.CenterParent,
@@ -386,14 +386,17 @@ public sealed class MainWindow : Form
 
     private void RemoveSelected()
     {
-        if (_connections.SelectedItems.Count == 0 || _connections.SelectedItems[0].Tag is not string server)
+        if (_connections.SelectedItems.Count == 0 || _connections.SelectedItems[0].Tag is not string token)
         {
             return;
         }
 
-        if (Ask($"إلغاء ربط هذا الجهاز بمنفذ البيع في النظام:\n{server}\n\nلن تُطبع الفواتير هنا حتى تربطه من جديد."))
+        var target = _connections.SelectedItems[0].SubItems[1].Text;
+        var server = _connections.SelectedItems[0].SubItems[2].Text;
+
+        if (Ask($"إلغاء ربط هذا الجهاز بـ«{target}» في النظام:\n{server}\n\nلن تُطبع المستندات هنا حتى تربطه من جديد."))
         {
-            _config.RemoveConnection(server);
+            _config.RemoveConnection(token);
             RefreshStatus();
         }
     }

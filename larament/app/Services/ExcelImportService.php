@@ -13,10 +13,11 @@ class ExcelImportService
     /**
      * Parse Excel file and return structure analysis
      */
-    public function analyzeExcelStructure(UploadedFile $file): array
+    public function analyzeExcelStructure(UploadedFile|string $file): array
     {
         try {
-            $spreadsheet = IOFactory::load($file->getPathname());
+            $path = $file instanceof UploadedFile ? ($file->getRealPath() ?: $file->getPathname()) : $file;
+            $spreadsheet = IOFactory::load($path);
             $worksheet = $spreadsheet->getActiveSheet();
 
             $highestRow = $worksheet->getHighestRow();
@@ -63,7 +64,7 @@ class ExcelImportService
     /**
      * Process Excel file and import data based on detected structure
      */
-    public function importExcelData(UploadedFile $file): array
+    public function importExcelData(UploadedFile|string $file): array
     {
         try {
             $analysis = $this->analyzeExcelStructure($file);
@@ -72,7 +73,8 @@ class ExcelImportService
                 return $analysis;
             }
 
-            $spreadsheet = IOFactory::load($file->getPathname());
+            $path = $file instanceof UploadedFile ? ($file->getRealPath() ?: $file->getPathname()) : $file;
+            $spreadsheet = IOFactory::load($path);
             $worksheet = $spreadsheet->getActiveSheet();
 
             $headers = $analysis['headers'];

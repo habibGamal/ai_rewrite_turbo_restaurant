@@ -32,7 +32,7 @@ class ItemLedgerReport extends BaseDashboard
 
     protected static ?string $title = 'كشف حركة صنف';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 18;
 
     public function filtersForm(Schema $schema): Schema
     {

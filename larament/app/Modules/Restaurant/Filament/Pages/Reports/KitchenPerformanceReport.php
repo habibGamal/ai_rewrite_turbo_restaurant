@@ -4,13 +4,13 @@ namespace App\Modules\Restaurant\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
+use App\Models\KitchenStation;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceOrderTypesWidget;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceSlowestOrdersWidget;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceSlowestProductsWidget;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceStationsWidget;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceStatsWidget;
 use App\Modules\Restaurant\Filament\Widgets\KitchenPerformanceWasteCandidatesWidget;
-use App\Models\KitchenStation;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
@@ -31,7 +31,7 @@ class KitchenPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء المطبخ';
 
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 15;
 
     public function filtersForm(Schema $schema): Schema
     {

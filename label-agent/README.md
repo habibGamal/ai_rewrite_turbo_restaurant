@@ -29,28 +29,30 @@ The server listens on 127.0.0.1 only, so nothing else on the network can
 reach it. The manifest and its images must come from the same address as
 the page that asked.
 
-## Receipts and the cash drawer (multi-terminal, hosted POS)
+## Receipts, kitchen tickets, and the cash drawer (hosted POS)
 
-A POS on a VPS can't reach a USB or LAN receipt printer at the counter.
-A point of sale («منافذ البيع» in the POS) set to print «عن طريق برنامج Turbo Label»
-queues its ESC/POS bytes on the server instead (receipt, drawer kick, test
-page). The app on that drawer's PC is paired with the drawer and asks the
-POS for them every 1.5 s, sends them to the printer as RAW, and reports
-back; the cashier sees the printer's error, or that the app isn't
-connected.
+A POS on a VPS can't reach a USB or LAN receipt/kitchen printer in the shop.
+A point of sale («منافذ البيع») or kitchen printer («الطابعات») set to print
+«عن طريق برنامج Turbo Label» queues its ESC/POS bytes on the server instead
+(receipt, drawer kick, kitchen ticket, kitchen changes, test page). The app
+on that shop computer is paired with one or more targets and asks the POS for
+waiting jobs every 1.5 s, sends them to the target's printer (or the app's
+default receipt printer) as RAW, and reports back; the cashier sees the
+printer's error, or that the app isn't connected.
 
-| POS endpoint (Bearer = the drawer's token) | |
+| POS endpoint (Bearer = the target's token) | |
 | --- | --- |
 | `POST /api/print-agent/hello` | `{version, machine, printers}`, every minute |
 | `GET /api/print-agent/jobs` | waiting jobs `[{id, kind, label, printer, data(base64)}]` |
 | `POST /api/print-agent/jobs/{id}` | `{ok, error?}` |
 
-Pairing: in the POS, «منافذ البيع» → «ربط برنامج الطباعة» shows a code
-(`TL1.` + base64url `{s: server, t: token, n: drawer}`) and a «ربط البرنامج»
-button that opens `turbo-label://pair?code=...`. Opened on the drawer's PC,
-the app asks once and pairs. The code can also be pasted in the window
-(«ربط بمنفذ بيع...»). A new code or «إلغاء ربط البرنامج» in the POS stops the
-old one.
+Pairing: in the POS, «منافذ البيع» or «الطابعات» → «ربط برنامج الطباعة»
+shows a code (`TL1.` + base64url `{s: server, t: token, n: name, k: targetKey}`)
+and a «ربط البرنامج» button that opens `turbo-label://pair?code=...`. Opened
+on the shop PC, the app asks once and pairs. The code can also be pasted in
+the window («ربط بمنفذ بيع أو طابعة...»). One PC can pair multiple targets
+from the same POS (e.g. a sales point and kitchen printers). A new code or
+«إلغاء ربط البرنامج» in the POS stops the old one.
 
 The receipt printer is the one chosen for the drawer in the POS, else the
 app's «طابعة الفواتير». It must take ESC/POS (thermal receipt printers);
@@ -60,7 +62,7 @@ the "Generic / Text Only" driver always works for RAW printing.
 
 Double-click the tray icon (or open the exe again) for:
 
-- «منافذ البيع والفواتير»: paired points of sale with their status, pair / unpair.
+- «منافذ البيع والطابعات»: paired points of sale and kitchen printers with their status, pair / unpair.
 - «الطابعات»: label printer and receipt printer, test label (any size),
   test receipt, open the cash drawer.
 - «المواقع المسموحة»: POS sites allowed to print labels; remove them.

@@ -1,6 +1,6 @@
 const FADE_MS = 200;
 
-/** Clone the on-screen card and fade it out (≤ 250ms) while the board reflows. */
+/** Clone the on-screen card and fade it out (<= 250ms) while the board reflows. */
 export function fadeLeavingTicket(ticketId: number): void {
     if (typeof document === 'undefined') {
         return;

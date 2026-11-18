@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SettingKey;
-use App\Models\Terminal;
 use App\PrintAgent\PrintAgentJob;
 use App\PrintAgent\PrintAgentQueue;
+use App\PrintAgent\PrintAgentTarget;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * What the Turbo Label app on a drawer's computer talks to. It sends the
- * drawer's token as a Bearer token; no user session is involved.
+ * What the Turbo Label app on a shop computer talks to. It sends the
+ * paired target's token as a Bearer token; no user session is involved.
  */
 class PrintAgentController extends Controller
 {
@@ -23,7 +23,7 @@ class PrintAgentController extends Controller
      */
     public function hello(Request $request): JsonResponse
     {
-        $terminal = $this->terminal($request);
+        $target = $this->target($request);
 
         $data = $request->validate([
             'version' => ['nullable', 'string', 'max:50'],
@@ -32,24 +32,24 @@ class PrintAgentController extends Controller
             'printers.*' => ['string', 'max:255'],
         ]);
 
-        $this->queue->seen($terminal, [
+        $this->queue->seen($target, [
             'version' => $data['version'] ?? null,
             'machine' => $data['machine'] ?? null,
             'printers' => array_values($data['printers'] ?? []),
         ]);
 
-        return response()->json($this->describe($terminal));
+        return response()->json($this->describe($target));
     }
 
     public function jobs(Request $request): JsonResponse
     {
-        $terminal = $this->terminal($request);
-        $this->queue->seen($terminal);
+        $target = $this->target($request);
+        $this->queue->seen($target);
 
-        $jobs = $terminal->printsViaAgent() ? $this->queue->claim($terminal) : collect();
+        $jobs = $target->agentEnabled() ? $this->queue->claim($target) : collect();
 
         return response()->json([
-            ...$this->describe($terminal),
+            ...$this->describe($target),
             'jobs' => $jobs->map(fn (PrintAgentJob $job): array => [
                 'id' => $job->id,
                 'kind' => $job->kind,
@@ -62,7 +62,7 @@ class PrintAgentController extends Controller
 
     public function finish(Request $request, int $job): JsonResponse
     {
-        $terminal = $this->terminal($request);
+        $target = $this->target($request);
 
         $data = $request->validate([
             'ok' => ['required', 'boolean'],
@@ -70,7 +70,7 @@ class PrintAgentController extends Controller
         ]);
 
         $record = PrintAgentJob::query()
-            ->where('terminal_id', $terminal->id)
+            ->where($target->agentTargetColumn(), $target->agentTargetId())
             ->findOrFail($job);
 
         $this->queue->finish($record, (bool) $data['ok'], $data['error'] ?? null);
@@ -78,23 +78,23 @@ class PrintAgentController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function terminal(Request $request): Terminal
+    private function target(Request $request): PrintAgentTarget
     {
-        $terminal = $this->queue->terminalForToken($request->bearerToken());
+        $target = $this->queue->targetForToken($request->bearerToken());
 
-        abort_if($terminal === null, 401, 'رمز الربط غير صحيح أو أُلغي. اربط البرنامج بمنفذ البيع من جديد.');
+        abort_if($target === null, 401, 'رمز الربط غير صحيح أو أُلغي. اربط البرنامج من جديد.');
 
-        return $terminal;
+        return $target;
     }
 
     /** @return array<string, mixed> */
-    private function describe(Terminal $terminal): array
+    private function describe(PrintAgentTarget $target): array
     {
         return [
             'shop' => (string) setting(SettingKey::RESTAURANT_NAME),
-            'terminal' => $terminal->name,
-            'enabled' => $terminal->printsViaAgent() && $terminal->is_active,
-            'printer' => $terminal->agentPrinter(),
+            'terminal' => $target->agentTargetName(),
+            'enabled' => $target->agentEnabled(),
+            'printer' => $target->agentPrinter(),
         ];
     }
 }

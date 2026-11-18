@@ -66,19 +66,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                             {showFooterTimer && (
                                 <OrderTimer createdAt={order.created_at} />
                             )}
-                            {order.kitchen_status && (
+                            {/* {order.kitchen_status && (
                                 <Tooltip
                                     title={order.kitchen_status === 'ready' ? 'جاهز' : 'قيد التحضير'}
                                 >
                                     <Tag
                                         color={order.kitchen_status === 'ready' ? 'success' : 'processing'}
                                         icon={order.kitchen_status === 'ready' ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
-                                        className="!m-0 text-xs px-1.5 py-0 leading-none inline-flex items-center gap-1 font-normal cursor-pointer"
+                                        // className=" text-xs px-1.5  leading-noxsne inline-flex items-center gap-1 font-normal cursor-pointer"
                                     >
                                         {order.kitchen_progress ? `(${order.kitchen_progress.done} من ${order.kitchen_progress.total})` : ''}
                                     </Tag>
                                 </Tooltip>
-                            )}
+                            )} */}
                             <Typography.Text strong>
                                 {formatCurrency(Number(order.total))}
                             </Typography.Text>

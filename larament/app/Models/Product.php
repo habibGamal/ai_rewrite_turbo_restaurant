@@ -161,6 +161,14 @@ class Product extends Model
         return $this->hasOne(InventoryItem::class);
     }
 
+    /**
+     * @return HasMany<InventoryItem, $this>
+     */
+    public function inventoryItems(): HasMany
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
+
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);

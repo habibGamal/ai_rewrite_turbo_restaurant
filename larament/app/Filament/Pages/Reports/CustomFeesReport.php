@@ -30,7 +30,7 @@ class CustomFeesReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير الرسوم الإضافية';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 7;
 
     public function filtersForm(Schema $schema): Schema
     {

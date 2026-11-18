@@ -26,7 +26,7 @@ class CashierCommissionReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء وعمولات الكاشير';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 13;
 
     protected ShiftsReportService $shiftsReportService;
 

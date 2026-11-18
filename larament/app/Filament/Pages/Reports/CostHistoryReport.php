@@ -12,6 +12,8 @@ class CostHistoryReport extends InventoryDocumentReport
 
     protected static ?string $title = 'سجل تغيير التكلفة';
 
+    protected static ?int $navigationSort = 20;
+
     public function getWidgets(): array
     {
         return [CostHistoryReportTable::class];

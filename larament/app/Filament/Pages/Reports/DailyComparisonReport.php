@@ -27,7 +27,7 @@ class DailyComparisonReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير مقارنة أداء أيام الأسبوع والشهر والشهور';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 3;
 
     protected DailyComparisonReportService $reportService;
 

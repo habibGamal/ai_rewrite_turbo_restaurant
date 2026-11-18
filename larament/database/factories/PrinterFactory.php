@@ -14,6 +14,7 @@ class PrinterFactory extends Factory
         return [
             'name' => $this->faker->word,
             'ip_address' => $this->faker->ipv4,
+            'print_via' => Printer::PRINT_VIA_SERVER,
         ];
     }
 }

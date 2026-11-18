@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PrintsViaAgent;
+use App\PrintAgent\PrintAgentTarget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,13 +27,11 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $agent_info
  * @property int $sort
  */
-class Terminal extends Model
+class Terminal extends Model implements PrintAgentTarget
 {
+    use PrintsViaAgent;
+
     public const DEFAULT_NAME = 'الكاشير';
-
-    public const PRINT_VIA_SERVER = 'server';
-
-    public const PRINT_VIA_AGENT = 'agent';
 
     protected $fillable = [
         'name',
@@ -132,36 +132,18 @@ class Terminal extends Model
         return $printer === '' ? null : $printer;
     }
 
-    /**
-     * Receipts and the cash drawer go through the Turbo Label app on this
-     * drawer's computer (POS hosted away from the shop).
-     */
-    public function printsViaAgent(): bool
+    public function agentTargetColumn(): string
     {
-        return $this->print_via === self::PRINT_VIA_AGENT;
+        return 'terminal_id';
     }
 
-    public function agentPaired(): bool
+    public function agentTargetKey(): string
     {
-        return $this->agent_token_hash !== null;
+        return 'terminal:'.$this->id;
     }
 
-    public function agentPrinter(): ?string
+    public function agentEnabled(): bool
     {
-        $printer = trim((string) $this->agent_printer);
-
-        return $printer === '' ? null : $printer;
-    }
-
-    /**
-     * Windows printers the paired app reported.
-     *
-     * @return list<string>
-     */
-    public function agentPrinters(): array
-    {
-        $printers = $this->agent_info['printers'] ?? [];
-
-        return is_array($printers) ? array_values(array_filter($printers, 'is_string')) : [];
+        return $this->printsViaAgent() && $this->is_active;
     }
 }

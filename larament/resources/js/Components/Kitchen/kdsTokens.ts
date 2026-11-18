@@ -1,50 +1,52 @@
 import type { CSSProperties } from 'react';
 
 /**
- * Wall-KDS palette. Dark surfaces, AA text, one accent per state.
- * Defined once and exposed as CSS variables so cards, the bar and drawers share it.
+ * Wall-KDS palette. High-contrast dark surfaces, crisp borders, one semantic accent per state.
+ * Exposed as CSS variables so cards, top bar, panels and drawers share a unified visual language.
  */
 export const kdsTokens = {
-    page: '#0b0e14',
-    bar: '#10141c',
+    page: '#090c12',
+    bar: '#0f141e',
     line: 'rgba(255,255,255,0.08)',
-    card: '#161b24',
-    cardAlt: '#1c2430',
-    text: '#f5f7fb',
-    textSoft: '#c5ceda',
-    textDim: '#9aa6b5',
-    stripNormal: '#3d4c63',
+    lineStrong: 'rgba(255,255,255,0.14)',
+    card: '#141b27',
+    cardElevated: '#192231',
+    cardAlt: '#1e293b',
+    text: '#f8fafc',
+    textSoft: '#cbd5e1',
+    textDim: '#94a3b8',
+    stripNormal: '#3b82f6',
     stripWarning: '#f59e0b',
     stripLate: '#ef4444',
-    timer: '#f5f7fb',
+    timer: '#f8fafc',
     timerWarning: '#fbbf24',
     timerLate: '#fecaca',
     fresh: '#34d399',
     freshInk: '#052e16',
-    rush: '#6d28d9',
+    rush: '#7c3aed',
+    rushSoft: 'rgba(124, 58, 237, 0.22)',
     note: '#fbbf24',
-    noteStrong: '#fde68a',
+    noteStrong: '#fef3c7',
     ack: '#f59e0b',
     ackInk: '#111827',
     voidTag: '#9ca3af',
     voidAfter: '#f87171',
     increase: '#6ee7b7',
     reduce: '#fca5a5',
-    qtyBg: '#243044',
+    qtyBg: '#253349',
     qtyInk: '#f8fafc',
-    done: '#15803d',
+    done: '#16a34a',
     doneInk: '#ffffff',
     check: '#4ade80',
-    cancelled: '#2a1518',
-    cancelledBanner: '#9f1239',
+    cancelled: '#241217',
+    cancelledBanner: '#be123c',
     highlight: '#facc15',
     danger: '#ef4444',
-    barHeight: 56,
-    footerHeight: 52,
-    markerHeight: 22,
-    gap: 10,
+    barHeight: 60,
+    footerHeight: 56,
+    gap: 12,
     touch: 48,
-    radius: 14,
+    radius: 16,
 } as const;
 
 export const kdsCssVars = {
@@ -83,23 +85,34 @@ export function kdsPx(base: number, scale: number): number {
 export const KDS_CSS = `
 @keyframes kds-late-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  50% { opacity: 0.52; }
 }
 @keyframes kds-ack-pulse {
-  0% { background-color: rgba(245, 158, 11, 0.22); }
+  0% { background-color: rgba(245, 158, 11, 0.24); }
   100% { background-color: transparent; }
 }
 @keyframes kds-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.kds-late-timer { animation: kds-late-pulse 1.6s ease-in-out infinite; }
-.kds-ack-once { animation: kds-ack-pulse 700ms ease-out 1; }
-.kds-card-enter { animation: kds-enter 180ms ease-out; }
-.kds-press:active { filter: brightness(1.15); }
-.kds-search::placeholder { color: #9aa6b5; }
+@keyframes kds-highlight-ring {
+  0%, 100% { box-shadow: 0 0 0 3px #facc15, 0 0 24px rgba(250, 204, 21, 0.35); }
+  50% { box-shadow: 0 0 0 4px #fde047, 0 0 32px rgba(250, 204, 21, 0.55); }
+}
+.kds-late-timer { animation: kds-late-pulse 1.5s ease-in-out infinite; }
+.kds-ack-once { animation: kds-ack-pulse 750ms ease-out 1; }
+.kds-card-enter { animation: kds-enter 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.kds-card-highlight { animation: kds-highlight-ring 1s ease-in-out infinite; }
+.kds-press { transition: transform 80ms ease, filter 120ms ease, background-color 140ms ease; }
+.kds-press:active { transform: scale(0.98); filter: brightness(1.12); }
+.kds-search::placeholder { color: #94a3b8; }
 .kds-search:focus { outline: 2px solid #f59e0b; outline-offset: 1px; }
+.kds-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.kds-scroll::-webkit-scrollbar-track { background: transparent; }
+.kds-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 9999px; }
+.kds-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.45); }
 @media (prefers-reduced-motion: reduce) {
-  .kds-late-timer, .kds-ack-once, .kds-card-enter { animation: none; }
+  .kds-late-timer, .kds-ack-once, .kds-card-enter, .kds-card-highlight { animation: none; }
+  .kds-press { transition: none; }
 }
 `;

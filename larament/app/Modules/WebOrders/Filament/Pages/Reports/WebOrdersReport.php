@@ -21,7 +21,7 @@ class WebOrdersReport extends BaseDashboard
 
     protected static ?string $title = 'أوردرات الويب';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 10;
 
     public function getWidgets(): array
     {

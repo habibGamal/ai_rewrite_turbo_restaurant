@@ -2,14 +2,15 @@
 
 namespace App\PrintAgent;
 
+use App\Models\Printer;
 use App\Models\Terminal;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * The queue between the POS and the Turbo Label app on each drawer's
- * computer, plus pairing the app with a drawer.
+ * The queue between the POS and the Turbo Label app on each paired computer
+ * (sales points and kitchen printers), plus pairing the app with a target.
  */
 class PrintAgentQueue
 {
@@ -21,12 +22,12 @@ class PrintAgentQueue
 
     public const TOKEN_PREFIX = 'TL1.';
 
-    public function push(Terminal $terminal, string $kind, string $bytes): PrintAgentJob
+    public function push(PrintAgentTarget $target, string $kind, string $bytes): PrintAgentJob
     {
         return PrintAgentJob::query()->create([
-            'terminal_id' => $terminal->id,
+            $target->agentTargetColumn() => $target->agentTargetId(),
             'kind' => $kind,
-            'printer' => $terminal->agentPrinter(),
+            'printer' => $target->agentPrinter(),
             'payload' => base64_encode($bytes),
             'status' => PrintAgentJob::PENDING,
         ]);
@@ -61,20 +62,29 @@ class PrintAgentQueue
             usleep(200_000);
         }
 
-        $terminal = $job->terminal;
+        $target = $job->target();
 
-        if (! $this->online($terminal)) {
+        if ($target === null || ! $target->agentPaired()) {
+            throw new PrintAgentException(sprintf(
+                'برنامج Turbo Label غير مربوط بـ«%s».',
+                $target?->agentTargetName() ?? '',
+            ));
+        }
+
+        if (! $this->online($target)) {
             throw new PrintAgentException(sprintf(
                 'برنامج Turbo Label على جهاز «%s» غير متصل. شغّله، وإذا عمل خلال دقيقتين فستُطبع.',
-                $terminal->name,
+                $target->agentTargetName(),
             ));
         }
     }
 
-    public function online(Terminal $terminal): bool
+    public function online(PrintAgentTarget $target): bool
     {
-        return $terminal->agent_last_seen_at !== null
-            && $terminal->agent_last_seen_at->gt(now()->subSeconds(self::ONLINE_SECONDS));
+        $lastSeen = $target->agentLastSeenAt();
+
+        return $lastSeen !== null
+            && $lastSeen->gt(now()->subSeconds(self::ONLINE_SECONDS));
     }
 
     /**
@@ -83,10 +93,13 @@ class PrintAgentQueue
      *
      * @return Collection<int, PrintAgentJob>
      */
-    public function claim(Terminal $terminal): Collection
+    public function claim(PrintAgentTarget $target): Collection
     {
+        $column = $target->agentTargetColumn();
+        $id = $target->agentTargetId();
+
         PrintAgentJob::query()
-            ->where('terminal_id', $terminal->id)
+            ->where($column, $id)
             ->where('status', PrintAgentJob::PENDING)
             ->where('created_at', '<', now()->subSeconds(self::EXPIRE_SECONDS))
             ->update([
@@ -95,9 +108,9 @@ class PrintAgentQueue
                 'finished_at' => now(),
             ]);
 
-        return DB::transaction(function () use ($terminal): Collection {
+        return DB::transaction(function () use ($column, $id): Collection {
             $jobs = PrintAgentJob::query()
-                ->where('terminal_id', $terminal->id)
+                ->where($column, $id)
                 ->where('status', PrintAgentJob::PENDING)
                 ->orderBy('id')
                 ->limit(20)
@@ -129,35 +142,48 @@ class PrintAgentQueue
     }
 
     /**
-     * A new token for the drawer (the old one stops working). Returns the
-     * pairing code the app accepts: TL1. + base64url JSON {s, t, n}.
+     * A new token for the target (the old one stops working). Returns the
+     * pairing code the app accepts: TL1. + base64url JSON {s, t, n, k}.
      */
-    public function pair(Terminal $terminal): string
+    public function pair(PrintAgentTarget $target): string
     {
         $token = Str::random(48);
 
-        $terminal->forceFill([
+        $target->updateAgentState([
             'agent_token_hash' => hash('sha256', $token),
             'agent_paired_at' => now(),
             'agent_last_seen_at' => null,
             'agent_info' => null,
-        ])->save();
+        ]);
 
         return self::TOKEN_PREFIX.rtrim(strtr(base64_encode((string) json_encode([
             's' => rtrim(url('/'), '/'),
             't' => $token,
-            'n' => $terminal->name,
+            'n' => $target->agentTargetName(),
+            'k' => $target->agentTargetKey(),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), '+/', '-_'), '=');
     }
 
-    public function unpair(Terminal $terminal): void
+    public function unpair(PrintAgentTarget $target): void
     {
-        $terminal->forceFill([
+        $target->updateAgentState([
             'agent_token_hash' => null,
             'agent_paired_at' => null,
             'agent_last_seen_at' => null,
             'agent_info' => null,
-        ])->save();
+        ]);
+    }
+
+    public function targetForToken(?string $token): ?PrintAgentTarget
+    {
+        if ($token === null || strlen($token) < 20) {
+            return null;
+        }
+
+        $hash = hash('sha256', $token);
+
+        return Terminal::query()->where('agent_token_hash', $hash)->first()
+            ?? Printer::query()->where('agent_token_hash', $hash)->first();
     }
 
     public function terminalForToken(?string $token): ?Terminal
@@ -174,7 +200,7 @@ class PrintAgentQueue
      *
      * @param  array<string, mixed>|null  $info
      */
-    public function seen(Terminal $terminal, ?array $info = null): void
+    public function seen(PrintAgentTarget $target, ?array $info = null): void
     {
         $attributes = ['agent_last_seen_at' => now()];
 
@@ -182,6 +208,6 @@ class PrintAgentQueue
             $attributes['agent_info'] = $info;
         }
 
-        $terminal->forceFill($attributes)->save();
+        $target->updateAgentState($attributes);
     }
 }

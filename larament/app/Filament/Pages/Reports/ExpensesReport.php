@@ -34,7 +34,7 @@ class ExpensesReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير المصروفات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     protected ShiftsReportService $shiftsReportService;
 

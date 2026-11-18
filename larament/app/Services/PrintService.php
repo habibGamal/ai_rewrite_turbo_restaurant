@@ -7,10 +7,11 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Terminal;
 use App\Orders\ReceiptPayment;
 use App\Orders\ReceiptView;
 use App\PrintAgent\AgentPrintConnector;
+use App\PrintAgent\PrintAgentException;
+use App\PrintAgent\PrintAgentTarget;
 use App\Services\PrintStrategies\PrintStrategyFactory;
 use App\Services\PrintStrategies\PrintStrategyInterface;
 use App\Terminals\TerminalSessionResolver;
@@ -140,6 +141,15 @@ class PrintService
         return $this->createConnector($this->cashierPrinter());
     }
 
+    private function printerConnector(\App\Models\Printer $printer, string $kind): PrintConnector
+    {
+        if ($printer->printsViaAgent()) {
+            return new AgentPrintConnector($printer, $kind);
+        }
+
+        return $this->createConnector((string) $printer->ip_address);
+    }
+
     private function sendIfAgent(PrintConnector $connector): void
     {
         if ($connector instanceof AgentPrintConnector) {
@@ -218,8 +228,17 @@ class PrintService
             }
 
             // Print directly to each printer
+            $errors = [];
             foreach ($itemsByPrinterMap as $printerId => $printerItems) {
-                $this->printKitchenProcess($order, $printerItems, $printerId);
+                try {
+                    $this->printKitchenProcess($order, $printerItems, $printerId);
+                } catch (Exception $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+
+            if ($errors !== []) {
+                throw new PrintAgentException(implode(' — ', $errors));
             }
 
             if (empty($itemsByPrinterMap)) {
@@ -337,24 +356,43 @@ class PrintService
      */
     public function printKitchenProcess(Order $order, array $orderItems, int $printerId): void
     {
+        $this->printToKitchenPrinter(
+            $printerId,
+            'kitchen',
+            fn (): string => $this->generateKitchenHtml($order, $orderItems),
+            'kitchen order',
+        );
+    }
+
+    /**
+     * @param  callable(): string  $renderHtml
+     */
+    private function printToKitchenPrinter(int $printerId, string $kind, callable $renderHtml, string $context): void
+    {
+        $printer = null;
+        $escposPrinter = null;
+        $tempImagePath = null;
+
         try {
             $printer = \App\Models\Printer::findOrFail($printerId);
 
-            if (! $printer->ip_address) {
+            if (! $printer->printsViaAgent() && ! $printer->ipAddress()) {
                 Log::warning("Printer {$printer->name} has no IP address configured");
 
                 return;
             }
-            Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
+
+            $targetLabel = $printer->printsViaAgent() ? 'Turbo Label' : $printer->ipAddress();
+            Log::info("Printing {$context} to printer {$printer->name} ({$targetLabel}) using {$this->printStrategy->getName()}");
 
             // ---------- 1. Generate HTML content using kitchen template ----------
-            $html = $this->generateKitchenHtml($order, $orderItems);
+            $html = $renderHtml();
 
             // ---------- 2. Convert HTML to image using current strategy ----------
             $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
 
             // ---------- 3. Print via escpos-php ----------
-            $connector = $this->createConnector($printer->ip_address);
+            $connector = $this->printerConnector($printer, $kind);
             $escposPrinter = new Printer($connector);
             $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
 
@@ -364,16 +402,24 @@ class PrintService
             $escposPrinter->feed(3);
             $escposPrinter->cut();
 
-            // Clean up
-            unlink($tempImagePath);
-            $escposPrinter->close();
-
-            Log::info("Kitchen order printed successfully to printer {$printer->name}");
-
+            Log::info("Kitchen ticket ({$context}) printed successfully to printer {$printer->name}");
         } catch (Exception $e) {
-            Log::error("Error printing kitchen order to printer {$printerId}: ".$e->getMessage());
-            // throw $e;
+            Log::error("Error printing {$context} to printer {$printerId}: ".$e->getMessage());
+            if ($printer?->printsViaAgent()) {
+                throw $e;
+            }
+
+            return;
+        } finally {
+            if ($tempImagePath !== null && file_exists($tempImagePath)) {
+                unlink($tempImagePath);
+            }
+            if ($escposPrinter !== null) {
+                $escposPrinter->close();
+            }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**
@@ -428,11 +474,11 @@ class PrintService
     }
 
     /**
-     * A test page on a drawer's printer through its Turbo Label app.
+     * A test page on a drawer's or kitchen printer's printer through its Turbo Label app.
      */
-    public function testThroughAgent(Terminal $terminal): void
+    public function testThroughAgent(PrintAgentTarget $target): void
     {
-        $connector = new AgentPrintConnector($terminal, 'test');
+        $connector = new AgentPrintConnector($target, 'test');
         $printer = new Printer($connector);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
@@ -673,8 +719,17 @@ class PrintService
                 }
             }
 
+            $errors = [];
             foreach ($itemsByPrinterMap as $printerId => $printerItems) {
-                $this->printKitchenChangesProcess($order, $printerItems, $printerId);
+                try {
+                    $this->printKitchenChangesProcess($order, $printerItems, $printerId);
+                } catch (Exception $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+
+            if ($errors !== []) {
+                throw new PrintAgentException(implode(' — ', $errors));
             }
 
             if (empty($itemsByPrinterMap)) {
@@ -769,37 +824,12 @@ class PrintService
 
     public function printKitchenChangesProcess(Order $order, array $orderItems, int $printerId): void
     {
-        try {
-            $printer = \App\Models\Printer::findOrFail($printerId);
-
-            if (! $printer->ip_address) {
-                Log::warning("Printer {$printer->name} has no IP address configured");
-
-                return;
-            }
-
-            Log::info("Printing kitchen changes to printer {$printer->name} ({$printer->ip_address})");
-
-            $html = $this->generateKitchenChangesHtml($order, $orderItems);
-            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
-
-            $connector = $this->createConnector($printer->ip_address);
-            $escposPrinter = new Printer($connector);
-            $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
-
-            $escposImage = EscposImage::load($tempImagePath);
-            $escposPrinter->bitImage($escposImage);
-            $escposPrinter->feed(3);
-            $escposPrinter->cut();
-
-            unlink($tempImagePath);
-            $escposPrinter->close();
-
-            Log::info("Kitchen changes printed successfully to printer {$printer->name}");
-
-        } catch (Exception $e) {
-            Log::error("Error printing kitchen changes to printer {$printerId}: ".$e->getMessage());
-        }
+        $this->printToKitchenPrinter(
+            $printerId,
+            'kitchen_changes',
+            fn (): string => $this->generateKitchenChangesHtml($order, $orderItems),
+            'kitchen changes',
+        );
     }
 
     private function generateKitchenChangesHtml(Order $order, array $orderItems): string

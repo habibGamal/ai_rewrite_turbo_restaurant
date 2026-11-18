@@ -7,9 +7,9 @@
 // is partly full. Pages stay horizontal.
 
 export const CONTINUATION_MARKER_HEIGHT = 22;
-export const FRAGMENT_GAP = 10;
+export const FRAGMENT_GAP = 12;
 /** Top accent strip of a ticket fragment. Side borders are box-shadows and do not add height. */
-export const CARD_CHROME_HEIGHT = 4;
+export const CARD_CHROME_HEIGHT = 5;
 
 export interface BlockMeasure {
     key: string;

@@ -304,8 +304,11 @@ export default function ManageOrder({
                     })),
                 });
                 message.success(terms.changesSentToKitchen);
-            } catch {
-                message.error(terms.sendChangesFailed);
+            } catch (error) {
+                const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+                    ? error.response?.data?.message
+                    : undefined;
+                message.error(serverMessage || terms.sendChangesFailed);
             } finally {
                 setIsPrintChangesModalOpen(false);
             }

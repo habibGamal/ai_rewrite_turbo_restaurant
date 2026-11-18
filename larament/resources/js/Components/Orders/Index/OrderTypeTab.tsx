@@ -133,11 +133,7 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
     };
 
     const cardDetails = (display: OrderDisplay | undefined, order: Order) => {
-        if (
-            !display?.showCustomer &&
-            !display?.showAddress &&
-            !display?.showDriver
-        ) {
+        if (!display?.showCustomer && !display?.showDriver) {
             return null;
         }
 
@@ -146,7 +142,7 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
         return (
             <div className="space-y-1 text-sm">
                 {display.showCustomer &&
-                    (display.showAddress || display.showDriver) &&
+                    display.showDriver &&
                     order.customer?.name && (
                         <Typography.Text className="block">
                             اسم العميل: {order.customer.name}
@@ -160,11 +156,6 @@ const OrderTypeTabBody: React.FC<OrderTypeTabProps> = ({ tab, orders }) => {
                         ) : (
                             <>رقم العميل {phone}</>
                         )}
-                    </Typography.Text>
-                )}
-                {display.showAddress && (
-                    <Typography.Text className="block">
-                        العنوان: {order.customer?.address || "غير معروف"}
                     </Typography.Text>
                 )}
                 {display.showDriver && (

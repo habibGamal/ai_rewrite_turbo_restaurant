@@ -167,7 +167,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             var parsed = PairingCode.Parse(code);
             if (parsed is null)
             {
-                MessageBox.Show("رمز الربط غير صحيح. انسخه من جديد من النظام («منافذ البيع» ← «ربط برنامج الطباعة»).", "Turbo Label",
+                MessageBox.Show("رمز الربط غير صحيح. انسخه من جديد من النظام («منافذ البيع» أو «الطابعات» ← «ربط برنامج الطباعة»).", "Turbo Label",
                     MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1,
                     MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading | MessageBoxOptions.DefaultDesktopOnly);
 
@@ -175,7 +175,7 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
             }
 
             var answer = MessageBox.Show(
-                $"ربط هذا الجهاز بمنفذ البيع «{parsed.Terminal}»\nعلى النظام: {parsed.Server}\n\nستُطبع فواتير منفذ البيع هذا ويُفتح درج النقود عبر طابعة هذا الجهاز. هل توافق؟",
+                $"ربط هذا الجهاز بـ«{parsed.Terminal}»\nعلى النظام: {parsed.Server}\n\nستُطبع المستندات المرسلة إليه عبر طابعة هذا الجهاز. هل توافق؟",
                 "Turbo Label",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question,
@@ -186,12 +186,12 @@ public sealed class TrayApp : ApplicationContext, IAgentUi
                 return;
             }
 
-            _config.AddConnection(new PosConnection { Server = parsed.Server, Token = parsed.Token, Terminal = parsed.Terminal });
+            _config.AddConnection(new PosConnection { Server = parsed.Server, Token = parsed.Token, Terminal = parsed.Terminal, Key = parsed.Key });
             _poller.Refresh();
             _log.Add("ربط", $"{parsed.Terminal} ← {parsed.Server}", ok: true);
             if (string.IsNullOrWhiteSpace(_config.ReceiptPrinter))
             {
-                Notify("اختر طابعة الفواتير", "رُبط الجهاز بمنفذ البيع. اختر طابعة الفواتير من «الطابعات» إذا لم تُحدَّد لمنفذ البيع طابعة في النظام.", error: false);
+                Notify("اختر الطابعة", "تم الربط بنجاح. اختر الطابعة من «الطابعات» إذا لم تُحدَّد في النظام.", error: false);
             }
 
             ShowWindow();

@@ -99,23 +99,28 @@ public sealed class AgentConfig
         }
     }
 
-    /// <summary>One drawer per POS address on this PC: a new code for the same POS replaces the old one.</summary>
+    /// <summary>Replace only an older pairing for the same target on the same POS, allowing a PC to pair a sales point and kitchen printers together.</summary>
     public void AddConnection(PosConnection connection)
     {
         lock (Gate)
         {
-            Connections.RemoveAll(c => string.Equals(c.Server, connection.Server, StringComparison.OrdinalIgnoreCase));
+            Connections.RemoveAll(c =>
+                string.Equals(c.Token, connection.Token, StringComparison.Ordinal)
+                || (string.Equals(c.Server, connection.Server, StringComparison.OrdinalIgnoreCase)
+                    && (!string.IsNullOrEmpty(c.Key) && !string.IsNullOrEmpty(connection.Key)
+                        ? string.Equals(c.Key, connection.Key, StringComparison.OrdinalIgnoreCase)
+                        : string.Equals(c.Terminal, connection.Terminal, StringComparison.OrdinalIgnoreCase))));
             Connections.Add(connection);
         }
 
         Save();
     }
 
-    public void RemoveConnection(string server)
+    public void RemoveConnection(string token)
     {
         lock (Gate)
         {
-            Connections.RemoveAll(c => string.Equals(c.Server, server, StringComparison.OrdinalIgnoreCase));
+            Connections.RemoveAll(c => string.Equals(c.Token, token, StringComparison.Ordinal));
         }
 
         Save();
@@ -157,6 +162,8 @@ public sealed record PosConnection
     public string Token { get; init; } = "";
 
     public string Terminal { get; init; } = "";
+
+    public string Key { get; init; } = "";
 
     public DateTime PairedAt { get; init; } = DateTime.Now;
 }

@@ -37,7 +37,7 @@ class PeriodShiftReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير فترة الشفتات';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected ShiftsReportService $shiftsReportService;
 

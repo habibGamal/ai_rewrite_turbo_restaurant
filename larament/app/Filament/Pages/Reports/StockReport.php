@@ -32,7 +32,7 @@ class StockReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير المخزون';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 16;
 
     public function filtersForm(Schema $schema): Schema
     {

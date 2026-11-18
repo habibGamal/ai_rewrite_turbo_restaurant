@@ -5,11 +5,11 @@ using System.Web;
 namespace TurboLabel;
 
 /// <summary>
-/// The code the POS shows when a drawer is set to print through this app:
-/// "TL1." + base64url of {"s": server, "t": token, "n": drawer name}. It
-/// can also arrive inside a link, turbo-label://pair?code=TL1....
+/// The code the POS shows when a drawer or kitchen printer is set to print
+/// through this app: "TL1." + base64url of {"s": server, "t": token, "n": name, "k": target key}.
+/// It can also arrive inside a link, turbo-label://pair?code=TL1....
 /// </summary>
-public sealed record PairingCode(string Server, string Token, string Terminal)
+public sealed record PairingCode(string Server, string Token, string Terminal, string Key = "")
 {
     private const string Prefix = "TL1.";
 
@@ -45,6 +45,7 @@ public sealed record PairingCode(string Server, string Token, string Terminal)
             var server = root.GetProperty("s").GetString()?.TrimEnd('/') ?? "";
             var token = root.GetProperty("t").GetString() ?? "";
             var terminal = root.TryGetProperty("n", out var name) ? name.GetString() ?? "" : "";
+            var key = root.TryGetProperty("k", out var keyProp) ? keyProp.GetString() ?? "" : "";
 
             if (!Uri.TryCreate(server, UriKind.Absolute, out var uri)
                 || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
@@ -53,7 +54,7 @@ public sealed record PairingCode(string Server, string Token, string Terminal)
                 return null;
             }
 
-            return new PairingCode(server, token, terminal);
+            return new PairingCode(server, token, terminal, key);
         }
         catch (Exception)
         {

@@ -2,21 +2,20 @@
 
 namespace App\PrintAgent;
 
-use App\Models\Terminal;
 use Mike42\Escpos\PrintConnectors\PrintConnector;
 
 /**
  * Collects the ESC/POS bytes a Printer writes instead of sending them to a
  * socket. Closing the printer only ends the buffer; the bytes are queued for
- * the drawer's Turbo Label app by send(), which callers run only after the
- * whole receipt was built, so a failure half way never prints half a receipt.
+ * the target's Turbo Label app by send(), which callers run only after the
+ * whole ticket/receipt was built, so a failure half way never prints half a job.
  */
 class AgentPrintConnector implements PrintConnector
 {
     private string $buffer = '';
 
     public function __construct(
-        public readonly Terminal $terminal,
+        public readonly PrintAgentTarget $target,
         public readonly string $kind,
     ) {}
 
@@ -54,7 +53,7 @@ class AgentPrintConnector implements PrintConnector
     public function send(): PrintAgentJob
     {
         $queue = app(PrintAgentQueue::class);
-        $job = $queue->push($this->terminal, $this->kind, $this->buffer);
+        $job = $queue->push($this->target, $this->kind, $this->buffer);
         $queue->await($job);
 
         return $job;

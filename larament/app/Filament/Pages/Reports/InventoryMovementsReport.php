@@ -64,7 +64,7 @@ class InventoryMovementsReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير حركة المخزون';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 17;
 
     /**
      * @return array<string, string>

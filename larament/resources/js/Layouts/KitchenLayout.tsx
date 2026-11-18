@@ -2,7 +2,7 @@ import { kdsTokens } from '@/Components/Kitchen/kdsTokens';
 import { App as AntApp, ConfigProvider, theme } from 'antd';
 import arEG from 'antd/locale/ar_EG';
 import { usePage } from '@inertiajs/react';
-import { ReactNode, useLayoutEffect, useRef } from 'react';
+import { type ReactNode, useLayoutEffect, useRef } from 'react';
 
 interface KitchenLayoutProps {
     children: ReactNode;
@@ -16,10 +16,11 @@ export default function KitchenLayout({ children }: KitchenLayoutProps) {
             theme={{
                 algorithm: theme.darkAlgorithm,
                 token: {
-                    colorPrimary: '#15803d',
-                    colorError: '#ef4444',
+                    colorPrimary: kdsTokens.done,
+                    colorError: kdsTokens.danger,
+                    colorBgElevated: kdsTokens.card,
                     fontSize: 16,
-                    borderRadius: 10,
+                    borderRadius: 12,
                     colorBgBase: kdsTokens.page,
                 },
             }}

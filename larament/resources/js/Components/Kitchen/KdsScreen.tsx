@@ -1,9 +1,9 @@
 import KdsAllDayPanel from '@/Components/Kitchen/KdsAllDayPanel';
-import KdsBoard, { type PageEdgeStats } from '@/Components/Kitchen/KdsBoard';
+import KdsBoard, { type BoardEmptyKind, type PageEdgeStats } from '@/Components/Kitchen/KdsBoard';
 import KdsRecallDrawer from '@/Components/Kitchen/KdsRecallDrawer';
 import KdsSettingsDrawer from '@/Components/Kitchen/KdsSettingsDrawer';
 import KdsStartOverlay from '@/Components/Kitchen/KdsStartOverlay';
-import KdsTopBar from '@/Components/Kitchen/KdsTopBar';
+import KdsTopBar, { type BoardFilter } from '@/Components/Kitchen/KdsTopBar';
 import { KdsProvider, type KdsContextValue } from '@/Components/Kitchen/kdsContext';
 import { isConnectionLost, useKitchenChannel } from '@/Components/Kitchen/hooks/useKitchenChannel';
 import { useKdsClock } from '@/Components/Kitchen/hooks/useKdsClock';
@@ -109,6 +109,19 @@ export default function KdsScreen({
         [board, nowMs, kdsSettings.warning_percent],
     );
 
+    const [filter, setFilter] = useState<BoardFilter>('all');
+    const visibleBoard = useMemo(() => {
+        if (filter === 'all') {
+            return board;
+        }
+        return board.filter((ticket) => {
+            if (filter === 'fresh') {
+                return ticket.seen_at == null && ticket.status !== 'cancelled';
+            }
+            return ticketUrgency(ticket, nowMs, kdsSettings.warning_percent) === filter;
+        });
+    }, [board, filter, nowMs, kdsSettings.warning_percent]);
+
     const sounds = useKdsSounds({
         settings: kdsSettings,
         muted: screen.settings.muted,
@@ -131,7 +144,7 @@ export default function KdsScreen({
     const columnWidth =
         columnCount > 0 ? Math.floor((boardSize.width - FRAGMENT_GAP * (columnCount - 1)) / columnCount) : 0;
 
-    const measures = useMemo(() => buildMeasures(board, heights), [board, heights]);
+    const measures = useMemo(() => buildMeasures(visibleBoard, heights), [visibleBoard, heights]);
     const pages = useMemo(() => {
         if (!measures || boardSize.height <= 0) {
             return [emptyPackedPage(columnCount)];
@@ -184,6 +197,11 @@ export default function KdsScreen({
                 setRecallOpen(true);
                 return;
             }
+            if (filter !== 'all') {
+                setFilter('all');
+                setPendingJumpId(ticket.id);
+                return;
+            }
             const index = pageOfTicket(pages, ticket.id);
             if (index >= 0) {
                 setPageIndex(index);
@@ -191,22 +209,25 @@ export default function KdsScreen({
                 setPendingJumpId(ticket.id);
             }
         },
-        [pages],
+        [pages, filter],
     );
 
-    const onQueryChange = (value: string): void => {
-        setQuery(value);
-        const normalized = normalizeDigits(value).trim();
-        if (!normalized) {
-            return;
-        }
-        const exact = [...board, ...recall].find((ticket) => String(ticket.order_number) === normalized);
-        if (exact) {
-            jumpTo(exact);
-        }
-    };
+    const onQueryChange = useCallback(
+        (value: string): void => {
+            setQuery(value);
+            const normalized = normalizeDigits(value).trim();
+            if (!normalized) {
+                return;
+            }
+            const exact = [...board, ...recall].find((ticket) => String(ticket.order_number) === normalized);
+            if (exact) {
+                jumpTo(exact);
+            }
+        },
+        [board, recall, jumpTo],
+    );
 
-    const onSearch = (): void => {
+    const onSearch = useCallback((): void => {
         const match = findTicket([...board, ...recall], query);
         if (match) {
             jumpTo(match);
@@ -215,7 +236,7 @@ export default function KdsScreen({
         if (query.trim()) {
             message.warning('لا يوجد طلب بهذا الرقم');
         }
-    };
+    }, [board, recall, query, jumpTo, message]);
 
     const confirmUndo = useCallback(
         (item: KdsItem, ticket: KdsTicket) => {
@@ -253,72 +274,107 @@ export default function KdsScreen({
         [confirmUndo, kdsSettings, nowMs, optimistic],
     );
 
+    const stationNames = useMemo(
+        () => new Map(stations.map((station) => [station.id, station.name])),
+        [stations],
+    );
+    const finishTicket = useCallback((ticket: KdsTicket) => optimistic.finishTicket(ticket), [optimistic]);
+    const acknowledge = useCallback((ticket: KdsTicket) => optimistic.acknowledge(ticket), [optimistic]);
+    const toggleRush = useCallback((ticket: KdsTicket) => optimistic.toggleRush(ticket), [optimistic]);
+
     const context = useMemo<KdsContextValue>(
         () => ({
             nowMs,
             scale: screen.settings.fontScale / 100,
             kdsSettings,
             stationId,
-            stationNames: new Map(stations.map((station) => [station.id, station.name])),
+            stationNames,
             highlightedId: highlightId,
             tapItem,
-            finishTicket: (ticket) => optimistic.finishTicket(ticket),
-            acknowledge: (ticket) => optimistic.acknowledge(ticket),
-            toggleRush: (ticket) => optimistic.toggleRush(ticket),
+            finishTicket,
+            acknowledge,
+            toggleRush,
         }),
-        [nowMs, screen.settings.fontScale, kdsSettings, stationId, stations, highlightId, tapItem, optimistic],
+        [
+            nowMs,
+            screen.settings.fontScale,
+            kdsSettings,
+            stationId,
+            stationNames,
+            highlightId,
+            tapItem,
+            finishTicket,
+            acknowledge,
+            toggleRush,
+        ],
     );
 
-    const empty = emptyKind(tickets, board, hasActiveShift, stationId);
-    const previous = edgeStats(
-        otherPageTicketIds(pages, pageIndex, 'previous'),
-        board,
-        nowMs,
-        kdsSettings.warning_percent,
+    const empty = emptyKind(tickets, board, visibleBoard, hasActiveShift, stationId, filter);
+    const previous = useMemo(
+        () => edgeStats(otherPageTicketIds(pages, pageIndex, 'previous'), visibleBoard, nowMs, kdsSettings.warning_percent),
+        [pages, pageIndex, visibleBoard, nowMs, kdsSettings.warning_percent],
     );
-    const next = edgeStats(otherPageTicketIds(pages, pageIndex, 'next'), board, nowMs, kdsSettings.warning_percent);
+    const next = useMemo(
+        () => edgeStats(otherPageTicketIds(pages, pageIndex, 'next'), visibleBoard, nowMs, kdsSettings.warning_percent),
+        [pages, pageIndex, visibleBoard, nowMs, kdsSettings.warning_percent],
+    );
+    const clock = formatClock(nowMs);
+    const activeStationLabel = useMemo(() => stationLabel(stationId, stations), [stationId, stations]);
+
+    const toggleAllDay = useCallback(() => setAllDayOpen((open) => !open), []);
+    const toggleRecall = useCallback(() => setRecallOpen((open) => !open), []);
+    const openSettings = useCallback(() => setSettingsOpen(true), []);
+    const toggleMute = useCallback(() => screen.setMuted(!screen.settings.muted), [screen]);
+    const resetStation = useCallback(() => screen.setStationId(null), [screen]);
+    const resetFilter = useCallback(() => setFilter('all'), []);
+    const testSound = useCallback((sound: KdsSound) => sounds.play(sound, true), [sounds]);
 
     return (
         <KdsProvider value={context}>
             <style>{KDS_CSS}</style>
-            <div
-                className="flex min-h-0 flex-1 touch-manipulation select-none flex-col"
-                style={kdsCssVars}
-            >
+            <div className="flex min-h-0 flex-1 touch-manipulation select-none flex-col" style={kdsCssVars}>
                 {isConnectionLost(channel.connection) && (
                     <div
-                        className="shrink-0 px-4 text-center text-base font-black text-white"
-                        style={{ height: 36, lineHeight: '36px', background: kdsTokens.danger }}
+                        className="shrink-0 px-4 text-center text-sm font-black text-white"
+                        style={{ height: 34, lineHeight: '34px', background: kdsTokens.danger }}
                     >
                         انقطع الاتصال — يتم التحديث كل 30 ثانية
                     </div>
                 )}
                 <KdsTopBar
-                    stationLabel={stationLabel(stationId, stations)}
+                    stations={stations}
+                    stationId={stationId}
+                    stationLabel={activeStationLabel}
+                    onStationId={screen.setStationId}
+                    pageIndex={pageIndex}
+                    pageCount={pages.length}
+                    totalBoardCount={board.length}
                     counts={counts}
+                    filter={filter}
+                    onFilterChange={setFilter}
                     query={query}
                     onQueryChange={onQueryChange}
                     onSearch={onSearch}
-                    pageIndex={pageIndex}
-                    pageCount={pages.length}
                     allDayOpen={allDayOpen}
-                    onToggleAllDay={() => setAllDayOpen((open) => !open)}
+                    onToggleAllDay={toggleAllDay}
                     recallCount={recall.length}
                     recallOpen={recallOpen}
-                    onToggleRecall={() => setRecallOpen((open) => !open)}
+                    onToggleRecall={toggleRecall}
+                    muted={screen.settings.muted}
+                    onToggleMute={toggleMute}
                     connection={channel.connection}
-                    clock={formatClock(nowMs)}
-                    onOpenSettings={() => setSettingsOpen(true)}
+                    clock={clock}
+                    onOpenSettings={openSettings}
                 />
                 <div className="flex min-h-0 flex-1">
                     {allDayOpen && <KdsAllDayPanel tickets={board} onClose={() => setAllDayOpen(false)} />}
                     <KdsBoard
-                        tickets={board}
+                        tickets={visibleBoard}
                         pages={pages}
                         pageIndex={pageIndex}
                         columnCount={columnCount}
                         columnWidth={Math.max(0, columnWidth)}
-                        clock={formatClock(nowMs)}
+                        clock={clock}
                         onMeasure={onMeasure}
                         onViewport={onViewport}
                         onPageIndex={setPageIndex}
@@ -326,6 +382,8 @@ export default function KdsScreen({
                         next={next}
                         keyboardEnabled={!settingsOpen && !recallOpen}
                         empty={empty}
+                        onResetStation={resetStation}
+                        onResetFilter={resetFilter}
                     />
                 </div>
             </div>
@@ -336,7 +394,7 @@ export default function KdsScreen({
                 nowMs={nowMs}
                 recallMinutes={kdsSettings.recall_minutes}
                 highlightedId={highlightId}
-                onUndo={(item, ticket) => confirmUndo(item, ticket)}
+                onUndo={confirmUndo}
             />
             <KdsSettingsDrawer
                 open={settingsOpen}
@@ -350,7 +408,7 @@ export default function KdsScreen({
                 onColumns={screen.setColumns}
                 onFontScale={screen.setFontScale}
                 onMuted={screen.setMuted}
-                onTestSound={(sound: KdsSound) => sounds.play(sound, true)}
+                onTestSound={testSound}
             />
             {sounds.needsUnlock && <KdsStartOverlay onStart={sounds.unlock} />}
         </KdsProvider>
@@ -360,11 +418,16 @@ export default function KdsScreen({
 function emptyKind(
     tickets: KdsTicket[],
     board: KdsTicket[],
+    visibleBoard: KdsTicket[],
     hasActiveShift: boolean,
     stationId: number | null,
-): 'shift' | 'station' | 'none' | null {
-    if (board.length > 0) {
+    filter: BoardFilter,
+): BoardEmptyKind {
+    if (visibleBoard.length > 0) {
         return null;
+    }
+    if (board.length > 0 && filter !== 'all') {
+        return 'filter';
     }
     if (tickets.length === 0 && !hasActiveShift) {
         return 'shift';

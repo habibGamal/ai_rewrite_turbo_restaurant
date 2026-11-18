@@ -40,7 +40,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(20) };
     private readonly CancellationTokenSource _stop = new();
-    private readonly ConcurrentDictionary<string, ConnectionState> _states = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ConnectionState> _states = new(StringComparer.Ordinal);
 
     public void Start()
     {
@@ -49,9 +49,9 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         _ = Task.Run(Loop);
     }
 
-    public ConnectionState State(string server)
+    public ConnectionState State(string token)
     {
-        return _states.GetOrAdd(server, _ => new ConnectionState());
+        return _states.GetOrAdd(token, _ => new ConnectionState());
     }
 
     /// <summary>Say hello again soon (after pairing or changing printers).</summary>
@@ -77,7 +77,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
                 }
                 catch (Exception e) when (!_stop.IsCancellationRequested)
                 {
-                    var state = State(connection.Server);
+                    var state = State(connection.Token);
                     state.Online = false;
                     state.Status = "خطأ: " + e.Message;
                 }
@@ -97,7 +97,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
     /// <returns>Whether there were jobs (then ask again right away).</returns>
     private async Task<bool> Poll(PosConnection connection)
     {
-        var state = State(connection.Server);
+        var state = State(connection.Token);
         if (DateTime.Now < state.RetryAt)
         {
             return false;
@@ -163,8 +163,8 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Terminal = answer.Terminal ?? state.Terminal;
         state.Enabled = answer.Enabled;
         state.Status = answer.Enabled
-            ? "متصل وجاهز لطباعة الفواتير"
-            : "متصل، لكن منفذ البيع مضبوط على الطباعة من الخادم لا من البرنامج";
+            ? "متصل وجاهز للطباعة"
+            : "متصل، لكن الطباعة مضبوطة على الخادم لا على البرنامج";
     }
 
     private async Task Print(PosConnection connection, ConnectionState state, AgentJob job)
@@ -175,8 +175,8 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
 
         if (string.IsNullOrWhiteSpace(printerName))
         {
-            error = "لم تُختر طابعة فواتير في برنامج Turbo Label على جهاز منفذ البيع.";
-            ui.Notify("اختر طابعة الفواتير", "افتح Turbo Label واختر طابعة الفواتير من «الطابعات».", error: true);
+            error = "لم تُختر طابعة في برنامج Turbo Label على هذا الجهاز.";
+            ui.Notify("اختر الطابعة", "افتح Turbo Label واختر طابعة الفواتير من «الطابعات».", error: true);
         }
         else
         {
@@ -239,7 +239,7 @@ public sealed class ReceiptPoller(AgentConfig config, IAgentUi ui, ActivityLog l
         state.Online = false;
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            state.Status = "أُلغي الربط من النظام. أنشئ رمز ربط جديداً من «منافذ البيع».";
+            state.Status = "أُلغي الربط من النظام. أنشئ رمز ربط جديداً من «منافذ البيع» أو «الطابعات».";
             state.RetryAt = DateTime.Now.AddSeconds(30);
         }
         else

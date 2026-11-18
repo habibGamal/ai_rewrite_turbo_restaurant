@@ -31,7 +31,7 @@ class EquipmentReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير المعدات';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 21;
 
     public function filtersForm(Schema $schema): Schema
     {

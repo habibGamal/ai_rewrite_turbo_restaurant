@@ -29,7 +29,7 @@ class ReturnsReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير المرتجعات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     public function filtersForm(Schema $schema): Schema
     {
