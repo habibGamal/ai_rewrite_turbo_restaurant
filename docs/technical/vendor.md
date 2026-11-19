@@ -33,7 +33,7 @@ Filament page «لوحة الدعم الفني» at `/admin/vendor-console` (`ve
 
 1. **نوع النشاط**: the business type (read-only once an order exists).
 2. **الوحدات**: module switches. Some refuse to turn off while they still have open data.
-3. **المميزات**: optional features (revenues, custom fees, equipment, variants, outsourced orders, multi-terminal drawers). Multi-terminal also sets `max_terminals` (1-50) and registers a disable blocker refusing to switch off while any drawer has an open session. With multi-terminal on, the vendor can also turn on **sales point separation** and pick the sales point web orders belong to (`web_orders_terminal_id`).
+3. **المميزات**: optional features (revenues, custom fees, equipment, variants, outsourced orders, multiple sales points, deferred payment, returns, closed-shift edits, purchase barcodes, label printing, document barcodes, AI assistant, AI direct queries; full list in [Modules](/technical/modules#optional-features)). All are off on a fresh install. Multi-terminal also sets `max_terminals` (1-50) and refuses to switch off while a sales point is open or during a shift that used them. With multi-terminal on, the vendor can also turn on **sales point separation** and pick the sales point web orders belong to (`web_orders_terminal_id`).
 4. **Change log**: every switch with time, old and new value and the user (stored in `feature_flag_audits`).
 
 Vendor-owned settings (`SettingKey::isVendorOwned()`) are not shown, saved or reset by the shop's Settings page, and the `settings` artisan command refuses them.
@@ -55,6 +55,6 @@ php artisan pos:profile cafe --keep-modules
 1. Deploy and migrate ([Deployment](/technical/deployment)).
 2. `php artisan pos:vendor` and keep the password.
 3. Log in as the vendor, run the setup wizard.
-4. Turn on extra modules or features the customer paid for.
+4. Turn on extra modules or features the customer paid for. Deferred payment and returns are off by default, so switch them on if the shop needs them.
 5. Change the seeded admin password and create the shop's users.
 6. If the shop has a website: set the [API key and integration token](/technical/website-integration#setup).

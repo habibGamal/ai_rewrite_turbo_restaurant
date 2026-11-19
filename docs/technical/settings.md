@@ -70,8 +70,19 @@ Not editable from the Settings page; set from the [vendor console](/technical/ve
 | `business_type` | Business profile (locked after first order). |
 | `enabled_modules` | JSON list of modules. |
 | `setup_completed` | First-run wizard done. |
-| `feature_revenues_enabled`, `feature_custom_fees_enabled`, `feature_equipment_enabled`, `feature_variants_enabled`, `feature_outsourced_orders_enabled`, `feature_multi_terminal_enabled` | Optional features. |
-| `max_terminals` | Maximum active terminals/drawers allowed in the shop (1–50). |
+| `feature_*_enabled` | Optional features: revenues, custom fees, equipment, variants, outsourced orders, multi-terminal, terminal separation, deferred payment, returns, closed-shift edits, purchase barcodes, label printing, document barcodes, AI assistant, AI queries. See [Modules](/technical/modules#optional-features). |
+| `max_terminals` | Maximum active sales points (1–50, default 2). |
+| `web_orders_terminal_id` | Sales point that web orders belong to when sales points are separated (empty = default point). |
+
+## Purchase barcode series
+
+Shop-editable, shown in «الإعدادات العامة» → «باركود فواتير الشراء» only while `feature_purchase_barcodes_enabled` is on.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `purchase_barcode_prefix` | empty | Optional letters/digits before the number (max 10, `[A-Za-z0-9]`). |
+| `purchase_barcode_digits` | `4` | Zero-padded width (1–12). |
+| `purchase_barcode_next_number` | `1` | Next number. Advanced under a row lock; taken codes and codes that would parse as scale labels are skipped. |
 
 ## Environment (`.env`)
 

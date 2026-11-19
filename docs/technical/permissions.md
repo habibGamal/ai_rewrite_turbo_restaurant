@@ -19,11 +19,11 @@ The seeder is **additive and re-runnable** (deploy runs it every time): it creat
 | Permission | Arabic label |
 |---|---|
 | `user.badge_login` | الدخول لنقطة البيع بالبادج |
-| `terminal.open` | فتح واستلام الدرج |
-| `terminal.close` | قفل درجه |
-| `terminal.close_others` | قفل درج كاشير تاني نيابةً عنه |
-| `terminal.bind_device` | ربط الأجهزة بالأدراج |
-| `view_terminals` / `create_terminals` / `update_terminals` | عرض / إضافة / تعديل الأدراج |
+| `terminal.open` | فتح واستلام منفذ البيع |
+| `terminal.close` | إغلاق منفذ البيع الخاص به |
+| `terminal.close_others` | إغلاق منفذ بيع كاشير آخر نيابةً عنه |
+| `terminal.bind_device` | ربط الأجهزة بمنافذ البيع |
+| `view_terminals` / `create_terminals` / `update_terminals` | عرض / إضافة / تعديل منافذ البيع |
 | `order.cancel` | إلغاء الطلبات |
 | `order.apply_discount` | تطبيق خصم على الطلبات والأصناف |
 | `order.change_items` | تعديل وحذف الأصناف بعد حفظ الطلب |
@@ -34,6 +34,13 @@ The seeder is **additive and re-runnable** (deploy runs it every time): it creat
 | `order.add_equipment` / `order.remove_equipment` | إضافة / تقليل معدات |
 | `shift_money.manage` / `shift_money.edit_closed` | مصروفات وإيرادات الورديات / المغلقة |
 | `view_inventory_movements_report` | تقرير حركة المخزون |
+| `print_labels` | طباعة ملصقات الباركود (feature: label printing) |
+| `view_label_templates` / `create_…` / `update_…` / `delete_label_templates` | تصميمات الملصقات |
+| `use_ai_assistant` | استخدام المساعد الذكي (feature: AI assistant) |
+
+Server-side rules enforced in `OrderController::saveOrder`, instant sale, exchanges and web orders: without `order.change_items` a saved line can't be lowered or removed; without `order.apply_discount` no line discount can be added or raised, and a web-order discount is refused. The order-level discount is capped at the items subtotal (100% for percent) in `OrderCalculationService`, so it never eats fees or equipment.
+
+Badge login (`BadgeLoginController`): wrong PINs are counted per user (5 tries, then a 15-minute lock), a successful scan of another badge does not reset the counter, and badge sessions can't open `/profile`.
 
 ## Tab permissions
 
@@ -47,7 +54,7 @@ New tab permissions go to every role that can use the POS.
 ## Module and feature gating
 
 - Module permissions (`Module::permissions()`) are denied by `Gate::before` for **everyone** while the module is off and hidden on the Roles screen.
-- Feature permissions (`OptionalFeature::permissions()`) follow the same rule for their feature.
+- Feature permissions (`OptionalFeature::permissions()`) follow the same rule for their feature, the vendor included (for example `shift_money.edit_closed` while closed-shift edits are off).
 - Admin bypasses policies in Filament, so **permission gating alone does not hide a screen**: module screens must also be listed in `ModuleScreens`.
 
 ## Legacy toggles

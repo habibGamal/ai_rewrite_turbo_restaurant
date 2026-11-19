@@ -35,6 +35,8 @@ const enSidebar = [
       { text: 'Website integration API', link: '/technical/website-integration' },
       { text: 'Branches (master / slave)', link: '/technical/branches' },
       { text: 'Platform sync', link: '/technical/platform-sync' },
+      { text: 'Printing, labels & Turbo Label', link: '/technical/printing' },
+      { text: 'AI assistant (MCP server)', link: '/technical/ai-mcp' },
     ],
   },
   {
@@ -67,6 +69,7 @@ const arSidebar = [
       { text: 'عدد الأفراد', link: '/ar/guide/guests' },
       { text: 'طلبات الموقع', link: '/ar/guide/web-orders' },
       { text: 'شاشة المطبخ', link: '/ar/guide/kitchen' },
+      { text: 'الملصقات والطباعة (Turbo Label)', link: '/ar/guide/labels' },
     ],
   },
   {
@@ -81,6 +84,7 @@ const arSidebar = [
       { text: 'التقارير', link: '/ar/guide/reports' },
       { text: 'الإعدادات', link: '/ar/guide/settings' },
       { text: 'ربط الموقع الإلكتروني', link: '/ar/guide/website' },
+      { text: 'المساعد الذكي', link: '/ar/guide/ai-assistant' },
     ],
   },
   {

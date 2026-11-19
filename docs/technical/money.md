@@ -53,14 +53,15 @@ Flat price per use plus a cost (`OptionalFeature::EQUIPMENT`). Typical use: shis
 
 ## Returns
 
-`OrderReturnService` handles cashier quick returns and admin returns, supported by `ReturnRefundCalculator`:
+`OrderReturnService` handles returns, supported by `ReturnRefundCalculator`. Behind `OptionalFeature::RETURNS` (off on a fresh install). Returns happen **only from the POS**: the admin create page and `ReturnOrderAction` were removed, and «مرتجعات الطلبات» is a read-only list.
 
 - **Proportional refund calculation**: a refunded line receives what the customer actually paid for it. An item discount stays on its line; order-level discounts are apportioned proportionally across lines based on post-item-discount value; dine-in service charge and taxes are refunded by proportional share; flat delivery fees are excluded; total rounding is shared. Partial quantities round to 0.01 with the final unit absorbing remainder.
-- `OrderReturnService` caps line refunds at this calculated maximum and populates it automatically. Both POS instant returns and admin return forms display the full calculation breakdown.
+- `OrderReturnService` caps line refunds at this calculated maximum and populates it automatically. The POS return screen displays the full calculation breakdown.
 - Receipts print `#<order id>` as a Code128 barcode. Scanning it finds the order; bare digits search the current shift then older shifts (within `returns_max_days`).
 - Each line has **restocked**: `true` returns the quantity to stock, `false` records it as damaged with no stock move.
-- Fee and equipment lines can be refunded too (`order_fee_id` / `order_equipment_id` on `order_return_items`).
-- An exchange is a return plus a new instant sale in the same transaction; the refund is first applied as a credit tender.
+- Only a **completed, fully paid** order can be returned (the order row is locked first), so a deferred order can't refund cash never collected. An order with returns can't be cancelled.
+- Fee and equipment lines can be refunded too by `OrderReturnService` (`order_fee_id` / `order_equipment_id` on `order_return_items`).
+- An exchange is a return plus a new instant sale in the same transaction; the refund is first applied as a credit tender. A card exchange sends the exact difference; split tenders above the total give the extra back from cash; totals compare at 2 decimals. The exchange order's receipt is printed.
 - Refunds count in the shift that **paid** them (shift reports) or on the refund date (date reports). Current and period shift reports feature a dedicated returns table.
 - Permissions: `order.return`, `order.return_without_restock`, `order.return_any_age`, `view_returns_report`.
 - Report helpers: `App\Services\Reports\ReturnsAggregates`.
@@ -90,7 +91,8 @@ When `OptionalFeature::MULTI_TERMINAL` is enabled, shifts contain independent dr
 - **Shift money page** (`/admin/shift-money`, «مصروفات وإيرادات الورديات»): pick any shift and add, edit or delete its expenses and revenues through `ShiftMoneyService`.
   - Counted cash and shortage inputs are removed (physical counting belongs to shift closing/reports).
   - With multiple terminals active, adding or editing an expense or revenue requires selecting which drawer of that shift it belongs to.
-  - Needs `shift_money.manage`; closed shifts also need `shift_money.edit_closed` and a written reason.
+  - POS expenses (`ExpenseController`): each drawer lists its own; only the drawer that recorded an expense can edit or delete it, and only while that drawer is open.
+  - Needs `shift_money.manage`; closed shifts also need `shift_money.edit_closed` (gated by `OptionalFeature::CLOSED_SHIFT_EDITS`, off by default; `ShiftMoneyService` refuses closed-shift changes while it is off) and a written reason.
   - Editing a closed shift recomputes `end_cash` (and closed drawer expected cash), `losses_amount` and `has_deficit` (the counted `real_cash` is untouched) and stamps `money_edited_at` / `money_edited_count`.
 
 ## Audit log
