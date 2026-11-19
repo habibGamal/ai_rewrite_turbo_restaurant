@@ -6,16 +6,25 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Tools\AuditEventsTool;
 use App\Mcp\Tools\CustomerInsightsTool;
+use App\Mcp\Tools\DeliveryPerformanceTool;
+use App\Mcp\Tools\EquipmentAndFeesTool;
 use App\Mcp\Tools\ExpensesRevenuesTool;
 use App\Mcp\Tools\FindEntitiesTool;
 use App\Mcp\Tools\GetBusinessContextTool;
+use App\Mcp\Tools\InventoryMovementsTool;
+use App\Mcp\Tools\InventoryStatusTool;
+use App\Mcp\Tools\KitchenPerformanceTool;
+use App\Mcp\Tools\ManufacturingYieldTool;
 use App\Mcp\Tools\OrdersTool;
+use App\Mcp\Tools\ProductDetailTool;
 use App\Mcp\Tools\ProductPerformanceTool;
+use App\Mcp\Tools\PurchasesSuppliersTool;
 use App\Mcp\Tools\ReturnsAnalysisTool;
 use App\Mcp\Tools\SalesBreakdownTool;
 use App\Mcp\Tools\SalesSummaryTool;
 use App\Mcp\Tools\ShiftsTool;
 use App\Mcp\Tools\StaffPerformanceTool;
+use App\Mcp\Tools\WebOrdersSummaryTool;
 use App\Services\FeatureService;
 use App\Services\SettingsService;
 use Laravel\Mcp\Server;
@@ -28,7 +37,7 @@ use Laravel\Mcp\Server\Attributes\Version;
  * only when that user can open the matching report in the app.
  */
 #[Name('Turbo POS')]
-#[Version('0.2.0')]
+#[Version('0.3.0')]
 class BusinessServer extends Server
 {
     /** Every tool fits on one page, so clients that ignore cursors see them all. */
@@ -48,6 +57,16 @@ class BusinessServer extends Server
         ReturnsAnalysisTool::class,
         StaffPerformanceTool::class,
         AuditEventsTool::class,
+        ProductDetailTool::class,
+        InventoryStatusTool::class,
+        InventoryMovementsTool::class,
+        PurchasesSuppliersTool::class,
+        // Module and feature tools: listed only when their report is available.
+        KitchenPerformanceTool::class,
+        DeliveryPerformanceTool::class,
+        WebOrdersSummaryTool::class,
+        ManufacturingYieldTool::class,
+        EquipmentAndFeesTool::class,
     ];
 
     protected function boot(): void

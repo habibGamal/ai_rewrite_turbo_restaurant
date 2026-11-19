@@ -6,7 +6,6 @@ namespace App\Mcp\Tools;
 
 use App\Enums\ProductType;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceReport;
-use App\Mcp\Support\ArabicText;
 use App\Mcp\Support\Period;
 use App\Models\Category;
 use App\Models\Product;
@@ -74,7 +73,7 @@ class ProductPerformanceTool extends BusinessTool
             throw new InvalidArgumentException('rank_by=no_sales works for products only.');
         }
 
-        [$mainId, $subId, $categoryName] = $this->category($request->get('category'));
+        [$mainId, $subId, $categoryName] = $this->resolveCategory($request->get('category'));
         $limit = $this->limit($request);
         $from = $period->from->toDateString();
         $to = $period->to->toDateString();
@@ -229,29 +228,5 @@ class ProductPerformanceTool extends BusinessTool
         ])->all();
 
         return ['rows_in_scope' => $count, 'rows' => $rows, 'truncated' => $count > $limit];
-    }
-
-    /**
-     * Resolve a category argument (id or name) to the report's main/sub ids.
-     *
-     * @return array{0: ?int, 1: ?int, 2: ?string}
-     */
-    private function category(mixed $value): array
-    {
-        if ($value === null || $value === '') {
-            return [null, null, null];
-        }
-
-        $category = is_numeric($value)
-            ? Category::query()->find((int) $value)
-            : ArabicText::whereMatches(Category::query(), 'name', (string) $value)->orderByRaw('LENGTH(name)')->first();
-
-        if ($category === null) {
-            throw new InvalidArgumentException("No category matches \"{$value}\". Use find_entities with kinds=[category] to list them.");
-        }
-
-        return $category->parent_id === null
-            ? [$category->id, null, $category->name]
-            : [null, $category->id, $category->name];
     }
 }
