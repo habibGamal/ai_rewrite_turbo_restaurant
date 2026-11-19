@@ -141,6 +141,8 @@ php artisan storage:link --force
 
 # --- Optimization ---
 php artisan migrate --force
+# OAuth signing keys for the AI assistant (MCP); created once, kept across deploys.
+[ -f storage/oauth-private.key ] || php artisan passport:keys --no-interaction
 php artisan db:seed --class=RolesAndPermissionsSeeder --force
 php artisan permission:cache-reset
 php artisan config:cache

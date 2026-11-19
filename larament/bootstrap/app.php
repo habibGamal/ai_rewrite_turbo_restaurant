@@ -1,8 +1,20 @@
 <?php
 
+use App\Http\Middleware\EnsureModuleEnabled;
+use App\Http\Middleware\EnsureOrderTabAccess;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ResolveTerminalDevice;
+use App\Http\Middleware\ShiftMiddleware;
+use App\Http\Middleware\VerifyApiKey;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,22 +28,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo('/admin/login');
 
         $middleware->web(append: [
-            \App\Http\Middleware\ResolveTerminalDevice::class,
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            ResolveTerminalDevice::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
         ])->alias([
-            'order.tab' => \App\Http\Middleware\EnsureOrderTabAccess::class,
-            'shift' => \App\Http\Middleware\ShiftMiddleware::class,
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-            'api.key' => \App\Http\Middleware\VerifyApiKey::class,
-            'module' => \App\Http\Middleware\EnsureModuleEnabled::class,
+            'order.tab' => EnsureOrderTabAccess::class,
+            'shift' => ShiftMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'api.key' => VerifyApiKey::class,
+            'module' => EnsureModuleEnabled::class,
         ]);
 
         $middleware->prependToPriorityList(
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\VerifyApiKey::class,
+            SubstituteBindings::class,
+            VerifyApiKey::class,
         );
 
         // Allow management/start route during maintenance mode
@@ -42,5 +54,10 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // AI clients (e.g. ChatGPT) may not send "Accept: application/json"; the MCP
+        // endpoint must still answer 401 + WWW-Authenticate so OAuth starts, never
+        // redirect to the login page.
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*', 'mcp/*') || $request->expectsJson(),
+        );
     })->create();

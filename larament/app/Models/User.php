@@ -16,13 +16,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Traits\HasRoles;
 
 #[ScopedBy(HidesVendorScope::class)]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, OAuthenticatable
 {
-    use HasFactory, HasSyncUuid, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasSyncUuid, Notifiable, SoftDeletes;
     use HasRoles {
         hasPermissionTo as spatieHasPermissionTo;
     }
@@ -32,6 +34,12 @@ class User extends Authenticatable implements FilamentUser
      * creates (orders, shifts, invoices, audit rows).
      */
     public const VENDOR_DISPLAY_NAME = 'الدعم الفني';
+
+    /**
+     * Every role and permission lives on the web guard; keep can() working
+     * when the user arrives with an OAuth token (api guard) on the MCP server.
+     */
+    protected string $guard_name = 'web';
 
     public function hasPermissionTo($permission, $guardName = null): bool
     {

@@ -120,6 +120,12 @@ class FeatureService
         return $this->isEnabled(OptionalFeature::CLOSED_SHIFT_EDITS);
     }
 
+    /** Owners can connect ChatGPT, Claude or Gemini to shop data over MCP. */
+    public function aiAssistantEnabled(): bool
+    {
+        return $this->isEnabled(OptionalFeature::AI_ASSISTANT);
+    }
+
     /**
      * Sales points work as separate branches. Only takes effect while
      * multiple terminals are on.

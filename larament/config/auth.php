@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -40,6 +42,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // OAuth access tokens for AI clients on the MCP server (routes/ai.php).
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*
@@ -63,7 +71,7 @@ return [
         'users' => [
             // Eloquent without the HidesVendor scope (see App\Auth\VendorAwareUserProvider).
             'driver' => 'vendor-aware',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
 
         // 'users' => [

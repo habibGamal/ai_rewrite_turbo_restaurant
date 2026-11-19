@@ -7,6 +7,7 @@ use App\Modules\Restaurant\RestaurantServiceProvider;
 use App\Modules\WebOrders\WebOrdersServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
+use App\Providers\McpServiceProvider;
 use Illuminate\Broadcasting\BroadcastServiceProvider;
 
 return [
@@ -18,4 +19,5 @@ return [
     WebOrdersServiceProvider::class,
     ExternalSellersServiceProvider::class,
     BroadcastServiceProvider::class,
+    McpServiceProvider::class,
 ];

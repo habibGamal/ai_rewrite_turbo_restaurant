@@ -85,6 +85,13 @@ return [
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
+    | Proxies whose X-Forwarded-* headers are trusted (comma-separated IPs or
+    | CIDRs, or "*" behind a tunnel). Needed so OAuth metadata for the MCP
+    | server advertises https behind Nginx or a tunnel.
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
