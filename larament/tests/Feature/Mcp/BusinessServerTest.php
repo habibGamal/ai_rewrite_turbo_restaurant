@@ -11,7 +11,6 @@ use App\Mcp\Tools\SalesBreakdownTool;
 use App\Mcp\Tools\SalesSummaryTool;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
@@ -19,7 +18,8 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
-use Laravel\Mcp\Server\Testing\TestResponse;
+
+require_once __DIR__.'/helpers.php';
 
 beforeEach(function () {
     CarbonImmutable::setTestNow('2026-11-19 15:00:00');
@@ -31,31 +31,6 @@ afterEach(function () {
     CarbonImmutable::setTestNow();
     Carbon::setTestNow();
 });
-
-/** The JSON a tool returned, decoded. */
-function mcpJson(TestResponse $response): array
-{
-    $raw = (fn () => $this->response->toArray())->call($response);
-
-    return json_decode($raw['result']['content'][0]['text'], true, flags: JSON_THROW_ON_ERROR);
-}
-
-function mcpOrder(string $type, float $total, string $at, array $extra = []): Order
-{
-    return Order::factory()->create([
-        'type' => $type,
-        'status' => $extra['status'] ?? OrderStatus::COMPLETED,
-        'sub_total' => $total,
-        'service' => 0,
-        'tax' => 0,
-        'discount' => 0,
-        'fees_total' => 0,
-        'equipment_total' => 0,
-        'total' => $total,
-        'profit' => $extra['profit'] ?? $total / 2,
-        'created_at' => $at,
-    ]);
-}
 
 describe('registration and access', function () {
     it('lists every tool for an admin', function () {

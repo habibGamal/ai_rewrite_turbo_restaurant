@@ -91,6 +91,16 @@ final class Period
         return (int) $this->from->diffInDays($this->to) + 1;
     }
 
+    /** The period to compare with, or null when compare is none. */
+    public function comparison(): ?self
+    {
+        return match ($this->compare) {
+            'previous_period' => new self($this->from->subDays($this->days()), $this->from->subDay(), 'previous_period', 'none'),
+            'same_period_last_year' => new self($this->from->subYear(), $this->to->subYear(), 'same_period_last_year', 'none'),
+            default => null,
+        };
+    }
+
     /** Includes today, so its figures can still change. */
     public function isOpen(): bool
     {
