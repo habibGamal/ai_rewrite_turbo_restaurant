@@ -10,6 +10,7 @@ use App\Mcp\Resources\GlossaryResource;
 use App\Mcp\Tools\AuditEventsTool;
 use App\Mcp\Tools\CustomerInsightsTool;
 use App\Mcp\Tools\DeliveryPerformanceTool;
+use App\Mcp\Tools\DescribeDataModelTool;
 use App\Mcp\Tools\EquipmentAndFeesTool;
 use App\Mcp\Tools\ExpensesRevenuesTool;
 use App\Mcp\Tools\FindEntitiesTool;
@@ -23,6 +24,7 @@ use App\Mcp\Tools\ProductDetailTool;
 use App\Mcp\Tools\ProductPerformanceTool;
 use App\Mcp\Tools\PurchasesSuppliersTool;
 use App\Mcp\Tools\ReturnsAnalysisTool;
+use App\Mcp\Tools\RunReadonlyQueryTool;
 use App\Mcp\Tools\SalesBreakdownTool;
 use App\Mcp\Tools\SalesSummaryTool;
 use App\Mcp\Tools\ShiftsTool;
@@ -40,7 +42,7 @@ use Laravel\Mcp\Server\Attributes\Version;
  * only when that user can open the matching report in the app.
  */
 #[Name('Turbo POS')]
-#[Version('0.4.0')]
+#[Version('0.5.0')]
 class BusinessServer extends Server
 {
     /** Every tool fits on one page, so clients that ignore cursors see them all. */
@@ -70,6 +72,9 @@ class BusinessServer extends Server
         WebOrdersSummaryTool::class,
         ManufacturingYieldTool::class,
         EquipmentAndFeesTool::class,
+        // Direct read-only queries: vendor feature, vendor and admins only.
+        DescribeDataModelTool::class,
+        RunReadonlyQueryTool::class,
     ];
 
     /** @var array<int, class-string<Server\Tool>> */
@@ -102,6 +107,7 @@ class BusinessServer extends Server
         - Use the period argument for "today", "yesterday", "this month" and so on. For other ranges pass from/to dates. Never invent dates or years; if the user names a month without a year, assume the most recent one and say so.
         - Resolve products, categories, customers, staff and suppliers by name with find_entities before using them in another tool. If several match, ask which one.
         - Default period: this month so far for facts, the last complete month for advice and comparisons. Always say which period you used.
+        - run_readonly_query (when listed) is a last resort for questions no other tool answers. Call describe_data_model first, follow its rules, and say that the figures come from a direct query.
         - When the user picks a prompt (daily briefing, month review, menu engineering...), follow its steps in order and use its answer shape.
 
         Definitions (use these, never your own)
