@@ -179,5 +179,18 @@ if [ -f /etc/nginx/nginx.conf ]; then
   else
     sed -i '/http {/a \        client_max_body_size 300M;' /etc/nginx/nginx.conf
   fi
-  rc-service nginx reload
+
+  # Bigger FastCGI buffers: large Inertia headers (e.g. /orders) otherwise fail
+  # with 502 "upstream sent too big header". Delete then re-add = idempotent.
+  VHOST_CONF="/etc/nginx/http.d/localturbo.system.conf"
+  if [ -f "$VHOST_CONF" ]; then
+    sed -i -E '/fastcgi_(buffer_size|buffers|busy_buffers_size) /d' "$VHOST_CONF"
+    sed -i \
+      -e '/fastcgi_pass /a \        fastcgi_buffer_size 32k;' \
+      -e '/fastcgi_pass /a \        fastcgi_buffers 16 32k;' \
+      -e '/fastcgi_pass /a \        fastcgi_busy_buffers_size 64k;' \
+      "$VHOST_CONF"
+  fi
+
+  nginx -t && rc-service nginx reload
 fi
