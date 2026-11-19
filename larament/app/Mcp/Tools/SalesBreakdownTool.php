@@ -17,6 +17,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('sales_breakdown')]
 #[Title('Sales breakdown')]
@@ -26,6 +27,7 @@ Use for "which channel sells most", "best day this month", "busiest hours", "sal
 Not for the headline totals (use sales_summary) or for items (use product_performance).
 Examples: «ما أكثر ساعات اليوم ازدحامًا يوم الجمعة؟», «ما نصيب التوصيل من المبيعات هذا الشهر؟», "Show daily sales for the last 30 days".
 TEXT)]
+#[IsReadOnly]
 class SalesBreakdownTool extends BusinessTool
 {
     public const GROUPS = ['channel', 'day', 'week', 'month', 'hour', 'weekday', 'payment_method'];

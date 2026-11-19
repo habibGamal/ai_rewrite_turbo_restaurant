@@ -17,12 +17,9 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Laravel\Mcp\Server\Testing\TestResponse;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     CarbonImmutable::setTestNow('2026-11-19 15:00:00');

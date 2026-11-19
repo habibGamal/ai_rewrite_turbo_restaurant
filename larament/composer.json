@@ -23,6 +23,7 @@
         "laravel/framework": "^11.9",
         "laravel/mcp": "~1.1.2",
         "laravel/pail": "^1.2",
+        "laravel/passport": "~13.11.0",
         "laravel/pulse": "^1.4",
         "laravel/reverb": "^1.5",
         "laravel/sanctum": "^4.0",

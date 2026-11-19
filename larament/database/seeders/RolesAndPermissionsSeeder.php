@@ -177,6 +177,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 'update_order_returns' => 'تعديل مرتجع طلب',
                 'delete_order_returns' => 'حذف مرتجع طلب',
             ],
+            'المساعد الذكي' => [
+                'use_ai_assistant' => 'استخدام المساعد الذكي (ربط ChatGPT وClaude وGemini)',
+            ],
             'التقارير' => [
                 'view_reports' => 'عرض كافة التقارير',
                 'view_current_shift_report' => 'تقرير الوردية الحالية (اليوم)',

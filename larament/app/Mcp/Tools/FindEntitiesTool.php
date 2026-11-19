@@ -19,6 +19,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('find_entities')]
 #[Title('Find products, customers, staff...')]
@@ -27,6 +28,7 @@ Finds products, categories, customers, staff, suppliers, warehouses or sales poi
 Use whenever the user names something, before calling another tool with it. If several rows match, ask the user which one they mean.
 Examples: «شاورما فراخ», «العميل صاحب الرقم 0100», "the cashier called Mona".
 TEXT)]
+#[IsReadOnly]
 class FindEntitiesTool extends BusinessTool
 {
     public const KINDS = ['product', 'category', 'customer', 'staff', 'supplier', 'warehouse', 'terminal'];

@@ -21,12 +21,14 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_business_context')]
 #[Title('Business context')]
 #[Description(<<<'TEXT'
 Call this first in every conversation. Returns the shop's name and type, today's date and time in the shop's timezone, whether a shift is open, the enabled modules and features, the sales channels (order type codes to pass as order_types), active sales points, the date range that has data, and who you are acting as.
 TEXT)]
+#[IsReadOnly]
 class GetBusinessContextTool extends BusinessTool
 {
     private readonly SettingsService $settings;

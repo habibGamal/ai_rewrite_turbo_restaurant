@@ -12,6 +12,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('sales_summary')]
 #[Title('Sales summary')]
@@ -21,6 +22,7 @@ Use for "how much did we sell", "profit this month vs last month", "average tick
 Not for splitting by day, hour, channel or payment method (use sales_breakdown) or for items (use product_performance).
 Examples: «كم بلغت مبيعات هذا الشهر؟», «ما صافي ربح أمس مقارنة باليوم نفسه من الأسبوع الماضي؟», "What is our average order value this week?".
 TEXT)]
+#[IsReadOnly]
 class SalesSummaryTool extends BusinessTool
 {
     private const METRICS = [

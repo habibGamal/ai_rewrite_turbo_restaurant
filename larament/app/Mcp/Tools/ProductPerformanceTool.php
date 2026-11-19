@@ -17,6 +17,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('product_performance')]
 #[Title('Product performance')]
@@ -26,6 +27,7 @@ Use for best/worst sellers, most profitable items, items losing money, category 
 Not for one product's full detail or for stock levels.
 Examples: «ما أكثر عشرة أصناف مبيعًا هذا الشهر؟», «ما الأصناف التي لم تُبع منذ ثلاثين يومًا؟», "Which category brings the most profit?".
 TEXT)]
+#[IsReadOnly]
 class ProductPerformanceTool extends BusinessTool
 {
     public const RANKS = ['net_sales', 'net_quantity', 'net_profit', 'margin', 'returns', 'lowest_sales', 'no_sales'];
