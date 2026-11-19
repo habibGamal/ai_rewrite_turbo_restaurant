@@ -66,7 +66,7 @@ if ! php -v | grep -q "PHP 8.4"; then
     php84-gd php84-zip php84-pdo php84-pdo_mysql \
     php84-mysqli php84-phar php84-session php84-tokenizer \
     php84-calendar php84-fileinfo php84-dom php84-iconv php84-mysqlnd \
-    php84-xmlreader php84-xmlwriter php84-simplexml
+    php84-xmlreader php84-xmlwriter php84-simplexml php84-sodium
 
   ln -sf /usr/bin/php84 /usr/bin/php
   [ -f /usr/bin/composer ] && sed -i 's/php83/php84/g' /usr/bin/composer
@@ -95,6 +95,13 @@ if ! php -v | grep -q "PHP 8.4"; then
     sed -i 's|fastcgi_pass .*|fastcgi_pass unix:/run/php-fpm84/php-fpm.sock;|' $NGINX_CONF
     nginx -t && rc-service nginx reload || true
   fi
+fi
+
+# Ensure required PHP extensions are installed (e.g. for Passport / JWT)
+if ! php -m | grep -qi "^sodium$"; then
+  echo "🔐 Installing php84-sodium extension..."
+  apk update && apk add php84-sodium
+  rc-service php-fpm84 restart || true
 fi
 
 # --- Deployment Logic ---
