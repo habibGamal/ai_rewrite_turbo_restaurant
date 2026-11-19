@@ -52,6 +52,7 @@ enum SettingKey: string
     case FEATURE_RETURNS_ENABLED = 'feature_returns_enabled';
     case FEATURE_CLOSED_SHIFT_EDITS_ENABLED = 'feature_closed_shift_edits_enabled';
     case FEATURE_AI_ASSISTANT_ENABLED = 'feature_ai_assistant_enabled';
+    case FEATURE_AI_QUERIES_ENABLED = 'feature_ai_queries_enabled';
     case PURCHASE_BARCODE_PREFIX = 'purchase_barcode_prefix';
     case PURCHASE_BARCODE_DIGITS = 'purchase_barcode_digits';
     case PURCHASE_BARCODE_NEXT_NUMBER = 'purchase_barcode_next_number';
@@ -111,6 +112,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => 'false',
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => 'false',
             self::FEATURE_AI_ASSISTANT_ENABLED => 'false',
+            self::FEATURE_AI_QUERIES_ENABLED => 'false',
             self::PURCHASE_BARCODE_PREFIX => '',
             self::PURCHASE_BARCODE_DIGITS => '4',
             self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
@@ -174,6 +176,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => self::storedBooleanRules(),
             self::FEATURE_AI_ASSISTANT_ENABLED => self::storedBooleanRules(),
+            self::FEATURE_AI_QUERIES_ENABLED => self::storedBooleanRules(),
             self::PURCHASE_BARCODE_PREFIX => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]*$/'],
             self::PURCHASE_BARCODE_DIGITS => ['required', 'integer', 'min:1', 'max:12'],
             self::PURCHASE_BARCODE_NEXT_NUMBER => ['required', 'integer', 'min:0', 'max:999999999999'],
@@ -236,6 +239,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => 'تفعيل مرتجعات المبيعات',
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => 'إعادة فتح الورديات المغلقة وتعديل مصروفاتها وإيراداتها',
             self::FEATURE_AI_ASSISTANT_ENABLED => 'المساعد الذكي (ربط ChatGPT وClaude وGemini ببيانات المتجر)',
+            self::FEATURE_AI_QUERIES_ENABLED => 'الاستعلامات المباشرة للمساعد الذكي (للمدير والدعم الفني)',
             self::PURCHASE_BARCODE_PREFIX => 'بادئة الباركود المولد',
             self::PURCHASE_BARCODE_DIGITS => 'عدد أرقام المسلسل',
             self::PURCHASE_BARCODE_NEXT_NUMBER => 'الرقم التالي في المسلسل',
@@ -298,6 +302,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => 'مرتجع واستبدال من نقطة البيع ومن لوحة التحكم، وصفحة مرتجعات الطلبات، وتقرير المرتجعات، وبطاقات المرتجعات وأعمدتها في التقارير، وباركود رقم الطلب في الإيصال. لا يؤثر في مرتجع المشتريات.',
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => 'يسمح من صفحة «مصروفات وإيرادات الورديات» بإضافة مصروفات وإيرادات وردية مغلقة أو تعديلها أو حذفها، مع سبب إلزامي وسجل للتعديل وإعادة حساب النقدية المتوقعة. يحتاج المستخدم أيضاً صلاحية «تعديل مصروفات وإيرادات الورديات المغلقة». عند الإيقاف تُعرض الورديات المغلقة للاطلاع فقط.',
             self::FEATURE_AI_ASSISTANT_ENABLED => 'يتيح للمستخدمين الذين يملكون صلاحية «استخدام المساعد الذكي» ربط تطبيقات الذكاء الاصطناعي (ChatGPT وClaude وGemini) ببيانات المتجر للاطلاع فقط وتحليل المبيعات والأصناف، عبر الرابط /mcp/pos. لا يرى المساعد إلا التقارير التي يملك المستخدم صلاحيتها، ولا يستطيع تعديل أي بيانات.',
+            self::FEATURE_AI_QUERIES_ENABLED => 'يضيف إلى المساعد الذكي أداة تقرأ البيانات باستعلامات SELECT مباشرة على جداول عرض مخصصة (ai_*) للأسئلة التي لا تغطيها الأدوات الجاهزة. تظهر للمدير والدعم الفني فقط، ولا تصل إلى المستخدمين أو كلمات المرور أو الإعدادات أو أرقام الهواتف، ولكل استعلام حد زمني قدره 5 ثوانٍ وحد أقصى قدره 500 صف، ويُسجَّل في سجل المساعد الذكي.',
             self::PURCHASE_BARCODE_PREFIX => 'حروف أو أرقام اختيارية قبل المسلسل (مثال: CL يعطي CL0001). اتركها فارغة لباركود أرقام فقط.',
             self::PURCHASE_BARCODE_DIGITS => 'يُكمل المسلسل بأصفار على اليسار لهذا العدد (4 تعني 0001).',
             self::PURCHASE_BARCODE_NEXT_NUMBER => 'رقم أول باركود سيتم توليده. يزيد تلقائياً بعد كل توليد، والأرقام المستخدمة بالفعل يتم تخطيها.',
@@ -360,6 +365,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => 'تفعيل',
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => 'تفعيل',
             self::FEATURE_AI_ASSISTANT_ENABLED => 'تفعيل',
+            self::FEATURE_AI_QUERIES_ENABLED => 'تفعيل',
             self::PURCHASE_BARCODE_PREFIX => 'بدون بادئة',
             self::PURCHASE_BARCODE_DIGITS => '4',
             self::PURCHASE_BARCODE_NEXT_NUMBER => '1',
@@ -412,6 +418,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => self::isStoredBoolean($value),
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => self::isStoredBoolean($value),
             self::FEATURE_AI_ASSISTANT_ENABLED => self::isStoredBoolean($value),
+            self::FEATURE_AI_QUERIES_ENABLED => self::isStoredBoolean($value),
             self::PURCHASE_BARCODE_PREFIX => $value === null || (is_string($value) && preg_match('/^[A-Za-z0-9]{0,10}$/', $value) === 1),
             self::PURCHASE_BARCODE_DIGITS => self::isIntInRange($value, 1, 12),
             self::PURCHASE_BARCODE_NEXT_NUMBER => self::isIntInRange($value, 0, 999_999_999_999),
@@ -452,6 +459,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED,
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED,
             self::FEATURE_AI_ASSISTANT_ENABLED,
+            self::FEATURE_AI_QUERIES_ENABLED,
             self::FEATURE_TERMINAL_SEPARATION_ENABLED,
             self::SETUP_COMPLETED => true,
             default => false,
@@ -474,6 +482,7 @@ enum SettingKey: string
             self::FEATURE_RETURNS_ENABLED => true,
             self::FEATURE_CLOSED_SHIFT_EDITS_ENABLED => true,
             self::FEATURE_AI_ASSISTANT_ENABLED => true,
+            self::FEATURE_AI_QUERIES_ENABLED => true,
             self::FEATURE_TERMINAL_SEPARATION_ENABLED => true,
             default => false,
         };

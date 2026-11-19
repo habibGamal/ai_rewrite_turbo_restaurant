@@ -20,6 +20,7 @@ enum OptionalFeature: string
     case TERMINAL_SEPARATION = 'feature_terminal_separation_enabled';
     case CLOSED_SHIFT_EDITS = 'feature_closed_shift_edits_enabled';
     case AI_ASSISTANT = 'feature_ai_assistant_enabled';
+    case AI_QUERIES = 'feature_ai_queries_enabled';
 
     public function settingKey(): SettingKey
     {
@@ -38,6 +39,7 @@ enum OptionalFeature: string
             self::TERMINAL_SEPARATION => SettingKey::FEATURE_TERMINAL_SEPARATION_ENABLED,
             self::CLOSED_SHIFT_EDITS => SettingKey::FEATURE_CLOSED_SHIFT_EDITS_ENABLED,
             self::AI_ASSISTANT => SettingKey::FEATURE_AI_ASSISTANT_ENABLED,
+            self::AI_QUERIES => SettingKey::FEATURE_AI_QUERIES_ENABLED,
         };
     }
 
@@ -82,6 +84,7 @@ enum OptionalFeature: string
             self::TERMINAL_SEPARATION => 'terminal_separation',
             self::CLOSED_SHIFT_EDITS => 'closed_shift_edits',
             self::AI_ASSISTANT => 'ai_assistant',
+            self::AI_QUERIES => 'ai_queries',
         };
     }
 
@@ -146,6 +149,7 @@ enum OptionalFeature: string
             self::AI_ASSISTANT => [
                 'use_ai_assistant',
             ],
+            self::AI_QUERIES => [],
             self::DEFERRED_PAYMENT => [
                 'pos.tab.system.receivables',
             ],
@@ -188,6 +192,7 @@ enum OptionalFeature: string
             self::TERMINAL_SEPARATION => 'ميزة فصل منافذ البيع غير مفعلة حالياً.',
             self::CLOSED_SHIFT_EDITS => 'ميزة تعديل الورديات المغلقة غير مفعلة حالياً.',
             self::AI_ASSISTANT => 'ميزة المساعد الذكي غير مفعلة حالياً.',
+            self::AI_QUERIES => 'ميزة الاستعلامات المباشرة للمساعد الذكي غير مفعلة حالياً.',
         };
     }
 
