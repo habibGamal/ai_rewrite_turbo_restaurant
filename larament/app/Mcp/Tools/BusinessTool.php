@@ -10,6 +10,7 @@ use App\Filament\Pages\Reports\DailyComparisonReport;
 use App\Filament\Pages\Reports\PeakHoursPerformanceReport;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceReport;
 use App\Mcp\Support\Period;
+use App\Mcp\Support\ToolCallLog;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
@@ -76,18 +77,36 @@ abstract class BusinessTool extends Tool
 
     public function handle(Request $request): Response
     {
-        if (! $this->allowed()) {
-            return Response::error('You do not have permission to see this data. Ask the shop admin for access to the matching report.');
-        }
+        $started = hrtime(true);
+        $error = null;
 
         try {
-            return Response::json($this->run($request));
-        } catch (InvalidArgumentException $e) {
-            return Response::error($e->getMessage());
-        } catch (Throwable $e) {
-            report($e);
+            if (! $this->allowed()) {
+                $error = 'You do not have permission to see this data. Ask the shop admin for access to the matching report.';
 
-            return Response::error("The {$this->name()} tool failed. Try a shorter period or simpler filters.");
+                return Response::error($error);
+            }
+
+            try {
+                return Response::json($this->run($request));
+            } catch (InvalidArgumentException $e) {
+                $error = $e->getMessage();
+
+                return Response::error($error);
+            } catch (Throwable $e) {
+                report($e);
+                $error = "The {$this->name()} tool failed. Try a shorter period or simpler filters.";
+
+                return Response::error($error);
+            }
+        } finally {
+            ToolCallLog::record(
+                $this->name(),
+                $request->all(),
+                $error === null,
+                $error,
+                (int) round((hrtime(true) - $started) / 1_000_000),
+            );
         }
     }
 
