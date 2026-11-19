@@ -76,5 +76,6 @@ Why: the cloud proxy blocks GitHub zip downloads, so plain `composer install` fa
 
 - `composer review` is the pre-push quality gate: Pint → Pest → PHPStan
 - FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.claude/skills/` for planning/testing patterns
+- MCP server / ChatGPT, Claude or Gemini connectors: follow `.claude/skills/laravel-mcp-server/`
 - `lang/ar.json` is the primary translation file (Arabic UI)
 - Default seed user: `admin@example.com` / `password`
