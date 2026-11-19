@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Prompts\PlaybookPrompt;
+use App\Mcp\Resources\BusinessProfileResource;
+use App\Mcp\Resources\GlossaryResource;
 use App\Mcp\Tools\AuditEventsTool;
 use App\Mcp\Tools\CustomerInsightsTool;
 use App\Mcp\Tools\DeliveryPerformanceTool;
@@ -37,14 +40,14 @@ use Laravel\Mcp\Server\Attributes\Version;
  * only when that user can open the matching report in the app.
  */
 #[Name('Turbo POS')]
-#[Version('0.3.0')]
+#[Version('0.4.0')]
 class BusinessServer extends Server
 {
     /** Every tool fits on one page, so clients that ignore cursors see them all. */
     public int $defaultPaginationLength = 50;
 
-    /** @var array<int, class-string<Server\Tool>> */
-    protected array $tools = [
+    /** @var list<class-string<Server\Tool>> */
+    public const TOOLS = [
         GetBusinessContextTool::class,
         FindEntitiesTool::class,
         SalesSummaryTool::class,
@@ -69,8 +72,20 @@ class BusinessServer extends Server
         EquipmentAndFeesTool::class,
     ];
 
+    /** @var array<int, class-string<Server\Tool>> */
+    protected array $tools = self::TOOLS;
+
+    /** @var array<int, class-string<Server\Resource>> */
+    protected array $resources = [
+        GlossaryResource::class,
+        BusinessProfileResource::class,
+    ];
+
     protected function boot(): void
     {
+        // Analysis playbooks; each one is listed only when the user may call its tools.
+        $this->prompts = PlaybookPrompt::all($this->tools);
+
         $features = app(FeatureService::class);
 
         $this->instructions = strtr(self::INSTRUCTIONS, [
@@ -87,6 +102,7 @@ class BusinessServer extends Server
         - Use the period argument for "today", "yesterday", "this month" and so on. For other ranges pass from/to dates. Never invent dates or years; if the user names a month without a year, assume the most recent one and say so.
         - Resolve products, categories, customers, staff and suppliers by name with find_entities before using them in another tool. If several match, ask which one.
         - Default period: this month so far for facts, the last complete month for advice and comparisons. Always say which period you used.
+        - When the user picks a prompt (daily briefing, month review, menu engineering...), follow its steps in order and use its answer shape.
 
         Definitions (use these, never your own)
         - Net sales = completed orders' totals minus refunds paid in the period. Cancelled orders are not sales; they are reported separately.
