@@ -9,9 +9,12 @@ use App\Filament\Pages\Reports\CustomersPerformanceReport;
 use App\Filament\Pages\Reports\DailyComparisonReport;
 use App\Filament\Pages\Reports\PeakHoursPerformanceReport;
 use App\Filament\Pages\Reports\ProductsSalesPerformanceReport;
+use App\Mcp\Support\ArabicText;
 use App\Mcp\Support\Period;
 use App\Mcp\Support\ToolCallLog;
+use App\Models\Category;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Laravel\Mcp\Request;
@@ -176,6 +179,47 @@ abstract class BusinessTool extends Tool
             'definitions' => $definitions === [] ? null : $definitions,
             'caveats' => $caveats === [] ? null : array_values(array_unique($caveats)),
         ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * Resolve a category argument (id or name) to the reports' main/sub ids.
+     *
+     * @return array{0: ?int, 1: ?int, 2: ?string}
+     */
+    protected function resolveCategory(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [null, null, null];
+        }
+
+        $category = $this->resolveModel(Category::class, $value, 'category');
+
+        return $category->getAttribute('parent_id') === null
+            ? [(int) $category->getKey(), null, (string) $category->getAttribute('name')]
+            : [null, (int) $category->getKey(), (string) $category->getAttribute('name')];
+    }
+
+    /**
+     * Find one record by id or (Arabic-folded) name; the shortest matching
+     * name wins. Throws a model-readable error when nothing matches.
+     *
+     * @template T of Model
+     *
+     * @param  class-string<T>  $class
+     * @return T
+     */
+    protected function resolveModel(string $class, mixed $value, string $kind, string $column = 'name'): Model
+    {
+        $query = $class::query();
+        $record = is_numeric($value)
+            ? $query->find((int) $value)
+            : ArabicText::whereMatches($query, $column, (string) $value)->orderByRaw("LENGTH({$column})")->first();
+
+        if (! $record instanceof Model) {
+            throw new InvalidArgumentException("No {$kind} matches \"{$value}\". Use find_entities with kinds=[{$kind}] to list them.");
+        }
+
+        return $record;
     }
 
     /** Percentage change, null when there is nothing to compare with. */
