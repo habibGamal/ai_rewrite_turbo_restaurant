@@ -21,3 +21,4 @@ Read with SKILL.md. Where this file and the skill differ, this file wins for thi
 - **Gating:** new god-mode feature in `App\Enums\OptionalFeature` + permission(s) in its `permissions()`.
 - **In-app text** (consent page, settings, errors shown to users) must be Modern Standard Arabic.
 - Plan doc: https://claude.ai/artifact/9V78qdttfEzrqe9q7xSRNp
+- **Remote only** (Habib, 2026-11-19): no `Mcp::local` / stdio server for this app. Skip SKILL.md section 1's stdio steps; test tools with Pest and connect clients (incl. Claude Code via `claude mcp add --transport http`) to `/mcp/pos`.
