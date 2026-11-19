@@ -7,6 +7,7 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Terminal;
 use App\Orders\ReceiptPayment;
 use App\Orders\ReceiptView;
 use App\PrintAgent\AgentPrintConnector;
