@@ -303,7 +303,9 @@ describe('find_entities', function () {
 });
 
 it('never writes: the MCP code uses no write calls', function () {
+    // ToolCallLog is the one writer: it appends the call log row, never shop data.
     $code = collect(File::allFiles(app_path('Mcp')))
+        ->reject(fn ($file) => $file->getFilename() === 'ToolCallLog.php')
         ->map(fn ($file) => $file->getContents())
         ->implode("\n");
 
