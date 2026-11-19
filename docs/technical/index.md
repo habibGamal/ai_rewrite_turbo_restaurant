@@ -10,6 +10,7 @@ This handbook is for developers and for whoever installs and supports the system
 |---|---|
 | `larament/` | The application: Laravel 11, Filament 5 admin panel, React 18 + Inertia 2 cashier, Pest 4 tests. |
 | `turbo_resturant/` | Legacy AdonisJS app. Read-only reference for old business rules. |
+| `label-agent/` | Turbo Label, the .NET 8 Windows print app for labels and hosted receipts. |
 | `docs/` | This documentation site (VitePress). |
 
 The online ordering website is a separate repository, `habibGamal/turbo_tenant`, with its own documentation. This handbook only covers its link to the POS: see [Website integration API](/technical/website-integration).
@@ -24,7 +25,8 @@ The online ordering website is a separate repository, `habibGamal/turbo_tenant`,
 | Real time | Laravel Reverb (Pusher protocol) + Laravel Echo |
 | Queue | Database queue (`QUEUE_CONNECTION=database`) for print jobs |
 | Permissions | spatie/laravel-permission, plus module and feature gating |
-| Printing | ESC/POS (`mike42/escpos-php`), receipt images via Browsershot or wkhtmltoimage, Arabic shaping via `ar-php` |
+| Printing | ESC/POS (`mike42/escpos-php`), receipt images via Browsershot or wkhtmltoimage, Arabic shaping via `ar-php`; barcode labels and hosted receipts through the Turbo Label Windows app ([Printing](/technical/printing)) |
+| AI | Remote read-only MCP server (`laravel/mcp`) with Passport OAuth ([AI assistant](/technical/ai-mcp)) |
 | Tests | Pest 4 (SQLite in memory), PHPStan level 5, Pint, Cypress for E2E |
 
 ## Defaults
@@ -38,3 +40,5 @@ The online ordering website is a separate repository, `habibGamal/turbo_tenant`,
 - New to the code: [System architecture](/technical/architecture), then [Modules & business types](/technical/modules).
 - Installing a shop: [Deployment](/technical/deployment), then [Vendor account & console](/technical/vendor).
 - Connecting the website: [Website integration API](/technical/website-integration).
+- Printing in the shop: [Printing, labels & Turbo Label](/technical/printing).
+- AI analysis of shop data: [AI assistant (MCP server)](/technical/ai-mcp).

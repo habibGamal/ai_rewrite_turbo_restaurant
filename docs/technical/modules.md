@@ -54,7 +54,7 @@ Each module has a provider extending `App\Modules\ModuleServiceProvider`:
 | Order types | `OrderTypeCatalog::available()/active()/options()` hide types whose behaviour belongs to an off module. `all()` still resolves old orders. |
 | Listeners | Return early via `enabledNow()`. |
 
-Disabling a module or feature can be blocked while it still has open data, through `FeatureService::registerModuleDisableBlocker()` (for example `CustomFeesDisableBlocker`, `EquipmentDisableBlocker`, `SellersDisableBlocker`, `MultiTerminalDisableBlocker`).
+Disabling a module or feature can be blocked while it still has open data, through `FeatureService::registerModuleDisableBlocker()` (for example `CustomFeesDisableBlocker`, `EquipmentDisableBlocker`, `SellersDisableBlocker`, `MultiTerminalDisableBlocker`, `DeferredPaymentDisableBlocker`, and `ModuleOpenOrdersBlocker`, which refuses turning off the restaurant, delivery or web orders module while orders of its types are open).
 
 ## Optional features
 
@@ -67,8 +67,18 @@ Disabling a module or feature can be blocked while it still has open data, throu
 | Equipment | `feature_equipment_enabled` | Equipment catalogue, equipment on orders, equipment report. |
 | Variants | `feature_variants_enabled` | Product groups (models) with sizes, colours and other axes. |
 | Outsourced orders | `feature_outsourced_orders_enabled` | The External sellers module switch. |
-| Multi-terminal drawers | `feature_multi_terminal_enabled` | Multiple drawers per shift, device binding, per-drawer receipt printers, drawer handovers and drawer scoping. |
+| Multiple sales points («منافذ البيع») | `feature_multi_terminal_enabled` | Multiple drawer sessions per shift, device binding, per-sales-point receipt printer (server or Turbo Label), handovers, per-sales-point expenses and report tabs. `max_terminals` caps active points. Can't be switched off during a shift that used drawers. |
 | Sales point separation | `feature_terminal_separation_enabled` | Needs multi-terminal. Each sales point works like a branch: own issue warehouse, owns its orders; web orders go to a chosen sales point. See [money](money.md#sales-point-separation-فصل-منافذ-البيع). |
+| Deferred payment («الدفع الآجل») | `feature_deferred_payment_enabled` | Partial / pay-later completion, the receivables tab, companies accounts page, deferred cards and tables in reports. Blocked from switching off while customers still owe money. |
+| Sales returns | `feature_returns_enabled` | POS returns and exchanges, the order returns list, returns report, returns cards/columns, the receipt order-number barcode. Purchase returns are not affected. |
+| Closed-shift edits | `feature_closed_shift_edits_enabled` | Gates `shift_money.edit_closed`: add/edit/delete money rows of a closed shift on the shift money page. Off → closed shifts are read-only for everyone, the vendor included. |
+| Purchase barcodes | `feature_purchase_barcodes_enabled` | «توليد باركود للأصناف» on purchase invoices: sequential codes from `purchase_barcode_prefix` / `_digits` / `_next_number`. |
+| Label printing | `feature_label_printing_enabled` | «تصميمات الملصقات», «طباعة ملصقات» actions, `print_labels`. See [Printing](/technical/printing). |
+| Document barcodes | `feature_document_barcodes_enabled` | Barcode column on purchase invoices, purchase returns, stock issues, stock transfers and waste; label printing from the first four. |
+| AI assistant («المساعد الذكي») | `feature_ai_assistant_enabled` | The remote MCP server at `/mcp/pos` and its admin pages, `use_ai_assistant`. See [AI assistant](/technical/ai-mcp). |
+| AI direct queries | `feature_ai_queries_enabled` | `run_readonly_query` + `describe_data_model` MCP tools on `ai_*` views, admins and vendor only. |
+
+Every feature is **off on a fresh install**. The upgrade migrations that introduced deferred payment, returns and closed-shift edits switched them on only for installs that already used them. While a feature is off its screens answer 404 (`ModuleScreens`), its permissions are denied for everyone and hidden on the Roles screen, and its parts disappear from the POS, reports, exports and receipts. Recorded data is never deleted and still counts in totals.
 
 The cashier reads features through the Inertia shared prop `features` (for example `features.variants`, `features.multi_terminal`).
 

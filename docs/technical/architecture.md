@@ -47,9 +47,9 @@ Frontend lives in `resources/js`: pages in `Pages/` (`Orders/Index`, `Orders/Man
 | URL | Who | What |
 |---|---|---|
 | `/admin` | Admin, viewer | Filament admin panel (products, inventory, reports, settings). |
-| `/admin/terminals` | Admin | Terminals and cash drawers management (`TerminalResource`). |
+| `/admin/terminals` | Admin | Sales points («منافذ البيع», `TerminalResource`): issue warehouse, receipt printer, Turbo Label pairing. |
 | `/badge` | Cashier | Scan barcode badge for instant POS login (`user.badge_login`). |
-| `/terminals/open`, `/terminals/handover` | Cashier | Open drawer session or execute cashier handover. |
+| `/terminals/open`, `/terminals/handover` | Cashier | Open a sales point (drawer session) or hand it over to another cashier. |
 | `/shifts/start` | Cashier | Open a shift with the opening cash. |
 | `/orders` | Cashier | Cashier home: order-type tabs, instant sale, expenses. |
 | `/orders/manage/{order}` | Cashier | Edit, pay and complete one order. |
@@ -57,6 +57,10 @@ Frontend lives in `resources/js`: pages in `Pages/` (`Orders/Index`, `Orders/Man
 | `/kitchen` | Kitchen | Kitchen display (Restaurant module). |
 | `/pos/customer-display` | Cashier | Second screen for the customer. |
 | `/admin/vendor-console` | Vendor only | Business type, modules, features. |
+| `/admin/label-templates` | Admin | Barcode label designs (label printing feature). |
+| `/admin/ai-assistant`, `/admin/ai-assistant-log` | Admin, `use_ai_assistant` | AI connections (revoke) and the tool call log. |
+| `/mcp/pos` | AI clients (OAuth) | Read-only MCP server. See [AI assistant](/technical/ai-mcp). |
+| `/api/print-agent/*` | Turbo Label app (Bearer token) | Receipt / kitchen print queue. See [Printing](/technical/printing). |
 
 ## Request rules worth knowing
 
