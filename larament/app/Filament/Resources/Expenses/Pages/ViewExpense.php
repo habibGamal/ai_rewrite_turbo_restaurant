@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Expenses\Pages;
 
 use App\Filament\Resources\Expenses\ExpenseResource;
-use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewExpense extends ViewRecord
@@ -13,7 +12,7 @@ class ViewExpense extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            ExpenseResource::openShiftMoneyAction(),
         ];
     }
 }

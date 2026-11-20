@@ -10,6 +10,13 @@ class ViewPurchaseInvoice extends ViewRecord
 {
     protected static string $resource = PurchaseInvoiceResource::class;
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            PurchaseInvoiceResource::printLabelsAction(),
+        ];
+    }
+
     public function getRelationManagers(): array
     {
         return [

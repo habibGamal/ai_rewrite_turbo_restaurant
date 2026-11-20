@@ -2,7 +2,6 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Customer;
@@ -13,6 +12,7 @@ use App\Models\Product;
 use App\Models\ProductComponent;
 use App\Models\Shift;
 use App\Models\User;
+use App\Orders\OrderOpening;
 use App\Services\Orders\OrderService;
 use App\Services\Orders\OrderStockConversionService;
 use App\Services\StockService;
@@ -23,8 +23,6 @@ uses(RefreshDatabase::class);
 
 describe('Order Stock Conversion Feature Integration', function () {
     beforeEach(function () {
-        // Register the OrderServiceProvider for dependency injection
-        app()->register(\App\Providers\OrderServiceProvider::class);
 
         $this->orderService = app(OrderService::class);
         $this->stockService = app(StockService::class);
@@ -58,11 +56,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with the consumable product
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T001'),
                 customerId: $this->customer->id,
-                tableNumber: 'T001'
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -85,8 +83,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             expect($initialStock)->toBe(100.0);
 
             // Complete the order - this should reduce stock
-            $paymentsData = ['cash' => 75.00]; // 3 * 25.00
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             // Verify stock was reduced
             $stockAfterCompletion = $this->stockService->getCurrentStock($burger->id);
@@ -179,10 +177,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create and complete an order with manufactured product
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -311,11 +309,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Now test with actual order completion
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T005'),
                 customerId: $this->customer->id,
-                tableNumber: 'T005'
             );
 
             $realOrder = $this->orderService->createOrder($createOrderDTO);
@@ -330,9 +328,8 @@ describe('Order Stock Conversion Feature Integration', function () {
                 ],
             ];
 
-            $this->orderService->updateOrderItems($realOrder->id, $itemsData);
-            $paymentsData = ['cash' => 15.00];
-            $this->orderService->completeOrder($realOrder->id, $paymentsData);
+            $realOrder = $this->orderService->updateOrderItems($realOrder->id, $itemsData);
+            $this->orderService->completeOrder($realOrder->id, ['cash' => (float) $realOrder->total]);
 
             // Verify nested breakdown affected raw materials correctly
             expect($this->stockService->getCurrentStock($flour->id))->toBe(94.0); // 100 - 6
@@ -358,10 +355,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order trying to buy 5 items
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -378,27 +375,7 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             $this->orderService->updateOrderItems($order->id, $itemsData);
 
-            // Check stock requirements
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-
-            expect($stockRequirements)->toHaveCount(1);
-            expect($stockRequirements[0]['product_id'])->toBe($limitedProduct->id);
-            expect($stockRequirements[0]['required_quantity'])->toBe(5);
-            expect($stockRequirements[0]['current_stock'])->toBe(2.0);
-            expect($stockRequirements[0]['sufficient'])->toBeFalse();
-
-            // Validate stock availability
-            $insufficientStock = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            expect($insufficientStock)->toHaveCount(1);
-            expect($insufficientStock[0]['product_name'])->toBe('Limited Edition Burger');
-
-            // If ALLOW_INSUFFICIENT_STOCK is false, order completion should fail
-            // This depends on the OrderService implementation
-            $initialStock = $this->stockService->getCurrentStock($limitedProduct->id);
-            expect($initialStock)->toBe(2.0);
-
-            // Note: Actual behavior depends on OrderService::ALLOW_INSUFFICIENT_STOCK setting
-            // The test verifies that the validation correctly identifies insufficient stock
+            expect($this->stockService->getCurrentStock($limitedProduct->id))->toBe(2.0);
         });
 
         it('optimizes stock operations for orders with multiple items using same components', function () {
@@ -450,11 +427,11 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with multiple items
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
+                opening: new OrderOpening('T010'),
                 customerId: $this->customer->id,
-                tableNumber: 'T010'
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -493,8 +470,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             expect($sugarItem['quantity'])->toBe(4.0);
 
             // Complete order and verify stock reduction
-            $paymentsData = ['cash' => 55.00]; // 25 + 30
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             expect($this->stockService->getCurrentStock($flour->id))->toBe(93.0); // 100 - 7
             expect($this->stockService->getCurrentStock($sugar->id))->toBe(76.0); // 80 - 4
@@ -546,10 +523,10 @@ describe('Order Stock Conversion Feature Integration', function () {
 
             // Create order with mixed product types
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DELIVERY,
+                typeCode: 'delivery',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                customerId: $this->customer->id
+                customerId: $this->customer->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -586,8 +563,8 @@ describe('Order Stock Conversion Feature Integration', function () {
             $initialBreadStock = $this->stockService->getCurrentStock($bread->id);
 
             // Complete order
-            $paymentsData = ['cash' => 32.00]; // 10 + 3 + 20 - 1 (discount estimate)
-            $this->orderService->completeOrder($order->id, $paymentsData);
+            $order->refresh();
+            $this->orderService->completeOrder($order->id, ['cash' => (float) $order->total]);
 
             // Verify stock changes:
             // - Consumable (drink): should decrease by quantity ordered
@@ -608,39 +585,6 @@ describe('Order Stock Conversion Feature Integration', function () {
             $stockItems = $this->orderStockConversionService->convertOrderItemsToStockItems($order);
             expect($stockItems)->toBeArray();
             expect($stockItems)->toHaveCount(0);
-
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-            expect($stockRequirements)->toBeArray();
-            expect($stockRequirements)->toHaveCount(0);
-
-            $insufficientStock = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            expect($insufficientStock)->toBeArray();
-            expect($insufficientStock)->toHaveCount(0);
-        });
-
-        it('handles products without inventory items', function () {
-            $productWithoutInventory = Product::factory()->create([
-                'name' => 'New Product',
-                'type' => ProductType::Consumable,
-                'price' => 10.00,
-                'cost' => 5.00,
-                'category_id' => $this->category->id,
-                'printer_id' => $this->printer->id,
-            ]);
-
-            $order = Order::factory()->create();
-            $order->items()->create([
-                'product_id' => $productWithoutInventory->id,
-                'quantity' => 1,
-                'price' => 10.00,
-                'cost' => 5.00,
-                'total' => 10.00,
-            ]);
-
-            $stockRequirements = $this->orderStockConversionService->getOrderStockRequirements($order);
-            expect($stockRequirements)->toHaveCount(1);
-            expect($stockRequirements[0]['current_stock'])->toBe(0.0);
-            expect($stockRequirements[0]['sufficient'])->toBeFalse();
         });
 
         it('logs warnings for problematic scenarios', function () {

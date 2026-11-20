@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Core\Audit\AuditLogger;
 use App\Models\ExpenceType;
 use App\Models\Expense;
+use App\Models\TerminalSession;
+use App\Services\FeatureService;
 use App\Services\ShiftLoggingService;
 use App\Services\ShiftService;
+use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +51,10 @@ class ExpenseController extends Controller
      */
     public function store(Request $request)
     {
+        if (! auth()->user()->can('expense.create')) {
+            abort(403, 'غير مسموح بإضافة مصروف');
+        }
+
         $request->validate([
             'amount' => 'required|numeric|min:0',
             'expenseTypeId' => 'required|exists:expence_types,id',
@@ -69,6 +77,8 @@ class ExpenseController extends Controller
                     'amount' => $request->amount,
                     'notes' => $request->description,
                 ]);
+
+                AuditLogger::created($expense, context: 'pos_expense', shift: $currentShift);
 
                 // Log expense creation
                 $this->loggingService->logExpenseAction('create', [
@@ -109,6 +119,10 @@ class ExpenseController extends Controller
             return back()->withErrors(['message' => 'لا يمكن تعديل هذا المصروف']);
         }
 
+        if (! $this->belongsToThisDrawer($expense)) {
+            return back()->withErrors(['message' => 'لا يمكن تعديل مصروف منفذ بيع آخر أو منفذ بيع مغلق']);
+        }
+
         try {
             DB::transaction(function () use ($request, $expense) {
                 $oldExpenseType = $expense->expenceType;
@@ -120,11 +134,17 @@ class ExpenseController extends Controller
                     'description' => $expense->notes,
                 ];
 
+                $original = $expense->getOriginal();
+
                 $expense->update([
                     'expence_type_id' => $request->expenseTypeId,
                     'amount' => $request->amount,
                     'notes' => $request->description,
                 ]);
+
+                if ($expense->wasChanged()) {
+                    AuditLogger::updated($expense, $original, context: 'pos_expense');
+                }
 
                 // Log expense update
                 $this->loggingService->logExpenseAction('update', [
@@ -157,10 +177,18 @@ class ExpenseController extends Controller
      */
     public function destroy(Expense $expense)
     {
+        if (! auth()->user()->can('expense.delete')) {
+            abort(403, 'غير مسموح بحذف المصروف');
+        }
+
         $currentShift = $this->shiftService->getCurrentShift();
 
         if (! $currentShift || $expense->shift_id !== $currentShift->id) {
             return back()->withErrors(['message' => 'لا يمكن حذف هذا المصروف']);
+        }
+
+        if (! $this->belongsToThisDrawer($expense)) {
+            return back()->withErrors(['message' => 'لا يمكن حذف مصروف منفذ بيع آخر أو منفذ بيع مغلق']);
         }
 
         try {
@@ -172,6 +200,7 @@ class ExpenseController extends Controller
                     'description' => $expense->notes,
                 ];
 
+                AuditLogger::deleted($expense, context: 'pos_expense');
                 $expense->delete();
 
                 // Log expense deletion
@@ -187,5 +216,28 @@ class ExpenseController extends Controller
 
             return back()->withErrors(['message' => 'حدث خطأ أثناء حذف المصروف: '.$e->getMessage()]);
         }
+    }
+
+    /**
+     * With several drawers, an expense is changed only from the drawer that
+     * recorded it, while that drawer is still open: a closed drawer's expected
+     * cash is frozen.
+     */
+    private function belongsToThisDrawer(Expense $expense): bool
+    {
+        $sessionId = $expense->getAttribute('terminal_session_id');
+
+        if ($sessionId === null || ! app(FeatureService::class)->multiTerminalEnabled()) {
+            return true;
+        }
+
+        $session = TerminalSession::query()->find($sessionId);
+        if ($session === null || ! $session->isOpen()) {
+            return false;
+        }
+
+        $current = app(TerminalSessionResolver::class)->current();
+
+        return $current === null || (int) $current->getKey() === (int) $sessionId;
     }
 }

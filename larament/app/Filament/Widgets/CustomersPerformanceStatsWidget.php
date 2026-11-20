@@ -10,81 +10,44 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CustomersPerformanceStatsWidget extends BaseWidget
 {
+    use InteractsWithPageFilters;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
 
-    use InteractsWithPageFilters;
-
-    protected CustomersPerformanceReportService $customersReportService;
-
-    public function boot(): void
-    {
-        $this->customersReportService = app(CustomersPerformanceReportService::class);
-    }
-
     protected function getStats(): array
     {
-        $summary = $this->getPeriodSummary();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $kpis = app(CustomersPerformanceReportService::class)->getKpis(
+            $this->pageFilters['startDate'] ?? $defaultStart,
+            $this->pageFilters['endDate'] ?? $defaultEnd,
+        );
+        $current = $kpis['current'];
+        $previous = $kpis['previous'];
 
         return [
-            Stat::make('إجمالي العملاء', $summary['total_customers'])
-                ->description('عدد العملاء الذين حققوا مبيعات')
-                ->descriptionIcon('heroicon-m-users', IconPosition::Before)
-                ->color('primary'),
+            $this->stat('العملاء المشترون', number_format($current['customers']), $current['customers'], $previous['customers'])
+                ->icon('heroicon-o-users'),
 
-            Stat::make('إجمالي الطلبات', number_format($summary['total_orders']))
-                ->description('إجمالي عدد الطلبات المكتملة')
-                ->descriptionIcon('heroicon-m-shopping-bag', IconPosition::Before)
-                ->color('info'),
+            $this->stat('عملاء جدد', number_format($current['new_customers']), $current['new_customers'], $previous['new_customers'])
+                ->icon('heroicon-o-user-plus'),
 
-            Stat::make('إجمالي قيمة المبيعات', number_format($summary['total_sales'], 2).' ج.م')
-                ->description('إجمالي قيمة المبيعات لجميع العملاء المسجلين')
-                ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
-                ->color('success'),
+            $this->stat('مبيعات العملاء (صافي)', $this->money($current['sales']), $current['sales'], $previous['sales'],
+                sprintf('%s%% من إجمالي المبيعات', number_format($current['sales_share'], 1)))
+                ->icon('heroicon-o-banknotes'),
 
-            Stat::make('إجمالي الأرباح', number_format($summary['total_profit'], 2).' ج.م')
-                ->description('إجمالي الأرباح المحققة من العملاء')
-                ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
-                ->color('warning'),
+            $this->stat('صافي الربح', $this->money($current['profit']), $current['profit'], $previous['profit'],
+                sprintf('هامش %s%%', number_format($current['margin'], 1)))
+                ->icon('heroicon-o-chart-bar'),
 
-            Stat::make('متوسط قيمة الطلب', number_format($summary['avg_order_value'], 2).' ج.م')
-                ->description('متوسط قيمة الطلب الواحد')
-                ->descriptionIcon('heroicon-m-calculator', IconPosition::Before)
-                ->color('info'),
+            $this->stat('متوسط قيمة الطلب', $this->money($current['avg_order_value']), $current['avg_order_value'], $previous['avg_order_value'],
+                sprintf('%s طلب', number_format($current['orders'])))
+                ->icon('heroicon-o-calculator'),
 
-            Stat::make('متوسط الطلبات لكل عميل', number_format($summary['avg_orders_per_customer'], 1))
-                ->description('متوسط عدد الطلبات لكل عميل')
-                ->descriptionIcon('heroicon-m-arrow-trending-up', IconPosition::Before)
-                ->color('gray'),
-
-            Stat::make('أفضل عميل بالمبيعات', $summary['top_customer_by_sales']?->name ?? 'لا يوجد')
-                ->description($summary['top_customer_by_sales'] ?
-                    number_format($summary['top_customer_by_sales']->total_sales, 2).' ج.م' :
-                    'لا توجد مبيعات')
-                ->descriptionIcon('heroicon-m-trophy', IconPosition::Before)
-                ->color('success'),
-
-            Stat::make('أفضل عميل بالربح', $summary['top_customer_by_profit']?->name ?? 'لا يوجد')
-                ->description($summary['top_customer_by_profit'] ?
-                    number_format($summary['top_customer_by_profit']->total_profit, 2).' ج.م' :
-                    'لا توجد مبيعات')
-                ->descriptionIcon('heroicon-m-trophy', IconPosition::Before)
-                ->color('warning'),
-
-            Stat::make('أكثر عميل طلباً', $summary['most_frequent_customer']?->name ?? 'لا يوجد')
-                ->description($summary['most_frequent_customer'] ?
-                    $summary['most_frequent_customer']->total_orders.' طلب' :
-                    'لا توجد طلبات')
-                ->descriptionIcon('heroicon-m-star', IconPosition::Before)
-                ->color('primary'),
-
-            Stat::make('أعلى متوسط قيمة طلب', $summary['highest_avg_order_customer']?->name ?? 'لا يوجد')
-                ->description($summary['highest_avg_order_customer'] ?
-                    number_format($summary['highest_avg_order_customer']->avg_order_value, 2).' ج.م' :
-                    'لا توجد طلبات')
-                ->descriptionIcon('heroicon-m-currency-dollar', IconPosition::Before)
-                ->color('info'),
+            $this->stat('معدل العودة', number_format($current['return_rate'], 1).'%', $current['return_rate'], $previous['return_rate'],
+                'عملاء طلبوا أكثر من مرة في الفترة', points: true)
+                ->icon('heroicon-o-arrow-path'),
         ];
     }
 
@@ -93,11 +56,29 @@ class CustomersPerformanceStatsWidget extends BaseWidget
         return 3;
     }
 
-    private function getPeriodSummary(): array
+    private function stat(string $label, string $value, float $current, float $previous, ?string $note = null, bool $points = false): Stat
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        if ($points) {
+            $diff = $current - $previous;
+            $change = sprintf('%s%s نقطة عن الفترة السابقة', $diff >= 0 ? '+' : '', number_format($diff, 1));
+        } elseif ($previous > 0) {
+            $diff = ($current - $previous) / $previous * 100;
+            $change = sprintf('%s%s%% عن الفترة السابقة', $diff >= 0 ? '+' : '', number_format($diff, 1));
+        } else {
+            $diff = $current > 0 ? 1 : 0;
+            $change = $current > 0 ? 'لا توجد بيانات للفترة السابقة' : 'بدون تغيير';
+        }
 
-        return $this->customersReportService->getPeriodSummary($startDate, $endDate);
+        $color = abs($diff) < 0.05 ? 'gray' : ($diff > 0 ? 'success' : 'danger');
+
+        return Stat::make($label, $value)
+            ->description($note ? "{$note} · {$change}" : $change)
+            ->descriptionIcon($diff >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down', IconPosition::Before)
+            ->color($color);
+    }
+
+    private function money(float $amount): string
+    {
+        return number_format($amount, 2).' ج.م';
     }
 }

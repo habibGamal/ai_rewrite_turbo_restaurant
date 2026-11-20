@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Order;
+use App\Services\Reports\ReportOrderTypesService;
+use App\Services\Reports\ReturnsAggregates;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -26,18 +27,47 @@ class PeakHoursPerformanceReportService
         return DB::connection()->getDriverName();
     }
 
-    private function getHourExpression(): string
+    private function getHourExpression(string $column = 'orders.created_at'): string
     {
         return $this->getDriver() === 'sqlite'
-            ? "CAST(strftime('%H', orders.created_at) AS INTEGER)"
-            : 'HOUR(orders.created_at)';
+            ? "CAST(strftime('%H', {$column}) AS INTEGER)"
+            : "HOUR({$column})";
     }
 
-    private function getDayOfWeekExpression(): string
+    private function getDayOfWeekExpression(string $column = 'orders.created_at'): string
     {
         return $this->getDriver() === 'sqlite'
-            ? "(CAST(strftime('%w', orders.created_at) AS INTEGER) + 1)"
-            : 'DAYOFWEEK(orders.created_at)';
+            ? "(CAST(strftime('%w', {$column}) AS INTEGER) + 1)"
+            : "DAYOFWEEK({$column})";
+    }
+
+    /**
+     * Refunds paid in the period, grouped by the hour / weekday they were paid.
+     *
+     * @return array<string, array{count: int, amount: float, profit_impact: float, quantity: float}>
+     */
+    private function returnsBy(string $expression, ?string $startDate, ?string $endDate): array
+    {
+        $aggregates = app(ReturnsAggregates::class);
+
+        return $aggregates->groupedBy($aggregates->periodQuery($startDate, $endDate), $expression);
+    }
+
+    /**
+     * Gross / returns / net fields for one row.
+     *
+     * @param  array<string, array{count: int, amount: float, profit_impact: float, quantity: float}>  $returns
+     * @return array{total_refunds: float, net_sales: float, net_profit: float}
+     */
+    private function netFields(array $returns, int|string $key, float $sales, float $profit): array
+    {
+        $row = $returns[(string) $key] ?? ['amount' => 0.0, 'profit_impact' => 0.0];
+
+        return [
+            'total_refunds' => (float) $row['amount'],
+            'net_sales' => round($sales - (float) $row['amount'], 2),
+            'net_profit' => round($profit - (float) $row['profit_impact'], 2),
+        ];
     }
 
     private function getYearExpression(): string
@@ -89,6 +119,7 @@ class PeakHoursPerformanceReportService
         }
 
         $hourExpr = $this->getHourExpression();
+        $returns = $this->returnsBy($this->getHourExpression('orr.created_at'), $startDate, $endDate);
 
         /** @var Collection<int, object> $results */
         $results = $this->getOrdersQuery($startDate, $endDate)
@@ -102,7 +133,7 @@ class PeakHoursPerformanceReportService
             ->groupBy(DB::raw($hourExpr))
             ->orderBy('hour')
             ->get()
-            ->map(function ($item) {
+            ->map(function ($item) use ($returns) {
                 $hour = (int) data_get($item, 'hour', 0);
                 $totalOrders = (int) data_get($item, 'total_orders', 0);
                 $totalSales = (float) data_get($item, 'total_sales', 0.0);
@@ -117,6 +148,7 @@ class PeakHoursPerformanceReportService
                     'total_orders' => $totalOrders,
                     'total_sales' => $totalSales,
                     'total_profit' => $totalProfit,
+                    ...$this->netFields($returns, $hour, $totalSales, $totalProfit),
                     'total_quantity' => 0,
                     'avg_order_value' => $avgOrderValue,
                     'profit_margin' => $profitMargin,
@@ -148,6 +180,7 @@ class PeakHoursPerformanceReportService
         }
 
         $dayOfWeekExpr = $this->getDayOfWeekExpression();
+        $returns = $this->returnsBy($this->getDayOfWeekExpression('orr.created_at'), $startDate, $endDate);
 
         /** @var Collection<int, object> $results */
         $results = $this->getOrdersQuery($startDate, $endDate)
@@ -161,7 +194,7 @@ class PeakHoursPerformanceReportService
             ->groupBy(DB::raw($dayOfWeekExpr))
             ->orderBy('day_of_week')
             ->get()
-            ->map(function ($item) {
+            ->map(function ($item) use ($returns) {
                 $dayOfWeek = (int) data_get($item, 'day_of_week', 0);
                 $totalOrders = (int) data_get($item, 'total_orders', 0);
                 $totalSales = (float) data_get($item, 'total_sales', 0.0);
@@ -187,6 +220,7 @@ class PeakHoursPerformanceReportService
                     'total_orders' => $totalOrders,
                     'total_sales' => $totalSales,
                     'total_profit' => $totalProfit,
+                    ...$this->netFields($returns, $dayOfWeek, $totalSales, $totalProfit),
                     'total_quantity' => 0,
                     'avg_order_value' => $avgOrderValue,
                     'profit_margin' => $profitMargin,
@@ -405,8 +439,7 @@ class PeakHoursPerformanceReportService
             ->map(function ($item) {
                 $hour = (int) data_get($item, 'hour', 0);
                 $typeRaw = data_get($item, 'type');
-                $type = $typeRaw instanceof OrderType ? $typeRaw : (is_string($typeRaw) ? OrderType::tryFrom($typeRaw) : null);
-                $typeLabel = $type ? $type->label() : (string) ($typeRaw ?? '');
+                $typeLabel = app(ReportOrderTypesService::class)->label((string) ($typeRaw ?? ''));
 
                 return (object) [
                     'hour' => $hour,

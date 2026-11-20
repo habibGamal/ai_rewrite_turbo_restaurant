@@ -44,13 +44,13 @@ class ProductImporterAction extends Action
                         return Product::whereIn('type', [
                             ProductType::RawMaterial,
                             ProductType::Consumable,
-                        ])->get()->pluck('name', 'id');
+                        ])->pluck('name', 'id');
                     })
                     ->multiple(),
                 Select::make('category_filter')
                     ->label('فلترة حسب الفئة')
                     ->placeholder('جميع الفئات')
-                    ->options(Category::all()->pluck('name', 'id'))
+                    ->options(Category::query()->pluck('name', 'id'))
                     ->reactive()
                     ->afterStateUpdated(fn ($state, callable $set) => $set('selected_products', [])),
 
@@ -125,16 +125,20 @@ class ProductImporterAction extends Action
 
                     $product = $products->where('id', $productId)->first();
                     if ($product) {
-                        $price = $product->cost ?? $product->price;
+                        $price = $product->cost ?? $product->price ?? 0;
                         $quantity = 1;
                         $total = $quantity * $price;
                         $currentItems[] = [
                             'product_id' => $product->id,
                             'product_name' => $product->name,
+                            'barcode' => $product->barcode,
                             'unit' => Product::formatUnit($product->unit),
                             'quantity' => $quantity,
                             'price' => $price,
                             'total' => $total,
+                            'unit_cost' => $price,
+                            'total_cost' => $total,
+                            'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
                             ...($this->additional ? ($this->additional)($product) : []),
                         ];
                         $addedCount++;
@@ -146,9 +150,10 @@ class ProductImporterAction extends Action
                 // Recalculate invoice total
                 $invoiceTotal = 0;
                 foreach ($currentItems as $item) {
-                    $invoiceTotal += $item['total'] ?? 0;
+                    $invoiceTotal += $item['total'] ?? $item['total_cost'] ?? 0;
                 }
                 $set('total', $invoiceTotal);
+                $set('total_cost', $invoiceTotal);
 
                 // Show notification
                 $message = "تم إضافة {$addedCount} منتج بنجاح";

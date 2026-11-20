@@ -3,18 +3,23 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
-    role: 'admin' | 'cashier' | 'waiter' | 'kitchen';
+    roles?: string[];
+    permissions?: string[];
+    isAdmin?: boolean;
 }
 
 export type OrderStatus = 'processing' | 'completed' | 'cancelled';
-export type OrderType = 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat';
+export type OrderType = string;
 export type PaymentMethod = 'cash' | 'card' | 'talabat_card';
 export type PaymentStatus = 'pending' | 'partial_paid' | 'full_paid';
 
 export interface Category {
     id: number;
     name: string;
+    parent_id?: number | null;
+    blocked_order_type_codes?: string[];
     products: Product[];
+    children?: Category[];
 }
 
 export interface Product {
@@ -58,6 +63,7 @@ export interface OrderItem {
     price: number;
     notes?: string;
     product: Product;
+    kitchen_status?: 'ready' | 'in_progress' | null;
 }
 
 export interface Payment {
@@ -83,11 +89,12 @@ export interface ItemChange {
 
 export interface Order {
     id: number;
+    terminal_id?: number | null;
     table_id?: number;
     customer_name?: string;
     phone?: string;
     status: OrderStatus;
-    type: OrderType;
+    type: string;
     total: number;
     subtotal: number;
     tax: number;
@@ -99,6 +106,102 @@ export interface Order {
     item_changes?: ItemChange[];
     table?: Table;
     payments?: Payment[];
+    display?: OrderDisplay;
+    kitchen_status?: 'ready' | 'in_progress' | null;
+    kitchen_progress?: {
+        done: number;
+        total: number;
+        status: 'ready' | 'in_progress';
+    } | null;
+    shift_id?: number;
+    credit?: {
+        allow_partial_payment: boolean;
+        allow_pay_later: boolean;
+        require_customer_for_credit: boolean;
+    };
+}
+
+export interface OrderDisplay {
+    code: string;
+    label: string;
+    color: string;
+    icon: string;
+    showTable: boolean;
+    showCustomer: boolean;
+    showAddress: boolean;
+    showDriver: boolean;
+    chargesService: boolean;
+    chargesDeliveryFee: boolean;
+}
+
+export interface TabPresentation {
+    body: 'cards' | 'inbox' | 'floor' | 'instant';
+    creation: 'immediate' | 'choose_table' | 'none' | 'instant';
+    statuses: string[];
+    cardTitle: 'table' | 'order_number';
+}
+
+export interface FloorRect { col: number; row: number; colSpan: number; rowSpan: number; [key: string]: any }
+export interface FloorTable extends FloorRect { number: string; capacity: number; zone: string; active: boolean }
+export interface FloorSection extends FloorRect { name: string; zone: string; color: string }
+export interface FloorLayout { version: number; enabled: boolean; columns: number; rows: number; tables: FloorTable[]; sections: FloorSection[]; [key: string]: any }
+export interface InstantCartCustomer {
+  id: number;
+  name: string;
+  phone: string;
+}
+
+export interface InstantCartDiscount {
+  value: number;
+  type: 'percent' | 'value';
+}
+
+export interface InstantLastSale {
+  id: number;
+  order_number: number;
+  total: number;
+  change: number;
+}
+
+export interface InstantTabPayload {
+  categories: Category[];
+  lastSale: InstantLastSale | null;
+  heldCount: number;
+  /** Catalogue too big to send: categories only, products come from the server search. */
+  remoteCatalog?: boolean;
+  credit: {
+    allow_partial_payment: boolean;
+    allow_pay_later: boolean;
+    require_customer_for_credit: boolean;
+  };
+  can: { discount: boolean; changeItems: boolean; returns?: boolean; returnWithoutRestock?: boolean };
+}
+
+export interface CashierTab {
+    key: string;
+    kind: 'type' | 'system';
+    code: string | null;
+    label: string;
+    color: string;
+    icon: string;
+    visible: boolean;
+    forcedVisible: boolean;
+    layout?: FloorLayout;
+  occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
+  presentation?: TabPresentation;
+  instant?: InstantTabPayload;
+    display?: OrderDisplay;
+    credit?: {
+        allow_partial_payment: boolean;
+        allow_pay_later: boolean;
+        require_customer_for_credit: boolean;
+    };
+}
+
+export interface ChangeTypeOption {
+    code: string;
+    label: string;
+    showTable: boolean;
 }
 
 export interface OrderItemData {
@@ -108,6 +211,7 @@ export interface OrderItemData {
     quantity: number;
     notes?: string;
     initial_quantity?: number;
+    kitchen_status?: 'ready' | 'in_progress' | null;
 }
 
 export type OrderItemAction =
@@ -118,19 +222,56 @@ export type OrderItemAction =
     | { type: 'changeQuantity'; id: number; quantity: number; user: User }
     | { type: 'changeNotes'; id: number; notes: string; user: User }
     | { type: 'delete'; id: number; user: User }
+    | { type: 'addScanned'; product: Product; quantity: number; user: User }
+    | { type: 'swap'; id: number; product: Product; user: User }
     | { type: 'init'; orderItems: OrderItemData[]; user: User };
 
 export interface ManageOrderProps {
     order: Order;
     categories: Category[];
     receiptFooter?: string;
+    kdsCashierStatusEnabled?: boolean;
 }
+
+export interface FeatureFlags {
+    revenues: boolean;
+    custom_fees: boolean;
+    outsourced_orders: boolean;
+    equipment: boolean;
+    variants: boolean;
+    multi_terminal: boolean;
+    terminal_separation: boolean;
+    deferred_payment?: boolean;
+    returns?: boolean;
+}
+
+export type ModuleKey =
+    | 'restaurant'
+    | 'delivery'
+    | 'web_orders'
+    | 'manufacturing'
+    | 'external_sellers'
+    | 'retail';
+
+export type BusinessType =
+    | 'restaurant'
+    | 'cafe'
+    | 'bakery'
+    | 'fashion'
+    | 'grocery'
+    | 'general_retail';
 
 export interface PageProps {
     auth: {
         user: User;
     };
+    features?: FeatureFlags;
+    modules?: ModuleKey[];
+    businessType?: BusinessType;
     receiptFooter: string;
+    scaleBarcodePrefix?: string;
+    tabsOrientation?: 'horizontal' | 'vertical';
+    [key: string]: unknown;
 }
 
 export interface OrdersPageProps extends PageProps {

@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\EditPurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\ListPurchaseInvoices;
@@ -18,7 +17,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -507,4 +506,20 @@ it('redirects to index after creation', function () {
 it('can create supplier inline from purchase invoice form', function () {
     livewire(CreatePurchaseInvoice::class)
         ->assertSchemaComponentExists('supplier_id');
+});
+
+it('recalculates the total from the edited items when an open invoice is saved', function () {
+    $record = PurchaseInvoice::factory()->create(['closed_at' => null, 'total' => 0]);
+    $product = Product::factory()->create();
+
+    livewire(EditPurchaseInvoice::class, ['record' => $record->getRouteKey()])
+        ->fillForm([
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 4, 'price' => 25.00],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect((float) $record->fresh()->total)->toBe(100.0);
 });

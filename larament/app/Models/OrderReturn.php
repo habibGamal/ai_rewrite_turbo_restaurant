@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTerminalSession;
+use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,15 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderReturn extends Model
 {
-    use HasFactory;
+    use BelongsToTerminalSession, HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'order_id',
         'user_id',
         'shift_id',
         'total_refund',
         'reason',
         'reverse_stock',
+        'exchange_order_id',
     ];
 
     protected $casts = [
@@ -38,6 +42,12 @@ class OrderReturn extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    /** The sale made in the same step when this return was an exchange. */
+    public function exchangeOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'exchange_order_id');
     }
 
     public function items(): HasMany

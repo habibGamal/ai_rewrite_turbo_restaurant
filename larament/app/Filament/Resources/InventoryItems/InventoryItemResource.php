@@ -7,7 +7,7 @@ use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
 use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
 use App\Filament\Resources\InventoryItems\RelationManagers\UsedInProductsRelationManager;
-use App\Filament\Traits\AdminAccess;
+use App\Filament\Resources\InventoryItems\RelationManagers\WarehouseBalancesRelationManager;
 use App\Models\InventoryItem;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
@@ -19,12 +19,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class InventoryItemResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = InventoryItem::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
@@ -43,6 +43,11 @@ class InventoryItemResource extends Resource
         return 'عناصر المخزون';
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['product.category', 'warehouse']);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -53,6 +58,12 @@ class InventoryItemResource extends Resource
                     ->sortable(),
                 TextColumn::make('product.category.name')
                     ->label('الفئة')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
+                    ->badge()
+                    ->color('gray')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('quantity')
@@ -90,6 +101,11 @@ class InventoryItemResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('warehouse_id')
+                    ->label('المخزن')
+                    ->relationship('warehouse', 'name')
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('product.category_id')
                     ->label('الفئة')
                     ->relationship('product.category', 'name'),
@@ -138,6 +154,30 @@ class InventoryItemResource extends Resource
                             ->label('اسم المنتج'),
                         TextEntry::make('product.category.name')
                             ->label('الفئة'),
+                        TextEntry::make('warehouse.name')
+                            ->label('المخزن')
+                            ->badge()
+                            ->color('gray'),
+                        TextEntry::make('quantity')
+                            ->label('الكمية بالمخزن')
+                            ->numeric(decimalPlaces: 3)
+                            ->badge()
+                            ->color(fn (InventoryItem $record): string => match (true) {
+                                $record->quantity > ($record->product->min_stock * 2) => 'success',
+                                $record->quantity > $record->product->min_stock => 'warning',
+                                default => 'danger',
+                            }),
+                        TextEntry::make('total_stock')
+                            ->label('إجمالي المخزون بكل المخازن')
+                            ->state(fn (InventoryItem $record): float => (float) InventoryItem::query()
+                                ->where('product_id', $record->product_id)
+                                ->sum('quantity'))
+                            ->numeric(decimalPlaces: 3)
+                            ->badge()
+                            ->color('info'),
+                        TextEntry::make('product.min_stock')
+                            ->label('الحد الأدنى للمخزون')
+                            ->numeric(),
                         TextEntry::make('product.unit')
                             ->label('الوحدة'),
                         TextEntry::make('product.cost')
@@ -153,6 +193,7 @@ class InventoryItemResource extends Resource
     {
         return [
             MovementsRelationManager::class,
+            WarehouseBalancesRelationManager::class,
             UsedInProductsRelationManager::class,
         ];
     }
@@ -165,23 +206,23 @@ class InventoryItemResource extends Resource
         ];
     }
 
-    public static function canCreate(): bool
+    public static function getCreateAuthorizationResponse(): Response
     {
-        return false;
+        return Response::deny();
     }
 
-    public static function canEdit($record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return false;
+        return Response::deny();
     }
 
-    public static function canDelete($record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return false;
+        return Response::deny();
     }
 
-    public static function canView($record): bool
+    public static function getViewAuthorizationResponse(Model $record): Response
     {
-        return true;
+        return Response::allow();
     }
 }

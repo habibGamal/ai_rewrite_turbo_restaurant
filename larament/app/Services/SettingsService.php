@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Costing\CostingMethod;
+use App\Enums\OptionalFeature;
 use App\Enums\SettingKey;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SettingsService
 {
@@ -29,7 +32,17 @@ class SettingsService
 
     public const MASTER_NODE_LINK = 'master_node_link';
 
-    public const UPDATE_PRODUCT_COST_ON_PURCHASE = 'update_product_cost_on_purchase';
+    public const COSTING_METHOD = 'costing_method';
+
+    public const FEATURE_REVENUES_ENABLED = 'feature_revenues_enabled';
+
+    public const FEATURE_CUSTOM_FEES_ENABLED = 'feature_custom_fees_enabled';
+
+    public const FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
+
+    public const FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
+
+    public const FEATURE_VARIANTS_ENABLED = 'feature_variants_enabled';
 
     /**
      * Get website link from settings
@@ -114,6 +127,30 @@ class SettingsService
     }
 
     /**
+     * The key the website and slave branches send as X-Api-Key. The value
+     * saved in Settings wins; the WEB_API_KEY .env line is the fallback.
+     */
+    public function getWebApiKey(): string
+    {
+        $stored = $this->get(SettingKey::WEB_API_KEY->value);
+        if (is_string($stored) && $stored !== '') {
+            return $stored;
+        }
+
+        $fromEnv = config('app.web_api_key');
+
+        return is_string($fromEnv) ? $fromEnv : '';
+    }
+
+    /**
+     * A new random key suitable for WEB_API_KEY.
+     */
+    public static function generateWebApiKey(): string
+    {
+        return bin2hex(random_bytes(24));
+    }
+
+    /**
      * Get scale barcode prefix from settings
      */
     public function getScaleBarcodePrefix(): string
@@ -122,33 +159,14 @@ class SettingsService
     }
 
     /**
-     * Check if cashiers are allowed to apply discounts
+     * Get cashier screen tabs orientation ('horizontal' or 'vertical')
      */
-    public function isCashierDiscountsAllowed(): bool
+    public function getCashierTabsOrientation(): string
     {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_DISCOUNTS->value, SettingKey::ALLOW_CASHIER_DISCOUNTS->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /**
-     * Check if cashiers are allowed to cancel orders
-     */
-    public function isCashierCancelOrdersAllowed(): bool
-    {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value, SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /**
-     * Check if cashiers are allowed to change order items after saving
-     */
-    public function isCashierItemChangesAllowed(): bool
-    {
-        $value = $this->get(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value, SettingKey::ALLOW_CASHIER_ITEM_CHANGES->defaultValue());
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        return (string) $this->get(
+            SettingKey::CASHIER_TABS_ORIENTATION->value,
+            SettingKey::CASHIER_TABS_ORIENTATION->defaultValue(),
+        );
     }
 
     /**
@@ -161,22 +179,32 @@ class SettingsService
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
-    /**
-     * Check if product cost should be updated when closing a purchase invoice
-     */
-    public function shouldUpdateProductCostOnPurchase(): bool
+    public function getCostingMethod(): CostingMethod
     {
-        $value = $this->get(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value, SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->defaultValue());
+        return CostingMethod::from($this->get(SettingKey::COSTING_METHOD->value, SettingKey::COSTING_METHOD->defaultValue()));
+    }
+
+    public function getBoolean(SettingKey|string $key, ?bool $default = null): bool
+    {
+        $settingKey = $key instanceof SettingKey ? $key : SettingKey::tryFrom($key);
+        $rawKey = $key instanceof SettingKey ? $key->value : $key;
+        $fallback = $default !== null
+            ? ($default ? 'true' : 'false')
+            : ($settingKey?->defaultValue() ?? 'false');
+
+        $value = $this->get($rawKey, $fallback);
 
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
-    /**
-     * Check if product cost update on purchase is prevented
-     */
-    public function isProductCostUpdatePrevented(): bool
+    public function isFeatureEnabled(OptionalFeature|SettingKey|string $feature): bool
     {
-        return ! $this->shouldUpdateProductCostOnPurchase();
+        $resolved = OptionalFeature::fromKey($feature);
+        if ($resolved !== null) {
+            return $this->getBoolean($resolved->settingKey());
+        }
+
+        return $this->getBoolean($feature, false);
     }
 
     /**
@@ -194,15 +222,41 @@ class SettingsService
      */
     public function set(string $key, mixed $value): void
     {
-        // Ensure value is a string
-        $stringValue = is_array($value) ? json_encode($value) : (string) $value;
+        if (SettingKey::tryFrom($key)?->isFeatureFlag()) {
+            app(FeatureService::class)->updateFeatures([$key => $value]);
 
+            return;
+        }
+
+        $stringValue = $this->normalizeValueForStorage($key, $value);
+        $this->persistRaw($key, $stringValue);
+    }
+
+    private function persistRaw(string $key, string $stringValue): void
+    {
         Setting::updateOrCreate(
             ['key' => $key],
             ['value' => $stringValue]
         );
 
-        Cache::forget("settings.{$key}");
+        Setting::invalidateCache($key);
+    }
+
+    private function normalizeValueForStorage(string $key, mixed $value): string
+    {
+        if (SettingKey::tryFrom($key)?->isBooleanSetting()) {
+            return SettingKey::parseStoredBoolean($key, $value) ? 'true' : 'false';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_array($value)) {
+            return json_encode($value) ?: '[]';
+        }
+
+        return (string) $value;
     }
 
     /**
@@ -220,12 +274,33 @@ class SettingsService
      */
     public function setMultiple(array $settings): void
     {
-        foreach ($settings as $key => $value) {
-            $this->set($key, $value);
+        if ($settings === []) {
+            return;
         }
 
-        // Clear the all settings cache
-        Cache::forget('settings.all');
+        DB::transaction(function () use ($settings): void {
+            $featureSettings = [];
+            $normalizedRegularSettings = [];
+
+            foreach ($settings as $key => $value) {
+                $stringKey = (string) $key;
+                if (SettingKey::tryFrom($stringKey)?->isFeatureFlag()) {
+                    $featureSettings[$stringKey] = $value;
+                } else {
+                    $normalizedRegularSettings[$stringKey] = $this->normalizeValueForStorage($stringKey, $value);
+                }
+            }
+
+            if ($featureSettings !== []) {
+                app(FeatureService::class)->updateFeatures($featureSettings);
+            }
+
+            foreach ($normalizedRegularSettings as $key => $stringValue) {
+                $this->persistRaw($key, $stringValue);
+            }
+
+            Setting::invalidateCache();
+        });
     }
 
     /**

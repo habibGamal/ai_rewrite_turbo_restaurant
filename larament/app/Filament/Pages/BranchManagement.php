@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Traits\AdminAccess;
 use App\Services\BranchService;
 use Exception;
 use Filament\Actions\Action;
@@ -15,7 +14,12 @@ use Illuminate\Support\Facades\Cache;
 
 class BranchManagement extends Page implements HasForms
 {
-    use AdminAccess, InteractsWithForms;
+    use InteractsWithForms;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('manage_branch') ?? false;
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-office';
 

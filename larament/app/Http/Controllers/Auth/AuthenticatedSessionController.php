@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +36,7 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         // Redirect kitchen users to the kitchen screen
-        if ($user?->role === UserRole::KITCHEN) {
+        if ($user?->hasRole('kitchen')) {
             return redirect()->intended(route('kitchen.index', absolute: false));
         }
 

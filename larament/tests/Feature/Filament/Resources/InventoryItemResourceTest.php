@@ -1,21 +1,34 @@
 <?php
 
+use App\Enums\InventoryMovementOperation;
+use App\Enums\MovementReason;
+use App\Enums\OrderStatus;
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Resources\InventoryItems\InventoryItemResource;
 use App\Filament\Resources\InventoryItems\Pages\ListInventoryItems;
 use App\Filament\Resources\InventoryItems\Pages\ViewInventoryItem;
 use App\Filament\Resources\InventoryItems\RelationManagers\MovementsRelationManager;
+use App\Filament\Resources\InventoryItems\RelationManagers\UsedInProductsRelationManager;
+use App\Filament\Resources\InventoryItems\RelationManagers\WarehouseBalancesRelationManager;
 use App\Models\Category;
 use App\Models\InventoryItem;
+use App\Models\InventoryItemMovement;
+use App\Models\InventoryItemMovementDaily;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductComponent;
+use App\Models\StockTransfer;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\Orders\OrderStockConversionService;
+use Illuminate\Database\Eloquent\Factories\Sequence;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -41,7 +54,8 @@ it('cannot render create page as creation is disabled', function () {
 it('cannot edit records as editing is disabled', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canEdit($record))->toBeFalse();
 });
@@ -49,7 +63,8 @@ it('cannot edit records as editing is disabled', function () {
 it('cannot delete records as deletion is disabled', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canDelete($record))->toBeFalse();
 });
@@ -57,7 +72,8 @@ it('cannot delete records as deletion is disabled', function () {
 it('can view records', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     expect(InventoryItemResource::canView($record))->toBeTrue();
 });
@@ -66,7 +82,7 @@ it('can view records', function () {
 it('has column', function (string $column) {
     livewire(ListInventoryItems::class)
         ->assertTableColumnExists($column);
-})->with(['product.name', 'product.category.name', 'quantity', 'product.min_stock', 'product.unit', 'product.type', 'created_at', 'updated_at']);
+})->with(['product.name', 'product.category.name', 'warehouse.name', 'quantity', 'product.min_stock', 'product.unit', 'product.type', 'created_at', 'updated_at']);
 
 it('can render column', function (string $column) {
     $category = Category::factory()->create();
@@ -75,7 +91,7 @@ it('can render column', function (string $column) {
 
     livewire(ListInventoryItems::class)
         ->assertCanRenderTableColumn($column);
-})->with(['product.name', 'product.category.name', 'quantity', 'product.min_stock', 'product.unit', 'product.type']);
+})->with(['product.name', 'product.category.name', 'warehouse.name', 'quantity', 'product.min_stock', 'product.unit', 'product.type']);
 
 it('can sort column', function (string $column) {
     $category = Category::factory()->create();
@@ -91,8 +107,10 @@ it('can sort column', function (string $column) {
 
 // Search Tests
 it('can search by product name', function () {
-    $category = Category::factory()->create();
-    $products = Product::factory(5)->create(['category_id' => $category->id]);
+    $category = Category::factory()->create(['name' => 'Inventory search category']);
+    $products = Product::factory(5)
+        ->sequence(fn (Sequence $sequence) => ['name' => 'Inventory search product '.$sequence->index])
+        ->create(['category_id' => $category->id]);
     $records = $products->map(fn ($product) => InventoryItem::factory()->create(['product_id' => $product->id]));
 
     $searchProduct = $products->first();
@@ -168,7 +186,8 @@ it('can filter by product type', function () {
     ]);
 
     $record1 = InventoryItem::factory()->create(['product_id' => $manufacturedProduct->id]);
-    $record2 = InventoryItem::factory()->create(['product_id' => $rawProduct->id]);
+    $record2 = InventoryItem::where('product_id', $rawProduct->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $rawProduct->id]);
 
     livewire(ListInventoryItems::class)
         ->filterTable('product_type', ['type' => ProductType::Manufactured->value])
@@ -274,7 +293,8 @@ it('can view inventory item details', function () {
         'cost' => 100.50,
         'type' => ProductType::RawMaterial,
     ]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(ViewInventoryItem::class, ['record' => $record->getRouteKey()])
         ->assertSchemaStateSet([
@@ -290,7 +310,8 @@ it('can view inventory item details', function () {
 it('can load movements relation manager', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(ViewInventoryItem::class, ['record' => $record->getRouteKey()])
         ->assertSeeLivewire(MovementsRelationManager::class);
@@ -299,7 +320,8 @@ it('can load movements relation manager', function () {
 it('movements relation manager shows correct columns', function () {
     $category = Category::factory()->create();
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $record = InventoryItem::factory()->create(['product_id' => $product->id]);
+    $record = InventoryItem::where('product_id', $product->id)->first()
+        ?? InventoryItem::factory()->create(['product_id' => $product->id]);
 
     livewire(MovementsRelationManager::class, [
         'ownerRecord' => $record,
@@ -349,4 +371,273 @@ it('created_at and updated_at are toggleable columns', function () {
     livewire(ListInventoryItems::class)
         ->assertTableColumnExists('created_at')
         ->assertTableColumnExists('updated_at');
+});
+
+// Multi-Warehouse Tests
+it('lists the same product across multiple warehouses and filters or searches by warehouse', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $category = Category::factory()->create();
+    $product = Product::factory()->create(['category_id' => $category->id, 'name' => 'دجاج متبل']);
+
+    $mainItem = InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'quantity' => 35,
+    ]);
+    $grillItem = InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'quantity' => 12,
+    ]);
+
+    expect($product->inventoryItems)->toHaveCount(2);
+
+    livewire(ListInventoryItems::class)
+        ->assertCanSeeTableRecords([$mainItem, $grillItem])
+        ->filterTable('warehouse_id', $grill->id)
+        ->assertCanSeeTableRecords([$grillItem])
+        ->assertCanNotSeeTableRecords([$mainItem]);
+
+    livewire(ListInventoryItems::class)
+        ->searchTable('مخزن الشواية')
+        ->assertCanSeeTableRecords([$grillItem])
+        ->assertCanNotSeeTableRecords([$mainItem]);
+});
+
+it('shows warehouse balance and total stock across all warehouses on the view page', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $category = Category::factory()->create();
+    $product = Product::factory()->create(['category_id' => $category->id, 'min_stock' => 10]);
+
+    InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'quantity' => 40,
+    ]);
+    $grillItem = InventoryItem::factory()->create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'quantity' => 15,
+    ]);
+
+    livewire(ViewInventoryItem::class, ['record' => $grillItem->getRouteKey()])
+        ->assertSchemaStateSet([
+            'warehouse.name' => 'مخزن الشواية',
+            'quantity' => 15.0,
+            'total_stock' => 55.0,
+        ]);
+});
+
+it('scopes InventoryItem movements and dailyMovements relationships to its warehouse across query, eager load, and existence checks', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $bar = Warehouse::factory()->create(['name' => 'مخزن البار']);
+    $product = Product::factory()->create(['type' => ProductType::Manufactured]);
+
+    $mainItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $main->id, 'quantity' => 20]);
+    $grillItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $grill->id, 'quantity' => 5]);
+    $barItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $bar->id, 'quantity' => 0]);
+
+    $mainMovement = InventoryItemMovement::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'operation' => InventoryMovementOperation::IN,
+        'reason' => MovementReason::PURCHASE,
+        'quantity' => 20,
+        'unit_cost' => 10,
+        'total_cost' => 200,
+    ]);
+    $grillMovement = InventoryItemMovement::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'operation' => InventoryMovementOperation::IN,
+        'reason' => MovementReason::TRANSFER_IN,
+        'quantity' => 5,
+        'unit_cost' => 10,
+        'total_cost' => 50,
+    ]);
+
+    InventoryItemMovementDaily::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'date' => today()->toDateString(),
+        'start_quantity' => 0,
+        'end_quantity' => 20,
+    ]);
+
+    expect($mainItem->movements()->pluck('id')->all())->toBe([$mainMovement->id])
+        ->and($grillItem->movements()->pluck('id')->all())->toBe([$grillMovement->id])
+        ->and($barItem->movements()->count())->toBe(0)
+        ->and($mainItem->dailyMovements()->count())->toBe(1)
+        ->and($grillItem->dailyMovements()->count())->toBe(0);
+
+    $eager = InventoryItem::query()
+        ->where('product_id', $product->id)
+        ->with('movements')
+        ->withCount('movements')
+        ->get()
+        ->keyBy('warehouse_id');
+
+    expect($eager[$main->id]->movements->pluck('id')->all())->toBe([$mainMovement->id])
+        ->and($eager[$grill->id]->movements->pluck('id')->all())->toBe([$grillMovement->id])
+        ->and($eager[$bar->id]->movements)->toBeEmpty()
+        ->and($eager[$main->id]->movements_count)->toBe(1)
+        ->and($eager[$grill->id]->movements_count)->toBe(1)
+        ->and($eager[$bar->id]->movements_count)->toBe(0);
+
+    $withMovements = InventoryItem::query()
+        ->where('product_id', $product->id)
+        ->whereHas('movements')
+        ->pluck('warehouse_id')
+        ->all();
+
+    expect($withMovements)->toEqualCanonicalizing([$main->id, $grill->id]);
+});
+
+it('shows only the owner warehouse movements in MovementsRelationManager and links transfer documents', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $product = Product::factory()->create(['type' => ProductType::Manufactured]);
+
+    $mainItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $main->id, 'quantity' => 10]);
+    $grillItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $grill->id, 'quantity' => 10]);
+
+    $transfer = StockTransfer::factory()->create([
+        'from_warehouse_id' => $main->id,
+        'to_warehouse_id' => $grill->id,
+    ]);
+
+    $outMovement = InventoryItemMovement::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $main->id,
+        'operation' => InventoryMovementOperation::OUT,
+        'reason' => MovementReason::TRANSFER_OUT,
+        'quantity' => 10,
+        'unit_cost' => 15,
+        'total_cost' => 150,
+        'referenceable_type' => StockTransfer::class,
+        'referenceable_id' => $transfer->id,
+    ]);
+
+    $inMovement = InventoryItemMovement::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $grill->id,
+        'operation' => InventoryMovementOperation::IN,
+        'reason' => MovementReason::TRANSFER_IN,
+        'quantity' => 10,
+        'unit_cost' => 15,
+        'total_cost' => 150,
+        'referenceable_type' => StockTransfer::class,
+        'referenceable_id' => $transfer->id,
+    ]);
+
+    livewire(MovementsRelationManager::class, [
+        'ownerRecord' => $grillItem,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertSuccessful()
+        ->assertCanSeeTableRecords([$inMovement])
+        ->assertCanNotSeeTableRecords([$outMovement])
+        ->assertTableColumnFormattedStateSet('referenceable_type', 'إذن تحويل', $inMovement)
+        ->assertTableActionVisible('view_reference', $inMovement);
+
+    livewire(MovementsRelationManager::class, [
+        'ownerRecord' => $mainItem,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertCanSeeTableRecords([$outMovement])
+        ->assertCanNotSeeTableRecords([$inMovement]);
+});
+
+it('lists all warehouse balances for the product in WarehouseBalancesRelationManager', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $product = Product::factory()->create(['type' => ProductType::Manufactured, 'min_stock' => 5]);
+
+    $mainItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $main->id, 'quantity' => 25]);
+    $grillItem = InventoryItem::factory()->create(['product_id' => $product->id, 'warehouse_id' => $grill->id, 'quantity' => 8]);
+
+    livewire(WarehouseBalancesRelationManager::class, [
+        'ownerRecord' => $mainItem,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertSuccessful()
+        ->assertCanSeeTableRecords([$mainItem, $grillItem])
+        ->assertTableActionHidden('view_warehouse_item', $mainItem)
+        ->assertTableActionVisible('view_warehouse_item', $grillItem);
+});
+
+it('calculates total_consumed in UsedInProductsRelationManager per owner warehouse only', function () {
+    $main = Warehouse::default();
+    $grill = Warehouse::factory()->create(['name' => 'مخزن الشواية']);
+    $bar = Warehouse::factory()->create(['name' => 'مخزن البار']);
+
+    $grillCategory = Category::factory()->create(['name' => 'مشاوي', 'warehouse_id' => $grill->id]);
+    $barCategory = Category::factory()->create(['name' => 'بار', 'warehouse_id' => $bar->id]);
+
+    $bread = Product::factory()->create(['name' => 'خبز', 'type' => ProductType::RawMaterial]);
+    $mainBread = InventoryItem::where('product_id', $bread->id)->where('warehouse_id', $main->id)->sole();
+    $grillBread = InventoryItem::create(['product_id' => $bread->id, 'warehouse_id' => $grill->id, 'quantity' => 50]);
+    $barBread = InventoryItem::create(['product_id' => $bread->id, 'warehouse_id' => $bar->id, 'quantity' => 30]);
+
+    $grillPlate = Product::factory()->create([
+        'name' => 'طبق مشاوي',
+        'type' => ProductType::Manufactured,
+        'category_id' => $grillCategory->id,
+    ]);
+    $barSandwich = Product::factory()->create([
+        'name' => 'سندويتش بار',
+        'type' => ProductType::Manufactured,
+        'category_id' => $barCategory->id,
+    ]);
+
+    $grillComponent = ProductComponent::create(['product_id' => $grillPlate->id, 'component_id' => $bread->id, 'quantity' => 2]);
+    $barComponent = ProductComponent::create(['product_id' => $barSandwich->id, 'component_id' => $bread->id, 'quantity' => 1.5]);
+
+    openInventoryDay($bread);
+
+    $order = Order::factory()->create(['status' => OrderStatus::COMPLETED]);
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $grillPlate->id,
+        'quantity' => 3,
+        'price' => 100,
+        'cost' => 40,
+        'total' => 300,
+    ]);
+    OrderItem::factory()->create([
+        'order_id' => $order->id,
+        'product_id' => $barSandwich->id,
+        'quantity' => 4,
+        'price' => 50,
+        'cost' => 20,
+        'total' => 200,
+    ]);
+    app(OrderStockConversionService::class)->removeStockForCompletedOrder($order->load('items.product'));
+
+    livewire(UsedInProductsRelationManager::class, [
+        'ownerRecord' => $grillBread,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertSuccessful()
+        ->assertTableColumnStateSet('total_consumed', 6.0, $grillComponent)
+        ->assertTableColumnStateSet('total_consumed', 0.0, $barComponent);
+
+    livewire(UsedInProductsRelationManager::class, [
+        'ownerRecord' => $barBread,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertSuccessful()
+        ->assertTableColumnStateSet('total_consumed', 0.0, $grillComponent)
+        ->assertTableColumnStateSet('total_consumed', 6.0, $barComponent);
+
+    livewire(UsedInProductsRelationManager::class, [
+        'ownerRecord' => $mainBread,
+        'pageClass' => ViewInventoryItem::class,
+    ])
+        ->assertSuccessful()
+        ->assertTableColumnStateSet('total_consumed', 0.0, $grillComponent)
+        ->assertTableColumnStateSet('total_consumed', 0.0, $barComponent);
 });

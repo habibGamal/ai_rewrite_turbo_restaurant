@@ -3,6 +3,7 @@
 namespace App\Filament\Exports;
 
 use App\Models\Product;
+use App\Services\Reports\StockReportService;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
@@ -28,15 +29,17 @@ class StockReportExporter extends Exporter
                 ->label('كمية الوارد')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
-            ExportColumn::make('return_sales')
-                ->label('مرتجع المبيعات')
+            ExportColumn::make('transfer_in')
+                ->label('تحويل وارد')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('manufacturing_in')
+                ->label('تصنيع وارد')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
             ExportColumn::make('total_quantity')
                 ->label('الكمية الكلية')
-                ->state(function ($record) {
-                    return ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
-                }),
+                ->state(fn ($record) => StockReportService::calculate($record)['total']),
 
             ExportColumn::make('sales')
                 ->label('كمية المبيعات')
@@ -46,72 +49,53 @@ class StockReportExporter extends Exporter
                 ->label('كمية الفاقد والمرتجع')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
+            ExportColumn::make('transfer_out')
+                ->label('تحويل صادر')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('manufacturing_out')
+                ->label('تصنيع صادر')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
+            ExportColumn::make('issue')
+                ->label('صرف')
+                ->formatStateUsing(fn ($state) => $state ?? 0),
+
             ExportColumn::make('total_consumed')
                 ->label('الكمية الكلية المنصرفة')
-                ->state(function ($record) {
-                    return ($record->sales ?? 0) + ($record->return_waste ?? 0);
-                }),
+                ->state(fn ($record) => StockReportService::calculate($record)['consumed']),
 
             ExportColumn::make('ideal_remaining')
                 ->label('الكمية المتبقية المثالية')
-                ->state(function ($record) {
-                    $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
-                    $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
-
-                    return $totalQuantity - $totalConsumed;
-                }),
+                ->state(fn ($record) => StockReportService::calculate($record)['ideal']),
 
             ExportColumn::make('actual_remaining_quantity')
                 ->label('الكمية المتبقية الفعلية')
                 ->formatStateUsing(fn ($state) => $state ?? 0),
 
-            ExportColumn::make('average_cost')
-                ->label('متوسط التكلفة (جنيه)')
-                ->state(function ($record) {
-                    return $record->cost ?? 0;
-                })
-                ->formatStateUsing(fn ($state) => number_format($state, 2)),
+            ExportColumn::make('cost')
+                ->label('التكلفة الحالية')
+                ->state(fn ($record) => $record->cost ?? 0)
+                ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
+
+            ExportColumn::make('stock_value')
+                ->label('قيمة المخزون الحالية')
+                ->state(fn ($record) => StockReportService::calculate($record)['stock_value'])
+                ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
 
             ExportColumn::make('deviation')
                 ->label('الانحراف')
-                ->state(function ($record) {
-                    $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
-                    $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
-                    $idealRemaining = $totalQuantity - $totalConsumed;
-                    $actualRemaining = $record->actual_remaining_quantity ?? 0;
-
-                    return $actualRemaining - $idealRemaining;
-                }),
+                ->state(fn ($record) => StockReportService::calculate($record)['deviation']),
 
             ExportColumn::make('deviation_value')
-                ->label('قيمة الانحراف (جنيه)')
-                ->state(function ($record) {
-                    $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
-                    $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
-                    $idealRemaining = $totalQuantity - $totalConsumed;
-                    $actualRemaining = $record->actual_remaining_quantity ?? 0;
-                    $deviation = $actualRemaining - $idealRemaining;
-
-                    return abs($deviation) * ($record->cost ?? 0);
-                })
-                ->formatStateUsing(fn ($state) => number_format($state, 2)),
+                ->label('قيمة الانحراف')
+                ->state(fn ($record) => StockReportService::calculate($record)['deviation_value'])
+                ->formatStateUsing(fn ($state) => number_format((float) $state, 2)),
 
             ExportColumn::make('deviation_percentage')
-                ->label('نسبة الانحراف (%)')
-                ->state(function ($record) {
-                    $totalQuantity = ($record->start_quantity ?? 0) + ($record->incoming ?? 0) + ($record->return_sales ?? 0);
-                    $totalConsumed = ($record->sales ?? 0) + ($record->return_waste ?? 0);
-                    $idealRemaining = $totalQuantity - $totalConsumed;
-                    $actualRemaining = $record->actual_remaining_quantity ?? 0;
-                    $deviation = $actualRemaining - $idealRemaining;
-
-                    if ($idealRemaining == 0) {
-                        return 0;
-                    }
-
-                    return ($deviation / $idealRemaining) * 100;
-                })
-                ->formatStateUsing(fn ($state) => number_format($state, 1)),
+                ->label('نسبة الانحراف')
+                ->state(fn ($record) => StockReportService::calculate($record)['deviation_percentage'])
+                ->formatStateUsing(fn ($state) => $state !== null ? number_format((float) $state, 1) : '—'),
         ];
     }
 

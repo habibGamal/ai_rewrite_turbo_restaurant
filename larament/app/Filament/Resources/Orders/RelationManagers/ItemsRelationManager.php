@@ -46,6 +46,13 @@ class ItemsRelationManager extends RelationManager
                     ->numeric()
                     ->sortable(),
 
+                TextColumn::make('ordered_by')
+                    ->label('الكاشير')
+                    ->state(fn ($record) => $record->ordered_by_cashiers)
+                    ->badge()
+                    ->color('info')
+                    ->tooltip('الكاشير الذي قام بطلب هذا الصنف مع الكميات'),
+
                 TextColumn::make('price')
                     ->label('سعر الوحدة')
                     ->money('EGP')

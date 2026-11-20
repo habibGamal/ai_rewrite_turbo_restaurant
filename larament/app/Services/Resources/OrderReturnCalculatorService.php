@@ -79,13 +79,32 @@ class OrderReturnCalculatorService
                         item.quantity = availableQty;
                     }
 
-                    item.refund_amount = (item.quantity * unitPrice).toFixed(2);
+                    // Same rule as the server (ReturnRefundCalculator): a share of
+                    // what the customer paid for the line; the last units take what is left.
+                    const qty = parseFloat(item.quantity) || 0;
+                    const original = parseFloat(item.original_quantity) || 0;
+                    const refundable = parseFloat(item.line_refundable);
+                    const refunded = parseFloat(item.line_refunded) || 0;
+                    let amount = qty * unitPrice;
+                    if (!isNaN(refundable) && original > 0) {
+                        const left = Math.max(0, Math.round((refundable - refunded) * 100) / 100);
+                        amount = qty <= 0 ? 0 : (qty >= availableQty - 0.0001
+                            ? left
+                            : Math.min(left, Math.round(refundable * qty / original * 100) / 100));
+                    }
+                    item.refund_amount = amount.toFixed(2);
                 });
 
-                // Calculate total refund from items
+                // Fee (by amount) and equipment (by quantity) lines keep their own
+                // refund amounts; the server caps them on blur.
+                const rows = (value) => Array.isArray(value) ? value : Object.values(value || {});
+                const chargesRefund = [...rows($wire.data.return_fees), ...rows($wire.data.return_equipment)]
+                    .reduce((total, line) => total + (parseFloat(line.refund_amount) || 0), 0);
+
+                // Calculate total refund from items, fees and equipment
                 const totalRefund = items.reduce((total, item) => {
                     return total + (parseFloat(item.refund_amount) || 0);
-                }, 0);
+                }, 0) + chargesRefund;
 
                 // Calculate total from refund distribution
                 let refunds = $wire.data.refund_distribution;

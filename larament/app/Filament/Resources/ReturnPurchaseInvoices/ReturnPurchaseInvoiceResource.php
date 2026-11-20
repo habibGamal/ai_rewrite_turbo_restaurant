@@ -4,16 +4,20 @@ namespace App\Filament\Resources\ReturnPurchaseInvoices;
 
 use App\Filament\Actions\CloseReturnPurchaseInvoiceAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintReturnPurchaseInvoiceAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\CreateReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\EditReturnPurchaseInvoice;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ListReturnPurchaseInvoices;
 use App\Filament\Resources\ReturnPurchaseInvoices\Pages\ViewReturnPurchaseInvoice;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\ReturnPurchaseInvoice;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -31,6 +35,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -40,8 +46,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ReturnPurchaseInvoiceResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = ReturnPurchaseInvoice::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
@@ -66,6 +70,19 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?ReturnPurchaseInvoice $record): bool => $record?->closed_at !== null),
 
                         Select::make('supplier_id')
                             ->label('المورد')
@@ -106,14 +123,18 @@ class ReturnPurchaseInvoiceResource extends Resource
                             ProductImporterAction::make('importProducts'),
                         ])
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, Set $set, Get $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                DocumentBarcodeField::enabled() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية')
@@ -122,7 +143,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
-                            ])
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
                                 TextInput::make('product_name')
@@ -137,6 +158,8 @@ class ReturnPurchaseInvoiceResource extends Resource
                                     ->dehydrated(false)
                                     ->disabled(),
 
+                                ...DocumentBarcodeField::whenEnabled(),
+
                                 TextInput::make('unit')
                                     ->label('الوحدة')
                                     ->formatStateUsing(function ($record, $state) {
@@ -148,6 +171,7 @@ class ReturnPurchaseInvoiceResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),
@@ -241,6 +265,11 @@ class ReturnPurchaseInvoiceResource extends Resource
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('user.name')
                     ->label('المستخدم')
                     ->sortable()
@@ -306,6 +335,7 @@ class ReturnPurchaseInvoiceResource extends Resource
             ->recordActions([
                 CloseReturnPurchaseInvoiceAction::table(),
                 PrintReturnPurchaseInvoiceAction::table(),
+                PrintLabelsAction::document(),
                 ViewAction::make(),
 
                 EditAction::make()

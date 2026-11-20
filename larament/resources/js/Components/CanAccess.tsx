@@ -4,36 +4,31 @@ import { User } from '@/types';
 
 interface CanAccessProps {
     children: React.ReactNode;
-    permission: 'discounts' | 'cancelOrders' | 'changeOrderItems';
+    permission?: string;
+    role?: string;
+    fallback?: React.ReactNode;
 }
 
-export default function CanAccess({ children, permission }: CanAccessProps) {
-    const { auth } = usePage().props;
-    const user = auth.user as User;
+export default function CanAccess({ children, permission, role, fallback = null }: CanAccessProps) {
+    const { auth } = usePage().props as unknown as { auth: { user: User } };
+    const user = auth?.user;
+
+    if (!user) {
+        return <>{fallback}</>;
+    }
 
     // Admin always has access
-    if (user.role === 'admin') {
+    if (user.isAdmin || user.roles?.includes('admin')) {
         return <>{children}</>;
     }
 
-    // Check specific permission
-    let hasPermission = false;
-
-    switch (permission) {
-        case 'discounts':
-            hasPermission = user.canApplyDiscounts ?? false;
-            break;
-        case 'cancelOrders':
-            hasPermission = user.canCancelOrders ?? false;
-            break;
-        case 'changeOrderItems':
-            hasPermission = user.canChangeOrderItems ?? false;
-            break;
+    if (role && user.roles?.includes(role)) {
+        return <>{children}</>;
     }
 
-    if (!hasPermission) {
-        return null;
+    if (permission && user.permissions?.includes(permission)) {
+        return <>{children}</>;
     }
 
-    return <>{children}</>;
+    return <>{fallback}</>;
 }

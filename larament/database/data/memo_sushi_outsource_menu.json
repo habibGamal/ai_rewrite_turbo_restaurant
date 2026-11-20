@@ -1,0 +1,980 @@
+{
+  "seller": {
+    "name": "Memo Sushi - ميمو سوشي",
+    "phone": "01037919134"
+  },
+  "products": [
+    {
+      "name": "Philadelphia (4 Pcs)",
+      "name_ar": "فيلادلفيا (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "فريش سالمون - أفوكادو - خيار - جبنة - سموكي سالمون - ترياكي - سمسم أبيض",
+      "is_active": true
+    },
+    {
+      "name": "Philadelphia (8 Pcs)",
+      "name_ar": "فيلادلفيا (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "فريش سالمون - أفوكادو - خيار - جبنة - سموكي سالمون - ترياكي - سمسم أبيض",
+      "is_active": true
+    },
+    {
+      "name": "Crispy Shrimp (4 Pcs)",
+      "name_ar": "كريسبي شرمب (4 قطع)",
+      "price": 135.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "جمبري - أفوكادو - أرز كريسبي - ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "Crispy Shrimp (8 Pcs)",
+      "name_ar": "كريسبي شرمب (8 قطع)",
+      "price": 260.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "جمبري - أفوكادو - أرز كريسبي - ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "California (4 Pcs)",
+      "name_ar": "كاليفورنيا (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "كراب - أفوكادو - خيار - كافيار",
+      "is_active": true
+    },
+    {
+      "name": "California (8 Pcs)",
+      "name_ar": "كاليفورنيا (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "كراب - أفوكادو - خيار - كافيار",
+      "is_active": true
+    },
+    {
+      "name": "Double Salmon (4 Pcs)",
+      "name_ar": "دبل سالمون (4 قطع)",
+      "price": 135.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "سالمون تمبورا + مدخن - جبنة - بانكو - فلامنج محروق",
+      "is_active": true
+    },
+    {
+      "name": "Double Salmon (8 Pcs)",
+      "name_ar": "دبل سالمون (8 قطع)",
+      "price": 260.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "سالمون تمبورا + مدخن - جبنة - بانكو - فلامنج محروق",
+      "is_active": true
+    },
+    {
+      "name": "SkyFall (4 Pcs)",
+      "name_ar": "سكاي فول (4 قطع)",
+      "price": 135.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "جمبري تمبورا - أفوكادو - أرز كريسبي - كراب ساكي - سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "SkyFall (8 Pcs)",
+      "name_ar": "سكاي فول (8 قطع)",
+      "price": 260.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "جمبري تمبورا - أفوكادو - أرز كريسبي - كراب ساكي - سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "White Temple (4 Pcs)",
+      "name_ar": "وايت تمبل (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "سالمون تمبورا - خيار - جلاس نودلز - استقشاندو شريحة ليمون",
+      "is_active": true
+    },
+    {
+      "name": "White Temple (8 Pcs)",
+      "name_ar": "وايت تمبل (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "سالمون تمبورا - خيار - جلاس نودلز - استقشاندو شريحة ليمون",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Maki (6 Pcs)",
+      "name_ar": "سالمون ماكي (6 قطع)",
+      "price": 170.0,
+      "category": "RAW",
+      "pieces": 6,
+      "description": "سالمون فريش - أفوكادو - جبنة",
+      "is_active": true
+    },
+    {
+      "name": "New Style Philadelphia (4 Pcs)",
+      "name_ar": "نيو ستايل فيلادلفيا (4 قطع)",
+      "price": 145.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "سموكي سالمون - جمبري تمبورا - أفوكادو - سمسم ميكس - جبنة ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "New Style Philadelphia (8 Pcs)",
+      "name_ar": "نيو ستايل فيلادلفيا (8 قطع)",
+      "price": 280.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "سموكي سالمون - جمبري تمبورا - أفوكادو - سمسم ميكس - جبنة ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "Pink Panther (4 Pcs)",
+      "name_ar": "بينك بانثر (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "جمبري خيار - كراب مفروم - صوص استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Pink Panther (8 Pcs)",
+      "name_ar": "بينك بانثر (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "جمبري خيار - كراب مفروم - صوص استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Mexico (4 Pcs)",
+      "name_ar": "مكسيكو (4 قطع)",
+      "price": 135.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "جمبري تمبورا - جبنة - أفوكادو - دوريتوس - صوص برميزان",
+      "is_active": true
+    },
+    {
+      "name": "Mexico (8 Pcs)",
+      "name_ar": "مكسيكو (8 قطع)",
+      "price": 260.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "جمبري تمبورا - جبنة - أفوكادو - دوريتوس - صوص برميزان",
+      "is_active": true
+    },
+    {
+      "name": "Ura Shrimp Crab Beast (4 Pcs)",
+      "name_ar": "أورا شرمب كراب بيست (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "كراب - أفوكادو - خيار - ميكس كراب جمبري سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "Ura Shrimp Crab Beast (8 Pcs)",
+      "name_ar": "أورا شرمب كراب بيست (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "كراب - أفوكادو - خيار - ميكس كراب جمبري سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "Flaming (4 Pcs)",
+      "name_ar": "فلامنج (4 قطع)",
+      "price": 130.0,
+      "category": "RAW",
+      "pieces": 4,
+      "description": "سالمون فريش - أفوكادو - خس - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Flaming (8 Pcs)",
+      "name_ar": "فلامنج (8 قطع)",
+      "price": 250.0,
+      "category": "RAW",
+      "pieces": 8,
+      "description": "سالمون فريش - أفوكادو - خس - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Paramoda (6 Pcs)",
+      "name_ar": "سالمون بارامودا (6 قطع)",
+      "price": 150.0,
+      "category": "RAW",
+      "pieces": 6,
+      "description": "جمبري - خيار - جبنة - سموكي سالمون - ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "Futomaki (5 Pcs)",
+      "name_ar": "فوتوماكي (5 قطع)",
+      "price": 175.0,
+      "category": "RAW",
+      "pieces": 5,
+      "description": "سالمون فريش - تونة - جمبري بويلد - أفوكادو - كراب",
+      "is_active": true
+    },
+    {
+      "name": "Easy Bezy (4 Pcs)",
+      "name_ar": "إيزي بيزي (4 قطع)",
+      "price": 130.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "جمبري تمبورا - خيار - شريحة شيدر - استراتشا",
+      "is_active": true
+    },
+    {
+      "name": "Easy Bezy (8 Pcs)",
+      "name_ar": "إيزي بيزي (8 قطع)",
+      "price": 250.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "جمبري تمبورا - خيار - شريحة شيدر - استراتشا",
+      "is_active": true
+    },
+    {
+      "name": "Caviar Third (4 Pcs)",
+      "name_ar": "كافيار ثيرد (4 قطع)",
+      "price": 140.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "جمبري - أفوكادو - سالمون ميكس - كافيار - سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "Caviar Third (8 Pcs)",
+      "name_ar": "كافيار ثيرد (8 قطع)",
+      "price": 270.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "جمبري - أفوكادو - سالمون ميكس - كافيار - سبايسي مايو",
+      "is_active": true
+    },
+    {
+      "name": "Music (Red Rice) (4 Pcs)",
+      "name_ar": "ميوزيك (أرز أحمر) (4 قطع)",
+      "price": 145.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "جمبري - سموكي سالمون - أفوكادو - شريحة شيدر - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Music (Red Rice) (8 Pcs)",
+      "name_ar": "ميوزيك (أرز أحمر) (8 قطع)",
+      "price": 280.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "جمبري - سموكي سالمون - أفوكادو - شريحة شيدر - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Crispy Philadelphia (4 Pcs)",
+      "name_ar": "كريسبي فيلادلفيا (4 قطع)",
+      "price": 135.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "سموكي سالمون - أفوكادو - خيار - جمبري - جبنة - أرز كريسبي - ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "Crispy Philadelphia (8 Pcs)",
+      "name_ar": "كريسبي فيلادلفيا (8 قطع)",
+      "price": 260.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "سموكي سالمون - أفوكادو - خيار - جمبري - جبنة - أرز كريسبي - ترياكي",
+      "is_active": true
+    },
+    {
+      "name": "Parmesan (4 Pcs)",
+      "name_ar": "بارميزان (4 قطع)",
+      "price": 140.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "جمبري ستيم - بصل فرايد - سموكي سالمون - بارميزان مدخن - سمسم ميكس",
+      "is_active": true
+    },
+    {
+      "name": "Parmesan (8 Pcs)",
+      "name_ar": "بارميزان (8 قطع)",
+      "price": 270.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "جمبري ستيم - بصل فرايد - سموكي سالمون - بارميزان مدخن - سمسم ميكس",
+      "is_active": true
+    },
+    {
+      "name": "Barbie (Yellow Rice) (4 Pcs)",
+      "name_ar": "باربي (أرز أصفر) (4 قطع)",
+      "price": 145.0,
+      "category": "RAW SPECIAL",
+      "pieces": 4,
+      "description": "سالمون تمبورا - خس - شريحة شيدر - أفوكادو - كراب جوليان - استراتشا - أبوناي",
+      "is_active": true
+    },
+    {
+      "name": "Barbie (Yellow Rice) (8 Pcs)",
+      "name_ar": "باربي (أرز أصفر) (8 قطع)",
+      "price": 280.0,
+      "category": "RAW SPECIAL",
+      "pieces": 8,
+      "description": "سالمون تمبورا - خس - شريحة شيدر - أفوكادو - كراب جوليان - استراتشا - أبوناي",
+      "is_active": true
+    },
+    {
+      "name": "Boiled Shrimp Nigiri (1 Pcs)",
+      "name_ar": "نيجيري جمبري مسلوق (1 قطعة)",
+      "price": 55.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري جمبري مسلوق",
+      "is_active": true
+    },
+    {
+      "name": "Fried Shrimp Nigiri (1 Pcs)",
+      "name_ar": "نيجيري جمبري مقلي (1 قطعة)",
+      "price": 55.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري جمبري مقلي",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Nigiri (1 Pcs)",
+      "name_ar": "نيجيري سالمون (1 قطعة)",
+      "price": 50.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري سالمون",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Third Nigiri (1 Pcs)",
+      "name_ar": "نيجيري سالمون ثيرد (1 قطعة)",
+      "price": 50.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري سالمون ثيرد",
+      "is_active": true
+    },
+    {
+      "name": "Tuna Nigiri (1 Pcs)",
+      "name_ar": "نيجيري تونة (1 قطعة)",
+      "price": 45.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري تونة",
+      "is_active": true
+    },
+    {
+      "name": "Tuna Third Nigiri (1 Pcs)",
+      "name_ar": "نيجيري تونة ثيرد (1 قطعة)",
+      "price": 45.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري تونة ثيرد",
+      "is_active": true
+    },
+    {
+      "name": "Crab Nigiri (1 Pcs)",
+      "name_ar": "نيجيري كراب (1 قطعة)",
+      "price": 40.0,
+      "category": "NIGIRI",
+      "pieces": 1,
+      "description": "نيجيري كراب",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Sashimi (5 Pcs)",
+      "name_ar": "ساشيمي سالمون (5 قطع)",
+      "price": 175.0,
+      "category": "SASHIMI",
+      "pieces": 5,
+      "description": "ساشيمي سالمون",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Third Sashimi (5 Pcs)",
+      "name_ar": "ساشيمي سالمون ثيرد (5 قطع)",
+      "price": 175.0,
+      "category": "SASHIMI",
+      "pieces": 5,
+      "description": "ساشيمي سالمون ثيرد",
+      "is_active": true
+    },
+    {
+      "name": "Tuna Sashimi (5 Pcs)",
+      "name_ar": "ساشيمي تونة (5 قطع)",
+      "price": 165.0,
+      "category": "SASHIMI",
+      "pieces": 5,
+      "description": "ساشيمي تونة",
+      "is_active": true
+    },
+    {
+      "name": "Tuna Third Sashimi (5 Pcs)",
+      "name_ar": "ساشيمي تونة ثيرد (5 قطع)",
+      "price": 165.0,
+      "category": "SASHIMI",
+      "pieces": 5,
+      "description": "ساشيمي تونة ثيرد",
+      "is_active": true
+    },
+    {
+      "name": "Tamaki Shrimp (1 Pcs)",
+      "name_ar": "تيماكي جمبري (1 قطعة)",
+      "price": 190.0,
+      "category": "TAMAKI",
+      "pieces": 1,
+      "description": "تيماكي جمبري",
+      "is_active": true
+    },
+    {
+      "name": "Tamaki Salmon (1 Pcs)",
+      "name_ar": "تيماكي سالمون (1 قطعة)",
+      "price": 185.0,
+      "category": "TAMAKI",
+      "pieces": 1,
+      "description": "تيماكي سالمون",
+      "is_active": true
+    },
+    {
+      "name": "Tamaki Tuna (1 Pcs)",
+      "name_ar": "تيماكي تونة (1 قطعة)",
+      "price": 180.0,
+      "category": "TAMAKI",
+      "pieces": 1,
+      "description": "تيماكي تونة",
+      "is_active": true
+    },
+    {
+      "name": "Tamaki Crab (1 Pcs)",
+      "name_ar": "تيماكي كراب (1 قطعة)",
+      "price": 145.0,
+      "category": "TAMAKI",
+      "pieces": 1,
+      "description": "تيماكي كراب",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Salmon (6 Pcs)",
+      "name_ar": "هوسوماكي سالمون (6 قطع)",
+      "price": 140.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي سالمون",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Caviar (6 Pcs)",
+      "name_ar": "هوسوماكي كافيار (6 قطع)",
+      "price": 140.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي كافيار",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Shrimp Tampora (6 Pcs)",
+      "name_ar": "هوسوماكي جمبري تمبورا (6 قطع)",
+      "price": 130.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي جمبري تمبورا",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Shrimp Steam (6 Pcs)",
+      "name_ar": "هوسوماكي جمبري ستيم (6 قطع)",
+      "price": 130.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي جمبري ستيم",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Tuna (6 Pcs)",
+      "name_ar": "هوسوماكي تونة (6 قطع)",
+      "price": 100.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي تونة",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Crab (6 Pcs)",
+      "name_ar": "هوسوماكي كراب (6 قطع)",
+      "price": 95.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي كراب",
+      "is_active": true
+    },
+    {
+      "name": "Hosomaki Avocado (6 Pcs)",
+      "name_ar": "هوسوماكي أفوكادو (6 قطع)",
+      "price": 60.0,
+      "category": "HOSOMAKI",
+      "pieces": 6,
+      "description": "هوسوماكي أفوكادو",
+      "is_active": true
+    },
+    {
+      "name": "Crunchy Shrimp (4 Pcs)",
+      "name_ar": "كرانشي شرمب (4 قطع)",
+      "price": 130.0,
+      "category": "FRIED",
+      "pieces": 4,
+      "description": "جمبري تمبورا - جبنة - اسبرينج - ترياكي - أبوناي",
+      "is_active": true
+    },
+    {
+      "name": "Crunchy Shrimp (8 Pcs)",
+      "name_ar": "كرانشي شرمب (8 قطع)",
+      "price": 250.0,
+      "category": "FRIED",
+      "pieces": 8,
+      "description": "جمبري تمبورا - جبنة - اسبرينج - ترياكي - أبوناي",
+      "is_active": true
+    },
+    {
+      "name": "Volcano (4 Pcs)",
+      "name_ar": "فولكانو (4 قطع)",
+      "price": 170.0,
+      "category": "FRIED",
+      "pieces": 4,
+      "description": "جمبري - جبنة - كراب - شريحة شيدر - سموكي سالمون - ترياكي - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Volcano (8 Pcs)",
+      "name_ar": "فولكانو (8 قطع)",
+      "price": 320.0,
+      "category": "FRIED",
+      "pieces": 8,
+      "description": "جمبري - جبنة - كراب - شريحة شيدر - سموكي سالمون - ترياكي - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Hot California (6 Pcs)",
+      "name_ar": "هوت كاليفورنيا (6 قطع)",
+      "price": 165.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "كراب ستيك - جبنة - ترياكي - بارميزان - سمسم صويا",
+      "is_active": true
+    },
+    {
+      "name": "Samurai (6 Pcs)",
+      "name_ar": "ساموراي (6 قطع)",
+      "price": 150.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "تونة - هالبينو - فلامنج - استراتشا - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "New Hot Lemon (6 Pcs)",
+      "name_ar": "نيو هوت ليمون (6 قطع)",
+      "price": 165.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "سالمون - جبنة - جمبري ستيم - كافيار - باميزان",
+      "is_active": true
+    },
+    {
+      "name": "Electric (6 Pcs)",
+      "name_ar": "إلكتريك (6 قطع)",
+      "price": 130.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "سالمون - كراب فرم سبايسي - بانكو فرايد - ترياكي - سمسم أبيض",
+      "is_active": true
+    },
+    {
+      "name": "Hot Hosomaki (12 Pcs)",
+      "name_ar": "هوت هوسوماكي (12 قطع)",
+      "price": 180.0,
+      "category": "FRIED",
+      "pieces": 12,
+      "description": "جمبري تمبورا - جبنة - بانكو - سبايسي مايو - سويت تشيلي",
+      "is_active": true
+    },
+    {
+      "name": "Island (Green Rice) SPECIAL (6 Pcs)",
+      "name_ar": "آيلاند (أرز أخضر) سبيشال (6 قطع)",
+      "price": 170.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "كراب تمبورا - شريحة شيدر - سموكي سالمون - بارميزان",
+      "is_active": true
+    },
+    {
+      "name": "Hot Salmon (4 Pcs)",
+      "name_ar": "هوت سالمون (4 قطع)",
+      "price": 130.0,
+      "category": "FRIED",
+      "pieces": 4,
+      "description": "سالمون - جبنة - سبايسي مايو - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Hot Salmon (8 Pcs)",
+      "name_ar": "هوت سالمون (8 قطع)",
+      "price": 250.0,
+      "category": "FRIED",
+      "pieces": 8,
+      "description": "سالمون - جبنة - سبايسي مايو - فلامنج",
+      "is_active": true
+    },
+    {
+      "name": "Hot Lemon (6 Pcs)",
+      "name_ar": "هوت ليمون (6 قطع)",
+      "price": 170.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "سالمون - جبنة - كراب تمبورا - سبايسي مايو - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Spider (6 Pcs)",
+      "name_ar": "سبايدر (6 قطع)",
+      "price": 170.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "شريحة سالمون - جمبري ستيم - بارميزان",
+      "is_active": true
+    },
+    {
+      "name": "Golden Paramoda (6 Pcs)",
+      "name_ar": "جولدن بارامودا (6 قطع)",
+      "price": 150.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "جمبري - سموكي سالمون - سبايسي مايو - بارميزان",
+      "is_active": true
+    },
+    {
+      "name": "Sun (6 Pcs)",
+      "name_ar": "صن (6 قطع)",
+      "price": 125.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "تونة - بصل أخضر - جبنة - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "El-Crazy (6 Pcs)",
+      "name_ar": "الكرازي (6 قطع)",
+      "price": 150.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "جمبري تمبورا - سموك سالمون - بانكو - بارميزان",
+      "is_active": true
+    },
+    {
+      "name": "Hot Futomaki (5 Pcs)",
+      "name_ar": "هوت فوتوماكي (5 قطع)",
+      "price": 140.0,
+      "category": "FRIED",
+      "pieces": 5,
+      "description": "سموكي سالمون - تونة - جمبري تمبورا - كراب تمبورا - أفوكادو",
+      "is_active": true
+    },
+    {
+      "name": "Blue Lagoon (Blue Rice) SPECIAL (6 Pcs)",
+      "name_ar": "بلو لاجون (أرز أزرق) سبيشال (6 قطع)",
+      "price": 170.0,
+      "category": "FRIED",
+      "pieces": 6,
+      "description": "تونة تمبورا - أفوكادو - كراب مفروم - استقشاندو",
+      "is_active": true
+    },
+    {
+      "name": "Zain (RAW) (4 Pcs)",
+      "name_ar": "زين (رو) (4 قطع)",
+      "price": 150.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "كراب تمبورا - جبنة - جمبري ستيم - جبنة تركي - موتزريلا - مايو",
+      "is_active": true
+    },
+    {
+      "name": "Zain (RAW) (8 Pcs)",
+      "name_ar": "زين (رو) (8 قطع)",
+      "price": 290.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "كراب تمبورا - جبنة - جمبري ستيم - جبنة تركي - موتزريلا - مايو",
+      "is_active": true
+    },
+    {
+      "name": "Cracker (RAW) (4 Pcs)",
+      "name_ar": "كراكر (رو) (4 قطع)",
+      "price": 140.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "فرايد تشيكن - ورق بصل فرايد - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Cracker (RAW) (8 Pcs)",
+      "name_ar": "كراكر (رو) (8 قطع)",
+      "price": 270.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "فرايد تشيكن - ورق بصل فرايد - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Double Salmon (RAW) (4 Pcs)",
+      "name_ar": "دبل سالمون (رو) (4 قطع)",
+      "price": 140.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "فرايد سالمون - جبنة - سموكي سالمون - جبنة تركي - موتزريلا - سويت شيلي",
+      "is_active": true
+    },
+    {
+      "name": "Double Salmon (RAW) (8 Pcs)",
+      "name_ar": "دبل سالمون (رو) (8 قطع)",
+      "price": 270.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "فرايد سالمون - جبنة - سموكي سالمون - جبنة تركي - موتزريلا - سويت شيلي",
+      "is_active": true
+    },
+    {
+      "name": "Tobiko (RAW) (4 Pcs)",
+      "name_ar": "توبيكو (رو) (4 قطع)",
+      "price": 130.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "فرايد تونة - شريحة شيدر - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Tobiko (RAW) (8 Pcs)",
+      "name_ar": "توبيكو (رو) (8 قطع)",
+      "price": 250.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "فرايد تونة - شريحة شيدر - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Lava (FRIED) (4 Pcs)",
+      "name_ar": "لافا (فرايد) (4 قطع)",
+      "price": 150.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "جمبري تمبورا - جبنة - سموكي سالمون - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Lava (FRIED) (8 Pcs)",
+      "name_ar": "لافا (فرايد) (8 قطع)",
+      "price": 290.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "جمبري تمبورا - جبنة - سموكي سالمون - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Monaliza (FRIED) (4 Pcs)",
+      "name_ar": "موناليزا (فرايد) (4 قطع)",
+      "price": 155.0,
+      "category": "COOKED ROLLS",
+      "pieces": 4,
+      "description": "فرايد سالمون - سموك سالمون - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Monaliza (FRIED) (8 Pcs)",
+      "name_ar": "موناليزا (فرايد) (8 قطع)",
+      "price": 300.0,
+      "category": "COOKED ROLLS",
+      "pieces": 8,
+      "description": "فرايد سالمون - سموك سالمون - جبنة تركي - موتزريلا - كاتشب",
+      "is_active": true
+    },
+    {
+      "name": "Fiji Roll (4 Pcs)",
+      "name_ar": "فيجي رول (4 قطع)",
+      "price": 130.0,
+      "category": "RICE PAPER",
+      "pieces": 4,
+      "description": "بويلد جمبري - خس - جزر - خيار",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Flakes (4 Pcs)",
+      "name_ar": "سالمون فليكس (4 قطع)",
+      "price": 130.0,
+      "category": "RICE PAPER",
+      "pieces": 4,
+      "description": "سموك سالمون - شريحة شيدر - أفوكادو - خيار",
+      "is_active": true
+    },
+    {
+      "name": "Noodles Shrimp",
+      "name_ar": "نودلز جمبري",
+      "price": 200.0,
+      "category": "NOODLES",
+      "pieces": 1,
+      "description": "نودلز جمبري",
+      "is_active": true
+    },
+    {
+      "name": "Noodles Chicken",
+      "name_ar": "نودلز دجاج",
+      "price": 190.0,
+      "category": "NOODLES",
+      "pieces": 1,
+      "description": "نودلز دجاج",
+      "is_active": true
+    },
+    {
+      "name": "Noodles Beef",
+      "name_ar": "نودلز لحم",
+      "price": 180.0,
+      "category": "NOODLES",
+      "pieces": 1,
+      "description": "نودلز لحم",
+      "is_active": true
+    },
+    {
+      "name": "Noodles Vegi",
+      "name_ar": "نودلز خضار",
+      "price": 130.0,
+      "category": "NOODLES",
+      "pieces": 1,
+      "description": "نودلز خضار",
+      "is_active": true
+    },
+    {
+      "name": "Sweet & Sour Shrimp",
+      "name_ar": "سويت آند ساور جمبري",
+      "price": 200.0,
+      "category": "SWEET & SOUR",
+      "pieces": 1,
+      "description": "سويت آند ساور جمبري",
+      "is_active": true
+    },
+    {
+      "name": "Sweet & Sour Chicken",
+      "name_ar": "سويت آند ساور دجاج",
+      "price": 190.0,
+      "category": "SWEET & SOUR",
+      "pieces": 1,
+      "description": "سويت آند ساور دجاج",
+      "is_active": true
+    },
+    {
+      "name": "Tom yum Soup",
+      "name_ar": "شوربة توم يوم",
+      "price": 210.0,
+      "category": "SOUP",
+      "pieces": 1,
+      "description": "شوربة توم يوم",
+      "is_active": true
+    },
+    {
+      "name": "Seafood Soup",
+      "name_ar": "شوربة سي فود",
+      "price": 230.0,
+      "category": "SOUP",
+      "pieces": 1,
+      "description": "شوربة سي فود",
+      "is_active": true
+    },
+    {
+      "name": "Miso Soup",
+      "name_ar": "شوربة ميسو",
+      "price": 130.0,
+      "category": "SOUP",
+      "pieces": 1,
+      "description": "شوربة ميسو",
+      "is_active": true
+    },
+    {
+      "name": "Spring Vegi",
+      "name_ar": "سبرينج خضار",
+      "price": 95.0,
+      "category": "APPETIZERS",
+      "pieces": 1,
+      "description": "سبرينج خضار",
+      "is_active": true
+    },
+    {
+      "name": "Spring Shrimp",
+      "name_ar": "سبرينج جمبري",
+      "price": 110.0,
+      "category": "APPETIZERS",
+      "pieces": 1,
+      "description": "سبرينج جمبري",
+      "is_active": true
+    },
+    {
+      "name": "Calimari Dynamite",
+      "name_ar": "كاليماري ديناميت",
+      "price": 100.0,
+      "category": "APPETIZERS",
+      "pieces": 1,
+      "description": "كاليماري ديناميت",
+      "is_active": true
+    },
+    {
+      "name": "Shrimp Dynamite",
+      "name_ar": "جمبري ديناميت",
+      "price": 130.0,
+      "category": "APPETIZERS",
+      "pieces": 1,
+      "description": "جمبري ديناميت",
+      "is_active": true
+    },
+    {
+      "name": "Crab Salad",
+      "name_ar": "سلطة كراب",
+      "price": 140.0,
+      "category": "SALAD",
+      "pieces": 1,
+      "description": "سلطة كراب",
+      "is_active": true
+    },
+    {
+      "name": "Shrimp Crab Salad",
+      "name_ar": "سلطة شرمب كراب",
+      "price": 160.0,
+      "category": "SALAD",
+      "pieces": 1,
+      "description": "سلطة شرمب كراب",
+      "is_active": true
+    },
+    {
+      "name": "Salmon Salad",
+      "name_ar": "سلطة سالمون",
+      "price": 150.0,
+      "category": "SALAD",
+      "pieces": 1,
+      "description": "سلطة سالمون",
+      "is_active": true
+    }
+  ]
+}

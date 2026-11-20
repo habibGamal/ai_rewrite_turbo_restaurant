@@ -3,7 +3,9 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Expense;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Carbon\Carbon;
 use Filament\Actions\ExportAction;
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 class PeriodShiftExpensesDetailsTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -35,40 +38,41 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
             $shiftIds = $this->pageFilters['shifts'] ?? [];
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
                 })
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         } else {
             $startDate = $this->pageFilters['startDate'];
             $endDate = $this->pageFilters['endDate'];
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
+                    $query->whereBetween('start_at', [
                         Carbon::parse($startDate)->startOfDay(),
                         Carbon::parse($endDate)->endOfDay(),
                     ]);
                 })
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         }
 
         return $table
             ->query($expenseQuery)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'expenses_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->extraAttributes([
-                        'id' => 'expenses_table',
-                    ])
                     ->exporter(PeriodShiftExpensesDetailedExporter::class)
                     ->fileName(fn () => 'period-shift-expenses-detailed-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
@@ -86,6 +90,12 @@ class PeriodShiftExpensesDetailsTable extends BaseWidget
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
+
+                TextColumn::make('terminalSession.terminal.name')
+                    ->label('منفذ البيع')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
 
                 TextColumn::make('amount')
                     ->label('المبلغ')

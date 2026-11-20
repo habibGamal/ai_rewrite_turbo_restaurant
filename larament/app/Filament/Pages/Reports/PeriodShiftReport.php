@@ -3,8 +3,11 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
+use App\Filament\Components\ReportTerminalTabs;
+use App\Filament\Pages\ShiftMoney\ShiftMoneyPage;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
 use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftExpensesTable;
@@ -12,7 +15,10 @@ use App\Filament\Widgets\PeriodShiftInfoStats;
 use App\Filament\Widgets\PeriodShiftMoneyInfoStats;
 use App\Filament\Widgets\PeriodShiftOrdersStats;
 use App\Filament\Widgets\PeriodShiftOrdersTable;
+use App\Filament\Widgets\Returns\ShiftReturnsTable;
+use App\Filament\Widgets\Terminals\PeriodShiftDrawersTable;
 use App\Services\ShiftsReportService;
+use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Schema;
@@ -31,7 +37,7 @@ class PeriodShiftReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير فترة الشفتات';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected ShiftsReportService $shiftsReportService;
 
@@ -40,32 +46,46 @@ class PeriodShiftReport extends BaseDashboard
         $this->shiftsReportService = app(ShiftsReportService::class);
     }
 
+    /**
+     * With exactly one shift picked, jump to its expenses and revenues.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('editShiftMoney')
+                ->label('تعديل المصروفات والإيرادات')
+                ->icon('heroicon-o-pencil-square')
+                ->visible(fn (): bool => ShiftMoneyPage::canAccess() && $this->singleSelectedShiftId() !== null)
+                ->url(fn (): string => ShiftMoneyPage::urlForShift((int) $this->singleSelectedShiftId())),
+        ];
+    }
+
+    private function singleSelectedShiftId(): ?int
+    {
+        $shifts = array_values(array_filter((array) ($this->filters['shifts'] ?? [])));
+
+        return ($this->filters['filterType'] ?? 'period') === 'shifts' && count($shifts) === 1 ? (int) $shifts[0] : null;
+    }
+
     public function filtersForm(Schema $schema): Schema
     {
         return $schema
-            ->components(
-                PeriodWithShiftFilterFormComponent::make(
+            ->components([
+                ReportTerminalTabs::make(fn () => $this->shiftsReportService->shiftIdsQueryFromFilters($this->filters)),
+                ...PeriodWithShiftFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض تقارير الشفتات',
                     'اختر الشفتات المحددة',
                     'last_7_days',
                     6
-                )
-            );
+                ),
+            ]);
     }
 
     public function getWidgets(): array
     {
-        $filterType = $this->filters['filterType'] ?? 'period';
-        $shiftsCount = 0;
-
-        if ($filterType === 'shifts') {
-            $shiftIds = $this->filters['shifts'] ?? [];
-            $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod(null, null, $shiftIds);
-        } else {
-            $startDate = $this->filters['startDate'] ?? now()->subDays(6)->startOfDay()->toDateString();
-            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-            $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod($startDate, $endDate, null);
-        }
+        $shiftsCount = $this->shiftsReportService->getShiftsCountInPeriod(
+            ...$this->shiftsReportService->scopeFromFilters($this->filters)
+        );
 
         if ($shiftsCount === 0) {
             return [
@@ -78,7 +98,11 @@ class PeriodShiftReport extends BaseDashboard
             PeriodShiftMoneyInfoStats::class,
             PeriodShiftOrdersStats::class,
             PeriodShiftDoneOrdersStats::class,
+            // Drawers table only while multiple terminals are on.
+            ...(PeriodShiftDrawersTable::canView() ? [PeriodShiftDrawersTable::class] : []),
             PeriodShiftOrdersTable::class,
+            ...(ShiftReturnsTable::canView() ? [ShiftReturnsTable::class] : []),
+            ...(PeriodShiftCreditCollectionsTable::canView() ? [PeriodShiftCreditCollectionsTable::class] : []),
             PeriodShiftExpensesDetailsTable::class,
             PeriodShiftExpensesTable::class,
         ];

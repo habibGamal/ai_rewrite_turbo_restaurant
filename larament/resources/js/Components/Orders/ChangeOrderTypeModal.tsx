@@ -1,31 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Radio, message, InputNumber, Spin } from 'antd';
 import { router } from '@inertiajs/react';
-import { Order } from '@/types';
-import { getOrderTypeLabel } from '@/utils/orderCalculations';
+import { ChangeTypeOption, Order } from '@/types';
 import useTableTypes from '@/hooks/useTableTypes';
+import { useModule } from '@/hooks/useModule';
+import { useTerms } from '@/lib/wording';
 
 interface ChangeOrderTypeModalProps {
     open: boolean;
     onCancel: () => void;
     order: Order;
+    options: ChangeTypeOption[];
 }
 
-export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOrderTypeModalProps) {
+export default function ChangeOrderTypeModal({ open, onCancel, order, options }: ChangeOrderTypeModalProps) {
     const [form] = Form.useForm();
-    const [isDineIn, setIsDineIn] = useState(false);
+    const [selectedType, setSelectedType] = useState<string>(order.type);
     const { tableTypes, loading, error } = useTableTypes();
 
-    // Update isDineIn state when modal opens or order changes
+    const selectedOption = options.find((option) => option.code === selectedType);
+    const restaurantEnabled = useModule('restaurant');
+    const terms = useTerms();
+    const showTableFields = restaurantEnabled && (selectedOption?.showTable ?? false);
+
+    // Reset the selected type when the modal opens or the order changes
     useEffect(() => {
         if (open) {
-            setIsDineIn(order.type === 'dine_in');
+            setSelectedType(order.type);
         }
     }, [open, order.type]);
 
-    // Set the first table type as default when dine_in is selected and table types are loaded
+    // Set the first table type as default when a table type is selected and table types are loaded
     useEffect(() => {
-        if (isDineIn && tableTypes.length > 0 && open) {
+        if (showTableFields && tableTypes.length > 0 && open) {
             const currentValues = form.getFieldsValue();
             if (!currentValues.tableType) {
                 form.setFieldsValue({
@@ -33,14 +40,7 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
                 });
             }
         }
-    }, [isDineIn, tableTypes, open, form]);
-
-    const orderTypes = [
-        { value: 'dine_in', label: 'صالة' },
-        { value: 'takeaway', label: 'تيك أواي' },
-        { value: 'delivery', label: 'دليفري' },
-        { value: 'talabat', label: 'طلبات' },
-    ];
+    }, [showTableFields, tableTypes, open, form]);
 
     const tableOptions = tableTypes.map(tableType => ({
         label: tableType.name,
@@ -50,8 +50,8 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
     const onFinish = (values: any) => {
         let submitData = { ...values };
 
-        // If dine_in is selected, format the table number
-        if (values.type === 'dine_in' && values.tableType && values.tableNumber) {
+        // Format the table number when the selected type shows a table
+        if (showTableFields && values.tableType && values.tableNumber) {
             submitData.table_number = `${values.tableType} - ${values.tableNumber}`;
         }
 
@@ -68,7 +68,7 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
 
     const handleCancel = () => {
         form.resetFields();
-        setIsDineIn(false);
+        setSelectedType(order.type);
         onCancel();
     };
 
@@ -97,31 +97,32 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
                 >
                     <Radio.Group
                         onChange={(e) => {
-                            const newValue = e.target.value;
-                            setIsDineIn(newValue === 'dine_in');
+                            const newValue = e.target.value as string;
+                            const previousOption = options.find((option) => option.code === selectedType);
+                            setSelectedType(newValue);
 
-                            // Clear table fields when switching away from dine_in
-                            if (newValue !== 'dine_in') {
+                            // Clear table fields when switching away from a table type
+                            if (!options.find((option) => option.code === newValue)?.showTable) {
                                 form.setFieldsValue({
                                     tableType: undefined,
                                     tableNumber: undefined,
                                 });
-                            } else if (tableTypes.length > 0) {
-                                // Set default table type when switching to dine_in
+                            } else if (tableTypes.length > 0 && !previousOption?.showTable) {
+                                // Set default table type when switching to a table type
                                 form.setFieldsValue({
                                     tableType: tableTypes[0].name,
                                 });
                             }
                         }}
                     >
-                        {orderTypes.map((type) => (
-                            <Radio key={type.value} value={type.value}>
-                                {type.label}
+                        {options.map((option) => (
+                            <Radio key={option.code} value={option.code}>
+                                {option.label}
                             </Radio>
                         ))}
                     </Radio.Group>
                 </Form.Item>
-                {isDineIn && (
+                {showTableFields && (
                     <>
                         {loading ? (
                             <div className="flex justify-center items-center py-4">
@@ -130,9 +131,9 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
                         ) : (
                             <>
                                 <Form.Item
-                                    label="نوع الطاولة"
+                                    label={terms.tableType}
                                     name="tableType"
-                                    rules={[{ required: true, message: 'يرجى اختيار نوع الطاولة' }]}
+                                    rules={[{ required: true, message: terms.chooseTableType }]}
                                 >
                                     <Radio.Group
                                         options={tableOptions}
@@ -141,9 +142,9 @@ export default function ChangeOrderTypeModal({ open, onCancel, order }: ChangeOr
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="رقم الطاولة"
+                                    label={terms.tableNumber}
                                     name="tableNumber"
-                                    rules={[{ required: true, message: 'يرجى اختيار رقم الطاولة' }]}
+                                    rules={[{ required: true, message: terms.chooseTableNumber }]}
                                 >
                                     <InputNumber min={1} className="w-full" />
                                 </Form.Item>

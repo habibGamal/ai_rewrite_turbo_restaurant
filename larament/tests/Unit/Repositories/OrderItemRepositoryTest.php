@@ -15,42 +15,6 @@ describe('OrderItemRepository', function () {
         $this->product = Product::factory()->create();
     });
 
-    describe('createForOrder', function () {
-        it('creates order item from DTO', function () {
-            $itemDTO = new OrderItemDTO(
-                productId: $this->product->id,
-                quantity: 2,
-                price: 25.50,
-                cost: 15.00,
-                notes: 'Extra cheese'
-            );
-
-            $orderItem = $this->repository->createForOrder($this->order, $itemDTO);
-
-            expect($orderItem)->toBeInstanceOf(OrderItem::class)
-                ->and($orderItem->order_id)->toBe($this->order->id)
-                ->and($orderItem->product_id)->toBe($this->product->id)
-                ->and($orderItem->quantity)->toBe(2)
-                ->and($orderItem->price)->toBe(25.50)
-                ->and($orderItem->cost)->toBe(15.00)
-                ->and($orderItem->total)->toBe(51.00)
-                ->and($orderItem->notes)->toBe('Extra cheese');
-        });
-
-        it('creates order item without notes', function () {
-            $itemDTO = new OrderItemDTO(
-                productId: $this->product->id,
-                quantity: 1,
-                price: 10.00,
-                cost: 5.00
-            );
-
-            $orderItem = $this->repository->createForOrder($this->order, $itemDTO);
-
-            expect($orderItem->notes)->toBeNull();
-        });
-    });
-
     describe('createManyForOrder', function () {
         it('creates multiple order items', function () {
             $product2 = Product::factory()->create();
@@ -122,44 +86,6 @@ describe('OrderItemRepository', function () {
             $result = $this->repository->deleteOrderItems($this->order);
 
             expect($result)->toBeTrue();
-        });
-    });
-
-    describe('getOrderItems', function () {
-        it('returns order items with products', function () {
-            $item1 = OrderItem::factory()->create([
-                'order_id' => $this->order->id,
-                'product_id' => $this->product->id,
-            ]);
-
-            $product2 = Product::factory()->create();
-            $item2 = OrderItem::factory()->create([
-                'order_id' => $this->order->id,
-                'product_id' => $product2->id,
-            ]);
-
-            $items = $this->repository->getOrderItems($this->order->id);
-
-            expect($items)->toHaveCount(2)
-                ->and($items->first()->product)->not->toBeNull()
-                ->and($items->last()->product)->not->toBeNull();
-        });
-
-        it('returns empty collection for order with no items', function () {
-            $items = $this->repository->getOrderItems($this->order->id);
-
-            expect($items)->toHaveCount(0);
-        });
-
-        it('does not return items from other orders', function () {
-            $otherOrder = Order::factory()->create();
-
-            OrderItem::factory()->create(['order_id' => $this->order->id]);
-            OrderItem::factory()->create(['order_id' => $otherOrder->id]);
-
-            $items = $this->repository->getOrderItems($this->order->id);
-
-            expect($items)->toHaveCount(1);
         });
     });
 });

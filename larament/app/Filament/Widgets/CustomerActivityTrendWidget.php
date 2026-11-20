@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\OrderStatus;
 use App\Services\CustomersPerformanceReportService;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
@@ -31,20 +32,26 @@ class CustomerActivityTrendWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $startDate = $this->pageFilters['startDate'] ?? $defaultStart;
+        $endDate = $this->pageFilters['endDate'] ?? $defaultEnd;
 
         // Get data grouped by customer type (new vs returning)
         $newCustomersQuery = $this->customersReportService->getOrdersQuery($startDate, $endDate)
             ->selectRaw('DATE(orders.created_at) as order_date')
             ->selectRaw('COUNT(DISTINCT CASE WHEN first_order.first_order_date = DATE(orders.created_at) THEN orders.customer_id END) as new_customers')
             ->selectRaw('COUNT(DISTINCT CASE WHEN first_order.first_order_date < DATE(orders.created_at) THEN orders.customer_id END) as returning_customers')
-            ->leftJoin(DB::raw('(
-                SELECT customer_id, MIN(DATE(created_at)) as first_order_date
-                FROM orders
-                WHERE status = "completed"
-                GROUP BY customer_id
-            ) as first_order'), 'orders.customer_id', '=', 'first_order.customer_id')
+            ->leftJoinSub(
+                DB::table('orders')
+                    ->selectRaw('customer_id, MIN(DATE(created_at)) as first_order_date')
+                    ->where('status', OrderStatus::COMPLETED->value)
+                    ->whereNotNull('customer_id')
+                    ->groupBy('customer_id'),
+                'first_order',
+                'orders.customer_id',
+                '=',
+                'first_order.customer_id'
+            )
             ->groupBy('order_date')
             ->orderBy('order_date')
             ->get();

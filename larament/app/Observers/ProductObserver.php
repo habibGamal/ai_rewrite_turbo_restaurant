@@ -2,9 +2,12 @@
 
 namespace App\Observers;
 
+use App\Costing\CostHistoryRecorder;
 use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Services\Products\ProductBarcodeService;
 
 class ProductObserver
 {
@@ -28,6 +31,7 @@ class ProductObserver
         if ($product->type !== ProductType::Manufactured) {
             InventoryItem::create([
                 'product_id' => $product->id,
+                'warehouse_id' => Warehouse::default()->id,
                 'quantity' => 0,
             ]);
         }
@@ -50,16 +54,32 @@ class ProductObserver
     }
 
     /**
-     * Handle the Product "saving" event.
+     * Handle the Product "saved" event.
      */
     public function saved(Product $product): void
     {
+        app(CostHistoryRecorder::class)->recordSaved($product);
+
+        if ($product->wasRecentlyCreated || $product->wasChanged('barcode')) {
+            app(ProductBarcodeService::class)->syncPrimary($product);
+        }
+
         // Auto-assign product_ref if not provided (fallback for mass assignment)
         if ($product->type !== ProductType::Manufactured) {
             $product->load('componentOf');
             $product->componentOf->each(function ($component) {
                 $component->updateManufacturedCost();
             });
+        }
+
+        if ($product->wasChanged('type') && $product->type !== ProductType::Manufactured) {
+            if (! InventoryItem::where('product_id', $product->id)->exists()) {
+                InventoryItem::create([
+                    'product_id' => $product->id,
+                    'warehouse_id' => Warehouse::default()->id,
+                    'quantity' => 0,
+                ]);
+            }
         }
     }
 

@@ -18,7 +18,8 @@ arch('All files in the policies directory have suffix `Policy`')
 
 arch('All files in the services directory have suffix `Service`')
     ->expect('App\Services')
-    ->toHaveSuffix('Service');
+    ->toHaveSuffix('Service')
+    ->ignoring('App\Services\PrintStrategies');
 
 arch('ensures `env()` is only used in config files')
     ->expect('env')
@@ -28,3 +29,23 @@ arch('ensures `env()` is only used in config files')
 arch('No file in the app directory uses `die`, `dd`, or `dump`.')
     ->expect('App')
     ->not->toUse(['die', 'dd', 'dump']);
+
+arch('module internals are only used inside their module')
+    ->expect('App\Modules\Restaurant')
+    ->toOnlyBeUsedIn('App\Modules\Restaurant');
+
+arch('delivery module internals are only used inside their module')
+    ->expect('App\Modules\Delivery')
+    ->toOnlyBeUsedIn('App\Modules\Delivery');
+
+arch('web orders module internals are only used inside their module')
+    ->expect('App\Modules\WebOrders')
+    ->toOnlyBeUsedIn('App\Modules\WebOrders');
+
+arch('manufacturing module internals are only used inside their module')
+    ->expect('App\Modules\Manufacturing')
+    ->toOnlyBeUsedIn('App\Modules\Manufacturing');
+
+arch('external sellers module internals are only used inside their module')
+    ->expect('App\Modules\ExternalSellers')
+    ->toOnlyBeUsedIn('App\Modules\ExternalSellers');

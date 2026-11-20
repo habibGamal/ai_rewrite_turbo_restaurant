@@ -66,7 +66,7 @@ if ! php -v | grep -q "PHP 8.4"; then
     php84-gd php84-zip php84-pdo php84-pdo_mysql \
     php84-mysqli php84-phar php84-session php84-tokenizer \
     php84-calendar php84-fileinfo php84-dom php84-iconv php84-mysqlnd \
-    php84-xmlreader php84-xmlwriter php84-simplexml
+    php84-xmlreader php84-xmlwriter php84-simplexml php84-sodium
 
   ln -sf /usr/bin/php84 /usr/bin/php
   [ -f /usr/bin/composer ] && sed -i 's/php83/php84/g' /usr/bin/composer
@@ -97,8 +97,29 @@ if ! php -v | grep -q "PHP 8.4"; then
   fi
 fi
 
+# Ensure required PHP extensions are installed (e.g. for Passport / JWT)
+if ! php -m | grep -qi "^sodium$"; then
+  echo "🔐 Installing php84-sodium extension..."
+  apk update && apk add php84-sodium
+  rc-service php-fpm84 restart || true
+fi
+
 # --- Deployment Logic ---
 cd /var/www/turbo_restaurant/larament
+
+# Ensure scheduler cron entry exists
+CRON_JOB="* * * * * cd /var/www/turbo_restaurant/larament && php artisan schedule:run >> /dev/null 2>&1"
+(crontab -l 2>/dev/null | grep -qF "$CRON_JOB") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+
+# Export APP_VERSION into .env
+APP_VERSION=$(git describe --tags --always)
+if [ -f .env ]; then
+  if grep -q "^APP_VERSION=" .env; then
+    sed -i "s|^APP_VERSION=.*|APP_VERSION=${APP_VERSION}|" .env
+  else
+    echo "APP_VERSION=${APP_VERSION}" >> .env
+  fi
+fi
 
 echo "📦 Installing Dependencies..."
 composer install
@@ -127,6 +148,10 @@ php artisan storage:link --force
 
 # --- Optimization ---
 php artisan migrate --force
+# OAuth signing keys for the AI assistant (MCP); created once, kept across deploys.
+[ -f storage/oauth-private.key ] || php artisan passport:keys --no-interaction
+php artisan db:seed --class=RolesAndPermissionsSeeder --force
+php artisan permission:cache-reset
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -154,5 +179,18 @@ if [ -f /etc/nginx/nginx.conf ]; then
   else
     sed -i '/http {/a \        client_max_body_size 300M;' /etc/nginx/nginx.conf
   fi
-  rc-service nginx reload
+
+  # Bigger FastCGI buffers: large Inertia headers (e.g. /orders) otherwise fail
+  # with 502 "upstream sent too big header". Delete then re-add = idempotent.
+  VHOST_CONF="/etc/nginx/http.d/localturbo.system.conf"
+  if [ -f "$VHOST_CONF" ]; then
+    sed -i -E '/fastcgi_(buffer_size|buffers|busy_buffers_size) /d' "$VHOST_CONF"
+    sed -i \
+      -e '/fastcgi_pass /a \        fastcgi_buffer_size 32k;' \
+      -e '/fastcgi_pass /a \        fastcgi_buffers 16 32k;' \
+      -e '/fastcgi_pass /a \        fastcgi_busy_buffers_size 64k;' \
+      "$VHOST_CONF"
+  fi
+
+  nginx -t && rc-service nginx reload
 fi

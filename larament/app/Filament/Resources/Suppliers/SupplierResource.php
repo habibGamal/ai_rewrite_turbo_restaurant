@@ -6,7 +6,6 @@ use App\Filament\Resources\Suppliers\Pages\CreateSupplier;
 use App\Filament\Resources\Suppliers\Pages\EditSupplier;
 use App\Filament\Resources\Suppliers\Pages\ListSuppliers;
 use App\Filament\Resources\Suppliers\Pages\ViewSupplier;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Supplier;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -22,13 +21,11 @@ use Filament\Tables\Table;
 
 class SupplierResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Supplier::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-truck';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 2;
 

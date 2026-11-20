@@ -1,54 +1,118 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Button, Descriptions, Form, InputNumber, Modal, Popconfirm, Tabs } from 'antd';
+import { Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Popconfirm, Switch, Tabs, notification } from 'antd';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import CashierLayout from '@/Layouts/CashierLayout';
-import { DineInTab } from '@/Components/Orders/Index/DineInTab';
-import { DeliveryTab } from '@/Components/Orders/Index/DeliveryTab';
-import { TakeawayTab } from '@/Components/Orders/Index/TakeawayTab';
-import { TalabatTab } from '@/Components/Orders/Index/TalabatTab';
-import { CompaniesTab } from '@/Components/Orders/Index/CompaniesTab';
+import { OrderTypeTab } from '@/Components/Orders/Index/OrderTypeTab';
 import { DisplayTab } from '@/Components/Orders/Index/DisplayTab';
-import { ReceiveOrdersPaymentsTab } from '@/Components/Orders/Index/ReceiveOrdersPaymentsTab';
 import { ShiftExpensesTab } from '@/Components/Orders/Index/ShiftExpensesTab';
-import WebDeliveryTab from '@/Components/Orders/Index/WebDeliveryTab';
-import WebTakeawayTab from '@/Components/Orders/Index/WebTakeawayTab';
-import type { Order, User } from '@/types';
+import { ReceivablesTab } from '@/Components/Orders/Index/ReceivablesTab';
+import { orderTypeIcon } from '@/helpers/orderTypeIcon';
+import type { CashierTab, Order, Receivable, User } from '@/types';
+import { useModule } from '@/hooks/useModule';
+import { useTerms } from '@/lib/wording';
+import BadgeScanForm from '@/Components/Auth/BadgeScanForm';
 
 interface IndexProps {
     orders: Order[];
-    previousPartialPaidOrders: Order[];
+    tabs: CashierTab[];
+    receivables: Receivable[];
+    currentShift: { id: number };
+    defaultTab?: string | null;
+    kdsCashierStatusEnabled?: boolean;
     auth: {
         user: User;
     };
+    tabsOrientation?: 'horizontal' | 'vertical';
+}
+
+interface TerminalInfo {
+    id: number;
+    name: string;
+    sessionId: number | null;
+    cashier: string | null;
+    openedAt: string | null;
 }
 
 const OrdersIndex: React.FC<IndexProps> = ({
     orders,
-    auth
+    tabs,
+    receivables,
+    currentShift,
+    defaultTab,
+    kdsCashierStatusEnabled = true,
+    auth,
+    tabsOrientation,
 }) => {
+    const pageProps = usePage().props as {
+        tabsOrientation?: 'horizontal' | 'vertical';
+        terminal?: TerminalInfo | null;
+    };
+    const terminal = pageProps.terminal ?? null;
+    const [deviceOnly, setDeviceOnly] = useState(false);
+    const [closeDrawerOpen, setCloseDrawerOpen] = useState(false);
+    const [switchOpen, setSwitchOpen] = useState(false);
+    const visibleOrders =
+        terminal && deviceOnly ? orders.filter((order) => order.terminal_id === terminal.id) : orders;
+    const effectiveOrientation = tabsOrientation ?? pageProps.tabsOrientation ?? 'horizontal';
+    const isVertical = effectiveOrientation === 'vertical';
     const { user } = auth;
-    const dineInOrders = orders.filter(
-        (order) => order.type === 'dine_in' && order.status === 'processing'
-    );
-    const takeawayOrders = orders.filter(
-        (order) => order.type === 'takeaway' && order.status === 'processing'
-    );
-    const deliveryOrders = orders.filter(
-        (order) => order.type === 'delivery' && order.status === 'processing'
-    );
-    const talabatOrders = orders.filter(
-        (order) => order.type === 'talabat' && order.status === 'processing'
-    );
-    const webDeliveryOrders = orders.filter(
-        (order) => order.type === 'web_delivery' && ['pending', 'processing', 'out_for_delivery'].includes(order.status)
-    );
-    const webTakeawayOrders = orders.filter(
-        (order) => order.type === 'web_takeaway' && ['pending', 'processing'].includes(order.status)
-    );
-    const cancelledOrders = orders.filter((order) => order.status === 'cancelled');
-    const completedOrders = orders.filter((order) => order.status === 'completed');
+    const restaurantEnabled = useModule('restaurant');
+    const terms = useTerms();
+    const hasFloor = tabs.some((item) => item.presentation?.body === 'floor');
+    useEffect(() => {
+        if (!window.Echo) {
+            return;
+        }
 
-    const [tab, setTab] = useState(window.location.hash.replace('#', '') || 'dine_in');
+        const channel = window.Echo.private(`shift.${currentShift.id}`);
+        const refresh = () => router.reload({ only: ['orders', 'tabs'] });
+        const events = [
+            'order.created',
+            'order.completed',
+            'order.cancelled',
+            'order.type_changed',
+        ];
+        events.forEach((event) => channel.listen(`.${event}`, refresh));
+
+        const handleKitchenUpdate = (data: { ticket_id: number; order_number: number; reason: string }) => {
+            router.reload({
+                only: ['orders'],
+            });
+            if (data.reason === 'done' && kdsCashierStatusEnabled && restaurantEnabled) {
+                const audio = new Audio('/audio/web-notification.wav');
+                audio.play().catch(() => {});
+                notification.success({
+                    message: `طلب رقم ${data.order_number} جاهز`,
+                    description: terms.kitchenItemsReady,
+                    icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+                    placement: 'topLeft',
+                });
+            }
+        };
+
+        channel.listen('.KitchenTicketUpdated', handleKitchenUpdate);
+
+        return () => {
+            events.forEach((event) => channel.stopListening(`.${event}`, refresh));
+            channel.stopListening('.KitchenTicketUpdated', handleKitchenUpdate);
+        };
+    }, [currentShift.id, hasFloor, kdsCashierStatusEnabled, restaurantEnabled]);
+    const renderedTabs = tabs;
+
+    const initialTab = () => {
+        const hash = window.location.hash.replace('#', '') || defaultTab || '';
+        const found = renderedTabs.find(
+            (candidate) =>
+                candidate.key === hash ||
+                candidate.code === hash ||
+                candidate.key === `type:${hash}` ||
+                candidate.key === `system:${hash}`
+        );
+        return found?.key ?? renderedTabs[0]?.key ?? '';
+    };
+
+    const [tab, setTab] = useState(initialTab);
     const [endShiftModalVisible, setEndShiftModalVisible] = useState(false);
     const [form] = Form.useForm();
 
@@ -61,53 +125,59 @@ const OrdersIndex: React.FC<IndexProps> = ({
         router.post(route('shifts.end'), { real_end_cash: 0 });
     };
 
-    const tabItems = [
-        {
-            label: 'الصالة',
-            children: <DineInTab orders={dineInOrders} />,
-            key: 'dine_in',
-        },
-        {
-            label: 'الديلفري',
-            children: <DeliveryTab orders={deliveryOrders} />,
-            key: 'delivery',
-        },
-        {
-            label: 'التيك اواي',
-            children: <TakeawayTab orders={takeawayOrders} />,
-            key: 'takeaway',
-        },
-        {
-            label: 'طلبات',
-            children: <TalabatTab orders={talabatOrders} />,
-            key: 'talabat',
-        },
-        {
-            label: 'ويب ديلفري',
-            children: <WebDeliveryTab orders={webDeliveryOrders} />,
-            key: 'web_delivery',
-        },
-        {
-            label: 'ويب تيك اواي',
-            children: <WebTakeawayTab orders={webTakeawayOrders} />,
-            key: 'web_takeaway',
-        },
-        {
-            label: 'مصاريف',
-            children: <ShiftExpensesTab />,
-            key: 'expenses',
-        },
-        {
-            label: 'ملغي',
-            children: <DisplayTab orders={cancelledOrders} />,
-            key: 'cancelled',
-        },
-        {
-            label: 'منتهي',
-            children: <DisplayTab orders={completedOrders} />,
-            key: 'completed',
-        },
-    ];
+    const closeDrawer = (values: { note?: string }) => {
+        router.post(route('terminals.close'), values);
+        setCloseDrawerOpen(false);
+    };
+
+    const tabLabel = (tab: CashierTab) => (
+        <span className="inline-flex items-center gap-2">
+            {orderTypeIcon(tab.icon)}
+            <span>{tab.label}</span>
+            {tab.forcedVisible && (
+                <span className="text-xs text-gray-400">مخفي</span>
+            )}
+        </span>
+    );
+
+    const activeTabKey = tab;
+    const tabItems = renderedTabs.map((tab) => {
+        if (tab.kind === 'type') {
+            return {
+                label: tabLabel(tab),
+                children: (
+                    <OrderTypeTab
+                        tab={tab}
+                        orders={visibleOrders}
+                        shiftId={currentShift.id}
+                        active={activeTabKey === tab.key}
+                    />
+                ),
+                key: tab.key,
+            };
+        }
+
+        const children =
+            tab.key === 'system:receivables' ? (
+                <ReceivablesTab orders={receivables} />
+            ) : tab.key === 'system:expenses' ? (
+                <ShiftExpensesTab />
+            ) : tab.key === 'system:cancelled' ? (
+                <DisplayTab
+                    orders={visibleOrders.filter((order) => order.status === 'cancelled')}
+                />
+            ) : (
+                <DisplayTab
+                    orders={visibleOrders.filter((order) => order.status === 'completed')}
+                />
+            );
+
+        return {
+            label: tabLabel(tab),
+            children,
+            key: tab.key,
+        };
+    });
 
     return (
         <CashierLayout>
@@ -119,14 +189,66 @@ const OrdersIndex: React.FC<IndexProps> = ({
                         <Descriptions.Item label="الموظف">{user?.email}</Descriptions.Item>
                     </Descriptions>
 
-                    <Popconfirm
-                        title="هل انت متأكد؟"
-                        onConfirm={() => endShiftWithZero()}
-                        okText="نعم"
-                        cancelText="لا"
+                    {terminal ? (
+                        <div className="flex items-center gap-4" data-testid="drawer-bar">
+                            <span className="whitespace-nowrap">
+                                <strong>{terminal.name}</strong>
+                                {terminal.cashier ? ` · ${terminal.cashier}` : ''}
+                                {terminal.openedAt
+                                    ? ` · من ${new Date(terminal.openedAt).toLocaleTimeString('ar-EG')}`
+                                    : ''}
+                            </span>
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <Switch size="small" checked={deviceOnly} onChange={setDeviceOnly} />
+                                طلبات هذا الجهاز
+                            </span>
+                            <Button onClick={() => setSwitchOpen(true)}>تبديل الكاشير</Button>
+                            <Button onClick={() => setCloseDrawerOpen(true)}>إغلاق منفذ البيع</Button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Button onClick={() => setSwitchOpen(true)}>تبديل الكاشير</Button>
+                            <Popconfirm
+                                title="هل انت متأكد؟"
+                                onConfirm={() => endShiftWithZero()}
+                                okText="نعم"
+                                cancelText="لا"
+                            >
+                                <Button>انهاء الشيفت</Button>
+                            </Popconfirm>
+                        </div>
+                    )}
+
+                    <Modal
+                        open={switchOpen}
+                        onCancel={() => setSwitchOpen(false)}
+                        title="تبديل الكاشير بالبادج"
+                        footer={null}
+                        destroyOnHidden
                     >
-                        <Button>انهاء الشيفت</Button>
-                    </Popconfirm>
+                        <BadgeScanForm
+                            action={route('badge.switch')}
+                            submitLabel="دخول"
+                            onDone={() => setSwitchOpen(false)}
+                        />
+                    </Modal>
+
+                    <Modal
+                        open={closeDrawerOpen}
+                        onCancel={() => setCloseDrawerOpen(false)}
+                        title={terminal ? `إغلاق «${terminal.name}»` : ''}
+                        footer={null}
+                        destroyOnHidden
+                    >
+                        <Form onFinish={closeDrawer} layout="vertical">
+                            <Form.Item name="note" label="ملاحظة (اختياري)">
+                                <Input.TextArea rows={2} maxLength={1000} />
+                            </Form.Item>
+                            <Button htmlType="submit" type="primary" danger>
+                                إغلاق منفذ البيع
+                            </Button>
+                        </Form>
+                    </Modal>
 
                     <Modal
                         open={endShiftModalVisible}
@@ -137,11 +259,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
                         <Form onFinish={endShift} layout="vertical" form={form}>
                             <Form.Item
                                 name="real_end_cash"
-                                label="النقدية في الدرج"
+                                label="النقدية الفعلية"
                                 rules={[
                                     {
                                         required: true,
-                                        message: 'النقدية في الدرج مطلوبة',
+                                        message: 'النقدية الفعلية مطلوبة',
                                     },
                                 ]}
                             >
@@ -156,16 +278,26 @@ const OrdersIndex: React.FC<IndexProps> = ({
                     </Modal>
                 </div>
 
-                <Tabs
-                    onChange={(key) => {
-                        setTab(key);
-                        window.location.hash = key;
-                    }}
-                    activeKey={tab}
-                    type="card"
-                    size="large"
-                    items={tabItems}
-                />
+                {tabItems.length === 0 ? (
+                    <Empty
+                        data-testid="no-tabs"
+                        description="لا توجد تبويبات متاحة لك"
+                        className="py-16"
+                    />
+                ) : (
+                    <Tabs
+                        className={isVertical ? 'cashier-vertical-tabs' : undefined}
+                        tabPosition={isVertical ? 'right' : 'top'}
+                        onChange={(key) => {
+                            setTab(key);
+                            window.location.hash = key;
+                        }}
+                        activeKey={tab}
+                        type="card"
+                        size="large"
+                        items={tabItems}
+                    />
+                )}
             </div>
         </CashierLayout>
     );

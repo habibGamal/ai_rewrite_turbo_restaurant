@@ -2,9 +2,12 @@ import { Order, OrderItemData } from '@/types';
 
 export interface OrderTotals {
   subTotal: number;
+  equipment: number;
   tax: number;
   service: number;
   discount: number;
+  /** Custom fee lines; added after service and discount, which stay on items. */
+  fees: number;
   total: number;
 }
 
@@ -20,10 +23,10 @@ export const calculateOrderTotals = (
   const tax = subTotal * 0; // Currently no tax
 
   let service = 0;
-  if (order.type === 'delivery') {
-    service = Number(order.customer?.delivery_cost ?? 0);
-  } else if (order.type === 'dine_in') {
+  if (order.display?.chargesService) {
     service = subTotal * order.service_rate!;
+  } else if (order.display?.chargesDeliveryFee) {
+    service = Number(order.customer?.delivery_cost ?? 0);
   }
 
   let discount = 0;
@@ -57,13 +60,20 @@ export const calculateOrderTotals = (
     }
   }
 
-  const total = Math.ceil(subTotal + tax + service - discount);
+  // Custom fees and equipment are saved on the server as soon as they are
+  // added; service and discount never apply to them.
+  const fees = Number(order.fees_total ?? 0) || 0;
+  const equipment = Number(order.equipment_total ?? 0) || 0;
+
+  const total = Math.ceil(subTotal + tax + service - discount + fees + equipment);
 
   return {
     subTotal,
+    equipment,
     tax,
     service,
     discount,
+    fees,
     total,
   };
 };
@@ -100,17 +110,6 @@ export const getOrderStatusConfig = (status: string) => {
         text: status,
       };
   }
-};
-
-export const getOrderTypeLabel = (type: string): string => {
-  const labels: Record<string, string> = {
-    dine_in: 'صالة',
-    takeaway: 'تيك أواي',
-    delivery: 'دليفري',
-    companies: 'شركات',
-    talabat: 'طلبات',
-  };
-  return labels[type] || type;
 };
 
 export const getPaymentMethodLabel = (method: string): string => {

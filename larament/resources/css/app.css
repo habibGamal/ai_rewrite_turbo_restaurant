@@ -23,3 +23,21 @@
 .ltr {
     direction: ltr;
 }
+
+.cashier-vertical-tabs {
+    min-height: calc(100vh - 120px);
+}
+
+.cashier-vertical-tabs > .ant-tabs-nav {
+    min-width: 170px;
+}
+
+.cashier-vertical-tabs > .ant-tabs-nav .ant-tabs-tab {
+    padding: 12px 16px !important;
+    margin-bottom: 8px !important;
+    justify-content: flex-start !important;
+}
+
+.cashier-vertical-tabs > .ant-tabs-content-holder {
+    padding-inline-start: 16px !important;
+}

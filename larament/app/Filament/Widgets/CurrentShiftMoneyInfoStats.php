@@ -2,13 +2,28 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\CreditReconciliationStats;
+use App\Filament\Widgets\Concerns\GuestAverageStats;
+use App\Filament\Widgets\Concerns\OtherRevenuesStats;
+use App\Filament\Widgets\Concerns\ReturnsStats;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Shift;
+use App\Services\FeatureService;
+use App\Services\Reports\EquipmentReportService;
 use App\Services\ShiftsReportService;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CurrentShiftMoneyInfoStats extends BaseWidget
 {
+    use CreditReconciliationStats;
+    use GuestAverageStats;
+    use InteractsWithPageFilters;
+    use OtherRevenuesStats;
+    use ReturnsStats;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -27,6 +42,8 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
 
     protected function getStats(): array
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {
@@ -46,15 +63,14 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('success'),
 
+            ...$this->returnsStats($stats),
+
             Stat::make('المصروفات', number_format($stats['expenses'], 2).' جنيه')
                 ->description('إجمالي مصروفات الشفت')
                 ->descriptionIcon('heroicon-m-arrow-down-circle')
                 ->extraAttributes([
                     'class' => 'transition hover:scale-105 cursor-pointer',
-                    'wire:click' => <<<'JS'
-                        $dispatch()
-                        document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    JS
+                    'x-on:click' => "document.getElementById('expenses_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' })",
                 ])
                 ->color('danger'),
 
@@ -69,6 +85,15 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                     JS
                 ])
                 ->color('warning'),
+
+            ...(app(FeatureService::class)->customFeesEnabled() || abs((float) ($stats['fees'] ?? 0)) > 0.0001 || (float) ($stats['feesRefunds'] ?? 0) > 0
+                ? [Stat::make('الرسوم الإضافية', number_format((float) ($stats['fees'] ?? 0), 2).' جنيه')
+                    ->description(app(FeatureService::class)->returnsEnabled() && (float) ($stats['feesRefunds'] ?? 0) > 0
+                        ? 'مرتجع '.number_format((float) $stats['feesRefunds'], 2).' · صافي '.number_format((float) ($stats['fees'] ?? 0) - (float) $stats['feesRefunds'], 2).' جنيه'
+                        : 'رسوم إضافية ضمن المبيعات المكتملة')
+                    ->descriptionIcon('heroicon-m-plus-circle')
+                    ->color('success')]
+                : []),
 
             Stat::make('النقود المدفوعة كاش', number_format($stats['cashPayments'], 2).' جنيه')
                 ->description('المدفوعات النقدية')
@@ -106,11 +131,23 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
                 ])
                 ->color('warning'),
 
+            ...$this->creditReconciliationStats($stats, 'الشفت'),
+
             Stat::make('متوسط قيمة الاوردر', number_format($stats['avgReceiptValue'], 2).' جنيه')
                 ->description('متوسط قيمة الطلب الواحد')
                 ->descriptionIcon('heroicon-m-calculator')
                 ->color('primary'),
 
+            ...$this->guestAverageStats([$currentShift->id]),
+
+            ...$this->otherRevenuesStats($stats),
+            ...app(EquipmentReportService::class)->shiftStats([$currentShift->id]),
+            ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['externalCash'] ?? 0)) > 0.0001
+                ? [Stat::make('نقد الطلبات الخارجية', number_format($stats['externalCash'], 2).' جنيه')]
+                : []),
+            ...(app(FeatureService::class)->outsourcedOrdersEnabled() || abs((float) ($stats['settlements'] ?? 0)) > 0.0001
+                ? [Stat::make('مدفوعات البائعين الخارجيين', number_format($stats['settlements'], 2).' جنيه')]
+                : []),
             $this->getAvailableCashStat($currentShift, $stats),
         ];
     }
@@ -122,7 +159,7 @@ class CurrentShiftMoneyInfoStats extends BaseWidget
 
     private function getAvailableCashStat(Shift $shift, array $stats): Stat
     {
-        $availableCash = (float) $shift->start_cash + $stats['cashPayments'] - $stats['expenses'];
+        $availableCash = $stats['availableCash'];
 
         return Stat::make('النقدية المتاحة', number_format($availableCash, 2).' جنيه')
             ->description('النقدية المتاحة في الدرج')

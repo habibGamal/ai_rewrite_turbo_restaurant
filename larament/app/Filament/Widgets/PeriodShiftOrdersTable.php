@@ -3,13 +3,15 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\PeriodShiftOrdersExporter;
+use App\Filament\Widgets\Concerns\ScopedOrderPayments;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Order;
+use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\ShiftsReportService;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
@@ -24,6 +26,8 @@ use Illuminate\Database\Eloquent\Builder;
 class PeriodShiftOrdersTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+    use ScopedOrderPayments;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -53,39 +57,29 @@ class PeriodShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
-        $filterType = $this->pageFilters['filterType'] ?? 'period';
+        $terminal = $this->reportTerminal();
 
-        if ($filterType === 'shifts') {
-            $shiftIds = $this->pageFilters['shifts'] ?? [];
-            $query = Order::query()
-                ->with(['customer', 'user', 'payments', 'shift'])
-                ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
-                    return $query->whereIn('shift_id', $shiftIds);
-                });
-        } else {
-            $startDate = $this->pageFilters['startDate'];
-            $endDate = $this->pageFilters['endDate'];
-            $query = Order::query()
-                ->with(['customer', 'user', 'payments', 'shift'])
-                ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
-                        Carbon::parse($startDate)->startOfDay(),
-                        Carbon::parse($endDate)->endOfDay(),
-                    ]);
-                });
-        }
+        [$startDate, $endDate, $shiftIds] = $this->shiftsReportService->scopeFromFilters($this->pageFilters);
+        $scope = $this->shiftsReportService->shiftIdsQuery($startDate, $endDate, $shiftIds);
+
+        $query = $terminal->orders(Order::query()
+            ->with(['customer', 'user', 'terminal', 'shift', ...$this->scopedPaymentsEagerLoad($scope)])
+            ->whereIn('shift_id', clone $scope));
 
         return $table
             ->query($query)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'orders_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير الاوردرات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(PeriodShiftOrdersExporter::class)
-                    ->extraAttributes([
-                        'id' => 'orders_table',
-                    ])
+                    // The exporter scopes payments itself (from these options), so the export job gets a
+                    // plain eager load instead of the table's closure-constrained one.
+                    ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['customer', 'user', 'terminal', 'shift', 'payments']))
+                    ->options(['scope' => [$startDate, $endDate, $shiftIds]])
                     ->fileName(fn () => 'period-shift-orders-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->columns([
@@ -113,7 +107,10 @@ class PeriodShiftOrdersTable extends BaseWidget
 
                 TextColumn::make('type')
                     ->label('النوع')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                 TextColumn::make('customer.name')
                     ->label('العميل')
@@ -215,10 +212,19 @@ class PeriodShiftOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
+                ...$this->scopedPaymentColumns('الفترة'),
+
                 TextColumn::make('user.name')
                     ->label('الموظف')
                     ->searchable()
                     ->color('gray')
+                    ->toggleable(),
+
+                TextColumn::make('terminal.name')
+                    ->label('منفذ البيع')
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
                     ->toggleable(),
 
                 TextColumn::make('created_at')
@@ -235,19 +241,18 @@ class PeriodShiftOrdersTable extends BaseWidget
 
                 SelectFilter::make('type')
                     ->label('النوع')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
-                SelectFilter::make('payment_method')
-                    ->label('طريقة الدفع')
-                    ->options(PaymentMethod::class)
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when(
-                            $data['value'],
-                            fn (Builder $query, $value): Builder => $query->whereHas('payments', function (Builder $subQuery) use ($value) {
-                                $subQuery->where('method', $value);
-                            })
-                        );
-                    }),
+                SelectFilter::make('terminal_id')
+                    ->label('منفذ البيع')
+                    ->relationship('terminal', 'name')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled()),
+
+                $this->scopedPaymentMethodFilter($scope),
+
+                $this->paymentStatusFilter(),
+
+                $this->hasCreditFilter($scope),
 
                 TernaryFilter::make('has_discount')
                     ->label('يحتوي على خصم')

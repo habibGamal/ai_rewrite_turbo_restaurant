@@ -4,23 +4,20 @@ namespace App\Repositories;
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
-use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Models\Shift;
 use Illuminate\Database\Eloquent\Collection;
 
-class OrderRepository implements OrderRepositoryInterface
+class OrderRepository
 {
-    public function create(CreateOrderDTO $orderDTO): Order
+    public function create(CreateOrderDTO $orderDTO, int $orderNumber): Order
     {
-        $orderNumber = $this->getNextOrderNumber($orderDTO->shiftId);
-
         return Order::create([
-            'type' => $orderDTO->type,
+            'type' => $orderDTO->typeCode,
             'shift_id' => $orderDTO->shiftId,
             'user_id' => $orderDTO->userId,
-            'dine_table_number' => $orderDTO->tableNumber,
+            'dine_table_number' => $orderDTO->opening->tableNumber,
             'customer_id' => $orderDTO->customerId,
             'driver_id' => $orderDTO->driverId,
             'kitchen_notes' => $orderDTO->kitchenNotes,
@@ -51,23 +48,47 @@ class OrderRepository implements OrderRepositoryInterface
     public function getShiftOrders(int $shiftId): Collection
     {
         return Order::where('shift_id', $shiftId)
-            ->with(['customer', 'driver', 'table', 'items.product'])
+            ->with(['customer', 'driver', 'table', 'items.product', 'kitchenTicket.items'])
             ->orderBy('created_at', 'asc')
             ->get();
     }
 
-    public function getProcessingOrders(int $shiftId): Collection
+    /**
+     * Completed credit orders with an outstanding balance (pending or partial_paid) for the given type codes.
+     *
+     * @param  list<string>  $codes
+     * @return Collection<int, Order>
+     */
+    public function receivablesForTypes(array $codes): Collection
     {
-        return Order::where('shift_id', $shiftId)
-            ->where('status', OrderStatus::PROCESSING)
-            ->with(['customer', 'driver', 'table', 'items.product'])
-            ->get();
+        if ($codes === []) {
+            return new Collection;
+        }
+
+        return Order::query()
+            ->with(['customer', 'payments'])
+            ->where('status', OrderStatus::COMPLETED)
+            ->whereIn('payment_status', [PaymentStatus::PENDING, PaymentStatus::PARTIAL_PAID])
+            ->whereIn('type', $codes)
+            ->orderBy('created_at')
+            ->get()
+            ->filter(function (Order $order): bool {
+                $paid = (float) $order->payments->sum('amount');
+
+                return round((float) $order->total - $paid, 2) > 0;
+            })
+            ->values();
     }
 
-    public function getNextOrderNumber(int $shiftId): int
+    /**
+     * @param  list<string>  $excludedCodes
+     */
+    public function getNextOrderNumber(int $shiftId, array $excludedCodes): int
     {
+        Shift::whereKey($shiftId)->lockForUpdate()->first();
+
         $lastOrder = Order::where('shift_id', $shiftId)
-            ->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereNotIn('type', $excludedCodes)
             ->orderBy('order_number', 'desc')
             ->first();
         $nextNumber = $lastOrder ? $lastOrder->order_number + 1 : 1;
@@ -86,13 +107,5 @@ class OrderRepository implements OrderRepositoryInterface
     public function delete(Order $order): bool
     {
         return $order->delete();
-    }
-
-    public function getOrdersWithPaymentStatus(string $paymentStatus): Collection
-    {
-        return Order::where('payment_status', $paymentStatus)
-            ->with(['customer', 'payments'])
-            ->orderBy('created_at', 'desc')
-            ->get();
     }
 }

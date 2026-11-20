@@ -362,7 +362,7 @@ describe('OrderStockConversionService', function () {
             $this->stockService->shouldReceive('removeStock')
                 ->once()
                 ->with($expectedStockItems, MovementReason::ORDER, $order)
-                ->andReturn(true);
+                ->andReturn(collect([new \App\Models\InventoryItemMovement]));
 
             $result = $this->orderStockConversionService->removeStockForCompletedOrder($order);
 
@@ -453,7 +453,7 @@ describe('OrderStockConversionService', function () {
             $this->stockService->shouldReceive('addStock')
                 ->once()
                 ->with($expectedStockItems, MovementReason::ORDER_RETURN, $order)
-                ->andReturn(true);
+                ->andReturn(collect([new \App\Models\InventoryItemMovement]));
 
             $result = $this->orderStockConversionService->addStockForCancelledOrder($order);
 
@@ -488,137 +488,6 @@ describe('OrderStockConversionService', function () {
             $result = $this->orderStockConversionService->addStockForCancelledOrder($order);
 
             expect($result)->toBeFalse();
-        });
-    });
-
-    describe('validateOrderStockAvailability', function () {
-        it('calls stock service to validate stock availability', function () {
-            $consumableProduct = Product::factory()->create([
-                'type' => ProductType::Consumable,
-                'category_id' => $this->category->id,
-                'printer_id' => $this->printer->id,
-            ]);
-
-            $order = Order::factory()->create();
-            $order->items()->create([
-                'product_id' => $consumableProduct->id,
-                'quantity' => 5,
-                'price' => 20.00,
-                'cost' => 10.00,
-                'total' => 0.00, // quantity * price
-            ]);
-
-            $order->load('items.product');
-
-            $expectedStockItems = [
-                ['product_id' => $consumableProduct->id, 'quantity' => 5],
-            ];
-
-            $expectedResult = [
-                [
-                    'product_id' => $consumableProduct->id,
-                    'product_name' => $consumableProduct->name,
-                    'required_quantity' => 5,
-                    'available_quantity' => 2,
-                ],
-            ];
-
-            $this->stockService->shouldReceive('validateStockAvailability')
-                ->once()
-                ->with($expectedStockItems)
-                ->andReturn($expectedResult);
-
-            $result = $this->orderStockConversionService->validateOrderStockAvailability($order);
-
-            expect($result)->toBe($expectedResult);
-        });
-
-        it('returns empty array when order has no stock items', function () {
-            $order = Order::factory()->create();
-            $order->load('items.product');
-
-            $result = $this->orderStockConversionService->validateOrderStockAvailability($order);
-
-            expect($result)->toBeEmpty();
-        });
-    });
-
-    describe('getOrderStockRequirements', function () {
-        it('returns stock requirements summary for order', function () {
-            $consumableProduct = Product::factory()->create([
-                'type' => ProductType::Consumable,
-                'name' => 'Test Product',
-                'category_id' => $this->category->id,
-                'printer_id' => $this->printer->id,
-            ]);
-
-            $order = Order::factory()->create();
-            $order->items()->create([
-                'product_id' => $consumableProduct->id,
-                'quantity' => 4,
-                'price' => 16.00,
-                'cost' => 8.00,
-                'total' => 0.00, // quantity * price
-            ]);
-
-            $order->load('items.product');
-
-            $this->stockService->shouldReceive('getCurrentStock')
-                ->once()
-                ->with($consumableProduct->id)
-                ->andReturn(6);
-
-            $result = $this->orderStockConversionService->getOrderStockRequirements($order);
-
-            expect($result)->toHaveCount(1);
-            expect($result[0])->toBe([
-                'product_id' => $consumableProduct->id,
-                'product_name' => 'Test Product',
-                'required_quantity' => 4,
-                'current_stock' => 6.0,
-                'sufficient' => true,
-            ]);
-        });
-
-        it('marks insufficient stock correctly', function () {
-            $consumableProduct = Product::factory()->create([
-                'type' => ProductType::Consumable,
-                'name' => 'Test Product',
-                'category_id' => $this->category->id,
-                'printer_id' => $this->printer->id,
-            ]);
-
-            $order = Order::factory()->create();
-            $order->items()->create([
-                'product_id' => $consumableProduct->id,
-                'quantity' => 10,
-                'price' => 40.00,
-                'cost' => 20.00,
-                'total' => 0.00, // quantity * price
-            ]);
-
-            $order->load('items.product');
-
-            $this->stockService->shouldReceive('getCurrentStock')
-                ->once()
-                ->with($consumableProduct->id)
-                ->andReturn(3);
-
-            $result = $this->orderStockConversionService->getOrderStockRequirements($order);
-
-            expect($result)->toHaveCount(1);
-            expect($result[0]['sufficient'])->toBeFalse();
-            expect($result[0]['required_quantity'])->toBe(10);
-            expect($result[0]['current_stock'])->toBe(3.0);
-        });
-
-        it('returns empty array when order has no stock items', function () {
-            $order = Order::factory()->create();
-            $order->load('items.product');
-
-            $result = $this->orderStockConversionService->getOrderStockRequirements($order);
-
-            expect($result)->toBeEmpty();
         });
     });
 });

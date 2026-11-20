@@ -5,16 +5,19 @@ namespace App\Filament\Resources\Stocktakings;
 use App\Filament\Actions\CloseStocktakingAction;
 use App\Filament\Actions\Forms\StocktakingProductImporterAction;
 use App\Filament\Actions\PrintStocktakingAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
 use App\Filament\Components\Forms\StocktakingProductSelector;
 use App\Filament\Resources\Stocktakings\Pages\CreateStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\EditStocktaking;
 use App\Filament\Resources\Stocktakings\Pages\ListStocktakings;
 use App\Filament\Resources\Stocktakings\Pages\ViewStocktaking;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\Stocktaking;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\StocktakingCalculatorService;
+use App\Services\StockService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -31,19 +34,20 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class StocktakingResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Stocktaking::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
@@ -69,6 +73,45 @@ class StocktakingResource extends Resource
                             ->required()
                             ->default(auth()->id()),
 
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set, Get $get): void {
+                                $warehouseId = (int) ($state ?: Warehouse::default()->id);
+                                $items = $get('items') ?? [];
+                                $stockService = app(StockService::class);
+                                $stocktakingTotal = 0.0;
+
+                                foreach ($items as $key => $item) {
+                                    $productId = (int) ($item['product_id'] ?? 0);
+                                    if ($productId <= 0) {
+                                        continue;
+                                    }
+
+                                    $stockQty = $stockService->getCurrentStock($productId, $warehouseId);
+                                    $realQty = (float) ($item['real_quantity'] ?? 0);
+                                    $price = (float) ($item['price'] ?? 0);
+                                    $total = ($realQty - $stockQty) * $price;
+
+                                    $items[$key]['stock_quantity'] = $stockQty;
+                                    $items[$key]['total'] = $total;
+                                    $stocktakingTotal += $total;
+                                }
+
+                                $set('items', $items);
+                                $set('total', $stocktakingTotal);
+                            })
+                            ->disabled(fn (?Stocktaking $record): bool => $record?->closed_at !== null),
+
                         TextInput::make('total')
                             ->label('إجمالي الفرق (ج.م)')
                             ->numeric()
@@ -92,7 +135,11 @@ class StocktakingResource extends Resource
                         Actions::make([
                             StocktakingProductImporterAction::make('importProducts'),
                         ])
+                            ->key('stocktakingImportActions')
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, $set, $get) => StocktakingProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         StocktakingProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
@@ -138,6 +185,7 @@ class StocktakingResource extends Resource
                                 TextInput::make('real_quantity')
                                     ->label('الكمية الفعلية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(0)
                                     ->minValue(0),
@@ -218,6 +266,11 @@ class StocktakingResource extends Resource
 
                 TextColumn::make('user.name')
                     ->label('المستخدم')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 
@@ -305,14 +358,14 @@ class StocktakingResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array

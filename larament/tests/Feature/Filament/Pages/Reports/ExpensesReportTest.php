@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\ExpensesReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
@@ -14,7 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -95,8 +94,7 @@ it('shows no shifts widget when no shifts in period', function () {
             'filterType' => 'period',
             'startDate' => now()->addDays(1)->toDateString(),
             'endDate' => now()->addDays(2)->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(NoShiftsInPeriodWidget::class);
 });
@@ -116,8 +114,7 @@ it('shows expense tables when shifts exist in period', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)
@@ -129,8 +126,7 @@ it('shows no shifts widget when selected shifts is empty', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(NoShiftsInPeriodWidget::class);
 });
@@ -147,8 +143,7 @@ it('shows expense tables when shifts are selected', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)
@@ -181,8 +176,7 @@ it('filters expenses by date range', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -205,8 +199,7 @@ it('filters expenses by selected shifts', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift1->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -274,7 +267,7 @@ it('can filter by this year', function () {
 
 // Access Control Tests
 it('allows admin users to access', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(ExpensesReport::class)
@@ -282,7 +275,7 @@ it('allows admin users to access', function () {
 });
 
 it('allows viewer users to access', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(ExpensesReport::class)
@@ -290,7 +283,7 @@ it('allows viewer users to access', function () {
 });
 
 it('denies cashier users access', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(ExpensesReport::class)
@@ -298,7 +291,7 @@ it('denies cashier users access', function () {
 });
 
 it('denies watcher users access', function () {
-    $watcher = User::factory()->create(['role' => UserRole::WATCHER]);
+    $watcher = User::factory()->watcher()->create();
     actingAs($watcher);
 
     livewire(ExpensesReport::class)
@@ -375,8 +368,7 @@ it('passes correct filters to widgets when using period filter', function () {
             'filterType' => 'period',
             'startDate' => now()->subDays(7)->toDateString(),
             'endDate' => now()->toDateString(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -393,8 +385,7 @@ it('passes correct filters to widgets when using shifts filter', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => [$shift->id],
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())->toContain(PeriodShiftExpensesTable::class);
 });
@@ -426,8 +417,7 @@ it('shows correct widgets when multiple shifts are selected', function () {
         ->set('filters', [
             'filterType' => 'shifts',
             'shifts' => $shifts->pluck('id')->toArray(),
-        ])
-        ->call('getWidgets');
+        ]);
 
     expect($widgets->instance()->getWidgets())
         ->toContain(PeriodShiftExpensesTable::class)

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Enums\ProductType;
 use App\Filament\Exports\ProductsSalesTableExporter;
+use App\Services\FeatureService;
 use App\Services\ProductsSalesReportService;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ViewAction;
@@ -36,13 +37,17 @@ class ProductsSalesTableWidget extends BaseWidget
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
+        $mainCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null);
+        $subCategoryId = ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null);
 
         return $table
             ->query(
                 $this->productsReportService->getProductsSalesPerformanceQuery(
                     $startDate,
                     $endDate,
-                    $shiftIds
+                    $shiftIds,
+                    $mainCategoryId,
+                    $subCategoryId,
                 )
             )
             ->headerActions([
@@ -56,13 +61,17 @@ class ProductsSalesTableWidget extends BaseWidget
                         return app(ProductsSalesReportService::class)->getProductsSalesPerformanceQuery(
                             $options['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString(),
                             $options['endDate'] ?? now()->endOfDay()->toDateString(),
-                            $options['shiftIds'] ?? null
+                            $options['shiftIds'] ?? null,
+                            ProductsSalesReportService::nullableFilterId($options['mainCategoryId'] ?? null),
+                            ProductsSalesReportService::nullableFilterId($options['subCategoryId'] ?? null),
                         );
                     })
                     ->options([
                         'startDate' => $startDate,
                         'endDate' => $endDate,
                         'shiftIds' => $shiftIds,
+                        'mainCategoryId' => $mainCategoryId,
+                        'subCategoryId' => $subCategoryId,
                     ])
                     ->fileName(fn () => 'products-sales-performance-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
@@ -76,15 +85,22 @@ class ProductsSalesTableWidget extends BaseWidget
                         return $query->orderBy('products.name', $direction);
                     }),
 
-                TextColumn::make('category_name')
-                    ->label('التصنيف')
+                TextColumn::make('main_category_name')
+                    ->label('التصنيف الرئيسي')
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->where('categories.name', 'like', "%{$search}%");
+                        return $query->where('main_categories.name', 'like', "%{$search}%");
                     })
                     ->sortable(query: function (Builder $query, string $direction): Builder {
-                        return $query->orderBy('categories.name', $direction);
+                        return $query->orderBy('main_categories.name', $direction);
                     })
                     ->default('غير مصنف'),
+
+                TextColumn::make('sub_category_name')
+                    ->label('التصنيف الفرعي')
+                    ->placeholder('أصناف التصنيف الرئيسي')
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('sub_category_name', $direction);
+                    }),
 
                 TextColumn::make('total_quantity')
                     ->label('إجمالي الكمية')
@@ -101,6 +117,32 @@ class ProductsSalesTableWidget extends BaseWidget
                     ->money('EGP')
                     ->sortable(),
 
+                TextColumn::make('returned_quantity')
+                    ->label('الكمية المرتجعة')
+                    ->numeric()
+                    ->description(fn ($record) => (float) $record->damaged_quantity > 0
+                        ? 'للمخزن '.(float) $record->restocked_quantity.' · تالف '.(float) $record->damaged_quantity
+                        : null)
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : null)
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
+
+                TextColumn::make('net_quantity')
+                    ->label('صافي الكمية')
+                    ->numeric()
+                    ->sortable(),
+
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->sortable()
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP')
+                    ->sortable(),
+
                 TextColumn::make('profit_margin')
                     ->label('هامش الربح %')
                     ->state(
@@ -109,41 +151,9 @@ class ProductsSalesTableWidget extends BaseWidget
                             : '0%'
                     ),
 
-                // Order Type Performance
-                TextColumn::make('dine_in_sales')
-                    ->label('صالة')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('takeaway_sales')
-                    ->label('تيك أواي')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('delivery_sales')
-                    ->label('دليفري')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('web_delivery_sales')
-                    ->label('اونلاين دليفري')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('web_takeaway_sales')
-                    ->label('اونلاين تيك أواي')
-                    ->money('EGP')
-                    ->sortable(),
-
-                TextColumn::make('talabat_sales')
-                    ->label('طلبات')
-                    ->money('EGP')
-                    ->sortable(),
-
-                // TextColumn::make('companies_sales')
-                //     ->label('شركات')
-                //     ->money('EGP')
-                //     ->sortable(),
+                ...array_map(fn (array $type) => TextColumn::make('type_'.$type['code'].'_sales')
+                    ->label($type['label'])->money('EGP')->sortable(),
+                    $this->productsReportService->getReportOrderTypes($startDate, $endDate, $shiftIds)),
             ])
             ->defaultSort('total_sales', 'desc')
             ->paginated([10, 25, 50, 100])

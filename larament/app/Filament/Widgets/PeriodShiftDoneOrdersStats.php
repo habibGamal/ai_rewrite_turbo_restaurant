@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Core\Orders\GuestStats;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Services\ShiftsReportService;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -9,6 +11,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PeriodShiftDoneOrdersStats extends BaseWidget
 {
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = null;
@@ -29,37 +33,36 @@ class PeriodShiftDoneOrdersStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $orderTypeStats = $this->calculatePeriodOrderTypeStats();
+        $this->reportTerminal();
 
-        $stats = [];
+        $types = $this->calculatePeriodOrderTypeStats();
 
-        // Map the new service format to the old format expected by widgets
-        $statsMapping = [
-            'dine_in' => ['key' => 'dineIn', 'label' => 'الاوردرات الصالة', 'icon' => 'heroicon-m-home', 'color' => 'success'],
-            'delivery' => ['key' => 'delivery', 'label' => 'الاوردرات ديليفري', 'icon' => 'heroicon-m-truck', 'color' => 'info'],
-            'takeaway' => ['key' => 'takeaway', 'label' => 'الاوردرات تيك اواي', 'icon' => 'heroicon-m-shopping-bag', 'color' => 'warning'],
-            'talabat' => ['key' => 'talabat', 'label' => 'الاوردرات طلبات', 'icon' => 'heroicon-m-device-phone-mobile', 'color' => 'purple'],
-            'web_delivery' => ['key' => 'webDelivery', 'label' => 'الاوردرات اونلاين ديليفري', 'icon' => 'heroicon-m-globe-alt', 'color' => 'danger'],
-            'web_takeaway' => ['key' => 'webTakeaway', 'label' => 'الاوردرات اونلاين تيك اواي', 'icon' => 'heroicon-m-computer-desktop', 'color' => 'info'],
-            // 'companies' => ['key' => 'companies', 'label' => 'اوردرات الشركات', 'icon' => 'heroicon-m-building-office', 'color' => 'gray'],
-        ];
+        $stats = array_map(function (array $type): Stat {
+            $average = $type['count'] > 0 ? $type['value'] / $type['count'] : 0;
+            $code = json_encode($type['code'], JSON_HEX_APOS | JSON_HEX_QUOT);
 
-        foreach ($statsMapping as $enumValue => $config) {
-            if (isset($orderTypeStats[$enumValue]) && $orderTypeStats[$enumValue]['count'] > 0) {
-                $data = $orderTypeStats[$enumValue];
-                $average = $data['count'] > 0 ? $data['value'] / $data['count'] : 0;
-                $stats[] = Stat::make($config['label'], $data['count'].' اوردر')
-                    ->description('بقيمة '.number_format($data['value'], 2).' جنيه - ربح '.number_format($data['profit'], 2).' جنيه - متوسط '.number_format($average, 2).' جنيه')
-                    ->descriptionIcon($config['icon'])
-                    ->extraAttributes([
-                        'class' => 'transition hover:scale-105 cursor-pointer',
-                        'wire:click' => <<<JS
-                            \$dispatch('filterUpdate',{filter:{type:'{$enumValue}'}} )
-                            document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        JS
-                    ])
-                    ->color($config['color']);
+            $description = 'بقيمة '.number_format($type['value'], 2).' جنيه - ربح '.number_format($type['profit'], 2).' جنيه - متوسط '.number_format($average, 2).' جنيه';
+            if (($type['guests_summary'] ?? null) !== null) {
+                $description .= ' - '.$type['guests_summary'];
             }
+
+            return Stat::make($type['label'], $type['count'].' طلب')
+                ->description($description)
+                ->extraAttributes([
+                    'class' => 'transition hover:scale-105 cursor-pointer',
+                    'wire:click' => "\$dispatch('filterUpdate', {filter: {type: {$code}}}); document.getElementById('orders_table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });",
+                ])
+                ->color($type['color']);
+        }, $types);
+
+        $guests = new GuestStats(
+            (int) array_sum(array_column($types, 'guests')),
+            (float) array_sum(array_column($types, 'guest_sales')),
+        );
+        if ($guests->hasGuests()) {
+            $stats[] = Stat::make('عدد الأفراد', number_format($guests->guests).' فرد')
+                ->description('متوسط الفرد '.number_format($guests->averagePerGuest(), 2).' جنيه')
+                ->color('info');
         }
 
         return $stats;

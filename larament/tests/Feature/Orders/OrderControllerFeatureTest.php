@@ -1,10 +1,8 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Driver;
@@ -24,11 +22,9 @@ uses(RefreshDatabase::class);
 describe('OrderController Feature Tests', function () {
     beforeEach(function () {
         $this->user = User::factory()->create([
-            'role' => UserRole::CASHIER,
         ]);
 
         $this->adminUser = User::factory()->create([
-            'role' => UserRole::ADMIN,
         ]);
 
         $this->shift = Shift::factory()->create([
@@ -76,7 +72,8 @@ describe('OrderController Feature Tests', function () {
                         ->has('currentShift')
                         ->has('expenses')
                         ->has('expenseTypes')
-                        ->has('previousPartialPaidOrders');
+                        ->has('receivables')
+                        ->missing('previousPartialPaidOrders');
                 });
         });
 
@@ -93,10 +90,12 @@ describe('OrderController Feature Tests', function () {
 
         it('shows partial paid company orders from previous shifts', function () {
             $partialPaidOrder = Order::factory()->create([
+                'status' => OrderStatus::COMPLETED,
                 'payment_status' => PaymentStatus::PARTIAL_PAID,
-                'type' => OrderType::COMPANIES,
+                'type' => 'companies',
                 'customer_id' => $this->customer->id,
                 'driver_id' => $this->driver->id,
+                'total' => 100,
             ]);
 
             OrderItem::factory()->create([
@@ -112,7 +111,12 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertOk()
                 ->assertInertia(function ($page) use ($partialPaidOrder) {
-                    $page->where('previousPartialPaidOrders.0.id', $partialPaidOrder->id);
+                    $page->where('receivables.0.id', $partialPaidOrder->id)
+                        ->has('receivables.0.display')
+                        ->has('receivables.0.total')
+                        ->has('receivables.0.paid')
+                        ->has('receivables.0.remaining')
+                        ->missing('previousPartialPaidOrders');
                 });
         });
     });
@@ -198,7 +202,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::DINE_IN)
+            expect($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T001')
                 ->and($order->shift_id)->toBe($this->shift->id)
                 ->and($order->user_id)->toBe($this->user->id)
@@ -214,7 +218,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::TAKEAWAY)
+            expect($order->type)->toBe('takeaway')
                 ->and($order->dine_table_number)->toBeNull();
         });
 
@@ -227,7 +231,7 @@ describe('OrderController Feature Tests', function () {
 
             $response->assertRedirect(route('orders.manage', $order));
 
-            expect($order->type)->toBe(OrderType::DELIVERY);
+            expect($order->type)->toBe('delivery');
         });
 
         it('validates order type', function () {
@@ -249,8 +253,8 @@ describe('OrderController Feature Tests', function () {
                 'table_number' => 'T001',
             ]);
 
-            $response->assertRedirect()
-                ->assertSessionHasErrors('error');
+            $response->assertRedirect(route('shifts.start'));
+            expect(Order::count())->toBe(0);
         });
     });
 
@@ -353,7 +357,7 @@ describe('OrderController Feature Tests', function () {
                 'print' => false,
             ]);
 
-            $response->assertRedirect(route('orders.index', ['type' => $order->type->value]))
+            $response->assertRedirect(route('orders.index', ['type' => $order->type]))
                 ->assertSessionHas('success', 'تم إنهاء الطلب بنجاح');
 
             $order->refresh();
@@ -374,7 +378,8 @@ describe('OrderController Feature Tests', function () {
                 'status' => OrderStatus::PROCESSING,
                 'discount' => 0,
                 'temp_discount_percent' => 0,
-                'type' => OrderType::TAKEAWAY,
+                'type' => 'companies',
+                'customer_id' => $this->customer->id,
             ]);
 
             OrderItem::factory()->create([
@@ -431,6 +436,7 @@ describe('OrderController Feature Tests', function () {
     describe('Order Cancellation', function () {
         it('allows admin to cancel completed order', function () {
             $this->actingAs($this->adminUser);
+            openInventoryDay();
 
             $order = Order::factory()->create([
                 'shift_id' => $this->shift->id,
@@ -582,7 +588,7 @@ describe('OrderController Feature Tests', function () {
             $order = Order::factory()->create([
                 'shift_id' => $this->shift->id,
                 'user_id' => $this->user->id,
-                'type' => OrderType::TAKEAWAY,
+                'type' => 'takeaway',
             ]);
 
             $response = $this->post(route('orders.updateType', $order), [
@@ -594,7 +600,7 @@ describe('OrderController Feature Tests', function () {
                 ->assertSessionHas('success', 'تم تغيير نوع الطلب بنجاح');
 
             $order->refresh();
-            expect($order->type)->toBe(OrderType::DINE_IN)
+            expect($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T005');
         });
 
@@ -862,6 +868,7 @@ describe('OrderController Feature Tests', function () {
                 'shift_id' => $this->shift->id,
                 'user_id' => $this->user->id,
                 'status' => OrderStatus::PROCESSING,
+                'type' => 'takeaway',
             ]);
 
             // Add items

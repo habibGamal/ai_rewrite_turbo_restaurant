@@ -3,6 +3,7 @@
 use App\Actions\Orders\CompleteOrderAction;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Models\Customer;
 use App\Models\Order;
 
 uses(Tests\Unit\TestCase::class);
@@ -65,6 +66,12 @@ describe('CompleteOrderAction', function () {
     });
 
     it('handles partial payment', function () {
+        $customer = Customer::factory()->create();
+        $this->order->update([
+            'type' => 'companies',
+            'customer_id' => $customer->id,
+        ]);
+
         $paymentsData = [
             'cash' => 50.00, // Pay less than the 100.00 total
         ];
@@ -76,6 +83,8 @@ describe('CompleteOrderAction', function () {
     });
 
     it('can specify print option', function () {
+        $this->order->update(['type' => 'takeaway']);
+
         $paymentsData = [
             'cash' => 100.00,
         ];

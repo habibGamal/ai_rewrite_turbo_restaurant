@@ -131,6 +131,17 @@ return [
     ],
 
     /*
+    | Optional database user for the AI assistant's read-only queries
+    | (App\Mcp\Support\ReadOnlyQuery). Give it SELECT on the ai_* views only:
+    | `php artisan mcp:readonly-grants` prints the statements. Empty = the
+    | default connection, still limited to a read-only transaction.
+    */
+    'ai_readonly' => [
+        'username' => env('DB_AI_USERNAME'),
+        'password' => env('DB_AI_PASSWORD'),
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Migration Repository Table
     |--------------------------------------------------------------------------

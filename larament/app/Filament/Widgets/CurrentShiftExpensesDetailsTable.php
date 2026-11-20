@@ -3,7 +3,9 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CurrentShiftExpensesDetailedExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Expense;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\ExportAction;
 use Filament\Forms\Components\TextInput;
@@ -11,11 +13,15 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 class CurrentShiftExpensesDetailsTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected int|string|array $columnSpan = 'full';
@@ -31,27 +37,28 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
 
         if (! $currentShift) {
             $expenseQuery = Expense::query()->where('id', 0); // Empty query
         } else {
-            $expenseQuery = Expense::query()
+            $expenseQuery = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->where('shift_id', $currentShift->id)
-                ->with(['expenceType', 'shift.user'])
+                ->with(['expenceType', 'shift.user', 'terminalSession.terminal'])
                 ->orderBy('created_at', 'desc');
         }
 
         return $table
             ->query($expenseQuery)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'expenses_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير تفاصيل المصروفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->extraAttributes([
-                        'id' => 'expenses_table',
-                    ])
                     ->exporter(CurrentShiftExpensesDetailedExporter::class)
                     ->fileName(fn () => 'current-shift-expenses-detailed-'.now()->format('Y-m-d-H-i-s').'.xlsx')
                     ->visible(fn () => $this->getCurrentShift() !== null),
@@ -70,6 +77,12 @@ class CurrentShiftExpensesDetailsTable extends BaseWidget
                     ->sortable()
                     ->weight('medium')
                     ->color('info'),
+
+                TextColumn::make('terminalSession.terminal.name')
+                    ->label('منفذ البيع')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
+                    ->toggleable(),
 
                 TextColumn::make('amount')
                     ->label('المبلغ')

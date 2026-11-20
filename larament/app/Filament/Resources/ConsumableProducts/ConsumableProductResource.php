@@ -3,13 +3,18 @@
 namespace App\Filament\Resources\ConsumableProducts;
 
 use App\Enums\ProductType;
+use App\Filament\Actions\PrintLabelsAction;
+use App\Filament\Components\Forms\KitchenDisplayFields;
+use App\Filament\Components\Forms\ProductBarcodeFields;
 use App\Filament\Resources\ConsumableProducts\Pages\CreateConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\EditConsumableProduct;
 use App\Filament\Resources\ConsumableProducts\Pages\ListConsumableProducts;
 use App\Filament\Resources\ConsumableProducts\Pages\ViewConsumableProduct;
-use App\Filament\Traits\AdminAccess;
+use App\Filament\Resources\ProductGroups\ProductGroupResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\FeatureService;
+use App\Services\Products\ProductVariantService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -19,6 +24,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -30,8 +36,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ConsumableProductResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Product::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
@@ -59,19 +63,38 @@ class ConsumableProductResource extends Resource
     {
         return $schema
             ->components([
+                TextEntry::make('variant_group_link')
+                    ->label('الموديل')
+                    ->state(fn (?Product $record): ?string => $record?->group?->name)
+                    ->helperText('هذا المنتج مقاس/لون من موديل؛ عدّل السعر والمتغيرات من صفحة الموديل.')
+                    ->url(fn (?Product $record): ?string => ($record?->product_group_id !== null && ProductGroupResource::canAccess())
+                        ? ProductGroupResource::getUrl('edit', ['record' => $record->product_group_id])
+                        : null)
+                    ->color('primary')
+                    ->visible(fn (?Product $record): bool => $record?->product_group_id !== null),
                 TextInput::make('name')
                     ->label('اسم المنتج الاستهلاكي')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('barcode')
-                    ->label('الباركود')
-                    ->maxLength(255)
-                    ->placeholder('اختياري'),
+                ProductBarcodeFields::primary(),
+                ProductBarcodeFields::extra(),
                 Select::make('category_id')
                     ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id'))
+                    ->options(Category::query()->pluck('name', 'id'))
                     ->required()
                     ->searchable(),
+                Select::make('warehouse_id')
+                    ->label('مخزن السحب')
+                    ->relationship(
+                        'warehouse',
+                        'name',
+                        fn (Builder $query): Builder => $query->where('is_active', true),
+                    )
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->placeholder('حسب التصنيف')
+                    ->helperText('اختياري. إن تُرك فارغاً يُسحب المخزون من مخزن التصنيف الرئيسي، وإلا من المخزن الافتراضي.'),
                 TextInput::make('price')
                     ->label('السعر')
                     ->required()
@@ -89,6 +112,13 @@ class ConsumableProductResource extends Resource
                     ->default(0),
                 Select::make('unit')
                     ->label('الوحدة')
+                    // Variants of a retail group can never be weighed (scale) items.
+                    ->disableOptionWhen(fn (string $value, ?Product $record): bool => $record?->product_group_id !== null
+                        && in_array($value, ProductVariantService::WEIGHT_UNITS, true))
+                    ->rule(
+                        'not_in:'.implode(',', ProductVariantService::WEIGHT_UNITS),
+                        fn (?Product $record): bool => $record?->product_group_id !== null,
+                    )
                     ->options([
                         'packet' => 'باكت',
                         'kg' => 'كيلوجرام',
@@ -123,6 +153,7 @@ class ConsumableProductResource extends Resource
                 Toggle::make('legacy')
                     ->label('غير نشط')
                     ->default(false),
+                ...KitchenDisplayFields::components(),
             ]);
     }
 
@@ -200,13 +231,26 @@ class ConsumableProductResource extends Resource
             ->filters([
                 SelectFilter::make('category_id')
                     ->label('الفئة')
-                    ->options(Category::all()->pluck('name', 'id')),
+                    ->options(Category::query()->pluck('name', 'id')),
                 SelectFilter::make('printers')
                     ->label('الطابعة')
                     ->relationship('printers', 'name')
                     ->multiple(),
                 TernaryFilter::make('legacy')
                     ->label('غير نشط'),
+                // Variant SKUs are managed from their group (الموديلات); hide them here by default.
+                TernaryFilter::make('variants')
+                    ->label('مقاسات/ألوان الموديلات')
+                    ->placeholder('الكل')
+                    ->trueLabel('المتغيرات فقط')
+                    ->falseLabel('بدون المتغيرات')
+                    ->default(false)
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('product_group_id'),
+                        false: fn (Builder $query) => $query->whereNull('product_group_id'),
+                        blank: fn (Builder $query) => $query,
+                    )
+                    ->visible(fn (): bool => app(FeatureService::class)->variantsEnabled()),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -215,6 +259,7 @@ class ConsumableProductResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    PrintLabelsAction::bulk(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

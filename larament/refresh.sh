@@ -1,3 +1,4 @@
+# Ensure scheduler cron entry exists: * * * * * cd /var/www/turbo_restaurant/larament && php artisan schedule:run >> /dev/null 2>&1
 php artisan config:clear
 php artisan cache:clear
 php artisan config:cache

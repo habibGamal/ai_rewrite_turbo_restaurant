@@ -1,21 +1,8 @@
 @php
     use App\Enums\SettingKey;
     use Illuminate\Support\Facades\Storage;
-    use App\Enums\OrderType;
 
-    // Order type mapping
-    $getOrderTypeString = function ($type) {
-        $typeMap = [
-            'dine_in' => 'صالة',
-            'takeaway' => 'تيك أواي',
-            'delivery' => 'دليفري',
-            'companies' => 'شركات',
-            'talabat' => 'طلبات',
-            'web_delivery' => 'اونلاين دليفري',
-            'web_takeaway' => 'اونلاين تيك أواي',
-        ];
-        return $typeMap[$type->value] ?? $type->value;
-    };
+    $display = $order->display();
 
     $logoPath =
         setting(SettingKey::RESTAURANT_PRINT_LOGO) !== ''
@@ -142,25 +129,29 @@
         <p>الكاشير : {{ $order->user?->email }}</p>
         <p>تاريخ الطلب : {{ $orderDate }}</p>
         <p>تاريخ الطباعة : {{ $printDate }}</p>
-        <p>نوع الطلب : {{ $getOrderTypeString($order->type) }} </p>
+        <p>نوع الطلب : {{ $display->label }} </p>
 
         {{-- Conditional fields based on order type --}}
-        @if ($order->type === OrderType::DINE_IN && $order->dine_table_number)
+        @if ($display->showTable && $order->dine_table_number)
             <p>طاولة رقم {{ $order->dine_table_number }}</p>
         @endif
 
         {{-- Takeaway: show customer name and phone --}}
-        @if (in_array($order->type->value, ['takeaway', 'web_takeaway']))
+        @if ($display->showCustomer && $order->customer && ! $display->showAddress && ! $display->showDriver)
             <p>اسم العميل : {{ $order->customer?->name ?? '-' }}</p>
             <p>رقم الهاتف : {{ $order->customer?->phone ?? '-' }}</p>
         @endif
 
         {{-- Delivery: show phone, name, address, driver --}}
-        @if (in_array($order->type->value, ['delivery', 'web_delivery']))
+        @if ($display->showAddress || $display->showDriver)
             <p>رقم الهاتف : {{ $order->customer?->phone ?? '-' }}</p>
             <p>اسم العميل : {{ $order->customer?->name ?? '-' }}</p>
-            <p>العنوان : {{ $order->customer?->address ?? '-' }}</p>
-            <p>السائق : {{ $order->driver?->name ?? '-' }}</p>
+            @if ($display->showAddress)
+                <p>العنوان : {{ $order->customer?->address ?? '-' }}</p>
+            @endif
+            @if ($display->showDriver)
+                <p>السائق : {{ $order->driver?->name ?? '-' }}</p>
+            @endif
         @endif
 
         <table>
@@ -177,9 +168,9 @@
             <tbody>
                 @foreach ($items as $item)
                     @php
-                        $itemSubtotal = $item->quantity * $item->price;
-                        $itemDiscount = $item->item_discount ?? 0;
-                        $itemTotal = $itemSubtotal - $itemDiscount;
+                        $itemSubtotal = $receiptView['restaurant_lines'][$item->id]['subtotal'];
+                        $itemDiscount = $receiptView['restaurant_lines'][$item->id]['discount'];
+                        $itemTotal = $receiptView['restaurant_lines'][$item->id]['total'];
                     @endphp
                     <tr>
                         <td class="product-cell">{{ $item->product->name }}</td>

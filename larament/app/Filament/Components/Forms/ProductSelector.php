@@ -91,17 +91,21 @@ class ProductSelector extends Select
                 }
 
                 // Prepare new item data
-                $price = $product->cost ?? $product->price;
+                $price = $product->cost ?? $product->price ?? 0;
                 $quantity = 1;
                 $total = $quantity * $price;
 
                 $newItem = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'barcode' => $product->barcode,
                     'unit' => Product::formatUnit($product->unit),
                     'quantity' => $quantity,
                     'price' => $price,
                     'total' => $total,
+                    'unit_cost' => $price,
+                    'total_cost' => $total,
+                    'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
                 ];
 
                 // Add additional props if callback is provided
@@ -117,15 +121,64 @@ class ProductSelector extends Select
                 // Recalculate total
                 $invoiceTotal = 0;
                 foreach ($currentItems as $item) {
-                    $invoiceTotal += $item['total'] ?? 0;
+                    $invoiceTotal += $item['total'] ?? $item['total_cost'] ?? 0;
                 }
                 $set('total', $invoiceTotal);
+                $set('total_cost', $invoiceTotal);
 
                 // Reset the select
                 $set('product_selector', null);
 
             })
             ->dehydrated(false); // Don't save this field's value
+    }
+
+    /**
+     * Add a scanned product to the items list: a new row with the scanned quantity,
+     * or more quantity on the row that already holds this product.
+     */
+    public static function addScannedProduct(Product $product, float $quantity, Set $set, Get $get, ?callable $additionalProps = null): void
+    {
+        $items = $get('items') ?? [];
+        $found = false;
+
+        foreach ($items as $key => $item) {
+            if ((int) ($item['product_id'] ?? 0) === $product->id) {
+                $newQuantity = (float) ($item['quantity'] ?? 0) + $quantity;
+                $unitCost = (float) ($item['price'] ?? $item['unit_cost'] ?? 0);
+                $lineTotal = $newQuantity * $unitCost;
+                $items[$key]['quantity'] = $newQuantity;
+                $items[$key]['total'] = $lineTotal;
+                $items[$key]['total_cost'] = $lineTotal;
+                $found = true;
+                break;
+            }
+        }
+
+        if (! $found) {
+            $price = (float) ($product->cost ?? $product->price ?? 0);
+            $newItem = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'barcode' => $product->barcode,
+                'unit' => Product::formatUnit($product->unit),
+                'quantity' => $quantity,
+                'price' => $price,
+                'total' => $quantity * $price,
+                'unit_cost' => $price,
+                'total_cost' => $quantity * $price,
+                'stock_quantity' => $product->inventoryItem ? (float) $product->inventoryItem->quantity : 0.0,
+            ];
+            if ($additionalProps) {
+                $newItem = array_merge($newItem, $additionalProps($product));
+            }
+            $items[] = $newItem;
+        }
+
+        $set('items', $items);
+        $totalSum = collect($items)->sum(fn ($item) => (float) ($item['total'] ?? $item['total_cost'] ?? 0));
+        $set('total', $totalSum);
+        $set('total_cost', $totalSum);
     }
 
     public static function make(?string $name = 'product_selector'): static

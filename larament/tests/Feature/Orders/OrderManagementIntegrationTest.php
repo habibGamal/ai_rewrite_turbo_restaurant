@@ -2,16 +2,18 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
-use App\Events\Orders\OrderCompleted;
-use App\Events\Orders\OrderCreated;
+use App\Events\Orders\OrderCompletedBroadcast;
+use App\Events\Orders\OrderCreatedBroadcast;
+use App\Exceptions\OrderException;
 use App\Models\Customer;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shift;
 use App\Models\User;
+use App\Orders\OrderOpening;
+use App\Services\Orders\OrderOpeningService;
 use App\Services\Orders\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -21,9 +23,6 @@ uses(RefreshDatabase::class);
 describe('Order Management Integration', function () {
     beforeEach(function () {
         Event::fake();
-
-        // Register the OrderServiceProvider for dependency injection
-        app()->register(\App\Providers\OrderServiceProvider::class);
 
         $this->orderService = app(OrderService::class);
         $this->user = User::factory()->create();
@@ -40,10 +39,10 @@ describe('Order Management Integration', function () {
         it('creates, updates, and completes a dine-in order', function () {
             // 1. Create order
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -51,10 +50,10 @@ describe('Order Management Integration', function () {
             expect($order)->toBeInstanceOf(Order::class)
                 ->and($order->status)->toBe(OrderStatus::PROCESSING)
                 ->and($order->payment_status)->toBe(PaymentStatus::PENDING)
-                ->and($order->type)->toBe(OrderType::DINE_IN)
+                ->and($order->type)->toBe('dine_in')
                 ->and($order->dine_table_number)->toBe('T001');
 
-            Event::assertDispatched(OrderCreated::class);
+            Event::assertDispatched(OrderCreatedBroadcast::class);
 
             // 2. Add items to order
             $itemsData = [
@@ -92,19 +91,19 @@ describe('Order Management Integration', function () {
                 ->and($order->payments)->toHaveCount(1)
                 ->and($order->payments->first()->amount)->toBe('45.00');
 
-            Event::assertDispatched(OrderCompleted::class);
+            Event::assertDispatched(OrderCompletedBroadcast::class);
         });
 
         it('creates and completes a takeaway order', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
-                userId: $this->user->id
+                userId: $this->user->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
 
-            expect($order->type)->toBe(OrderType::TAKEAWAY)
+            expect($order->type)->toBe('takeaway')
                 ->and($order->dine_table_number)->toBeNull();
 
             // Add items and complete
@@ -128,10 +127,10 @@ describe('Order Management Integration', function () {
 
         it('handles multiple payment methods', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DELIVERY,
+                typeCode: 'delivery',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                driverId: $this->driver->id
+                driverId: $this->driver->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -191,6 +190,11 @@ describe('Order Management Integration', function () {
         });
 
         it('applies different discount types', function () {
+            // A discount is capped at the items, so the order needs some.
+            $this->orderService->updateOrderItems($this->order->id, [
+                ['product_id' => $this->product->id, 'quantity' => 2, 'price' => $this->product->price],
+            ]);
+
             // Percentage discount
             $order = $this->orderService->applyDiscount($this->order->id, 15.0, 'percentage');
             $percentageDiscount = $order->discount;
@@ -217,21 +221,21 @@ describe('Order Management Integration', function () {
         });
 
         it('validates table requirements for dine-in orders', function () {
-            expect(fn () => new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+            expect(fn () => app(OrderOpeningService::class)->open(new CreateOrderDTO(
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
-                userId: $this->user->id
-            ))->toThrow(InvalidArgumentException::class, 'Table number is required for dine-in orders');
+                userId: $this->user->id,
+            )))->toThrow(OrderException::class, 'رقم الطاولة مطلوب');
         });
     });
 
     describe('Order Calculations', function () {
         it('calculates order totals correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $this->shift->id,
                 userId: $this->user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);
@@ -265,9 +269,9 @@ describe('Order Management Integration', function () {
 
         it('calculates profit correctly', function () {
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::TAKEAWAY,
+                typeCode: 'takeaway',
                 shiftId: $this->shift->id,
-                userId: $this->user->id
+                userId: $this->user->id,
             );
 
             $order = $this->orderService->createOrder($createOrderDTO);

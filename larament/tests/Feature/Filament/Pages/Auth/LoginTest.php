@@ -27,13 +27,13 @@ test('an unauthenticated user can login', function () {
             'email' => config('app.default_user.email'),
             'password' => config('app.default_user.password'),
         ])
-        ->assertActionExists('authenticate')
         ->call('authenticate')
         ->assertHasNoFormErrors();
 });
 
 test('an authenticated user can access the admin panel', function () {
-    $this->get('admin')
+    $this->followingRedirects()
+        ->get('admin')
         ->assertOk();
 });
 

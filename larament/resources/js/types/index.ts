@@ -3,16 +3,20 @@ export interface User {
   name: string;
   email: string;
   email_verified_at?: string;
-  role: string;
-  canApplyDiscounts?: boolean;
-  canCancelOrders?: boolean;
-  canChangeOrderItems?: boolean;
+  roles?: string[];
+  permissions?: string[];
+  isAdmin?: boolean;
 }
 
 export interface Category {
   id: number;
   name: string;
+  parent_id?: number | null;
+  blocked_order_type_codes?: string[];
   products: Product[];
+  children?: Category[];
+  /** Retail variant group tiles; only sent when the variants feature is on. */
+  groups?: ProductGroupTile[];
 }
 
 export interface Product {
@@ -20,11 +24,46 @@ export interface Product {
   category_id: number;
   name: string;
   price: number;
-  cost: number;
+  /** Not sent for variant SKUs. */
+  cost?: number;
   type: string;
   unit: string;
   legacy: boolean;
-  barcode?: string;
+  barcode?: string | null;
+  product_group_id?: number | null;
+  variant_label?: string | null;
+}
+
+export interface ProductOptionValueTile {
+  id: number;
+  value: string;
+  color_hex: string | null;
+}
+
+export interface ProductOptionTile {
+  id: number;
+  name: string;
+  values: ProductOptionValueTile[];
+}
+
+/** One sellable SKU of a variant group, as the POS receives it. */
+export interface VariantSku extends Product {
+  product_group_id: number;
+  variant_label: string | null;
+  option_value_ids: number[];
+  /** Quantity in the warehouse the POS deducts this SKU from. */
+  stock: number;
+}
+
+export interface ProductGroupTile {
+  id: number;
+  name: string;
+  image: string | null;
+  category_id: number;
+  min_price: number;
+  max_price: number;
+  options: ProductOptionTile[];
+  skus: VariantSku[];
 }
 
 export interface Customer {
@@ -60,6 +99,12 @@ export interface OrderItem {
   item_discount: number;
   item_discount_type?: string;
   item_discount_percent?: number;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
   product: Product;
 }
 
@@ -84,24 +129,155 @@ export interface OrderItemChange {
   updated_at: string;
 }
 
+export interface OrderDisplay {
+  code: string;
+  label: string;
+  color: string;
+  icon: string;
+  showTable: boolean;
+  showCustomer: boolean;
+  showAddress: boolean;
+  showDriver: boolean;
+  chargesService: boolean;
+  chargesDeliveryFee: boolean;
+}
+
+export interface TabPresentation {
+  body: 'cards' | 'inbox' | 'floor' | 'instant';
+  creation: 'immediate' | 'choose_table' | 'none' | 'instant';
+  statuses: string[];
+  cardTitle: 'table' | 'order_number';
+}
+
+export type TableShape = 'square' | 'round';
+
+export interface FloorRect {
+  col: number;
+  row: number;
+  colSpan: number;
+  rowSpan: number;
+  [key: string]: any;
+}
+
+export interface FloorTable extends FloorRect {
+  number: string;
+  capacity: number;
+  shape?: TableShape;
+  zone: string;
+  active: boolean;
+}
+
+export interface FloorSection extends FloorRect {
+  name: string;
+  zone: string;
+  color: string;
+}
+
+export interface TableLabelConfig {
+  prefix: string;
+  showCapacity: boolean;
+  showOrderNumber: boolean;
+  showTimer: boolean;
+}
+
+export interface FloorLayout {
+  version: number;
+  enabled: boolean;
+  columns: number;
+  rows: number;
+  tables: FloorTable[];
+  sections: FloorSection[];
+  tableLabel?: TableLabelConfig;
+  [key: string]: any;
+}
+export interface InstantCartCustomer {
+  id: number;
+  name: string;
+  phone: string;
+}
+
+export interface InstantCartDiscount {
+  value: number;
+  type: 'percent' | 'value';
+}
+
+export interface InstantLastSale {
+  id: number;
+  order_number: number;
+  total: number;
+  change: number;
+}
+
+export interface InstantTabPayload {
+  categories: Category[];
+  lastSale: InstantLastSale | null;
+  heldCount: number;
+  /** Catalogue too big to send: categories only, products come from the server search. */
+  remoteCatalog?: boolean;
+  credit: {
+    allow_partial_payment: boolean;
+    allow_pay_later: boolean;
+    require_customer_for_credit: boolean;
+  };
+  can: { discount: boolean; changeItems: boolean; returns?: boolean; returnWithoutRestock?: boolean };
+}
+
+export interface CashierTab {
+  key: string;
+  kind: 'type' | 'system';
+  code: string | null;
+  label: string;
+  color: string;
+  icon: string;
+  visible: boolean;
+  forcedVisible: boolean;
+  layout?: FloorLayout;
+  occupancy?: Record<string, { id: number; order_number: number; created_at: string }>;
+  presentation?: TabPresentation;
+  instant?: InstantTabPayload;
+  display?: OrderDisplay;
+  guests_mode?: GuestsMode;
+}
+
+export type GuestsMode = 'off' | 'optional' | 'required';
+
+export interface ChangeTypeOption {
+  code: string;
+  label: string;
+  showTable: boolean;
+}
+
+export interface OrderCreditFlags {
+  allow_partial_payment: boolean;
+  allow_pay_later: boolean;
+  require_customer_for_credit: boolean;
+}
+
 export interface Order {
   id: number;
+  terminal_id?: number | null;
   customer_id?: number;
   service_rate?: number;
   driver_id?: number;
   user_id: number;
   shift_id: number;
-  type: 'dine_in' | 'takeaway' | 'delivery' | 'companies' | 'talabat' | 'web_delivery' | 'web_takeaway';
+  type: string;
   status: 'pending' | 'processing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
   sub_total: number;
+  fees_total?: number | string;
+  equipment_total?: number | string;
   tax: number;
   service: number;
   discount: number;
   temp_discount_percent: number;
   total: number;
   profit: number;
+  /** Custom fee lines («رسوم إضافية»); their sum is fees_total. */
+  fees?: OrderFee[];
   payment_status: 'pending' | 'partial_paid' | 'full_paid';
   dine_table_number?: string;
+  guests_count?: number | null;
+  guests_mode?: GuestsMode;
   kitchen_notes?: string;
   order_notes?: string;
   order_number: string;
@@ -112,10 +288,69 @@ export interface Order {
   updated_at: string;
   customer?: Customer;
   driver?: Driver;
+  credit?: OrderCreditFlags;
   items: OrderItem[];
   item_changes?: OrderItemChange[];
   payments: Payment[];
   user?: User;
+  display?: OrderDisplay;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
+  receiptPayment?: ReceiptPayment;
+  receiptView?: ReceiptView;
+}
+
+export interface OrderFee {
+  id: number;
+  order_id: number;
+  name: string;
+  amount: number | string;
+  user_id?: number | null;
+  created_at?: string;
+}
+
+export interface ReceiptView {
+  equipment_lines?: { name: string; quantity: number; price: number; total: number }[];
+  restaurant_total: number;
+  external_total: number;
+  guest_total: number;
+  external_orders: { seller_name: string; total: number; items: { name: string; quantity: number; price: number; total: number }[] }[];
+}
+
+export interface ExternalOrder {
+  id: number;
+  external_seller_id: number;
+  seller_name: string;
+  status: string;
+  total: number;
+  items: { id: number; external_product_id: number | null; name: string; quantity: number; price: number; total: number }[];
+}
+
+export interface ReceiptPayment {
+  paid: number;
+  remaining: number;
+  partial: boolean;
+}
+
+export interface Receivable {
+  id: number;
+  order_number: string;
+  created_at: string;
+  type: string;
+  payment_status: Order['payment_status'];
+  customer: {
+    id: number;
+    name: string;
+    phone: string;
+  } | null;
+  display: OrderDisplay;
+  total: number;
+  paid: number;
+  remaining: number;
 }
 
 export interface OrderItemData {
@@ -128,6 +363,12 @@ export interface OrderItemData {
   item_discount?: number;
   item_discount_type?: string;
   item_discount_percent?: number;
+  kitchen_status?: 'ready' | 'in_progress' | null;
+  kitchen_progress?: {
+    done: number;
+    total: number;
+    status: 'ready' | 'in_progress';
+  } | null;
   product: Product;
 }
 
@@ -149,26 +390,87 @@ export type OrderItemAction =
   | { type: 'changeNotes'; id: number; notes: string; user: User }
   | { type: 'changeItemDiscount'; id: number; discount: number; discountType: string; discountPercent?: number; user: User }
   | { type: 'delete'; id: number; user: User }
-  | { type: 'addByBarcode'; barcode: string; products: Product[]; scalePrefix?: string; user: User }
+  | { type: 'addScanned'; product: Product; quantity: number; user: User }
+  | { type: 'swap'; id: number; product: Product; user: User }
   | { type: 'init'; orderItems: OrderItemData[]; user: User };
+
+export interface FeatureFlags {
+  revenues: boolean;
+  custom_fees: boolean;
+  outsourced_orders: boolean;
+  equipment: boolean;
+  variants?: boolean;
+  multi_terminal?: boolean;
+  deferred_payment?: boolean;
+  returns?: boolean;
+}
+
+export type ModuleKey =
+  | 'restaurant'
+  | 'delivery'
+  | 'web_orders'
+  | 'manufacturing'
+  | 'external_sellers'
+  | 'retail';
+
+export type BusinessType =
+  | 'restaurant'
+  | 'cafe'
+  | 'bakery'
+  | 'fashion'
+  | 'grocery'
+  | 'general_retail';
 
 export type PageProps<T = {}> = T & {
   auth: {
     user: User;
   };
+  features?: FeatureFlags;
+  modules?: ModuleKey[];
+  businessType?: BusinessType;
   flash?: {
     success?: string;
     error?: string;
   };
   receiptFooter?: string;
   scaleBarcodePrefix?: string;
+  tabsOrientation?: 'horizontal' | 'vertical';
+  [key: string]: unknown;
 };
 
 export interface ManageOrderProps extends PageProps {
   order: Order;
+  orderDisplay: OrderDisplay;
+  changeTypeOptions: ChangeTypeOption[];
   categories: Category[];
   drivers: Driver[];
   regions: Region[];
+  externalOrders: ExternalOrder[];
+  sellers: { id: number; name: string; products: { id: number; name: string; price: number | string }[] }[];
+  guestDue: number;
+  canAddExternalOrder: boolean;
+  /** Custom fees are on and this order type may carry them. */
+  canAddFees?: boolean;
+  /** Fee names used before on this install, most used first. */
+  feeSuggestions?: string[];
+  credit?: OrderCreditFlags;
+  equipmentLines?: OrderEquipmentLine[];
+  equipmentOptions?: EquipmentOption[];
+}
+
+export interface OrderEquipmentLine {
+  id: number;
+  equipment_id: number | null;
+  name: string;
+  quantity: number;
+  unit_price: number | string;
+  total: number | string;
+}
+
+export interface EquipmentOption {
+  id: number;
+  name: string;
+  price: number;
 }
 
 export interface ExpenseType {

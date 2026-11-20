@@ -3,7 +3,9 @@
 namespace App\Filament\Components\Forms;
 
 use App\Enums\ProductType;
+use App\Models\Category;
 use App\Models\Product;
+use App\Services\Products\RecipeCycleDetectionService;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
@@ -29,7 +31,7 @@ class ProductComponentSelector extends Select
 
                 return $products->mapWithKeys(function ($product) {
                     $cost = $product->cost ?? 0;
-                    $categoryName = $product->category ? $product->category->name : 'بدون فئة';
+                    $categoryName = $product->category instanceof Category ? $product->category->name : 'بدون فئة';
                     $typeLabel = match ($product->type->value) {
                         'raw_material' => 'مادة خام',
                         'consumable' => 'استهلاكي',
@@ -42,7 +44,7 @@ class ProductComponentSelector extends Select
                 });
             })
             ->live()
-            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+            ->afterStateUpdated(function ($state, Set $set, Get $get, $record) {
                 if (! $state) {
                     return;
                 }
@@ -64,6 +66,30 @@ class ProductComponentSelector extends Select
                         ->send();
 
                     // Reset the select
+                    $set('component_selector', null);
+
+                    return;
+                }
+
+                // Check for cyclic dependency
+                $newComponentIds = array_merge(
+                    array_map('intval', $existingComponentIds),
+                    [(int) $product->id]
+                );
+
+                $cycle = app(RecipeCycleDetectionService::class)->detectCycleForProduct(
+                    $record?->id,
+                    $newComponentIds
+                );
+
+                if ($cycle) {
+                    Notification::make()
+                        ->title('تحذير: تبعية دائرية')
+                        ->body('لا يمكن إضافة هذا المكون لوجود تبعية دائرية: '.implode(' ← ', $cycle))
+                        ->danger()
+                        ->persistent()
+                        ->send();
+
                     $set('component_selector', null);
 
                     return;

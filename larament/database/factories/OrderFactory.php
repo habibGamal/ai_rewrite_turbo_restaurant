@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Shift;
@@ -22,7 +21,7 @@ class OrderFactory extends Factory
             'user_id' => User::factory(),
             'shift_id' => Shift::factory(),
             'status' => OrderStatus::PROCESSING->value,
-            'type' => OrderType::DINE_IN->value,
+            'type' => 'dine_in',
             'sub_total' => $this->faker->randomFloat(2, 10, 200),
             'tax' => $this->faker->randomFloat(2, 0, 20),
             'service' => $this->faker->randomFloat(2, 0, 20),

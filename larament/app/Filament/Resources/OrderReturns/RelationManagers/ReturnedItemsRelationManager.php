@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\OrderReturns\RelationManagers;
 
+use App\Models\OrderReturnItem;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReturnedItemsRelationManager extends RelationManager
 {
@@ -28,11 +30,15 @@ class ReturnedItemsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('orderItem.product.name')
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(OrderReturnItem::LINE_NAME_RELATIONS))
             ->columns([
-                TextColumn::make('orderItem.product.name')
+                TextColumn::make('line_name')
                     ->label('المنتج')
-                    ->searchable(),
+                    ->state(fn (OrderReturnItem $record): string => $record->lineName())
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $inner) => $inner
+                        ->whereHas('orderItem.product', fn (Builder $product) => $product->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('orderFee', fn (Builder $fee) => $fee->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('orderEquipment', fn (Builder $line) => $line->where('name', 'like', "%{$search}%")))),
 
                 TextColumn::make('quantity')
                     ->label('الكمية المرتجعة')
@@ -42,13 +48,15 @@ class ReturnedItemsRelationManager extends RelationManager
                     ->label('مبلغ الاسترجاع')
                     ->money('EGP'),
 
-                TextColumn::make('orderItem.quantity')
+                TextColumn::make('original_quantity')
                     ->label('الكمية الأصلية')
+                    ->state(fn (OrderReturnItem $record) => $record->orderItem?->quantity ?? $record->orderEquipment?->quantity)
                     ->numeric()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('orderItem.price')
+                TextColumn::make('original_price')
                     ->label('السعر الأصلي')
+                    ->state(fn (OrderReturnItem $record) => $record->orderItem?->price ?? $record->orderEquipment?->unit_price ?? $record->orderFee?->amount)
                     ->money('EGP')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

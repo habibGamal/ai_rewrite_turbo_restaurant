@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\ProductType;
-use App\Enums\UserRole;
 use App\Filament\Resources\Printers\Pages\CreatePrinter;
 use App\Filament\Resources\Printers\Pages\EditPrinter;
 use App\Filament\Resources\Printers\Pages\ListPrinters;
@@ -10,6 +9,8 @@ use App\Models\Category;
 use App\Models\Printer;
 use App\Models\Product;
 use App\Models\User;
+use App\PrintAgent\PrintAgentJob;
+use App\PrintAgent\PrintAgentQueue;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Support\Str;
@@ -18,7 +19,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -386,4 +387,76 @@ it('created_at and updated_at are toggleable and hidden by default', function ()
     livewire(ListPrinters::class)
         ->assertTableColumnExists('created_at')
         ->assertTableColumnExists('updated_at');
+});
+
+// Turbo Label Print Agent Tests
+it('can create and update a printer configured to print via Turbo Label without ip_address', function () {
+    livewire(CreatePrinter::class)
+        ->fillForm([
+            'name' => 'طابعة المشويات',
+            'print_via' => Printer::PRINT_VIA_AGENT,
+            'ip_address' => null,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $printer = Printer::query()->where('name', 'طابعة المشويات')->sole();
+    expect($printer->printsViaAgent())->toBeTrue()
+        ->and($printer->ipAddress())->toBeNull();
+
+    $printer->forceFill(['agent_info' => ['printers' => ['Kitchen-XP80']]])->save();
+
+    livewire(EditPrinter::class, ['record' => $printer->getRouteKey()])
+        ->fillForm([
+            'print_via' => Printer::PRINT_VIA_AGENT,
+            'agent_printer' => 'Kitchen-XP80',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($printer->fresh()->agentPrinter())->toBe('Kitchen-XP80');
+});
+
+it('displays Turbo Label and agent printer name on the printers list', function () {
+    $printer = Printer::factory()->create([
+        'name' => 'طابعة المطبخ',
+        'ip_address' => null,
+        'print_via' => Printer::PRINT_VIA_AGENT,
+        'agent_printer' => 'Kitchen-XP80',
+    ]);
+
+    livewire(ListPrinters::class)
+        ->assertCanSeeTableRecords([$printer])
+        ->assertSee('Turbo Label · Kitchen-XP80');
+});
+
+it('can pair, test, and unpair Turbo Label from the printers list', function () {
+    config(['print_agent.wait_seconds' => 0]);
+
+    $printer = Printer::factory()->create([
+        'name' => 'طابعة العصائر',
+        'ip_address' => null,
+        'print_via' => Printer::PRINT_VIA_AGENT,
+        'agent_printer' => 'Drinks-XP80',
+    ]);
+
+    livewire(ListPrinters::class)
+        ->callTableAction('pairAgent', $printer)
+        ->assertNotified();
+
+    $printer->refresh();
+    expect($printer->agentPaired())->toBeTrue();
+
+    app(PrintAgentQueue::class)->seen($printer);
+
+    livewire(ListPrinters::class)
+        ->callTableAction('testAgent', $printer)
+        ->assertNotified();
+
+    expect(PrintAgentJob::query()->where('printer_id', $printer->id)->where('kind', 'test')->exists())->toBeTrue();
+
+    livewire(ListPrinters::class)
+        ->callTableAction('unpairAgent', $printer);
+
+    expect($printer->fresh()->agentPaired())->toBeFalse();
 });

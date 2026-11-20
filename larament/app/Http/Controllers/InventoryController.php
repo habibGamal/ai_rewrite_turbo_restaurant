@@ -34,6 +34,10 @@ class InventoryController extends Controller
      */
     public function toggleDay(): JsonResponse
     {
+        if (! auth()->user()->can('inventory.toggle_day')) {
+            abort(403, 'غير مسموح بفتح أو إغلاق يوم المخزون');
+        }
+
         try {
             $currentStatus = $this->inventoryService->dayStatus();
 

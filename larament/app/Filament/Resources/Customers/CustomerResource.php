@@ -8,7 +8,6 @@ use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
 use App\Filament\Resources\Customers\Pages\ViewCustomer;
 use App\Filament\Resources\Customers\RelationManagers\OrdersRelationManager;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Customer;
 use App\Models\Region;
 use Exception;
@@ -36,8 +35,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CustomerResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Customer::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
@@ -48,7 +45,7 @@ class CustomerResource extends Resource
 
     protected static ?string $pluralModelLabel = 'العملاء';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 2;
 

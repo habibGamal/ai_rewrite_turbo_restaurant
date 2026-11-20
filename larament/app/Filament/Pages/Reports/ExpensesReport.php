@@ -4,14 +4,22 @@ namespace App\Filament\Pages\Reports;
 
 use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
+use App\Filament\Widgets\ExpensesRevenuesSummaryWidget;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftExpensesTable;
+use App\Filament\Widgets\PeriodShiftRevenuesDetailsTable;
+use App\Services\FeatureService;
 use App\Services\ShiftsReportService;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Schema;
 
+/**
+ * «تقرير المصروفات والإيرادات» while the revenues feature is on (summary with
+ * the computed order revenue line, revenue rows, then expenses); just
+ * «تقرير المصروفات» as before while it is off.
+ */
 class ExpensesReport extends BaseDashboard
 {
     use HasFiltersForm,ViewerAccess;
@@ -26,9 +34,24 @@ class ExpensesReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير المصروفات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 5;
 
     protected ShiftsReportService $shiftsReportService;
+
+    public static function getNavigationLabel(): string
+    {
+        return self::label();
+    }
+
+    public function getTitle(): string
+    {
+        return self::label();
+    }
+
+    private static function label(): string
+    {
+        return app(FeatureService::class)->revenuesEnabled() ? 'تقرير المصروفات والإيرادات' : 'تقرير المصروفات';
+    }
 
     public function boot(): void
     {
@@ -65,6 +88,15 @@ class ExpensesReport extends BaseDashboard
         if ($shiftsCount === 0) {
             return [
                 NoShiftsInPeriodWidget::class,
+            ];
+        }
+
+        if (app(FeatureService::class)->revenuesEnabled()) {
+            return [
+                ExpensesRevenuesSummaryWidget::class,
+                PeriodShiftRevenuesDetailsTable::class,
+                PeriodShiftExpensesTable::class,
+                PeriodShiftExpensesDetailsTable::class,
             ];
         }
 

@@ -2,42 +2,56 @@
 
 namespace App\Services\Orders;
 
+use App\Core\Events\OrderCancelled;
+use App\Core\Events\OrderCompleted;
+use App\Core\Events\OrderItemsChanged;
+use App\Core\Events\OrderTypeChanged;
+use App\Core\OrderExtensions;
 use App\DTOs\Orders\CreateOrderDTO;
-use App\DTOs\Orders\OrderItemDTO;
-use App\DTOs\Orders\PaymentDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use App\Events\Orders\OrderCancelled;
+use App\Enums\PaymentStatus;
 use App\Exceptions\OrderException;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
-use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Models\Shift;
+use App\Orders\OrderOpening;
+use App\Orders\OrderTypeCatalog;
+use App\Orders\Tenders;
+use App\Repositories\OrderItemRepository;
+use App\Repositories\OrderRepository;
+use App\Services\OrderItemChangeService;
+use App\Services\ShiftLoggingService;
+use App\Services\ShiftService;
+use App\Sync\DocumentType;
+use App\Sync\Outbox;
+use Closure;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
-    /**
-     * Setting to allow or disallow operations with insufficient stock
-     * Set to false to prevent orders from being completed when stock is insufficient
-     */
-    public const ALLOW_INSUFFICIENT_STOCK = false;
-
     public function __construct(
-        private readonly OrderRepositoryInterface $orderRepository,
-        private readonly OrderCreationService $orderCreationService,
-        private readonly OrderPaymentService $orderPaymentService,
+        private readonly OrderRepository $orderRepository,
+        private readonly OrderOpeningService $orderOpeningService,
         private readonly OrderCalculationService $orderCalculationService,
-        private readonly TableManagementService $tableManagementService,
         private readonly OrderCompletionService $orderCompletionService,
+        private readonly OrderPaymentService $orderPaymentService,
+        private readonly ShiftService $shiftService,
         private readonly OrderStockConversionService $orderStockConversionService,
+        private readonly OrderItemRepository $orderItemRepository,
+        private readonly OrderItemPricingService $itemPricer,
+        private readonly ShiftLoggingService $shiftLoggingService,
+        private readonly OrderItemChangeService $orderItemChangeService,
+        private readonly OrderTypeCatalog $catalog,
+        private readonly OrderExtensions $extensions,
+        private readonly OrderCategoryBlockService $categoryBlock,
     ) {}
 
     public function createOrder(CreateOrderDTO $createOrderDTO): Order
     {
         return DB::transaction(function () use ($createOrderDTO) {
-            return $this->orderCreationService->create($createOrderDTO);
+            return $this->orderOpeningService->open($createOrderDTO);
         });
     }
 
@@ -49,132 +63,102 @@ class OrderService
     public function getOrderDetails(int $orderId): Order
     {
         $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments']);
+        $order->load(['items.product', 'user', 'customer', 'driver', 'table', 'payments', 'kitchenTicket.items', 'fees']);
 
         return $order;
     }
 
     public function updateOrderItems(int $orderId, array $itemsData): Order
     {
-        return DB::transaction(function () use ($orderId, $itemsData) {
-            $order = Order::where('id', $orderId)
-                ->lockForUpdate()
-                ->firstOrFail();
+        return $this->locked($orderId, 'لا يمكن تعديل الطلب في هذه المرحلة', function (Order $order) use ($itemsData) {
+            $this->assertNewItemsAllowed($order, $itemsData);
+            $oldItems = $this->itemLines($order);
 
-            if (! $order->status->canBeModified()) {
-                throw new OrderException('لا يمكن تعديل الطلب في هذه المرحلة');
-            }
+            $this->orderCalculationService->clearOrderDiscountForItemDiscounts($order, $itemsData);
 
-            $productIds = array_column($itemsData, 'product_id');
-            $products = Product::select(['id', 'cost', 'price'])->whereIn('id', $productIds)->get();
+            $priced = $this->itemPricer->price($itemsData);
 
-            // Check if using item-level discounts and clear order-level discount if needed
-            $hasItemDiscounts = collect($itemsData)->some(fn ($item) => ($item['item_discount'] ?? 0) > 0);
-            if ($hasItemDiscounts && ($order->discount > 0 || $order->temp_discount_percent > 0)) {
-                $this->orderRepository->update($order, [
-                    'discount' => 0,
-                    'temp_discount_percent' => 0,
-                ]);
-            }
+            $this->orderItemRepository->updateOrderItems($order, $priced);
+            $order->refresh();
+            $newItems = $this->itemLines($order);
+            $order->load('items');
+            $order = $this->orderCalculationService->calculateOrderTotals($order);
 
-            $itemsData = array_map(function ($item) use ($products) {
-                $product = $products->firstWhere('id', $item['product_id']);
-                if (! $product) {
-                    throw new OrderException('المنتج غير موجود');
-                }
+            $differences = $this->shiftLoggingService->calculateItemDifferences($oldItems, $newItems);
+            $this->shiftLoggingService->logOrderSave($order->id, $differences);
+            $this->orderItemChangeService->recordChanges($order->id, $differences);
 
-                // Calculate item discount
-                $itemDiscount = 0;
-                $itemDiscountType = $item['item_discount_type'] ?? null;
-                $itemDiscountPercent = $item['item_discount_percent'] ?? null;
+            OrderItemsChanged::dispatch($order, $differences);
 
-                if ($itemDiscountType === 'percent' && $itemDiscountPercent) {
-                    $itemSubtotal = $product->price * $item['quantity'];
-                    $itemDiscount = $itemSubtotal * ($itemDiscountPercent / 100);
-                    $itemDiscount = min($itemDiscount, $itemSubtotal); // Cap at subtotal
-                } elseif (isset($item['item_discount'])) {
-                    $itemSubtotal = $product->price * $item['quantity'];
-                    $itemDiscount = min($item['item_discount'], $itemSubtotal); // Cap at subtotal
-                }
-
-                return [
-                    'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
-                    'price' => (float) $product->price,
-                    'cost' => (float) $product->cost,
-                    'notes' => $item['notes'] ?? null,
-                    'item_discount' => $itemDiscount,
-                    'item_discount_type' => $itemDiscountType,
-                    'item_discount_percent' => $itemDiscountPercent,
-                ];
-            }, $itemsData);
-
-            $itemDTOs = array_map(fn ($item) => OrderItemDTO::fromArray($item), $itemsData);
-
-            return $this->orderCreationService->updateOrderItems($order, $itemDTOs);
+            return $order;
         });
     }
 
     public function linkCustomer(int $orderId, ?int $customerId): Order
     {
-        $order = $this->orderRepository->findByIdOrFail($orderId);
+        return $this->locked($orderId, 'لا يمكن ربط العميل في هذه المرحلة', function (Order $order) use ($customerId) {
+            $this->orderRepository->update($order, ['customer_id' => $customerId]);
+            $order->refresh();
 
-        if (! $order->status->canBeModified()) {
-            throw new OrderException('لا يمكن ربط العميل في هذه المرحلة');
-        }
-
-        $this->orderRepository->update($order, ['customer_id' => $customerId]);
-        $order->refresh();
-
-        // Recalculate totals as delivery cost might change
-        $this->orderCalculationService->calculateOrderTotals($order);
-
-        return $order;
+            // Recalculate totals as delivery cost might change
+            return $this->orderCalculationService->calculateOrderTotals($order);
+        });
     }
 
     public function linkDriver(int $orderId, int $driverId): Order
     {
-        $order = $this->orderRepository->findByIdOrFail($orderId);
+        return $this->locked($orderId, 'لا يمكن ربط السائق في هذه المرحلة', function (Order $order) use ($driverId) {
+            $this->orderRepository->update($order, ['driver_id' => $driverId]);
+            $order->refresh();
 
-        if (! $order->status->canBeModified()) {
-            throw new OrderException('لا يمكن ربط السائق في هذه المرحلة');
-        }
-
-        $this->orderRepository->update($order, ['driver_id' => $driverId]);
-        $order->refresh();
-
-        return $order;
+            return $order;
+        });
     }
 
     public function updateNotes(int $orderId, ?string $kitchenNotes = null, ?string $orderNotes = null): Order
     {
-        $order = $this->orderRepository->findByIdOrFail($orderId);
+        return $this->locked($orderId, null, function (Order $order) use ($kitchenNotes, $orderNotes) {
+            $updateData = [];
+            if ($kitchenNotes !== null) {
+                $updateData['kitchen_notes'] = $kitchenNotes;
+            }
+            if ($orderNotes !== null) {
+                $updateData['order_notes'] = $orderNotes;
+            }
 
-        $updateData = [];
-        if ($kitchenNotes !== null) {
-            $updateData['kitchen_notes'] = $kitchenNotes;
-        }
-        if ($orderNotes !== null) {
-            $updateData['order_notes'] = $orderNotes;
-        }
+            if (! empty($updateData)) {
+                $this->orderRepository->update($order, $updateData);
+                $order->refresh();
+            }
 
-        if (! empty($updateData)) {
-            $this->orderRepository->update($order, $updateData);
+            return $order;
+        });
+    }
+
+    /**
+     * Set (or clear, with null) the number of guests on an open order.
+     */
+    public function updateGuestsCount(int $orderId, ?int $guestsCount): Order
+    {
+        return $this->locked($orderId, 'لا يمكن تعديل الطلب في هذه المرحلة', function (Order $order) use ($guestsCount) {
+            if (! $order->typeRow()->asksForGuests()) {
+                throw new OrderException('هذا النوع من الطلبات لا يسجل عدد الأفراد');
+            }
+
+            if ($guestsCount === null && $order->typeRow()->requiresGuests()) {
+                throw new OrderException('عدد الأفراد إجباري لهذا النوع من الطلبات');
+            }
+
+            $this->orderRepository->update($order, ['guests_count' => $guestsCount]);
             $order->refresh();
-        }
 
-        return $order;
+            return $order;
+        });
     }
 
     public function applyDiscount(int $orderId, float $discount, string $discountType): Order
     {
-        return DB::transaction(function () use ($orderId, $discount, $discountType) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
-
-            if (! $order->status->canBeModified()) {
-                throw new OrderException('لا يمكن تطبيق الخصم في هذه المرحلة');
-            }
-
+        return $this->locked($orderId, 'لا يمكن تطبيق الخصم في هذه المرحلة', function (Order $order) use ($discount, $discountType) {
             return $this->orderCalculationService->applyDiscount($order, $discount, $discountType);
         });
     }
@@ -188,46 +172,96 @@ class OrderService
                 throw new OrderException('الطلب غير متاح للإكمال');
             }
 
-            // Validate stock availability before completing the order
-            // $insufficientItems = $this->orderStockConversionService->validateOrderStockAvailability($order);
-            // if (!empty($insufficientItems) && !self::ALLOW_INSUFFICIENT_STOCK) {
-            //     $itemNames = array_column($insufficientItems, 'product_name');
-            //     throw new OrderException('مخزون غير كافي للمنتجات: ' . implode(', ', $itemNames));
-            // }
+            return $this->finishCompletion($order, $paymentsData, $shouldPrint);
+        });
+    }
 
-            // Complete the order
-            $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
+    /**
+     * The completion path shared by the order screen and instant sale: payments,
+     * OrderCompleting, status, stock removal with real costs, profit and
+     * OrderCompleted. Callers hold a transaction and the order's row lock.
+     *
+     * @param  array<string, mixed>  $paymentsData
+     */
+    public function finishCompletion(Order $order, array $paymentsData, bool $shouldPrint = false): Order
+    {
+        $completedOrder = $this->orderCompletionService->complete($order, $paymentsData, $shouldPrint);
 
-            // Remove stock items after successful completion
-            $stockRemoved = $this->orderStockConversionService->removeStockForCompletedOrder($completedOrder);
+        // Remove stock items after successful completion
+        $this->orderStockConversionService->removeStockWithRealCostsForCompletedOrder($completedOrder);
+        $completedOrder->load('items');
+        $completedOrder->update([
+            'profit' => $this->orderCalculationService->calculateProfit($completedOrder, (float) $completedOrder->total),
+        ]);
+        OrderCompleted::dispatch($completedOrder, $shouldPrint);
 
-            if (! $stockRemoved) {
-                // Log warning but don't fail the transaction as order is already completed
-                Log::warning('Failed to remove stock for completed order', [
-                    'order_id' => $completedOrder->id,
-                ]);
+        return $completedOrder;
+    }
+
+    public function collectRemaining(int $orderId, Tenders $tenders): Order
+    {
+        return DB::transaction(function () use ($orderId, $tenders) {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
+
+            if ($order->status !== OrderStatus::COMPLETED || ! in_array($order->payment_status, [PaymentStatus::PARTIAL_PAID, PaymentStatus::PENDING], true)) {
+                throw new OrderException('لا يمكن تحصيل متبقي إلا لطلب مكتمل وغير مدفوع بالكامل');
             }
 
-            return $completedOrder;
+            if (! $order->typeRow()->allowsCredit()) {
+                throw new OrderException('هذا النوع من الطلبات لا يسمح بتحصيل المتبقي');
+            }
+
+            $shift = $this->shiftService->getCurrentShift();
+
+            if ($shift === null) {
+                throw new OrderException('لا يوجد شيفت مفتوح لتحصيل المتبقي');
+            }
+
+            return $this->orderPaymentService->pay($order, $tenders, $shift->id);
         });
     }
 
     public function cancelOrder(int $orderId, string $reason = ''): Order
     {
         return DB::transaction(function () use ($orderId, $reason) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
+            $order = Order::where('id', $orderId)->lockForUpdate()->firstOrFail();
 
             if (! $order->status->canBeCancelled()) {
                 throw new OrderException('لا يمكن إلغاء الطلب في هذه المرحلة');
             }
 
+            // Cancelling deletes the payments but would keep the refunds, and it
+            // can't tell damaged returned units from unreturned ones.
+            if ($order->returns()->exists()) {
+                throw new OrderException('لا يمكن إلغاء طلب عليه مرتجعات');
+            }
+
+            $order->load('payments.shift');
+
+            $paidInClosedShift = $order->payments->contains(function (mixed $payment): bool {
+                if (! $payment instanceof Payment) {
+                    return false;
+                }
+
+                $shift = $payment->shift;
+
+                return $shift instanceof Shift && $shift->closed;
+            });
+
+            // Cancelling deletes the order's payments; a payment taken in a closed shift would silently
+            // change that shift's cash after it was counted and closed. Block it for every order type.
+            if ($paidInClosedShift) {
+                throw new OrderException('لا يمكن إلغاء الطلب لأن إحدى دفعاته تخص شيفتًا مغلقًا');
+            }
+
+            if ($order->status === OrderStatus::COMPLETED) {
+                shouldDayBeOpen();
+            }
+
             // Store the original status to check if we need to restore stock
             $wasCompleted = $order->status === OrderStatus::COMPLETED;
 
-            // Free table if dine-in
-            if ($order->type->requiresTable() && $order->dine_table_number) {
-                $this->tableManagementService->freeTable($order->dine_table_number);
-            }
+            $order->behavior()->onClosed($order);
 
             // Update order status
             $this->orderRepository->update($order, [
@@ -237,90 +271,108 @@ class OrderService
 
             // Delete any payments
             $order->payments()->delete();
+            Outbox::record(DocumentType::Order, (string) $order->getAttribute('uuid'));
 
             $order->refresh();
 
             // If order was completed, add stock back
             if ($wasCompleted) {
-                $stockRestored = $this->orderStockConversionService->addStockForCancelledOrder($order);
-
-                if (! $stockRestored) {
-                    Log::warning('Failed to restore stock for cancelled order', [
-                        'order_id' => $order->id,
-                    ]);
-                }
+                $this->orderStockConversionService->addStockForCancelledOrder($order);
             }
 
-            // Fire event
-            OrderCancelled::dispatch($order, $reason);
+            // Kitchen ticket cancel and external seller reversal run as
+            // in-transaction listeners: a throw rolls back the whole cancel.
+            OrderCancelled::dispatch($order, $wasCompleted, $reason);
 
             return $order;
-        });
-    }
-
-    public function processOldOrderPayment(int $orderId, PaymentDTO $paymentDTO): Order
-    {
-        return DB::transaction(function () use ($orderId, $paymentDTO) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
-
-            return $this->orderPaymentService->processPayment($order, $paymentDTO);
         });
     }
 
     public function changeOrderType(int $orderId, string $newType, ?string $tableNumber = null): Order
     {
-        return DB::transaction(function () use ($orderId, $newType, $tableNumber) {
-            $order = $this->orderRepository->findByIdOrFail($orderId);
+        return $this->locked($orderId, 'لا يمكن تغيير نوع الطلب في هذه المرحلة', function (Order $order) use ($newType, $tableNumber) {
+            $newTypeRow = $this->catalog->find($newType);
+            foreach ($this->extensions->typeChangeGuards() as $guard) {
+                $guard->assertCanChange($order, $newTypeRow);
+            }
+            $oldType = (string) $order->type;
+            $newBehavior = $this->catalog->behaviorFor($newType);
+            $assignsTable = $newBehavior->display($newTypeRow)->showTable;
 
-            if (! $order->status->canBeModified()) {
-                throw new OrderException('لا يمكن تغيير نوع الطلب في هذه المرحلة');
+            if ($assignsTable && ! $tableNumber) {
+                throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');
             }
 
-            // Handle table management
-            $oldType = $order->type;
-            $newOrderType = OrderType::from($newType);
+            $order->behavior()->onClosed($order);
 
-            // Free old table if switching from dine-in
-            if ($oldType->requiresTable() && $order->dine_table_number) {
-                $this->tableManagementService->freeTable($order->dine_table_number);
-            }
-
-            // Reserve new table if switching to dine-in
-            if ($newOrderType->requiresTable()) {
-                if (! $tableNumber) {
-                    throw new OrderException('رقم الطاولة مطلوب للطلبات الداخلية');
-                }
-                $this->tableManagementService->reserveTable($tableNumber, $order->id);
-            }
-
-            // Update order
             $this->orderRepository->update($order, [
-                'type' => $newOrderType,
-                'dine_table_number' => $newOrderType->requiresTable() ? $tableNumber : null,
+                'type' => $newType,
+                'dine_table_number' => $assignsTable ? $tableNumber : null,
+                // A type that does not ask for guests keeps no count, so reports stay clean.
+                'guests_count' => $newTypeRow->asksForGuests() ? $order->guests_count : null,
             ]);
 
             $order->refresh();
 
+            $newBehavior->onOpened($order, new OrderOpening($tableNumber));
+
             // Recalculate totals as service charges might change
             $this->orderCalculationService->calculateOrderTotals($order);
+            OrderTypeChanged::dispatch($order, $oldType, $newType);
 
             return $order;
         });
     }
 
-    public function getOrderStockRequirements(int $orderId): array
+    /**
+     * @param  list<array<string, mixed>>  $itemsData
+     */
+    private function assertNewItemsAllowed(Order $order, array $itemsData): void
     {
-        $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load('items.product');
+        $existingIds = $order->items()->pluck('product_id')->map(fn (mixed $id): int => (int) $id)->all();
+        $newIds = collect($itemsData)
+            ->pluck('product_id')
+            ->filter(fn (mixed $id): bool => $id !== null && $id !== '')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->reject(fn (int $id): bool => in_array($id, $existingIds, true))
+            ->values()
+            ->all();
 
-        return $this->orderStockConversionService->getOrderStockRequirements($order);
+        $this->categoryBlock->assertCanAdd((string) $order->type, $newIds);
     }
 
-    public function validateOrderStockAvailability(int $orderId): array
+    /**
+     * @param  Closure(Order): Order  $fn
+     */
+    private function locked(int $orderId, ?string $notModifiableMessage, Closure $fn): Order
     {
-        $order = $this->orderRepository->findByIdOrFail($orderId);
-        $order->load('items.product');
+        return DB::transaction(function () use ($orderId, $notModifiableMessage, $fn) {
+            $order = Order::whereKey($orderId)->lockForUpdate()->firstOrFail();
 
-        return $this->orderStockConversionService->validateOrderStockAvailability($order);
+            if ($notModifiableMessage !== null && ! $order->status->canBeModified()) {
+                throw new OrderException($notModifiableMessage);
+            }
+
+            return $fn($order);
+        });
+    }
+
+    /**
+     * @return list<array{product_id: mixed, product_name: string, quantity: mixed, notes: mixed}>
+     */
+    private function itemLines(Order $order): array
+    {
+        return $order->items()->with('product')->get()->map(function ($item): array {
+            $product = $item->getRelation('product');
+
+            return [
+                'product_id' => $item->getAttribute('product_id'),
+                'product_name' => $product instanceof Product ? $product->name : '',
+                'quantity' => $item->getAttribute('quantity'),
+                'notes' => $item->getAttribute('notes'),
+                'price' => (float) $item->getAttribute('price'),
+            ];
+        })->all();
     }
 }

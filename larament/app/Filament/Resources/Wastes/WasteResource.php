@@ -2,18 +2,22 @@
 
 namespace App\Filament\Resources\Wastes;
 
+use App\Enums\WasteReason;
 use App\Filament\Actions\CloseWasteAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
 use App\Filament\Actions\PrintWasteAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\Wastes\Pages\CreateWaste;
 use App\Filament\Resources\Wastes\Pages\EditWaste;
 use App\Filament\Resources\Wastes\Pages\ListWastes;
 use App\Filament\Resources\Wastes\Pages\ViewWaste;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Models\Waste;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\WasteCalculatorService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -31,19 +35,20 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class WasteResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Waste::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-trash';
@@ -68,6 +73,19 @@ class WasteResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?Waste $record): bool => $record?->closed_at !== null),
 
                         TextInput::make('total')
                             ->label('إجمالي قيمة التالف (ج.م)')
@@ -99,14 +117,18 @@ class WasteResource extends Resource
                         ])
                             ->alignStart(),
 
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, Set $set, Get $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product.inventoryItem'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                DocumentBarcodeField::enabled() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية الحالية')
@@ -117,7 +139,9 @@ class WasteResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
-                            ])
+                                TableColumn::make('السبب')
+                                    ->width('170px'),
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
 
@@ -128,6 +152,8 @@ class WasteResource extends Resource
                                     })
                                     ->dehydrated(false)
                                     ->disabled(),
+
+                                ...DocumentBarcodeField::whenEnabled(),
 
                                 TextInput::make('unit')
                                     ->label('الوحدة')
@@ -147,6 +173,7 @@ class WasteResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),
@@ -164,6 +191,11 @@ class WasteResource extends Resource
                                     ->prefix('ج.م')
                                     ->disabled()
                                     ->dehydrated(false),
+
+                                Select::make('reason')
+                                    ->label('السبب')
+                                    ->options(WasteReason::class)
+                                    ->placeholder('بدون سبب'),
                             ])
                             ->defaultItems(0)
                             ->reorderableWithButtons()
@@ -225,6 +257,11 @@ class WasteResource extends Resource
 
                 TextColumn::make('user.name')
                     ->label('المستخدم')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 
@@ -308,14 +345,14 @@ class WasteResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array

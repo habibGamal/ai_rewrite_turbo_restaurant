@@ -2,18 +2,25 @@
 
 namespace App\Filament\Pages\Reports;
 
-use App\Filament\Components\PeriodFilterFormComponent;
+use App\Filament\Components\PeriodWithShiftFilterFormComponent;
 use App\Filament\Traits\ViewerAccess;
 use App\Filament\Widgets\CategoryPerformanceWidget;
 use App\Filament\Widgets\NoProductsSalesInPeriodWidget;
 use App\Filament\Widgets\OrderTypePerformanceWidget;
+use App\Filament\Widgets\ProductGroupSalesWidget;
+use App\Filament\Widgets\ProductsSalesGroupedWidget;
 use App\Filament\Widgets\ProductsSalesStatsWidget;
 use App\Filament\Widgets\ProductsSalesTableWidget;
 use App\Filament\Widgets\TopProductsByProfitWidget;
 use App\Filament\Widgets\TopProductsBySalesWidget;
+use App\Models\Category;
 use App\Services\ProductsSalesReportService;
+use Filament\Forms\Components\Select;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class ProductsSalesPerformanceReport extends BaseDashboard
@@ -30,7 +37,7 @@ class ProductsSalesPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء المنتجات في المبيعات';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 8;
 
     protected ProductsSalesReportService $productsReportService;
 
@@ -43,22 +50,59 @@ class ProductsSalesPerformanceReport extends BaseDashboard
     {
         return $schema
             ->components([
-                PeriodFilterFormComponent::make(
+                ...PeriodWithShiftFilterFormComponent::make(
                     'اختر الفترة الزمنية لعرض أداء المنتجات في المبيعات',
+                    'اختر الشفتات المحددة',
                     'last_30_days',
                     29
                 ),
+                Section::make('التصنيف')
+                    ->description('صفِّ التقرير حسب التصنيف الرئيسي أو الفرعي')
+                    ->columnSpanFull()
+                    ->schema([
+                        Select::make('mainCategoryId')
+                            ->label('التصنيف الرئيسي')
+                            ->placeholder('كل التصنيفات الرئيسية')
+                            ->options(fn (): array => Category::query()
+                                ->whereNull('parent_id')
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('subCategoryId', null)),
+                        Select::make('subCategoryId')
+                            ->label('التصنيف الفرعي')
+                            ->placeholder('كل التصنيفات الفرعية')
+                            ->options(function (Get $get): array {
+                                $mainId = $get('mainCategoryId');
+
+                                return Category::query()
+                                    ->whereNotNull('parent_id')
+                                    ->when(is_numeric($mainId), fn ($query) => $query->where('parent_id', (int) $mainId))
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
+                            ->searchable()
+                            ->live(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
     public function getWidgets(): array
     {
-        $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
-        $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
-        $ordersCount = $this->productsReportService->getOrdersQuery(
-            $startDate,
-            $endDate
-        )->count();
+        $filterType = $this->filters['filterType'] ?? 'period';
+
+        if ($filterType === 'shifts') {
+            $shiftIds = $this->filters['shifts'] ?? [];
+            $ordersCount = $this->productsReportService->getOrdersQuery(null, null, $shiftIds)->count();
+        } else {
+            $startDate = $this->filters['startDate'] ?? now()->subDays(29)->startOfDay()->toDateString();
+            $endDate = $this->filters['endDate'] ?? now()->endOfDay()->toDateString();
+            $ordersCount = $this->productsReportService->getOrdersQuery($startDate, $endDate, null)->count();
+        }
 
         if ($ordersCount === 0) {
             return [
@@ -72,6 +116,8 @@ class ProductsSalesPerformanceReport extends BaseDashboard
             TopProductsByProfitWidget::class,
             OrderTypePerformanceWidget::class,
             CategoryPerformanceWidget::class,
+            ProductGroupSalesWidget::class,
+            ProductsSalesGroupedWidget::class,
             ProductsSalesTableWidget::class,
         ];
     }

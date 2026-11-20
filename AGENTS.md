@@ -12,22 +12,33 @@ This workspace rewrites **turbo_resturant** (AdonisJS) into **larament** (Larave
 
 ## Commands
 
-All commands for larament must use: `cd e:\AI_rewirte\larament; <command>`
+All commands for larament must use: `cd D:/ai_rewrite_turbo_restaurant/larament; <command>`
 
 ### Larament (primary)
 
 | Task | Command |
 |---|---|
 | Quality gate (lint+test+static analysis) | `composer review` |
-| Fix code style (Pint) | `cd e:\AI_rewirte\larament; ./vendor/bin/pint` |
-| Run tests (Pest, parallel) | `cd e:\AI_rewirte\larament; ./vendor/bin/pest --parallel` |
-| Single test file | `cd e:\AI_rewirte\larament; ./vendor/bin/pest tests/Feature/SomeTest.php` |
-| Static analysis (PHPStan level 5) | `cd e:\AI_rewirte\larament; ./vendor/bin/phpstan analyse` |
-| Build frontend | `cd e:\AI_rewirte\larament; npm run build` |
-| E2E tests (Cypress) | `cd e:\AI_rewirte\larament; npm run cypress:run` |
-| Dev (all services) | `cd e:\AI_rewirte\larament; composer dev` |
+| Fix code style (Pint) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pint` |
+| Run tests (Pest, parallel) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pest --parallel` |
+| Single test file | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/pest tests/Feature/SomeTest.php` |
+| Static analysis (PHPStan level 5) | `cd D:/ai_rewrite_turbo_restaurant/larament; ./vendor/bin/phpstan analyse` |
+| Build frontend | `cd D:/ai_rewrite_turbo_restaurant/larament; npm run build` |
+| E2E tests (Cypress) | `cd D:/ai_rewrite_turbo_restaurant/larament; npm run cypress:run` |
+| Dev (all services) | `cd D:/ai_rewrite_turbo_restaurant/larament; composer dev` |
 
 **Never run `php artisan serve`** — the user manages dev servers themselves.
+
+### Claude Code cloud sessions
+
+A fresh cloud container has no `vendor/`. The SessionStart hook (`.claude/hooks/session-start.js`) runs `larament/scripts/cloud-setup.sh` automatically once this lands on the branch the session starts from. If `larament/vendor` is missing (e.g. after checking out a branch), run it yourself:
+
+```bash
+bash larament/scripts/cloud-setup.sh   # ~30 s fresh, instant when vendor/ is current
+cd larament && php vendor/bin/pest --parallel
+```
+
+Why: the cloud proxy blocks GitHub zip downloads, so plain `composer install` falls back to full git clones of all ~200 packages (10+ min). `scripts/composer-prefetch.sh` shallow-fetches only the locked commit of each package into Composer's cache, then `composer install` loads everything from cache. Cloud images ship PHP 8.3, so the script passes `--ignore-platform-req=php` there (the lock targets 8.4; tests run fine on 8.3).
 
 ### manage_operations
 
@@ -64,6 +75,7 @@ All commands for larament must use: `cd e:\AI_rewirte\larament; <command>`
 ## Conventions
 
 - `composer review` is the pre-push quality gate: Pint → Pest → PHPStan
-- FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.github/skills/` for planning/testing patterns
+- FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.claude/skills/` for planning/testing patterns
+- MCP server / ChatGPT, Claude or Gemini connectors: follow `.claude/skills/laravel-mcp-server/`
 - `lang/ar.json` is the primary translation file (Arabic UI)
 - Default seed user: `admin@example.com` / `password`

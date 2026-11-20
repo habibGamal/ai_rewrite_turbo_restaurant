@@ -4,6 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\App\Profile;
 use App\Filament\Pages\Auth\Login;
+use App\Http\Middleware\EnsureModuleScreenEnabled;
+use App\Http\Middleware\RejectBadgeSessions;
+use App\Modules\ModuleFilament;
+use App\Services\FeatureService;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -12,6 +16,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -20,7 +25,9 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Kisame76\FilamentTreeTable\FilamentTreeTablePlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -31,6 +38,18 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(Login::class)
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn (): HtmlString => new HtmlString(
+                    '<div style="text-align:center;margin-top:1rem"><a href="'.e(route('badge.login')).'" style="text-decoration:underline">دخول نقطة البيع بالبادج</a></div>'
+                ),
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => app(FeatureService::class)->labelPrintingEnabled()
+                    ? view('filament.labels.print-script')->render()
+                    : '',
+            )
             ->brandName(config('app.name', 'Turbo'))
             ->brandLogo('/images/turbo_logo.png')
             ->brandLogoHeight('2rem')
@@ -45,6 +64,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->plugin(FilamentTreeTablePlugin::make())
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->globalSearchFieldKeyBindingSuffix()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -53,6 +73,7 @@ class AdminPanelProvider extends PanelProvider
                 // Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            ->plugins(ModuleFilament::plugins())
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
@@ -74,6 +95,9 @@ class AdminPanelProvider extends PanelProvider
                     ->label('إدارة المصروفات')
                     ->collapsible(),
                 NavigationGroup::make()
+                    ->label('إدارة المبيعات')
+                    ->collapsible(),
+                NavigationGroup::make()
                     ->label('إدارة المطعم')
                     ->collapsible(),
                 NavigationGroup::make()
@@ -92,8 +116,13 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            // Persistent so Livewire updates of a hidden screen 404 too.
+            ->middleware([
+                EnsureModuleScreenEnabled::class,
+            ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
+                RejectBadgeSessions::class,
             ]);
     }
 }

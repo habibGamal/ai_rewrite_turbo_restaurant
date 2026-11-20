@@ -2,25 +2,39 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSyncUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property Carbon|null $business_date
+ * @property Carbon|null $start_at
+ * @property Carbon|null $end_at
+ * @property Carbon|null $money_edited_at
+ * @property int $money_edited_count
+ */
 class Shift extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSyncUuid;
 
     protected $fillable = [
+        'uuid',
         'user_id',
         'start_at',
         'end_at',
+        'business_date',
         'start_cash',
         'end_cash',
         'losses_amount',
         'real_cash',
         'has_deficit',
         'closed',
+        'money_edited_at',
+        'money_edited_count',
     ];
 
     protected $casts = [
@@ -30,8 +44,11 @@ class Shift extends Model
         'real_cash' => 'decimal:2',
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'business_date' => 'date',
         'has_deficit' => 'boolean',
         'closed' => 'boolean',
+        'money_edited_at' => 'datetime',
+        'money_edited_count' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -47,6 +64,25 @@ class Shift extends Model
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
+    }
+
+    /** @return HasMany<TerminalSession, $this> */
+    public function terminalSessions(): HasMany
+    {
+        return $this->hasMany(TerminalSession::class);
+    }
+
+    public function revenues(): HasMany
+    {
+        return $this->hasMany(Revenue::class);
+    }
+
+    /**
+     * Expenses or revenues were changed after the shift closed.
+     */
+    public function getMoneyEditedAttribute(): bool
+    {
+        return $this->money_edited_at !== null;
     }
 
     public function getIsActiveAttribute(): bool

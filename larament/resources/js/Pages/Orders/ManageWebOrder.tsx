@@ -1,4 +1,4 @@
-import { Order, Category, User, OrderItemData } from "@/types";
+import { Order, Category, User, OrderItemData, OrderDisplay } from "@/types";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import {
     Badge,
@@ -40,14 +40,19 @@ import OrderItem from "@/Components/Orders/OrderItem";
 import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
+import IfModule from "@/Components/IfModule";
+import { useModule } from "@/hooks/useModule";
+import { useTerms } from "@/lib/wording";
 
 interface ManageWebOrderProps {
     order: any;
+    orderDisplay: OrderDisplay;
     categories: any[];
 }
 
 export default function ManageWebOrder({
     order,
+    orderDisplay,
     categories,
 }: ManageWebOrderProps) {
     const { auth } = usePage().props;
@@ -191,7 +196,10 @@ export default function ManageWebOrder({
     const disableAllControls = !["pending", "processing"].includes(
         order.status
     );
-    const isDelivery = order.type === "web_delivery";
+    const isDelivery = orderDisplay?.showDriver ?? false;
+    const deliveryEnabled = useModule("delivery");
+    const showDriver = deliveryEnabled && isDelivery;
+    const terms = useTerms();
 
     // For web orders, we should allow notes editing even when other controls are disabled
     const disableNotesEditing = !["pending", "processing"].includes(
@@ -233,8 +241,7 @@ export default function ManageWebOrder({
         {
             key: "1",
             label: "نوع الطلب",
-            children:
-                order.type === "web_delivery" ? "ويب دليفري" : "ويب تيك أواي",
+            children: orderDisplay?.label ?? order.type,
         },
         {
             key: "2",
@@ -318,12 +325,10 @@ export default function ManageWebOrder({
 
     const actionBtn = {
         accept: order.status === "pending",
-        outForDelivery:
-            order.status === "processing" && order.type === "web_delivery",
+        outForDelivery: order.status === "processing" && isDelivery,
         complete:
-            (order.status === "out_for_delivery" &&
-                order.type === "web_delivery") ||
-            (order.status === "processing" && order.type === "web_takeaway"),
+            (order.status === "out_for_delivery" && isDelivery) ||
+            (order.status === "processing" && !isDelivery),
     };
 
     return (
@@ -363,20 +368,22 @@ export default function ManageWebOrder({
                                 طباعة الفاتورة
                             </LoadingButton>
 
-                            <LoadingButton
-                                onCustomClick={printInKitchen}
-                                disabled={
-                                    !btnsState[order.status]?.includes(
-                                        "printKitchen"
-                                    )
-                                }
-                                size="large"
-                                icon={<PrinterOutlined />}
-                            >
-                                طباعة في المطبخ
-                            </LoadingButton>
+                            <IfModule name="restaurant">
+                                <LoadingButton
+                                    onCustomClick={printInKitchen}
+                                    disabled={
+                                        !btnsState[order.status]?.includes(
+                                            "printKitchen"
+                                        )
+                                    }
+                                    size="large"
+                                    icon={<PrinterOutlined />}
+                                >
+                                    {terms.printInKitchen}
+                                </LoadingButton>
+                            </IfModule>
 
-                            {isDelivery && (
+                            {showDriver && (
                                 <Button
                                     onClick={() => driverModal.showModal()}
                                     disabled={
@@ -398,7 +405,7 @@ export default function ManageWebOrder({
                                 }
                                 size="large"
                                 icon={<EditOutlined />}
-                                className={`${isDelivery ? "" : "col-span-2"}`}
+                                className={`${showDriver ? "" : "col-span-2"}`}
                             >
                                 ملاحظات الطلب
                             </Button>
@@ -547,11 +554,13 @@ export default function ManageWebOrder({
             </div>
 
             {/* Modals */}
-            <DriverModal
-                open={driverModal.open}
-                onCancel={driverModal.onCancel}
-                order={order}
-            />
+            <IfModule name="delivery">
+                <DriverModal
+                    open={driverModal.open}
+                    onCancel={driverModal.onCancel}
+                    order={order}
+                />
+            </IfModule>
             <OrderDiscountModal
                 open={orderDiscountModal.open}
                 onCancel={orderDiscountModal.onCancel}
@@ -567,12 +576,14 @@ export default function ManageWebOrder({
                 onCancel={orderNotesModal.onCancel}
                 order={order}
             />
-            <PrintInKitchenModal
-                open={printInKitchenModal.open}
-                onCancel={printInKitchenModal.onCancel}
-                order={order}
-                orderItems={orderItems}
-            />
+            <IfModule name="restaurant">
+                <PrintInKitchenModal
+                    open={printInKitchenModal.open}
+                    onCancel={printInKitchenModal.onCancel}
+                    order={order}
+                    orderItems={orderItems}
+                />
+            </IfModule>
         </CashierLayout>
     );
 }

@@ -2,17 +2,18 @@
 
 namespace App\Filament\Resources\ExpenseTypes;
 
+use App\Enums\ExpenseCategory;
 use App\Filament\Resources\ExpenseTypes\Pages\CreateExpenseType;
 use App\Filament\Resources\ExpenseTypes\Pages\EditExpenseType;
 use App\Filament\Resources\ExpenseTypes\Pages\ListExpenseTypes;
 use App\Filament\Resources\ExpenseTypes\Pages\ViewExpenseType;
-use App\Filament\Traits\AdminAccess;
 use App\Models\ExpenceType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -21,8 +22,6 @@ use Filament\Tables\Table;
 
 class ExpenseTypeResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = ExpenceType::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
@@ -49,6 +48,11 @@ class ExpenseTypeResource extends Resource
                     ->label('اسم نوع المصروف')
                     ->required()
                     ->maxLength(255),
+                Select::make('category')
+                    ->label('التصنيف')
+                    ->options(ExpenseCategory::class)
+                    ->required()
+                    ->default('other'),
                 TextInput::make('avg_month_rate')
                     ->label('متوسط الميزانية الشهرية (جنيه)')
                     ->numeric()
@@ -66,6 +70,10 @@ class ExpenseTypeResource extends Resource
                 TextColumn::make('name')
                     ->label('اسم نوع المصروف')
                     ->searchable()
+                    ->sortable(),
+                TextColumn::make('category')
+                    ->label('التصنيف')
+                    ->badge()
                     ->sortable(),
                 TextColumn::make('avg_month_rate')
                     ->label('متوسط الميزانية الشهرية')

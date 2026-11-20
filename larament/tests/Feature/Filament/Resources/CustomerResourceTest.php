@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Filament\Resources\Customers\Pages\CreateCustomer;
 use App\Filament\Resources\Customers\Pages\EditCustomer;
 use App\Filament\Resources\Customers\Pages\ListCustomers;
@@ -17,7 +16,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -168,7 +167,7 @@ it('can create a customer', function () {
 
 it('can create a customer with whatsapp', function () {
     $region = Region::factory()->create();
-    $record = Customer::factory()->make(['has_whatsapp' => true]);
+    $record = Customer::factory()->make(['has_whatsapp' => true, 'phone' => '01012345678']);
 
     livewire(CreateCustomer::class)
         ->fillForm([

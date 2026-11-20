@@ -28,7 +28,7 @@ class PeakHoursPerformanceReport extends BaseDashboard
 
     protected static ?string $title = 'تقرير أداء ساعات الذروة والأنماط الزمنية';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 11;
 
     protected PeakHoursPerformanceReportService $peakHoursReportService;
 

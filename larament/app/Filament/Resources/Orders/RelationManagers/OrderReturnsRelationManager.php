@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Orders\RelationManagers;
 
+use App\Services\FeatureService;
 use Filament\Actions\ViewAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class OrderReturnsRelationManager extends RelationManager
 {
@@ -18,6 +20,11 @@ class OrderReturnsRelationManager extends RelationManager
     protected static ?string $label = 'إرجاع';
 
     protected static ?string $pluralLabel = 'عمليات الإرجاع';
+
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return app(FeatureService::class)->returnsEnabled() && parent::canViewForRecord($ownerRecord, $pageClass);
+    }
 
     public function form(Schema $schema): Schema
     {

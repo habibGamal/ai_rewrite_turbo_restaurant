@@ -4,8 +4,11 @@ use App\Enums\SettingKey;
 use App\Filament\Pages\Settings;
 use App\Models\Setting;
 use App\Models\User;
+use App\Modules\Module;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\SettingsService;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +20,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Create admin user and authenticate
-    $this->admin = User::factory()->create(['role' => 'admin']);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 
     // Seed default settings
@@ -29,6 +32,9 @@ beforeEach(function () {
             ['value' => $value]
         );
     }
+
+    // A restaurant that takes web orders: the defaults leave that module off.
+    app(FeatureService::class)->enableModule(Module::WEB_ORDERS);
 });
 
 // ===== Page Rendering Tests =====
@@ -37,8 +43,51 @@ it('can render the settings page', function () {
         ->assertSuccessful();
 });
 
+it('renders all settings tabs', function () {
+    livewire(Settings::class)
+        ->assertSeeHtml('fi-tabs')
+        ->assertSeeHtml('isTabPersistedInQueryString: true')
+        ->assertSeeInOrder([
+            'الإعدادات العامة',
+            'إعدادات المطعم',
+            'إدارة الفروع',
+            'إدارة الورديات',
+            'تبويبات الكاشير',
+            'إدارة المشتريات',
+            'شاشة المطبخ (KDS)',
+        ]);
+});
+
+it('saves settings from the first and last tabs together', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::WEBSITE_URL->value => 'https://tabs.example.com',
+            SettingKey::KDS_WARNING_PERCENT->value => '65',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::WEBSITE_URL->value)->first()->value)->toBe('https://tabs.example.com');
+    expect(Setting::where('key', SettingKey::KDS_WARNING_PERCENT->value)->first()->value)->toBe('65');
+});
+
+it('indicates validation errors on the affected tab', function () {
+    $component = livewire(Settings::class)
+        ->fillForm([SettingKey::KDS_WARNING_PERCENT->value => '150'])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_WARNING_PERCENT->value]);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$component->html());
+    $xpath = new DOMXPath($document);
+    $badges = $xpath->query("//button[contains(., 'شاشة المطبخ (KDS)')]//*[contains(concat(' ', normalize-space(@class), ' '), ' fi-badge ')]");
+
+    expect($badges->length)->toBeGreaterThan(0);
+});
+
 it('only allows admins to access settings page', function () {
-    $cashier = User::factory()->create(['role' => 'cashier']);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(Settings::class)
@@ -69,11 +118,12 @@ it('has all branch management fields', function () {
         ->assertSchemaComponentExists(SettingKey::MASTER_NODE_LINK->value);
 });
 
-it('has all cashier permission fields', function () {
+it('no longer has the legacy cashier permission toggles', function () {
     livewire(Settings::class)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)
-        ->assertSchemaComponentExists(SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value);
+        ->assertSchemaComponentDoesNotExist('allow_cashier_discounts')
+        ->assertSchemaComponentDoesNotExist('allow_cashier_cancel_orders')
+        ->assertSchemaComponentDoesNotExist('allow_cashier_item_changes')
+        ->assertDontSee('صلاحيات الكاشير');
 });
 
 it('has shift management fields', function () {
@@ -83,7 +133,8 @@ it('has shift management fields', function () {
 
 it('has purchase management fields', function () {
     livewire(Settings::class)
-        ->assertSchemaComponentExists(SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value);
+        ->assertSchemaComponentExists(SettingKey::COSTING_METHOD->value)
+        ->assertSee('طريقة تقييم التكلفة');
 });
 
 // ===== Form State Tests =====
@@ -102,11 +153,8 @@ it('loads default settings correctly', function () {
 it('loads boolean settings correctly', function () {
     livewire(Settings::class)
         ->assertSchemaStateSet([
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => false,
-            SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
-            SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
-            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => true,
+            SettingKey::COSTING_METHOD->value => 'immediate',
         ]);
 });
 
@@ -115,14 +163,13 @@ it('loads existing settings from database', function () {
         ->update(['value' => 'https://example.com']);
     Setting::where('key', SettingKey::RESTAURANT_NAME->value)
         ->update(['value' => 'Test Restaurant']);
-    Setting::where('key', SettingKey::ALLOW_CASHIER_DISCOUNTS->value)
+    Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)
         ->update(['value' => 'true']);
 
     livewire(Settings::class)
         ->assertSchemaStateSet([
             SettingKey::WEBSITE_URL->value => 'https://example.com',
             SettingKey::RESTAURANT_NAME->value => 'Test Restaurant',
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
         ]);
 });
 
@@ -166,25 +213,16 @@ it('can save restaurant settings', function () {
 it('can save boolean settings', function () {
     livewire(Settings::class)
         ->fillForm([
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
-            SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => true,
-            SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => false,
             SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => true,
-            SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value => false,
+            SettingKey::COSTING_METHOD->value => 'off',
         ])
         ->call('save')
         ->assertNotified();
 
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_DISCOUNTS->value)->first()->value)
-        ->toBe('true');
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value)->first()->value)
-        ->toBe('true');
-    expect(Setting::where('key', SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value)->first()->value)
-        ->toBe('false');
     expect(Setting::where('key', SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value)->first()->value)
         ->toBe('true');
-    expect(Setting::where('key', SettingKey::UPDATE_PRODUCT_COST_ON_PURCHASE->value)->first()->value)
-        ->toBe('false');
+    expect(Setting::where('key', SettingKey::COSTING_METHOD->value)->first()->value)
+        ->toBe('off');
 });
 
 it('can save node type settings', function () {
@@ -327,9 +365,6 @@ it('persists all settings after save', function () {
         SettingKey::RESTAURANT_NAME->value => 'مطعم جديد',
         SettingKey::NODE_TYPE->value => 'master',
         SettingKey::SCALE_BARCODE_PREFIX->value => '25',
-        SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
-        SettingKey::ALLOW_CASHIER_CANCEL_ORDERS->value => false,
-        SettingKey::ALLOW_CASHIER_ITEM_CHANGES->value => true,
         SettingKey::ALLOW_WEB_ORDERS_SHIFT_TRANSFER->value => false,
     ];
 
@@ -356,7 +391,6 @@ it('settings service can retrieve saved settings', function () {
         ->fillForm([
             SettingKey::WEBSITE_URL->value => 'https://example.com',
             SettingKey::CASHIER_PRINTER_IP->value => '192.168.1.101',
-            SettingKey::ALLOW_CASHIER_DISCOUNTS->value => true,
         ])
         ->call('save');
 
@@ -364,5 +398,200 @@ it('settings service can retrieve saved settings', function () {
 
     expect($settingsService->getWebsiteLink())->toBe('https://example.com');
     expect($settingsService->getCashierPrinterIp())->toBe('192.168.1.101');
-    expect($settingsService->isCashierDiscountsAllowed())->toBeTrue();
+});
+
+// ===== KDS (شاشة المطبخ) Settings Tests =====
+it('has all KDS settings fields', function () {
+    livewire(Settings::class)
+        ->assertSchemaComponentExists(SettingKey::KDS_ITEM_TRACKING->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_DEFAULT_PREP_MINUTES->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in')
+        ->assertSchemaComponentExists(SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery')
+        ->assertSchemaComponentExists(SettingKey::KDS_WARNING_PERCENT->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_RECALL_MINUTES->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_NEW_ORDER_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_CHANGE_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_CANCEL_SOUND->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_SOUND_VOLUME->value)
+        ->assertSchemaComponentExists(SettingKey::KDS_REMINDER_SECONDS->value);
+});
+
+it('loads KDS settings defaults', function () {
+    livewire(Settings::class)
+        ->assertSchemaStateSet([
+            SettingKey::KDS_ITEM_TRACKING->value => true,
+            SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => true,
+            SettingKey::KDS_DEFAULT_PREP_MINUTES->value => '10',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '',
+            SettingKey::KDS_WARNING_PERCENT->value => '75',
+            SettingKey::KDS_RECALL_MINUTES->value => '15',
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'chime',
+            SettingKey::KDS_CHANGE_SOUND->value => 'bell',
+            SettingKey::KDS_CANCEL_SOUND->value => 'alert',
+            SettingKey::KDS_SOUND_VOLUME->value => '80',
+            SettingKey::KDS_REMINDER_SECONDS->value => '30',
+        ]);
+});
+
+it('loads saved order-type targets into per-type fields', function () {
+    Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)
+        ->update(['value' => '{"dine_in":12,"web_delivery":20}']);
+
+    livewire(Settings::class)
+        ->assertSchemaStateSet([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '12',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '20',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.delivery' => '',
+        ]);
+});
+
+it('can save KDS toggles persisted as true/false strings', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ITEM_TRACKING->value => false,
+            SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value => false,
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ITEM_TRACKING->value)->first()->value)
+        ->toBe('false');
+    expect(Setting::where('key', SettingKey::KDS_AUTO_FINISH_ON_COMPLETE->value)->first()->value)
+        ->toBe('false');
+});
+
+it('can save KDS numeric values and sounds', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_DEFAULT_PREP_MINUTES->value => '20',
+            SettingKey::KDS_WARNING_PERCENT->value => '60',
+            SettingKey::KDS_RECALL_MINUTES->value => '45',
+            SettingKey::KDS_SOUND_VOLUME->value => '50',
+            SettingKey::KDS_REMINDER_SECONDS->value => '90',
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'beep',
+            SettingKey::KDS_CHANGE_SOUND->value => 'alert',
+            SettingKey::KDS_CANCEL_SOUND->value => 'none',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_DEFAULT_PREP_MINUTES->value)->first()->value)
+        ->toBe('20');
+    expect(Setting::where('key', SettingKey::KDS_WARNING_PERCENT->value)->first()->value)
+        ->toBe('60');
+    expect(Setting::where('key', SettingKey::KDS_RECALL_MINUTES->value)->first()->value)
+        ->toBe('45');
+    expect(Setting::where('key', SettingKey::KDS_SOUND_VOLUME->value)->first()->value)
+        ->toBe('50');
+    expect(Setting::where('key', SettingKey::KDS_REMINDER_SECONDS->value)->first()->value)
+        ->toBe('90');
+    expect(Setting::where('key', SettingKey::KDS_NEW_ORDER_SOUND->value)->first()->value)
+        ->toBe('beep');
+    expect(Setting::where('key', SettingKey::KDS_CHANGE_SOUND->value)->first()->value)
+        ->toBe('alert');
+    expect(Setting::where('key', SettingKey::KDS_CANCEL_SOUND->value)->first()->value)
+        ->toBe('none');
+});
+
+it('saves order-type targets as JSON and drops empty entries', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '12',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.web_delivery' => '20',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{"dine_in":12,"web_delivery":20}');
+});
+
+it('keeps empty order-type targets as an empty JSON object', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{}');
+});
+
+it('round-trips order-type targets through mount and save', function () {
+    Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)
+        ->update(['value' => '{"dine_in":12,"delivery":8}']);
+
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.delivery' => '25',
+            SettingKey::KDS_ORDER_TYPE_TARGETS->value.'.dine_in' => '',
+        ])
+        ->call('save')
+        ->assertNotified();
+
+    expect(Setting::where('key', SettingKey::KDS_ORDER_TYPE_TARGETS->value)->first()->value)
+        ->toBe('{"delivery":25}');
+});
+
+it('rejects an invalid warning percent', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_WARNING_PERCENT->value => '150',
+        ])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_WARNING_PERCENT->value]);
+});
+
+it('rejects an invalid sound value', function () {
+    livewire(Settings::class)
+        ->fillForm([
+            SettingKey::KDS_NEW_ORDER_SOUND->value => 'fake_sound',
+        ])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::KDS_NEW_ORDER_SOUND->value]);
+});
+
+// ===== Web API key =====
+it('generates and saves a web api key from the settings page', function () {
+    $component = livewire(Settings::class)
+        ->call('generateWebApiKey')
+        ->assertNotified();
+
+    $key = app(SettingsService::class)->get(SettingKey::WEB_API_KEY->value);
+
+    expect($key)->toBeString()->toHaveLength(48)
+        ->and(app(SettingsService::class)->getWebApiKey())->toBe($key);
+    $component->assertSet('data.'.SettingKey::WEB_API_KEY->value, $key);
+});
+
+it('generates the web api key through the field action', function () {
+    livewire(Settings::class)
+        ->callAction(TestAction::make('generateWebApiKey')->schemaComponent(SettingKey::WEB_API_KEY->value, schema: 'form'));
+
+    expect(app(SettingsService::class)->get(SettingKey::WEB_API_KEY->value))->toHaveLength(48);
+});
+
+it('saves a typed web api key and rejects a short one', function () {
+    livewire(Settings::class)
+        ->fillForm([SettingKey::WEB_API_KEY->value => 'short'])
+        ->call('save')
+        ->assertHasFormErrors([SettingKey::WEB_API_KEY->value]);
+
+    livewire(Settings::class)
+        ->fillForm([SettingKey::WEB_API_KEY->value => 'a-long-enough-manual-key'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect(app(SettingsService::class)->getWebApiKey())->toBe('a-long-enough-manual-key');
+});
+
+it('keeps the web api key when resetting settings to defaults', function () {
+    app(SettingsService::class)->set(SettingKey::WEB_API_KEY->value, 'keep-this-key-after-reset');
+
+    livewire(Settings::class)->call('resetToDefaults');
+
+    expect(app(SettingsService::class)->getWebApiKey())->toBe('keep-this-key-after-reset');
 });

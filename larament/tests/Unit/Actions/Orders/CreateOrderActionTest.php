@@ -2,8 +2,8 @@
 
 use App\Actions\Orders\CreateOrderAction;
 use App\DTOs\Orders\CreateOrderDTO;
-use App\Enums\OrderType;
 use App\Models\Order;
+use App\Orders\OrderOpening;
 
 uses(Tests\Unit\TestCase::class);
 
@@ -17,9 +17,9 @@ describe('CreateOrderAction', function () {
 
     it('delegates to order service', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::TAKEAWAY,
+            typeCode: 'takeaway',
             shiftId: $this->shift->id,
-            userId: $this->user->id
+            userId: $this->user->id,
         );
 
         $result = $this->action->execute($createOrderDTO);
@@ -29,16 +29,16 @@ describe('CreateOrderAction', function () {
 
     it('creates order with correct data', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::DINE_IN,
+            typeCode: 'dine_in',
             shiftId: $this->shift->id,
             userId: $this->user->id,
-            tableNumber: 'T001'
+            opening: new OrderOpening('T001'),
         );
 
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::DINE_IN)
+            ->and($order->type)->toBe('dine_in')
             ->and($order->shift_id)->toBe($this->shift->id)
             ->and($order->user_id)->toBe($this->user->id)
             ->and($order->dine_table_number)->toBe('T001');
@@ -46,30 +46,30 @@ describe('CreateOrderAction', function () {
 
     it('creates takeaway order without table', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::TAKEAWAY,
+            typeCode: 'takeaway',
             shiftId: $this->shift->id,
-            userId: $this->user->id
+            userId: $this->user->id,
         );
 
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::TAKEAWAY)
+            ->and($order->type)->toBe('takeaway')
             ->and($order->dine_table_number)->toBeNull();
     });
 
     it('creates delivery order with driver', function () {
         $createOrderDTO = new CreateOrderDTO(
-            type: OrderType::DELIVERY,
+            typeCode: 'delivery',
             shiftId: $this->shift->id,
             userId: $this->user->id,
-            driverId: $this->driver->id
+            driverId: $this->driver->id,
         );
 
         $order = $this->action->execute($createOrderDTO);
 
         expect($order)->toBeInstanceOf(Order::class)
-            ->and($order->type)->toBe(OrderType::DELIVERY)
+            ->and($order->type)->toBe('delivery')
             ->and($order->driver_id)->toBe($this->driver->id);
     });
 });

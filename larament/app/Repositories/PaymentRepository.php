@@ -4,10 +4,9 @@ namespace App\Repositories;
 
 use App\DTOs\Orders\PaymentDTO;
 use App\Models\Payment;
-use App\Repositories\Contracts\PaymentRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-class PaymentRepository implements PaymentRepositoryInterface
+class PaymentRepository
 {
     public function create(PaymentDTO $paymentDTO): Payment
     {

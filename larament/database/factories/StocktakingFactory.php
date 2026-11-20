@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Stocktaking;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class StocktakingFactory extends Factory
@@ -13,6 +14,7 @@ class StocktakingFactory extends Factory
     {
         return [
             'user_id' => 1,
+            'warehouse_id' => fn () => Warehouse::default()->id,
             'notes' => $this->faker->optional()->sentence(),
             'total' => 0,
         ];

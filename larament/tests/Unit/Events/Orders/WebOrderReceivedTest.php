@@ -1,14 +1,14 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use App\Events\Orders\WebOrderReceived;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Modules\WebOrders\Events\WebOrderReceived;
 use Illuminate\Broadcasting\PrivateChannel;
+use Tests\Unit\TestCase;
 
-uses(Tests\Unit\TestCase::class);
+uses(TestCase::class);
 
 describe('WebOrderReceived Event', function () {
     it('broadcasts on correct channel', function () {
@@ -17,7 +17,7 @@ describe('WebOrderReceived Event', function () {
         $order = Order::factory()->create([
             'shift_id' => $shift->id,
             'customer_id' => $customer->id,
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
         ]);
 
@@ -40,7 +40,7 @@ describe('WebOrderReceived Event', function () {
             'shift_id' => $shift->id,
             'customer_id' => $customer->id,
             'order_number' => 'WEB001',
-            'type' => OrderType::WEB_DELIVERY,
+            'type' => 'web_delivery',
             'status' => OrderStatus::PENDING,
             'total' => 150.50,
             'order_notes' => 'بدون بصل',

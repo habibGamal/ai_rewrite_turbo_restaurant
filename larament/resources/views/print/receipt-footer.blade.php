@@ -3,6 +3,8 @@
     use Illuminate\Support\Facades\Storage;
 
     $receiptFooter = setting(SettingKey::RECEIPT_FOOTER);
+    $receiptPayment = $receiptPayment ?? \App\Orders\ReceiptPayment::forOrder($order);
+    $receiptView = $receiptView ?? \App\Orders\ReceiptView::forOrder($order);
 
     $qrLogoPath =
         setting(SettingKey::RESTAURANT_QR_LOGO) !== '' ? Storage::disk('public')->path(setting(SettingKey::RESTAURANT_QR_LOGO)) : null;
@@ -125,6 +127,8 @@
 
 <body>
     <div class="receipt">
+        @include('print.receipt-charges')
+
         <table>
             <tbody>
                 <tr>
@@ -143,14 +147,37 @@
                     <td>الضريبة</td>
                     <td class="number-cell">{{ number_format($order->tax, 2) }}</td>
                 </tr>
+                @if ((float) $order->equipment_total > 0)
+                    <tr>
+                        <td>المعدات</td>
+                        <td class="number-cell">{{ number_format($order->equipment_total, 2) }}</td>
+                    </tr>
+                @endif
+                @if ((float) $order->fees_total > 0)
+                    <tr>
+                        <td>رسوم إضافية</td>
+                        <td class="number-cell">{{ number_format($order->fees_total, 2) }}</td>
+                    </tr>
+                @endif
                 <tr>
                     <td>الاجمالي النهائي</td>
-                    <td class="number-cell">{{ ceil($order->total) }}</td>
+                    <td class="number-cell">{{ number_format($receiptView['restaurant_total'], 2) }}</td>
                 </tr>
+                @if ($receiptPayment->partial)
+                    <tr>
+                        <td>المدفوع</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->paid, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>المتبقي</td>
+                        <td class="number-cell">{{ number_format($receiptPayment->remaining, 2) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
 
-        <p class="reference">الرقم المرجعي - {{ $order->id }}</p>
+        @include('print.receipt-external')
+        @include('print.receipt-reference')
         @if ($order->order_notes)
             <p>{{ $order->order_notes }}</p>
         @endif

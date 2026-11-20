@@ -20,6 +20,12 @@ class CategoryPerformanceExporter extends Exporter
                     return $record->category_name ?: 'غير مصنف';
                 }),
 
+            ExportColumn::make('parent_category_name')
+                ->label('التصنيف الرئيسي')
+                ->state(function ($record) {
+                    return $record->parent_category_name ?? '-';
+                }),
+
             ExportColumn::make('products_count')
                 ->label('عدد المنتجات')
                 ->state(function ($record) {

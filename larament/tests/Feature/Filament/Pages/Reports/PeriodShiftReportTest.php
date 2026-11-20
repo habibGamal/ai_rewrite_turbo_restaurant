@@ -1,10 +1,9 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\PeriodShiftReport;
 use App\Filament\Widgets\NoShiftsInPeriodWidget;
+use App\Filament\Widgets\PeriodShiftCreditCollectionsTable;
 use App\Filament\Widgets\PeriodShiftDoneOrdersStats;
 use App\Filament\Widgets\PeriodShiftExpensesDetailsTable;
 use App\Filament\Widgets\PeriodShiftExpensesTable;
@@ -25,7 +24,7 @@ use function Pest\Livewire\livewire;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -36,7 +35,7 @@ describe('Page Access and Authorization', function () {
     });
 
     it('can render the page as viewer', function () {
-        $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+        $viewer = User::factory()->viewer()->create();
         actingAs($viewer);
 
         livewire(PeriodShiftReport::class)
@@ -44,7 +43,7 @@ describe('Page Access and Authorization', function () {
     });
 
     it('cannot access the page as cashier', function () {
-        $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+        $cashier = User::factory()->cashier()->create();
         actingAs($cashier);
 
         livewire(PeriodShiftReport::class)
@@ -52,7 +51,7 @@ describe('Page Access and Authorization', function () {
     });
 
     it('cannot access the page as watcher', function () {
-        $watcher = User::factory()->create(['role' => UserRole::WATCHER]);
+        $watcher = User::factory()->watcher()->create();
         actingAs($watcher);
 
         livewire(PeriodShiftReport::class)
@@ -209,7 +208,7 @@ describe('Widgets - With Data', function () {
             Order::factory()->count(5)->create([
                 'shift_id' => $shift->id,
                 'status' => OrderStatus::COMPLETED,
-                'type' => OrderType::DINE_IN,
+                'type' => 'dine_in',
             ]);
 
             $expenseType = ExpenceType::factory()->create();
@@ -249,6 +248,7 @@ describe('Widgets - With Data', function () {
 
         expect($widgets)
             ->toContain(PeriodShiftOrdersTable::class)
+            ->toContain(PeriodShiftCreditCollectionsTable::class)
             ->toContain(PeriodShiftExpensesDetailsTable::class)
             ->toContain(PeriodShiftExpensesTable::class);
     });

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\CategoryPerformanceExporter;
 use App\Services\ProductsSalesReportService;
+use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -23,6 +24,8 @@ class CategoryPerformanceWidget extends BaseWidget
 
     protected static ?string $heading = 'أداء التصنيفات';
 
+    public string $categoryMode = 'main';
+
     protected ProductsSalesReportService $productsReportService;
 
     public function boot(): void
@@ -30,30 +33,64 @@ class CategoryPerformanceWidget extends BaseWidget
         $this->productsReportService = app(ProductsSalesReportService::class);
     }
 
+    public function setCategoryMode(string $mode): void
+    {
+        $this->categoryMode = in_array($mode, ['main', 'secondary'], true) ? $mode : 'main';
+        $this->resetTable();
+    }
+
     public function table(Table $table): Table
     {
-
         return $table
+            ->heading('أداء التصنيفات')
+            ->description(fn (): string => $this->categoryMode === 'secondary'
+                ? 'عرض وتحليل مبيعات وأرباح التصنيفات الفرعية'
+                : 'عرض وتحليل مبيعات وأرباح التصنيفات الرئيسية')
             ->query(
                 $this->getCategoryPerformance()
             )
             ->headerActions([
+                Action::make('mode_main')
+                    ->label('التصنيفات الرئيسية')
+                    ->icon('heroicon-m-squares-2x2')
+                    ->color(fn (): string => $this->categoryMode === 'main' ? 'primary' : 'gray')
+                    ->outlined(fn (): bool => $this->categoryMode !== 'main')
+                    ->action(fn () => $this->setCategoryMode('main')),
+
+                Action::make('mode_secondary')
+                    ->label('التصنيفات الفرعية')
+                    ->icon('heroicon-m-rectangle-group')
+                    ->color(fn (): string => $this->categoryMode === 'secondary' ? 'primary' : 'gray')
+                    ->outlined(fn (): bool => $this->categoryMode !== 'secondary')
+                    ->action(fn () => $this->setCategoryMode('secondary')),
+
                 ExportAction::make()
                     ->label('تصدير تقرير أداء التصنيفات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(CategoryPerformanceExporter::class)
-                    ->fileName(fn () => 'category-performance-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
+                    ->fileName(fn () => 'category-performance-'.$this->categoryMode.'-'.now()->format('Y-m-d-H-i-s').'.xlsx'),
             ])
             ->columns([
                 TextColumn::make('category_name')
-                    ->label('التصنيف')
+                    ->label(fn (): string => $this->categoryMode === 'secondary' ? 'التصنيف الفرعي' : 'التصنيف الرئيسي')
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('categories.name', 'like', "%{$search}%");
                     })
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->orderBy('categories.name', $direction);
                     }),
+
+                TextColumn::make('parent_category_name')
+                    ->label('التصنيف الرئيسي')
+                    ->visible(fn (): bool => $this->categoryMode === 'secondary')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('parent_categories.name', 'like', "%{$search}%");
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('parent_categories.name', $direction);
+                    })
+                    ->default('-'),
 
                 TextColumn::make('products_count')
                     ->label('عدد المنتجات')
@@ -104,13 +141,20 @@ class CategoryPerformanceWidget extends BaseWidget
             ->striped();
     }
 
-    private function getCategoryPerformance()
+    private function getCategoryPerformance(): Builder
     {
         $filterType = $this->pageFilters['filterType'] ?? 'period';
         $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
         $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
         $shiftIds = $filterType === 'shifts' ? ($this->pageFilters['shifts'] ?? []) : null;
 
-        return $this->productsReportService->getCategoryPerformance($startDate, $endDate, $shiftIds);
+        return $this->productsReportService->getCategoryPerformance(
+            $startDate,
+            $endDate,
+            $shiftIds,
+            ProductsSalesReportService::nullableFilterId($this->pageFilters['mainCategoryId'] ?? null),
+            ProductsSalesReportService::nullableFilterId($this->pageFilters['subCategoryId'] ?? null),
+            $this->categoryMode,
+        );
     }
 }

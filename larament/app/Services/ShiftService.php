@@ -3,18 +3,25 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
-use App\Enums\PaymentMethod;
+use App\Models\HeldSale;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Models\Terminal;
 use App\Models\User;
+use App\Orders\Behaviors\OrderTypeBehavior;
+use App\Orders\OrderTypeCatalog;
+use App\Terminals\TerminalSessionService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class ShiftService
 {
     public function __construct(
-        private readonly SettingsService $settingsService
+        private readonly SettingsService $settingsService,
+        private readonly OrderTypeCatalog $catalog,
+        private readonly ShiftsReportService $shiftsReportService,
+        private readonly TerminalSessionService $terminalSessions,
+        private readonly FeatureService $features,
     ) {}
 
     /**
@@ -30,7 +37,7 @@ class ShiftService
     /**
      * Start a new shift for a user
      */
-    public function startShift(float $startCash, ?User $user = null): Shift
+    public function startShift(float $startCash, ?User $user = null, ?Terminal $terminal = null): Shift
     {
         shouldDayBeOpen();
 
@@ -40,13 +47,18 @@ class ShiftService
             throw new Exception('User already has an active shift');
         }
 
-        return DB::transaction(function () use ($user, $startCash) {
+        return DB::transaction(function () use ($user, $startCash, $terminal) {
             $shift = Shift::create([
                 'start_cash' => $startCash,
                 'start_at' => now(),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
                 'closed' => false,
                 'user_id' => $user ? $user->id : auth()->id(),
             ]);
+
+            // Every shift has at least one drawer session; with multiple
+            // terminals off it is the hidden default drawer.
+            $this->terminalSessions->openOn($shift, $terminal ?? Terminal::default(), $user ?? auth()->user(), $startCash);
 
             // Transfer open web orders from previous shift if setting is enabled
             if ($this->settingsService->isWebOrdersShiftTransferAllowed()) {
@@ -55,6 +67,25 @@ class ShiftService
 
             return $shift;
         });
+    }
+
+    /**
+     * Count open web orders in the last closed shift
+     */
+    public function countOpenWebOrdersInLastClosedShift(): int
+    {
+        $lastShift = Shift::where('closed', true)
+            ->orderBy('end_at', 'desc')
+            ->first();
+
+        if (! $lastShift) {
+            return 0;
+        }
+
+        return Order::where('shift_id', $lastShift->id)
+            ->whereIn('type', $this->carryingTypeCodes())
+            ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
+            ->count();
     }
 
     /**
@@ -73,7 +104,7 @@ class ShiftService
 
         // Find all open web orders from the last shift
         Order::where('shift_id', $lastShift->id)
-            ->whereIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY])
+            ->whereIn('type', $this->carryingTypeCodes())
             ->whereIn('status', [OrderStatus::PROCESSING, OrderStatus::OUT_FOR_DELIVERY, OrderStatus::PENDING])
             ->update(['shift_id' => $newShiftId]);
     }
@@ -95,7 +126,7 @@ class ShiftService
 
         // If web orders shift transfer is enabled, exclude web orders from the check
         if ($this->settingsService->isWebOrdersShiftTransferAllowed()) {
-            $processingOrdersQuery->whereNotIn('type', [OrderType::WEB_DELIVERY, OrderType::WEB_TAKEAWAY]);
+            $processingOrdersQuery->whereNotIn('type', $this->carryingTypeCodes());
         }
 
         $processingOrders = $processingOrdersQuery->exists();
@@ -105,31 +136,48 @@ class ShiftService
         }
 
         return DB::transaction(function () use ($currentShift, $realCash) {
-            // Calculate end cash from shift orders
-            $totalCash = $currentShift->orders()
-                ->where('status', OrderStatus::COMPLETED)
-                ->whereHas('payments', function ($query) {
-                    $query->where('method', PaymentMethod::CASH);
-                })
-                ->sum('total');
+            if ($this->features->multiTerminalEnabled()) {
+                // Each cashier closes their own drawer first.
+                if ($currentShift->terminalSessions()->open()->exists()) {
+                    throw new Exception('يجب إغلاق جميع منافذ البيع قبل إنهاء الوردية');
+                }
+            } else {
+                $this->terminalSessions->closeAllOpen($currentShift, auth()->user());
+            }
 
-            $endCash = $currentShift->start_cash + $totalCash;
+            // Expected drawer cash is the report's "النقدية المتاحة": opening cash + cash payments
+            // received in this shift + external cash − seller settlements − expenses. Payments count
+            // in the shift that received them, so a pay-later order adds only what was actually paid
+            // here, and a later collection adds to the shift that collected it.
+            $endCash = round((float) $this->shiftsReportService->calculateShiftStats($currentShift)['availableCash'], 2);
 
-            // Calculate if there's a deficit
-            $deficit = $endCash - $realCash;
-            $hasDeficit = $deficit > 0;
+            // Positive = shortage, negative = surplus (same sign as Shift::deficit).
+            $difference = round($endCash - $realCash, 2);
 
             $currentShift->update([
                 'end_cash' => $endCash,
                 'real_cash' => $realCash,
-                'losses_amount' => $lossesAmount ?? 0,
-                'has_deficit' => $hasDeficit,
+                'losses_amount' => $difference,
+                'has_deficit' => $difference > 0,
                 'end_at' => now(),
                 'closed' => true,
             ]);
 
+            // Carts parked on the instant-sale screen never became orders; they end with the shift.
+            HeldSale::query()->where('shift_id', $currentShift->id)->delete();
+
             return $currentShift->fresh();
         });
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function carryingTypeCodes(): array
+    {
+        return $this->catalog->codesWhere(
+            fn (OrderTypeBehavior $behavior): bool => $behavior->carriesAcrossShifts()
+        );
     }
 
     /**

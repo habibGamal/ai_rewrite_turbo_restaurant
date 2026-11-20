@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Wastes\RelationManagers;
 
+use App\Enums\WasteReason;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Models\Product;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -42,6 +44,12 @@ class ItemsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('product.barcode')
+                    ->label('الباركود')
+                    ->placeholder('بدون باركود')
+                    ->searchable()
+                    ->visible(fn (): bool => DocumentBarcodeField::enabled()),
+
                 TextColumn::make('quantity')
                     ->label('الكمية')
                     ->numeric()
@@ -60,12 +68,21 @@ class ItemsRelationManager extends RelationManager
                     ->sortable()
                     ->alignEnd(),
 
+                TextColumn::make('reason')
+                    ->label('السبب')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('—'),
+
                 TextColumn::make('product.unit')
                     ->label('الوحدة')
                     ->formatStateUsing(fn (?string $state): string => Product::formatUnit($state))
                     ->searchable(),
             ])
             ->filters([
+                SelectFilter::make('reason')
+                    ->label('السبب')
+                    ->options(WasteReason::class),
                 SelectFilter::make('product.category')
                     ->label('الفئة')
                     ->relationship('product.category', 'name'),

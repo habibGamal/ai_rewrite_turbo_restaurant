@@ -1,5 +1,8 @@
-import { Order, OrderItemData } from "@/types";
+import { FeatureFlags, Order, OrderItemData } from "@/types";
+import { Code128Barcode } from "@/utils/code128";
 import { usePage } from "@inertiajs/react";
+import ExternalReceipt from "./ExternalReceipt";
+import { useTerms } from "@/lib/wording";
 
 export default function ReceiptTemplate({
     order,
@@ -10,20 +13,9 @@ export default function ReceiptTemplate({
     orderItems: OrderItemData[];
     receiptFooter: string;
 }) {
-    const getOrderTypeString = (type: string) => {
-        const typeMap = {
-            dine_in: "صالة",
-            takeaway: "تيك أواي",
-            delivery: "دليفري",
-            companies: "شركات",
-            talabat: "طلبات",
-            web_delivery: "اونلاين دليفري",
-            web_takeaway: "اونلاين تيك أواي",
-        };
-        return typeMap[type as keyof typeof typeMap] || type;
-    };
-
-
+    const terms = useTerms();
+    // The scannable reference only serves the returns screen.
+    const returnsEnabled = Boolean((usePage().props as { features?: FeatureFlags }).features?.returns);
     return (
         <div id="receipt" className="w-[500px] font-bold text-xl space-y-4">
             <img
@@ -42,19 +34,24 @@ export default function ReceiptTemplate({
                 تاريخ الطباعة :{" "}
                 {new Date().toLocaleString("ar-EG", { hour12: true })}
             </p>
-            <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
-            {order.type === "dine_in" && (
-                <p>طاولة رقم {order.dine_table_number}</p>
+            <p>نوع الطلب : {order.display?.label ?? order.type}</p>
+            {order.display?.showTable && (
+                <p>{terms.tableNumber} : {order.dine_table_number}</p>
             )}
-            {["delivery", "web_delivery", "web_takeaway"].includes(
-                order.type
-            ) && (
+            {Boolean(order.guests_count) && (
+                <p>عدد الأفراد : {order.guests_count}</p>
+            )}
+            {order.display?.showCustomer && (
                 <>
                     <p>رقم الهاتف : {order.customer?.phone || "-"}</p>
                     <p>اسم العميل : {order.customer?.name || "-"}</p>
-                    <p>العنوان : {order.customer?.address || "-"}</p>
-                    <p>السائق : {order.driver?.name || "-"}</p>
                 </>
+            )}
+            {order.display?.showAddress && (
+                <p>العنوان : {order.customer?.address || "-"}</p>
+            )}
+            {order.display?.showDriver && (
+                <p>السائق : {order.driver?.name || "-"}</p>
             )}
             <table className="w-full mt-4 table-fixed border-collapse border-solid border border-black">
                 <thead>
@@ -90,6 +87,22 @@ export default function ReceiptTemplate({
                             </td>
                         </tr>
                     ))}
+                    {(order.receiptView?.equipment_lines ?? []).map((line, index) => (
+                        <tr key={`equipment-${index}`}>
+                            <td className="px-2 py-4 border border-solid border-black">
+                                {line.name}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {line.quantity}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {Number(line.price).toFixed(2)}
+                            </td>
+                            <td className="px-2 border border-solid border-black">
+                                {Number(line.total).toFixed(2)}
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
             <table className="mt-4 w-full table-fixed border-collapse border-solid border border-black">
@@ -118,6 +131,16 @@ export default function ReceiptTemplate({
                             {Number(order.service).toFixed(2)}
                         </td>
                     </tr>
+                    {Number(order.equipment_total ?? 0) > 0 && (
+                        <tr>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                المعدات
+                            </td>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {Number(order.equipment_total).toFixed(2)}
+                            </td>
+                        </tr>
+                    )}
                     <tr>
                         <td className="p-2 py-4 border border-solid border-black">
                             الضريبة
@@ -126,6 +149,16 @@ export default function ReceiptTemplate({
                             {Number(order.tax).toFixed(2)}
                         </td>
                     </tr>
+                    {(order.fees ?? []).map((fee) => (
+                        <tr key={`fee-${fee.id}`}>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {fee.name}
+                            </td>
+                            <td className="p-2 py-4 border border-solid border-black">
+                                {Number(fee.amount).toFixed(2)}
+                            </td>
+                        </tr>
+                    ))}
                     <tr>
                         <td className="p-2 py-4 border border-solid border-black">
                             الاجمالي النهائي
@@ -134,9 +167,35 @@ export default function ReceiptTemplate({
                             {Number(order.total).toFixed(2)}
                         </td>
                     </tr>
+                    {order.payment_status === "partial_paid" && order.receiptPayment && (
+                        <>
+                            <tr>
+                                <td className="p-2 py-4 border border-solid border-black">
+                                    المدفوع
+                                </td>
+                                <td className="p-2 py-4 border border-solid border-black">
+                                    {Number(order.receiptPayment.paid).toFixed(2)}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 py-4 border border-solid border-black">
+                                    المتبقي
+                                </td>
+                                <td className="p-2 py-4 border border-solid border-black">
+                                    {Number(order.receiptPayment.remaining).toFixed(2)}
+                                </td>
+                            </tr>
+                        </>
+                    )}
                 </tbody>
             </table>
-            <p className="text-center mt-4">الرقم المرجعي - {order.id}</p>
+            <ExternalReceipt receipt={order.receiptView} />
+            <div className="mt-4">
+                {returnsEnabled && <Code128Barcode code={`#${order.id}`} />}
+                <p className="text-center">
+                    الرقم المرجعي: <span dir="ltr">#{order.id}</span>
+                </p>
+            </div>
             <p className="whitespace-pre-line  text-center">{receiptFooter}</p>
             <img
                 className="block mx-auto w-[50mm] mt-4"

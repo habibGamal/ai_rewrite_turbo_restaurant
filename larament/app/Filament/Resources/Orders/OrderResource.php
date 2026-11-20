@@ -3,19 +3,28 @@
 namespace App\Filament\Resources\Orders;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Enums\ReturnStatus;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Pages\ViewOrder;
 use App\Filament\Resources\Orders\RelationManagers\ItemsRelationManager;
+use App\Filament\Resources\Orders\RelationManagers\KitchenItemsRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\OrderReturnsRelationManager;
+use App\Filament\Resources\Orders\RelationManagers\OrderTimelineRelationManager;
 use App\Filament\Resources\Orders\RelationManagers\PaymentsRelationManager;
-use App\Filament\Traits\AdminAccess;
+use App\Models\ExternalOrder;
+use App\Models\ExternalOrderItem;
+use App\Models\KitchenTicket;
+use App\Models\KitchenTicketItem;
+use App\Models\KitchenTicketRound;
 use App\Models\Order;
+use App\Modules\Module;
+use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -28,8 +37,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class OrderResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = Order::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';
@@ -40,7 +47,7 @@ class OrderResource extends Resource
 
     protected static ?string $pluralModelLabel = 'الطلبات';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المطعم';
+    protected static string|\UnitEnum|null $navigationGroup = 'إدارة المبيعات';
 
     protected static ?int $navigationSort = 1;
 
@@ -50,6 +57,14 @@ class OrderResource extends Resource
             ->components([
                 // This is a view-only resource, no form fields needed
             ]);
+    }
+
+    /**
+     * Table number, kitchen notes and kitchen items belong to the Restaurant module.
+     */
+    private static function restaurantEnabled(): bool
+    {
+        return app(FeatureService::class)->moduleEnabled(Module::RESTAURANT);
     }
 
     public static function table(Table $table): Table
@@ -79,6 +94,9 @@ class OrderResource extends Resource
                 TextColumn::make('type')
                     ->label('نوع الطلب')
                     ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon)
                     ->sortable(),
 
                 TextColumn::make('status')
@@ -132,7 +150,7 @@ class OrderResource extends Resource
             ->filters([
                 SelectFilter::make('type')
                     ->label('نوع الطلب')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
                 SelectFilter::make('status')
                     ->label('حالة الطلب')
@@ -186,7 +204,10 @@ class OrderResource extends Resource
 
                         TextEntry::make('type')
                             ->label('نوع الطلب')
-                            ->badge(),
+                            ->badge()
+                            ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                            ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                            ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                         TextEntry::make('status')
                             ->label('حالة الطلب')
@@ -201,6 +222,7 @@ class OrderResource extends Resource
                             ->badge(),
 
                         TextEntry::make('dine_table_number')
+                            ->visible(fn (): bool => self::restaurantEnabled())
                             ->label('رقم الطاولة')
                             ->placeholder('غير محدد'),
 
@@ -273,7 +295,8 @@ class OrderResource extends Resource
                         TextEntry::make('remaining_amount')
                             ->label('المبلغ المتبقي')
                             ->money('EGP')
-                            ->color(fn ($record) => $record->remaining_amount > 0 ? 'danger' : 'success'),
+                            ->color(fn ($record) => $record->remaining_amount > 0 ? 'danger' : 'success')
+                            ->visible(fn ($record): bool => app(FeatureService::class)->deferredPaymentEnabled() || $record->remaining_amount > 0.005),
 
                         TextEntry::make('profit')
                             ->label('الربح')
@@ -283,13 +306,14 @@ class OrderResource extends Resource
                             ->label('إجمالي المرتجع')
                             ->money('EGP')
                             ->color('danger')
-                            ->visible(fn ($record) => $record->total_refunded > 0),
+                            ->visible(fn ($record) => $record->total_refunded > 0 && app(FeatureService::class)->returnsEnabled()),
                     ])
                     ->columns(3),
 
                 Section::make('ملاحظات')
                     ->schema([
                         TextEntry::make('kitchen_notes')
+                            ->visible(fn (): bool => self::restaurantEnabled())
                             ->label('ملاحظات المطبخ')
                             ->placeholder('لا توجد ملاحظات'),
 
@@ -351,6 +375,98 @@ class OrderResource extends Resource
                     ->collapsed()
                     ->collapsible()
                     ->visible(fn ($record) => ! empty($record->web_preferences)),
+
+                Section::make('الطلبات الخارجية')
+                    ->schema([
+                        RepeatableEntry::make('externalOrders')
+                            ->label('تفاصيل الطلبات الخارجية')
+                            ->schema([
+                                TextEntry::make('seller.name')
+                                    ->label('البائع الخارجي'),
+                                TextEntry::make('status')
+                                    ->label('الحالة')
+                                    ->formatStateUsing(fn (string $state): string => $state === 'cancelled' ? 'ملغي' : 'نشط')
+                                    ->color(fn (string $state): string => $state === 'cancelled' ? 'danger' : 'success')
+                                    ->badge(),
+                                TextEntry::make('total')
+                                    ->label('الإجمالي')
+                                    ->money('EGP'),
+                                TextEntry::make('items_summary')
+                                    ->label('الأصناف')
+                                    ->state(fn (ExternalOrder $record): string => $record->items
+                                        ->map(fn (ExternalOrderItem $item): string => "{$item->name} × {$item->quantity}")
+                                        ->join('، ') ?: '-'),
+                            ])
+                            ->columns(4),
+                    ])
+                    ->visible(fn (Order $record): bool => $record->externalOrders->isNotEmpty()),
+
+                Section::make('أداء المطبخ وأوقات التحضير')
+                    ->schema([
+                        TextEntry::make('kitchenTicket.status')
+                            ->label('حالة تذكرة المطبخ')
+                            ->badge()
+                            ->formatStateUsing(fn ($state) => match ($state instanceof \BackedEnum ? $state->value : (string) $state) {
+                                'active' => 'قيد التحضير',
+                                'done' => 'جاهز',
+                                'cancelled' => 'ملغي',
+                                default => (string) ($state instanceof \BackedEnum ? $state->value : ($state ?? 'غير محدد')),
+                            })
+                            ->color(fn ($state) => match ($state instanceof \BackedEnum ? $state->value : (string) $state) {
+                                'done' => 'success',
+                                'active' => 'primary',
+                                'cancelled' => 'danger',
+                                default => 'gray',
+                            }),
+
+                        TextEntry::make('kitchenTicket.first_sent_at')
+                            ->label('وقت الإرسال الأول')
+                            ->dateTime('Y-m-d H:i:s')
+                            ->placeholder('غير محدد'),
+
+                        TextEntry::make('kitchenTicket.done_at')
+                            ->label('وقت الانتهاء')
+                            ->dateTime('Y-m-d H:i:s')
+                            ->placeholder('قيد التحضير'),
+
+                        TextEntry::make('kitchen_duration')
+                            ->label('إجمالي وقت المطبخ')
+                            ->state(function (Order $record): string {
+                                /** @var KitchenTicket|null $ticket */
+                                $ticket = $record->kitchenTicket;
+                                if (! $ticket) {
+                                    return '-';
+                                }
+                                $seconds = 0;
+                                foreach ($ticket->rounds as $round) {
+                                    /** @var KitchenTicketRound $round */
+                                    if ($round->ended_at) {
+                                        $seconds += max(0, $round->ended_at->getTimestamp() - $round->started_at->getTimestamp());
+                                    }
+                                }
+
+                                return sprintf('%02d:%02d', intdiv(max(0, (int) round((float) $seconds)), 60), max(0, (int) round((float) $seconds)) % 60);
+                            })
+                            ->color('info')
+                            ->weight('semibold'),
+
+                        TextEntry::make('delayed_items_count')
+                            ->label('البنود المتأخرة')
+                            ->state(function (Order $record): string {
+                                $items = $record->kitchenItems;
+                                $lateCount = $items->filter(fn (KitchenTicketItem $item): bool => $item->isLate())->count();
+
+                                return $lateCount > 0 ? "{$lateCount} صنف متأخر" : 'لا توجد أصناف متأخرة';
+                            })
+                            ->badge()
+                            ->color(function (Order $record): string {
+                                $lateCount = $record->kitchenItems->filter(fn (KitchenTicketItem $item): bool => $item->isLate())->count();
+
+                                return $lateCount > 0 ? 'danger' : 'success';
+                            }),
+                    ])
+                    ->columns(3)
+                    ->visible(fn (Order $record): bool => $record->kitchenTicket !== null),
             ]);
     }
 
@@ -358,8 +474,10 @@ class OrderResource extends Resource
     {
         return [
             ItemsRelationManager::class,
+            KitchenItemsRelationManager::class,
             PaymentsRelationManager::class,
             OrderReturnsRelationManager::class,
+            OrderTimelineRelationManager::class,
         ];
     }
 
@@ -374,6 +492,6 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns']);
+            ->with(['customer', 'user', 'driver', 'shift', 'payments', 'items', 'returns', 'externalOrders.seller', 'externalOrders.items', 'externalOrders.collections', 'kitchenTicket.rounds', 'kitchenItems']);
     }
 }

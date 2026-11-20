@@ -2,9 +2,13 @@
 
 use App\Enums\InventoryMovementOperation;
 use App\Enums\MovementReason;
+use App\Exceptions\StockOperationException;
 use App\Models\InventoryItem;
 use App\Models\InventoryItemMovement;
+use App\Models\InventoryItemMovementDaily;
 use App\Models\Product;
+use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\InventoryDailyAggregationService;
 use App\Services\StockService;
 
@@ -14,11 +18,110 @@ describe('StockService', function () {
     beforeEach(function () {
         $this->dailyAggregationService = \Mockery::mock(InventoryDailyAggregationService::class);
         $this->dailyAggregationService->shouldReceive('aggregateMultipleMovements')->andReturn([]);
+        $this->dailyAggregationService->shouldReceive('currentBusinessDate')->andReturn(\Carbon\Carbon::today());
         $this->stockService = new StockService($this->dailyAggregationService);
+        openInventoryDay();
     });
 
     afterEach(function () {
         \Mockery::close();
+    });
+
+    describe('warehouse stock', function () {
+        it('keeps order stock wrappers compatible with movement collections', function () {
+            $product = Product::factory()->create(['type' => \App\Enums\ProductType::Consumable]);
+            $order = \App\Models\Order::factory()->create();
+            \App\Models\OrderItem::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => 2]);
+            $this->stockService->addStock([['product_id' => $product->id, 'quantity' => 10]]);
+            $conversion = new \App\Services\Orders\OrderStockConversionService($this->stockService);
+            expect($conversion->removeStockForCompletedOrder($order))->toBeTrue()
+                ->and($this->stockService->getCurrentStock($product->id))->toBe(8.0)
+                ->and($conversion->addStockForCancelledOrder($order))->toBeTrue()
+                ->and($this->stockService->getCurrentStock($product->id))->toBe(10.0);
+        });
+        it('preserves line value when duplicate lines carry different unit costs', function () {
+            $product = Product::factory()->create(['cost' => 20]);
+            $movement = $this->stockService->addStock([
+                ['product_id' => $product->id, 'quantity' => 2],
+                ['product_id' => $product->id, 'quantity' => 3, 'unit_cost' => 30],
+            ])->sole();
+            expect((float) $movement->quantity)->toBe(5.0)
+                ->and((float) $movement->unit_cost)->toBe(26.0)
+                ->and((float) $movement->total_cost)->toBe(130.0);
+        });
+        it('adds stock to the given warehouse only and returns persisted costed movements', function () {
+            $product = Product::factory()->create(['cost' => 20]);
+            $warehouse = Warehouse::factory()->create();
+            $user = User::factory()->create();
+            $this->actingAs($user);
+            $movements = $this->stockService->addStock([
+                ['product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 10.125, 'unit_cost' => 23.4567],
+            ], MovementReason::PURCHASE, $product);
+
+            expect($movements)->toBeInstanceOf(\Illuminate\Support\Collection::class)->toHaveCount(1);
+            $movement = $movements->sole();
+            expect($movement->exists)->toBeTrue()->and($movement->id)->not->toBeNull()
+                ->and($movement->warehouse->id)->toBe($warehouse->id)
+                ->and($movement->user->id)->toBe($user->id)
+                ->and((float) $movement->unit_cost)->toBe(23.4567)
+                ->and((float) $movement->total_cost)->toBe(237.50)
+                ->and($movement->referenceable->is($product))->toBeTrue()
+                ->and($this->stockService->getCurrentStock($product->id, $warehouse->id))->toBe(10.125)
+                ->and($this->stockService->getCurrentStock($product->id, Warehouse::default()->id))->toBe(0.0);
+        });
+
+        it('defaults to the default warehouse and product cost when none is given', function () {
+            auth()->logout();
+            $product = Product::factory()->create(['cost' => 20]);
+            $movement = $this->stockService->addStock([['product_id' => $product->id, 'quantity' => 3]])->sole();
+            expect($movement->warehouse_id)->toBe(Warehouse::default()->id)
+                ->and((float) $movement->unit_cost)->toBe(20.0)
+                ->and((float) $movement->total_cost)->toBe(60.0)
+                ->and($movement->user_id)->toBeNull();
+        });
+
+        it('lets one warehouse go negative and sums all warehouses when none is passed', function () {
+            $product = Product::factory()->create(['cost' => 20]);
+            $warehouse = Warehouse::factory()->create();
+            $this->stockService->addStock([['product_id' => $product->id, 'quantity' => 30]]);
+            $movement = $this->stockService->removeStock([
+                ['product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 2],
+            ])->sole();
+            expect($this->stockService->getCurrentStock($product->id, $warehouse->id))->toBe(-2.0)
+                ->and($this->stockService->getCurrentStock($product->id))->toBe(28.0)
+                ->and((float) $movement->total_cost)->toBe(40.0);
+        });
+
+        it('merges duplicate lines per product and warehouse and keeps different warehouses separate', function () {
+            $product = Product::factory()->create(['cost' => 20]);
+            $warehouse = Warehouse::factory()->create();
+            $movements = $this->stockService->addStock([
+                ['product_id' => $product->id, 'quantity' => 2],
+                ['product_id' => $product->id, 'warehouse_id' => Warehouse::default()->id, 'quantity' => 3],
+                ['product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 4],
+            ]);
+            expect($movements)->toHaveCount(2)
+                ->and((float) $movements->firstWhere('warehouse_id', Warehouse::default()->id)->quantity)->toBe(5.0)
+                ->and($this->stockService->getCurrentStock($product->id, $warehouse->id))->toBe(4.0);
+        });
+
+        it('keeps an explicit zero incoming cost and values outgoing lines at current cost', function () {
+            $product = Product::factory()->create(['cost' => 20]);
+            $movement = $this->stockService->addStock([['product_id' => $product->id, 'quantity' => 3, 'unit_cost' => 0]])->sole();
+            expect((float) $movement->unit_cost)->toBe(0.0)->and((float) $movement->total_cost)->toBe(0.0);
+            $out = $this->stockService->removeStock([['product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 15.25]])->sole();
+            expect((float) $out->unit_cost)->toBe(20.0)->and((float) $out->total_cost)->toBe(40.0);
+        });
+
+        it('rolls back all warehouse balances and movements when a warehouse does not exist', function () {
+            $product = Product::factory()->create();
+            expect(fn () => $this->stockService->addStock([
+                ['product_id' => $product->id, 'quantity' => 3],
+                ['product_id' => $product->id, 'warehouse_id' => 999999, 'quantity' => 4],
+            ]))->toThrow(StockOperationException::class);
+            expect($this->stockService->getCurrentStock($product->id))->toBe(0.0)
+                ->and(InventoryItemMovement::where('product_id', $product->id)->count())->toBe(0);
+        });
     });
 
     describe('addStock', function () {
@@ -32,7 +135,7 @@ describe('StockService', function () {
 
             $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
 
-            expect($result)->toBeTrue();
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
@@ -55,7 +158,7 @@ describe('StockService', function () {
 
             $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
 
-            expect($result)->toBeTrue();
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
                 'quantity' => 75.0, // 50 + 25
@@ -72,9 +175,9 @@ describe('StockService', function () {
                 ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
-            $result = $this->stockService->addStock($items, MovementReason::PURCHASE);
+            expect(fn () => $this->stockService->addStock($items, MovementReason::PURCHASE))
+                ->toThrow(StockOperationException::class);
 
-            expect($result)->toBeFalse();
             $this->assertDatabaseMissing('inventory_items', ['product_id' => 99999]);
             $this->assertDatabaseMissing('inventory_items', ['product_id' => 99998]);
         });
@@ -100,7 +203,7 @@ describe('StockService', function () {
 
             $result = $this->stockService->removeStock($items, MovementReason::ORDER);
 
-            expect($result)->toBeTrue();
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
             foreach ($items as $item) {
                 $this->assertDatabaseHas('inventory_items', [
                     'product_id' => $item['product_id'],
@@ -109,7 +212,7 @@ describe('StockService', function () {
             }
         });
 
-        it('fails to remove stock when insufficient inventory', function () {
+        it('removes stock below zero when insufficient inventory', function () {
             $products = Product::factory(2)->create();
 
             // Create initial inventory with limited stock
@@ -129,15 +232,14 @@ describe('StockService', function () {
 
             $result = $this->stockService->removeStock($items, MovementReason::ORDER);
 
-            expect($result)->toBeFalse();
-            // Quantities should remain unchanged due to transaction rollback
+            expect((bool) $result)->toBeTrue();
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0,
+                'quantity' => -10.0,
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0,
+                'quantity' => 5.0,
             ]);
         });
 
@@ -147,9 +249,8 @@ describe('StockService', function () {
                 ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
-            $result = $this->stockService->removeStock($items, MovementReason::ORDER);
-
-            expect($result)->toBeFalse();
+            expect(fn () => $this->stockService->removeStock($items, MovementReason::ORDER))
+                ->toThrow(StockOperationException::class);
         });
     });
 
@@ -207,9 +308,9 @@ describe('StockService', function () {
                 ['product_id' => 99998, 'quantity' => 75.0],
             ];
 
-            $result = $this->stockService->processMultipleItems($items, 'add', MovementReason::PURCHASE);
+            expect(fn () => $this->stockService->processMultipleItems($items, 'add', MovementReason::PURCHASE))
+                ->toThrow(StockOperationException::class);
 
-            expect($result)->toBeFalse();
             $this->assertDatabaseMissing('inventory_items', [
                 'product_id' => 99999,
             ]);
@@ -218,7 +319,7 @@ describe('StockService', function () {
             ]);
         });
 
-        it('fails to process multiple items when insufficient stock for removal', function () {
+        it('processes multiple items below zero when insufficient stock for removal', function () {
             $products = Product::factory(2)->create();
 
             // Create initial inventory with limited stock
@@ -238,15 +339,14 @@ describe('StockService', function () {
 
             $result = $this->stockService->processMultipleItems($items, 'remove', MovementReason::ORDER);
 
-            expect($result)->toBeFalse();
-            // Quantities should remain unchanged due to transaction rollback
+            expect((bool) $result)->toBeTrue();
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[0]->id,
-                'quantity' => 10.0,
+                'quantity' => -10.0,
             ]);
             $this->assertDatabaseHas('inventory_items', [
                 'product_id' => $products[1]->id,
-                'quantity' => 15.0,
+                'quantity' => 5.0,
             ]);
         });
 
@@ -433,6 +533,116 @@ describe('StockService', function () {
             $summary = $this->stockService->getDailyMovementSummary($product->id, $startDate, $endDate);
 
             expect($summary)->toBe($expectedSummary);
+        });
+    });
+
+    describe('Phase 1 correctness improvements', function () {
+        it('merges duplicate product lines and updates stock correctly', function () {
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'quantity' => 10.0]);
+
+            $items = [
+                ['product_id' => $product->id, 'quantity' => 2.0],
+                ['product_id' => $product->id, 'quantity' => 3.0],
+            ];
+
+            $result = $this->stockService->removeStock($items, MovementReason::ORDER);
+
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
+            expect(InventoryItem::where('product_id', $product->id)->count())->toBe(1);
+            expect(InventoryItem::where('product_id', $product->id)->value('quantity'))->toEqual(5.0);
+
+            $movements = InventoryItemMovement::where('product_id', $product->id)->get();
+            expect($movements)->toHaveCount(1);
+            expect($movements->first()->quantity)->toEqual(5.0);
+        });
+
+        it('creates inventory item with negative quantity when outgoing for product without inventory row', function () {
+            $product = Product::factory()->create();
+            InventoryItem::where('product_id', $product->id)->delete();
+
+            $items = [
+                ['product_id' => $product->id, 'quantity' => 4.0],
+            ];
+
+            $result = $this->stockService->removeStock($items, MovementReason::ORDER);
+
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
+            $inventoryItem = InventoryItem::where('product_id', $product->id)->first();
+            expect($inventoryItem)->not->toBeNull();
+            expect($inventoryItem->quantity)->toEqual(-4.0);
+        });
+
+        it('throws StockOperationException and rolls back transaction on failure', function () {
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'quantity' => 10.0]);
+
+            $items = [
+                ['product_id' => $product->id, 'quantity' => 5.0],
+                ['product_id' => 999999, 'quantity' => 5.0],
+            ];
+
+            expect(fn () => $this->stockService->removeStock($items, MovementReason::ORDER))
+                ->toThrow(StockOperationException::class);
+
+            expect(InventoryItem::where('product_id', $product->id)->value('quantity'))->toEqual(10.0);
+            expect(InventoryItemMovement::where('product_id', $product->id)->count())->toBe(0);
+        });
+
+        it('throws StockOperationException when no day is open', function () {
+            InventoryItemMovementDaily::query()->delete();
+
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'quantity' => 10.0]);
+
+            $items = [
+                ['product_id' => $product->id, 'quantity' => 5.0],
+            ];
+
+            expect(fn () => $this->stockService->addStock($items, MovementReason::PURCHASE))
+                ->toThrow(StockOperationException::class);
+        });
+
+        it('creates inventory item when product type changes away from manufactured to consumable', function () {
+            $product = Product::factory()->create([
+                'type' => \App\Enums\ProductType::Manufactured->value,
+            ]);
+
+            expect(InventoryItem::where('product_id', $product->id)->exists())->toBeFalse();
+
+            $product->update([
+                'type' => \App\Enums\ProductType::Consumable->value,
+            ]);
+
+            expect(InventoryItem::where('product_id', $product->id)->exists())->toBeTrue();
+            expect(InventoryItem::where('product_id', $product->id)->value('quantity'))->toEqual(0);
+        });
+
+        it('enforces unique product and warehouse on inventory_items table', function () {
+            $product = Product::factory()->create();
+            InventoryItem::create(['product_id' => $product->id, 'quantity' => 5.0]);
+
+            expect(fn () => InventoryItem::create(['product_id' => $product->id, 'quantity' => 10.0]))
+                ->toThrow(\Illuminate\Database\QueryException::class);
+        });
+
+        it('stores 3 decimals precision for movements and inventory deduction', function () {
+            $product = Product::factory()->create();
+            InventoryItem::updateOrCreate(['product_id' => $product->id], ['quantity' => 10.000]);
+
+            $items = [
+                ['product_id' => $product->id, 'quantity' => 0.015],
+            ];
+
+            $result = $this->stockService->removeStock($items, MovementReason::ORDER);
+
+            expect($result)->toBeInstanceOf(\Illuminate\Support\Collection::class)->not->toBeEmpty();
+
+            $inventoryItem = InventoryItem::where('product_id', $product->id)->first();
+            expect((float) $inventoryItem->quantity)->toEqual(9.985);
+
+            $movement = InventoryItemMovement::where('product_id', $product->id)->latest('id')->first();
+            expect((float) $movement->quantity)->toEqual(0.015);
         });
     });
 

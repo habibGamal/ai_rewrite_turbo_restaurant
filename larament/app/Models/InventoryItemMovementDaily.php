@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/** @property int $warehouse_id */
 class InventoryItemMovementDaily extends Model
 {
     use HasFactory;
@@ -15,6 +16,12 @@ class InventoryItemMovementDaily extends Model
 
     protected $fillable = [
         'product_id',
+        'warehouse_id',
+        'transfer_in_quantity',
+        'transfer_out_quantity',
+        'manufacturing_in_quantity',
+        'manufacturing_out_quantity',
+        'issue_quantity',
         'date',
         'start_quantity',
         'incoming_quantity',
@@ -27,14 +34,31 @@ class InventoryItemMovementDaily extends Model
 
     protected $casts = [
         'date' => 'date',
-        'start_quantity' => 'decimal:2',
-        'incoming_quantity' => 'decimal:2',
-        'return_sales_quantity' => 'decimal:2',
-        'sales_quantity' => 'decimal:2',
-        'return_waste_quantity' => 'decimal:2',
-        'end_quantity' => 'decimal:2',
+        'start_quantity' => 'decimal:3',
+        'incoming_quantity' => 'decimal:3',
+        'return_sales_quantity' => 'decimal:3',
+        'sales_quantity' => 'decimal:3',
+        'return_waste_quantity' => 'decimal:3',
+        'end_quantity' => 'decimal:3',
         'closed_at' => 'datetime',
+        'transfer_in_quantity' => 'decimal:3',
+        'transfer_out_quantity' => 'decimal:3',
+        'manufacturing_in_quantity' => 'decimal:3',
+        'manufacturing_out_quantity' => 'decimal:3',
+        'issue_quantity' => 'decimal:3',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (InventoryItemMovementDaily $daily) {
+            $daily->warehouse_id ??= Warehouse::default()->id;
+        });
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
     /**
      * Get the product that owns the daily movement

@@ -31,31 +31,41 @@ class WasteService
         DB::beginTransaction();
 
         try {
+            $locked = Waste::whereKey($waste->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->closed_at) {
+                throw new Exception('سجل التالف مغلق بالفعل');
+            }
+
             // Load waste items with products
-            $waste->load(['items.product']);
+            $items = $locked->items()->with('product')->orderBy('id')->lockForUpdate()->get();
 
             // Prepare items for stock removal
             $itemsToRemove = [];
-            foreach ($waste->items as $item) {
+            foreach ($items as $item) {
                 $itemsToRemove[] = [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
+                    'warehouse_id' => $locked->warehouse_id,
                 ];
             }
 
             // Remove stock for all wasted items
             if (! empty($itemsToRemove)) {
-                $this->stockService->removeStock($itemsToRemove, MovementReason::WASTE, $waste);
-                Log::info('Removed stock for '.count($itemsToRemove)." products in waste {$waste->id}");
+                $this->stockService->removeStock($itemsToRemove, MovementReason::WASTE, $locked);
+                Log::info('Removed stock for '.count($itemsToRemove)." products in waste {$locked->id}");
             }
 
             // Mark waste as closed
-            $waste->update([
+            $locked->update([
                 'closed_at' => now(),
-                'total' => $waste->items->sum('total'),
+                'business_date' => app(InventoryDailyAggregationService::class)->currentBusinessDate()->toDateString(),
+                'total' => $items->sum('total'),
             ]);
 
             DB::commit();
+
+            $waste->refresh();
 
             Log::info("Waste {$waste->id} closed successfully with ".count($itemsToRemove).' items removed from inventory');
 

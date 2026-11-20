@@ -35,8 +35,9 @@ class NoCustomersSalesInPeriodWidget extends Widget
 
     private function getPeriodInfo(): array
     {
-        $startDate = $this->pageFilters['startDate'] ?? now()->subDays(30)->startOfDay()->toDateString();
-        $endDate = $this->pageFilters['endDate'] ?? now()->endOfDay()->toDateString();
+        [$defaultStart, $defaultEnd] = CustomersPerformanceReportService::defaultPeriod();
+        $startDate = $this->pageFilters['startDate'] ?? $defaultStart;
+        $endDate = $this->pageFilters['endDate'] ?? $defaultEnd;
 
         return $this->customersReportService->getPeriodInfo($startDate, $endDate);
     }

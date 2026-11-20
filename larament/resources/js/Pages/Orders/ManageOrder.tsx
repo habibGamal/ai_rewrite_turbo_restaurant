@@ -13,15 +13,21 @@ import {
     Popconfirm,
     Row,
     Tag,
+    Tooltip,
     Typography,
 } from "antd";
 import {
     CheckCircleOutlined,
+    ClockCircleOutlined,
     EditOutlined,
     PercentageOutlined,
+    PlusCircleOutlined,
     PrinterOutlined,
     RightOutlined,
     SaveOutlined,
+    ShopOutlined,
+    TeamOutlined,
+    ToolOutlined,
     UserAddOutlined,
 } from "@ant-design/icons";
 
@@ -31,13 +37,12 @@ import {
     calculateOrderTotals,
     getOrderStatusConfig,
     formatCurrency,
-    getOrderTypeLabel,
 } from "@/utils/orderCalculations";
 import CashierLayout from "@/Layouts/CashierLayout";
 import { printOrder } from "../../helpers/printTemplate";
 
 // Components
-import Categories from "@/Components/Orders/Categories";
+import Categories, { productsForOrder } from "@/Components/Orders/Categories";
 import OrderItem from "@/Components/Orders/OrderItem";
 import CustomerModal from "@/Components/Orders/CustomerModal";
 import DriverModal from "@/Components/Orders/DriverModal";
@@ -45,67 +50,114 @@ import OrderNotesModal from "@/Components/Orders/OrderNotesModal";
 import OrderDiscountModal from "@/Components/Orders/OrderDiscountModal";
 import ChangeOrderTypeModal from "@/Components/Orders/ChangeOrderTypeModal";
 import PaymentModal from "@/Components/Orders/PaymentModal";
+import GuestsCountModal from "@/Components/Orders/GuestsCountModal";
+import ExternalOrders from "@/Components/Orders/ExternalOrders";
+import OrderEquipment from "@/Components/Orders/OrderEquipment";
+import OrderFees from "@/Components/Orders/OrderFees";
 import PrintInKitchenModal from "@/Components/Orders/PrintInKitchenModal";
 import PrintChangesModal, { detectChangedItems } from "@/Components/Orders/PrintChangesModal";
 import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import LoadingButton from "@/Components/LoadingButton";
+import IfModule from "@/Components/IfModule";
+import { useModule } from "@/hooks/useModule";
+import { useTerms } from "@/lib/wording";
 import axios from "axios";
-import { useSymbologyScanner } from "@use-symbology-scanner/react";
-import {
-    STANDARD_SYMBOLOGY_KEYS,
-    StandardSymbologyKey,
-} from "@use-symbology-scanner/core/symbologies";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 
 export default function ManageOrder({
     order,
+    orderDisplay,
+    changeTypeOptions,
     categories,
     drivers,
     regions,
+    externalOrders,
+    sellers,
+    guestDue,
+    canAddExternalOrder: typeAllowsExternalOrder,
+    canAddFees: typeAllowsFees = false,
+    feeSuggestions = [],
+    credit,
+    equipmentLines = [],
+    equipmentOptions = [],
 }: ManageOrderProps) {
-    const { auth, receiptFooter, scaleBarcodePrefix } = usePage().props;
-    const user = auth.user as User;
+    const { auth, features, receiptFooter } =
+        usePage<ManageOrderProps>().props;
+    const restaurantEnabled = useModule("restaurant");
+    const deliveryEnabled = useModule("delivery");
+    const externalSellersEnabled = useModule("external_sellers");
+    const terms = useTerms();
+    const outsourcedFeatureEnabled = externalSellersEnabled && Boolean(features?.outsourced_orders);
+    const equipmentFeatureEnabled = Boolean(features?.equipment);
+    const user = auth.user;
+    const hasPermission = (permission: string) =>
+        Boolean(
+            user?.isAdmin ||
+                user?.roles?.includes("admin") ||
+                user?.permissions?.includes(permission)
+        );
     const { modal } = App.useApp();
-    const barcodeScanner = (symbol: string, type: any) => {
-        const barcode = symbol;
-        console.log("Scanned barcode:", barcode, type);
-        // Use dispatch to add item by barcode
-        dispatch({
-            type: "addByBarcode",
-            barcode: barcode,
-            products: products,
-            scalePrefix: scaleBarcodePrefix as string,
-            user: user,
-        });
+    // The server resolves the code (extra barcodes, pack sizes, scale labels);
+    // the item is only added if it is on this order type's menu.
+    const barcodeScanner = async (symbol: string) => {
+        const code = symbol.trim();
+        if (!code) return;
+        try {
+            const { data } = await axios.get<{
+                found: boolean;
+                product_id: number;
+                quantity: number;
+            }>(route("products.lookup"), { params: { code } });
+            const product = scannableProducts.find(
+                (p) => p.id === data.product_id
+            );
+            if (!product) {
+                message.warning("هذا المنتج غير متاح لهذا النوع من الطلبات");
+                return;
+            }
+            dispatch({
+                type: "addScanned",
+                product,
+                quantity: Number(data.quantity) || 1,
+                user,
+            });
+        } catch (error: any) {
+            if (error?.response?.status === 404) {
+                message.warning(`لا يوجد منتج بالباركود ${code}`);
+            } else {
+                message.error("تعذر البحث عن الباركود");
+            }
+        }
     };
-    const symbologies = ["EAN 13"] as StandardSymbologyKey[];
-    useSymbologyScanner(barcodeScanner, {
-        // symbologies,
-        scannerOptions: {
-            prefix: "",
-            suffix: "",
-            maxDelay: 50,
-        },
-    });
+    // Only fast scanner bursts on the order screen itself; typing in fields
+    // or dialogs (fees, notes, discounts...) is never a scan.
+    useBarcodeScanner(barcodeScanner, { maxDelay: 50 });
 
-    // Create initial order items from the order
-    const products = categories.flatMap((category) => category.products);
-    const initOrderItems: OrderItemData[] = order.items.map((orderItem) => ({
-        product_id: orderItem.product_id,
-        name:
-            products.find((product) => product.id === orderItem.product_id)
-                ?.name || "",
-        price: parseFloat(orderItem.price.toString()),
-        quantity: orderItem.quantity,
-        notes: orderItem.notes,
-        initial_quantity: orderItem.quantity,
-        item_discount: orderItem.item_discount || 0,
-        item_discount_type: orderItem.item_discount_type,
-        item_discount_percent: orderItem.item_discount_percent,
-        product: products.find(
-            (product) => product.id === orderItem.product_id
-        )!,
-    }));
+    // Names of items already on the order still resolve after a type change hides their category.
+    const products = productsForOrder(categories, order.type, true);
+    const scannableProducts = productsForOrder(categories, order.type, false);
+    // A product deactivated after it was added (e.g. a retired variant SKU) is no
+    // longer on the menu, so fall back to the order item's own product row.
+    const initOrderItems: OrderItemData[] = order.items.map((orderItem) => {
+        const product =
+            products.find((p) => p.id === orderItem.product_id) ??
+            orderItem.product;
+
+        return {
+            product_id: orderItem.product_id,
+            name: product?.name || "",
+            price: parseFloat(orderItem.price.toString()),
+            quantity: orderItem.quantity,
+            notes: orderItem.notes,
+            initial_quantity: orderItem.quantity,
+            item_discount: orderItem.item_discount || 0,
+            item_discount_type: orderItem.item_discount_type,
+            item_discount_percent: orderItem.item_discount_percent,
+            product: product!,
+            kitchen_status: orderItem.kitchen_status,
+        };
+    });
 
     const [orderItems, dispatch] = useReducer(orderItemsReducer, []);
     const [customerInfoSkip, setCustomerInfoSkip] = useState<boolean>(false);
@@ -118,7 +170,15 @@ export default function ManageOrder({
         useState(false);
     const [isChangeOrderTypeModalOpen, setIsChangeOrderTypeModalOpen] =
         useState(false);
+    const [isExternalOrderModalOpen, setIsExternalOrderModalOpen] =
+        useState(false);
+    const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+    const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
+    const [payAfterGuests, setPayAfterGuests] = useState(false);
+    const [isGuestsSaving, setIsGuestsSaving] = useState(false);
+    const guestsMode = order.guests_mode ?? "off";
     const [isPrintInKitchenModalOpen, setIsPrintInKitchenModalOpen] =
         useState(false);
     const [isPrintChangesModalOpen, setIsPrintChangesModalOpen] =
@@ -130,17 +190,50 @@ export default function ManageOrder({
         dispatch({ type: "init", orderItems: initOrderItems, user });
     }, [order.items]);
 
+    useEffect(() => {
+        if (!window.Echo || !order.shift_id) {
+            return;
+        }
+
+        const channel = window.Echo.private(`shift.${order.shift_id}`);
+        const handleKitchenUpdate = (data: { ticket_id: number; order_number: number; reason: string }) => {
+            if (String(data.order_number) === String(order.order_number)) {
+                router.reload({ only: ['order'] });
+            }
+        };
+
+        channel.listen('.KitchenTicketUpdated', handleKitchenUpdate);
+
+        return () => {
+            channel.stopListening('.KitchenTicketUpdated', handleKitchenUpdate);
+        };
+    }, [order.shift_id, order.order_number]);
+
     // Order state checks
     const disableAllControls = order.status !== "processing";
     const orderCancelled = order.status === "cancelled";
     const orderInProcess = order.status === "processing";
     const orderCompleted = order.status === "completed";
-    const isDineIn = order.type === "dine_in";
-    const isTakeAway = order.type === "takeaway";
-    const isDelivery = order.type === "delivery";
+    const canAddExternalOrder =
+        outsourcedFeatureEnabled &&
+        !disableAllControls &&
+        typeAllowsExternalOrder;
+    const canEditEquipment =
+        equipmentFeatureEnabled && hasPermission("order.add_equipment");
+    const canAddEquipment =
+        canEditEquipment &&
+        !disableAllControls &&
+        (equipmentOptions.length > 0 || equipmentLines.length > 0);
+    const canAddFees = typeAllowsFees && !disableAllControls;
+    const orderFees = order.fees ?? [];
+    const showDriver = deliveryEnabled && (orderDisplay?.showDriver ?? false);
+    const orderWithDisplay = {
+        ...order,
+        display: order.display ?? orderDisplay,
+    };
 
     // Calculate totals
-    const totals = calculateOrderTotals(order, orderItems);
+    const totals = calculateOrderTotals(orderWithDisplay, orderItems);
 
     // Check if using item-level discounts
     const hasItemDiscounts = orderItems.some(item => (item.item_discount ?? 0) > 0);
@@ -180,7 +273,7 @@ export default function ManageOrder({
     const handleSave = (finish: () => void) => {
         const changed = detectChangedItems(orderItems, initOrderItems);
 
-        if (changed.length > 0) {
+        if (restaurantEnabled && changed.length > 0) {
             setPendingChangedItems(changed);
             setIsPrintChangesModalOpen(true);
             finish();
@@ -210,9 +303,12 @@ export default function ManageOrder({
                         notes: item.notes || null,
                     })),
                 });
-                message.success("تم إرسال التغييرات للمطبخ بنجاح");
-            } catch {
-                message.error("حدث خطأ أثناء إرسال التغييرات للمطبخ");
+                message.success(terms.changesSentToKitchen);
+            } catch (error) {
+                const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+                    ? error.response?.data?.message
+                    : undefined;
+                message.error(serverMessage || terms.sendChangesFailed);
             } finally {
                 setIsPrintChangesModalOpen(false);
             }
@@ -235,7 +331,42 @@ export default function ManageOrder({
         // if (!order.customer && !customerInfoSkip) {
         //     return save(() => askForCustomerInfo(finish), finish);
         // }
+        if (guestsMode === "required" && !order.guests_count) {
+            message.warning("يجب إدخال عدد الأفراد قبل إنهاء الطلب");
+            setPayAfterGuests(true);
+            save(() => setIsGuestsModalOpen(true), finish);
+            return;
+        }
         payment(finish);
+    };
+
+    const openGuestsModal = (finish: () => void) => {
+        setPayAfterGuests(false);
+        save(() => setIsGuestsModalOpen(true), finish);
+    };
+
+    const saveGuests = (guests: number | null) => {
+        setIsGuestsSaving(true);
+        router.post(
+            route("orders.updateGuests", order.id),
+            { guests_count: guests },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsGuestsModalOpen(false);
+                    if (payAfterGuests && guests) {
+                        setIsPaymentModalOpen(true);
+                    }
+                    setPayAfterGuests(false);
+                },
+                onError: (errors) => {
+                    message.error(
+                        errors.guests_count || "حدث خطأ أثناء حفظ عدد الأفراد"
+                    );
+                },
+                onFinish: () => setIsGuestsSaving(false),
+            }
+        );
     };
 
     const payment = (finish: () => void) => {
@@ -285,8 +416,10 @@ export default function ManageOrder({
         //     title: "الطلبات",
         // },
         {
-            title: `${getOrderTypeLabel(order.type)} ${
-                order.dine_table_number ?? ""
+            title: `${orderDisplay?.label ?? order.type}${
+                orderDisplay?.showTable && order.dine_table_number
+                    ? ` ${order.dine_table_number}`
+                    : ""
             }`,
         },
         {
@@ -315,6 +448,24 @@ export default function ManageOrder({
             label: "الخصم",
             children: formatCurrency(Number(totals.discount)),
         },
+        ...(totals.equipment > 0 || equipmentLines.length > 0
+            ? [
+                  {
+                      key: "equipment",
+                      label: "المعدات",
+                      children: formatCurrency(totals.equipment),
+                  },
+              ]
+            : []),
+        ...(totals.fees > 0
+            ? [
+                  {
+                      key: "fees",
+                      label: "رسوم إضافية",
+                      children: formatCurrency(totals.fees),
+                  },
+              ]
+            : []),
         {
             key: "5",
             label: "الاجمالي",
@@ -331,7 +482,7 @@ export default function ManageOrder({
                     color={orderStatusConfig.color}
                     text={orderStatusConfig.text}
                 >
-                    <div className="isolate flex gap-4 items-center">
+                    <div className="isolate flex gap-4 items-center flex-wrap">
                         <Button
                             onClick={() => router.get("/orders#" + order.type)}
                             size="large"
@@ -343,6 +494,17 @@ export default function ManageOrder({
                             separator=">"
                             items={breadcrumbItems}
                         />
+                        {restaurantEnabled && order.kitchen_status && (
+                            <Tooltip title={order.kitchen_status === 'ready' ? 'جاهز' : 'قيد التحضير'}>
+                                <Tag
+                                    color={order.kitchen_status === 'ready' ? 'success' : 'processing'}
+                                    icon={order.kitchen_status === 'ready' ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+                                    className="text-sm py-0.5 px-2 !m-0 inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                    {order.kitchen_progress ? `(${order.kitchen_progress.done} من ${order.kitchen_progress.total})` : ''}
+                                </Tag>
+                            </Tooltip>
+                        )}
                     </div>
                 </Badge.Ribbon>
 
@@ -356,24 +518,26 @@ export default function ManageOrder({
                             >
                                 طباعة الفاتورة
                             </LoadingButton>
-                            <LoadingButton
-                                disabled={orderCancelled}
-                                onCustomClick={printInKitchen}
-                                size="large"
-                                icon={<PrinterOutlined />}
-                            >
-                                طباعة في المطبخ
-                            </LoadingButton>
+                            <IfModule name="restaurant">
+                                <LoadingButton
+                                    disabled={orderCancelled}
+                                    onCustomClick={printInKitchen}
+                                    size="large"
+                                    icon={<PrinterOutlined />}
+                                >
+                                    {terms.printInKitchen}
+                                </LoadingButton>
+                            </IfModule>
                             <Button
                                 onClick={() => setIsCustomerModalOpen(true)}
                                 disabled={orderCancelled}
                                 size="large"
-                                className={isDelivery ? "" : "col-span-2"}
+                                className={showDriver ? "" : "col-span-2"}
                                 icon={<UserAddOutlined />}
                             >
                                 بيانات العميل
                             </Button>
-                            {isDelivery && (
+                            {showDriver && (
                                 <Button
                                     onClick={() => setIsDriverModalOpen(true)}
                                     disabled={orderCancelled}
@@ -401,7 +565,56 @@ export default function ManageOrder({
                             >
                                 تغيير الطلب الى
                             </Button>
-                            <CanAccess permission="discounts">
+                            {guestsMode !== "off" && (
+                                <LoadingButton
+                                    disabled={disableAllControls}
+                                    onCustomClick={openGuestsModal}
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<TeamOutlined />}
+                                >
+                                    {order.guests_count
+                                        ? `عدد الأفراد: ${order.guests_count}`
+                                        : "عدد الأفراد"}
+                                </LoadingButton>
+                            )}
+                            {canAddExternalOrder && (
+                                <Button
+                                    disabled={disableAllControls}
+                                    onClick={() =>
+                                        setIsExternalOrderModalOpen(true)
+                                    }
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<ShopOutlined />}
+                                >
+                                    إضافة طلب خارجي
+                                </Button>
+                            )}
+                            {canAddEquipment && (
+                                <Button
+                                    disabled={disableAllControls}
+                                    onClick={() => setIsEquipmentModalOpen(true)}
+                                    size="large"
+                                    className="col-span-2"
+                                    icon={<ToolOutlined />}
+                                >
+                                    إضافة معدات
+                                </Button>
+                            )}
+                            {canAddFees && (
+                                <CanAccess permission="order.add_fees">
+                                    <Button
+                                        onClick={() => setIsFeesModalOpen(true)}
+                                        size="large"
+                                        className="col-span-2"
+                                        icon={<PlusCircleOutlined />}
+                                    >
+                                        رسوم إضافية
+                                    </Button>
+                                </CanAccess>
+                            )}
+                            <CanAccess permission="order.apply_discount">
                                 <LoadingButton
                                     disabled={disableAllControls || hasItemDiscounts}
                                     onCustomClick={(finish) => {
@@ -447,7 +660,7 @@ export default function ManageOrder({
                                 انهاء الطلب
                             </LoadingButton>
                             {orderCompleted && (
-                                <CanAccess permission="cancelOrders">
+                                <CanAccess permission="order.cancel">
                                     <Popconfirm
                                         title="هل انت متأكد من الغاء الطلب؟"
                                         okText="نعم"
@@ -489,6 +702,46 @@ export default function ManageOrder({
                                 />
                             ))}
                             <Divider />
+                            {externalSellersEnabled && (
+                            <ExternalOrders
+                                orderId={order.id}
+                                orders={externalOrders}
+                                sellers={sellers}
+                                disabled={
+                                    disableAllControls ||
+                                    !outsourcedFeatureEnabled
+                                }
+                                featureEnabled={outsourcedFeatureEnabled}
+                                open={
+                                    outsourcedFeatureEnabled &&
+                                    isExternalOrderModalOpen
+                                }
+                                onClose={() => setIsExternalOrderModalOpen(false)}
+                                beforeAction={(action) => save(action, () => {})}
+                            />
+                            )}
+                            <OrderEquipment
+                                orderId={order.id}
+                                lines={equipmentLines}
+                                options={equipmentOptions}
+                                disabled={disableAllControls}
+                                canEdit={canEditEquipment && !disableAllControls}
+                                canRemove={hasPermission("order.remove_equipment")}
+                                open={isEquipmentModalOpen}
+                                onClose={() => setIsEquipmentModalOpen(false)}
+                                beforeAction={(action) => save(action, () => {})}
+                            />
+                            {(typeAllowsFees || orderFees.length > 0) && (
+                                <OrderFees
+                                    orderId={order.id}
+                                    fees={orderFees}
+                                    suggestions={feeSuggestions}
+                                    disabled={disableAllControls}
+                                    open={canAddFees && isFeesModalOpen}
+                                    onClose={() => setIsFeesModalOpen(false)}
+                                    beforeAction={(action) => save(action, () => {})}
+                                />
+                            )}
                             <Descriptions
                                 bordered
                                 title="الحساب"
@@ -501,6 +754,7 @@ export default function ManageOrder({
                         <Categories
                             disabled={disableAllControls}
                             categories={categories}
+                            orderType={order.type}
                             dispatch={dispatch}
                             user={user}
                         />
@@ -513,11 +767,13 @@ export default function ManageOrder({
                     onCancel={() => setIsCustomerModalOpen(false)}
                     order={order}
                 />
-                <DriverModal
-                    open={isDriverModalOpen}
-                    onCancel={() => setIsDriverModalOpen(false)}
-                    order={order}
-                />
+                <IfModule name="delivery">
+                    <DriverModal
+                        open={isDriverModalOpen}
+                        onCancel={() => setIsDriverModalOpen(false)}
+                        order={order}
+                    />
+                </IfModule>
                 <OrderNotesModal
                     open={isOrderNotesModalOpen}
                     onCancel={() => setIsOrderNotesModalOpen(false)}
@@ -527,32 +783,52 @@ export default function ManageOrder({
                     open={isChangeOrderTypeModalOpen}
                     onCancel={() => setIsChangeOrderTypeModalOpen(false)}
                     order={order}
+                    options={changeTypeOptions}
                 />
                 <OrderDiscountModal
                     open={isOrderDiscountModalOpen}
                     onCancel={() => setIsOrderDiscountModalOpen(false)}
                     order={order}
                 />
+                {guestsMode !== "off" && (
+                    <GuestsCountModal
+                        open={isGuestsModalOpen}
+                        mode={payAfterGuests ? "required" : guestsMode}
+                        initialValue={order.guests_count}
+                        okText={payAfterGuests ? "متابعة الدفع" : "حفظ"}
+                        skipText="بدون عدد"
+                        loading={isGuestsSaving}
+                        onCancel={() => {
+                            setIsGuestsModalOpen(false);
+                            setPayAfterGuests(false);
+                        }}
+                        onSubmit={saveGuests}
+                    />
+                )}
                 <PaymentModal
                     open={isPaymentModalOpen}
                     onCancel={() => setIsPaymentModalOpen(false)}
-                    order={order}
+                    order={orderWithDisplay}
                     orderItems={orderItems}
+                    guestDue={externalOrders.length > 0 ? guestDue : undefined}
+                    credit={credit}
                 />
-                <PrintInKitchenModal
-                    open={isPrintInKitchenModalOpen}
-                    onCancel={() => setIsPrintInKitchenModalOpen(false)}
-                    order={order}
-                    orderItems={orderItems}
-                />
-                <PrintChangesModal
-                    open={isPrintChangesModalOpen}
-                    onCancel={() => setIsPrintChangesModalOpen(false)}
-                    onSaveOnly={handleSaveOnly}
-                    onSaveAndPrint={handleSaveAndPrint}
-                    loading={isChangesLoading}
-                    changedItems={pendingChangedItems}
-                />
+                <IfModule name="restaurant">
+                    <PrintInKitchenModal
+                        open={isPrintInKitchenModalOpen}
+                        onCancel={() => setIsPrintInKitchenModalOpen(false)}
+                        order={order}
+                        orderItems={orderItems}
+                    />
+                    <PrintChangesModal
+                        open={isPrintChangesModalOpen}
+                        onCancel={() => setIsPrintChangesModalOpen(false)}
+                        onSaveOnly={handleSaveOnly}
+                        onSaveAndPrint={handleSaveAndPrint}
+                        loading={isChangesLoading}
+                        changedItems={pendingChangedItems}
+                    />
+                </IfModule>
             </div>
         </CashierLayout>
     );

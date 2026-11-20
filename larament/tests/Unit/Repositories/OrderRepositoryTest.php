@@ -2,9 +2,9 @@
 
 use App\DTOs\Orders\CreateOrderDTO;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
+use App\Orders\OrderOpening;
 use App\Repositories\OrderRepository;
 
 uses(Tests\Unit\TestCase::class);
@@ -20,16 +20,16 @@ describe('OrderRepository', function () {
             $shift = \App\Models\Shift::factory()->create();
 
             $createOrderDTO = new CreateOrderDTO(
-                type: OrderType::DINE_IN,
+                typeCode: 'dine_in',
                 shiftId: $shift->id,
                 userId: $user->id,
-                tableNumber: 'T001'
+                opening: new OrderOpening('T001'),
             );
 
-            $order = $this->repository->create($createOrderDTO);
+            $order = $this->repository->create($createOrderDTO, 1);
 
             expect($order)->toBeInstanceOf(Order::class)
-                ->and($order->type)->toBe(OrderType::DINE_IN)
+                ->and($order->type)->toBe('dine_in')
                 ->and($order->shift_id)->toBe($shift->id)
                 ->and($order->user_id)->toBe($user->id)
                 ->and($order->dine_table_number)->toBe('T001')
@@ -41,11 +41,11 @@ describe('OrderRepository', function () {
             $user = \App\Models\User::factory()->create();
             $shift = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift->id, $user->id);
+            $dto1 = new CreateOrderDTO('takeaway', $shift->id, $user->id);
+            $dto2 = new CreateOrderDTO('takeaway', $shift->id, $user->id);
 
-            $order1 = $this->repository->create($dto1);
-            $order2 = $this->repository->create($dto2);
+            $order1 = $this->repository->create($dto1, 1);
+            $order2 = $this->repository->create($dto2, 2);
 
             expect($order1->order_number)->toBe(1)
                 ->and($order2->order_number)->toBe(2);
@@ -56,11 +56,11 @@ describe('OrderRepository', function () {
             $shift1 = \App\Models\Shift::factory()->create();
             $shift2 = \App\Models\Shift::factory()->create();
 
-            $dto1 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift1->id, $user->id);
-            $dto2 = new CreateOrderDTO(OrderType::TAKEAWAY, $shift2->id, $user->id);
+            $dto1 = new CreateOrderDTO('takeaway', $shift1->id, $user->id);
+            $dto2 = new CreateOrderDTO('takeaway', $shift2->id, $user->id);
 
-            $order1 = $this->repository->create($dto1);
-            $order2 = $this->repository->create($dto2);
+            $order1 = $this->repository->create($dto1, 1);
+            $order2 = $this->repository->create($dto2, 1);
 
             expect($order1->order_number)->toBe(1)
                 ->and($order2->order_number)->toBe(1);
@@ -121,26 +121,11 @@ describe('OrderRepository', function () {
         });
     });
 
-    describe('getProcessingOrders', function () {
-        it('returns only processing orders for shift', function () {
-            $shift = \App\Models\Shift::factory()->create();
-
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::PROCESSING]);
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::COMPLETED]);
-            Order::factory()->create(['shift_id' => $shift->id, 'status' => OrderStatus::PROCESSING]);
-
-            $orders = $this->repository->getProcessingOrders($shift->id);
-
-            expect($orders)->toHaveCount(2);
-            expect($orders->every(fn ($order) => $order->status === OrderStatus::PROCESSING))->toBeTrue();
-        });
-    });
-
     describe('getNextOrderNumber', function () {
         it('returns 1 for first order in shift', function () {
             $shift = \App\Models\Shift::factory()->create();
 
-            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, []);
 
             expect($orderNumber)->toBe(1);
         });
@@ -150,7 +135,7 @@ describe('OrderRepository', function () {
 
             Order::factory()->create(['shift_id' => $shift->id, 'order_number' => 5]);
 
-            $orderNumber = $this->repository->getNextOrderNumber($shift->id);
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, []);
 
             expect($orderNumber)->toBe(6);
         });
@@ -162,11 +147,31 @@ describe('OrderRepository', function () {
             Order::factory()->create(['shift_id' => $shift1->id, 'order_number' => 5]);
             Order::factory()->create(['shift_id' => $shift2->id, 'order_number' => 3]);
 
-            $orderNumber1 = $this->repository->getNextOrderNumber($shift1->id);
-            $orderNumber2 = $this->repository->getNextOrderNumber($shift2->id);
+            $orderNumber1 = $this->repository->getNextOrderNumber($shift1->id, []);
+            $orderNumber2 = $this->repository->getNextOrderNumber($shift2->id, []);
 
             expect($orderNumber1)->toBe(6)
                 ->and($orderNumber2)->toBe(4);
+        });
+
+        it('skips a number already taken by a web order in the same shift', function () {
+            $user = \App\Models\User::factory()->create();
+            $shift = \App\Models\Shift::factory()->create();
+
+            $this->repository->create(new CreateOrderDTO('takeaway', $shift->id, $user->id), 1);
+
+            Order::factory()->create([
+                'shift_id' => $shift->id,
+                'type' => 'web_delivery',
+                'order_number' => 2,
+            ]);
+
+            $orderNumber = $this->repository->getNextOrderNumber($shift->id, [
+                'web_delivery',
+                'web_takeaway',
+            ]);
+
+            expect($orderNumber)->toBe(3);
         });
     });
 
@@ -189,19 +194,6 @@ describe('OrderRepository', function () {
 
             expect($result)->toBeTrue();
             expect(Order::find($order->id))->toBeNull();
-        });
-    });
-
-    describe('getOrdersWithPaymentStatus', function () {
-        it('returns orders with specific payment status', function () {
-            Order::factory()->create(['payment_status' => PaymentStatus::PENDING]);
-            Order::factory()->create(['payment_status' => PaymentStatus::FULL_PAID]);
-            Order::factory()->create(['payment_status' => PaymentStatus::PENDING]);
-
-            $orders = $this->repository->getOrdersWithPaymentStatus(PaymentStatus::PENDING->value);
-
-            expect($orders)->toHaveCount(2);
-            expect($orders->every(fn ($order) => $order->payment_status === PaymentStatus::PENDING))->toBeTrue();
         });
     });
 });

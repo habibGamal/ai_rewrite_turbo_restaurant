@@ -3,11 +3,14 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Filament\Exports\CurrentShiftOrdersExporter;
+use App\Filament\Widgets\Concerns\ScopedOrderPayments;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\Order;
 use App\Models\Shift;
+use App\Orders\OrderTypeCatalog;
+use App\Services\FeatureService;
 use App\Services\PrintService;
 use App\Services\ShiftsReportService;
 use Filament\Actions\Action;
@@ -17,11 +20,16 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 class CurrentShiftOrdersTable extends BaseWidget
 {
+    use InteractsWithPageFilters;
+    use ScopedOrderPayments;
+    use ScopesReportToTerminal;
+
     protected static bool $isLazy = false;
 
     protected static ?string $pollingInterval = null;
@@ -53,36 +61,40 @@ class CurrentShiftOrdersTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $terminal = $this->reportTerminal();
+
         $currentShift = $this->getCurrentShift();
+
+        $scope = $this->shiftsReportService->shiftIdsQuery(null, null, [$currentShift->id ?? 0]);
 
         if (! $currentShift) {
             $query = Order::query()->where('id', 0); // Empty query
         } else {
-            $query = Order::query()
+            $query = $terminal->orders(Order::query()
                 ->where('shift_id', $currentShift->id)
-                ->with(['customer', 'user', 'payments']);
+                ->with(['customer', 'user', 'terminal', ...$this->scopedPaymentsEagerLoad($scope)]));
         }
 
         return $table
             ->query($query)
+            // Anchor for the report cards: they scroll to this table.
+            ->extraAttributes(['id' => 'orders_table', 'style' => 'scroll-margin-top: 5rem'])
             ->headerActions([
                 ExportAction::make()
                     ->label('تصدير الاوردرات')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->exporter(CurrentShiftOrdersExporter::class)
-                    ->extraAttributes([
-                        'id' => 'orders_table',
-                    ])
                     ->modifyQueryUsing(function (Builder $query) {
                         $currentShift = $this->getCurrentShift();
                         if ($currentShift) {
-                            return $query->where('shift_id', $currentShift->id)
-                                ->with(['customer', 'user', 'payments']);
+                            return $this->reportTerminal()->orders($query->where('shift_id', $currentShift->id)
+                                ->with(['customer', 'user', 'terminal', 'payments']));
                         }
 
                         return $query->where('id', 0);
                     })
+                    ->options(fn (): array => ['shift_ids' => [$this->getCurrentShift()->id ?? 0]])
                     ->fileName(fn () => 'current-shift-orders-'.now()->format('Y-m-d-H-i-s').'.xlsx')
                     ->visible(fn () => $this->getCurrentShift() !== null),
             ])
@@ -104,7 +116,10 @@ class CurrentShiftOrdersTable extends BaseWidget
 
                 TextColumn::make('type')
                     ->label('النوع')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->label)
+                    ->color(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->color)
+                    ->icon(fn (mixed $state): string => app(OrderTypeCatalog::class)->display((string) $state)->icon),
 
                 TextColumn::make('customer.name')
                     ->label('العميل')
@@ -209,10 +224,19 @@ class CurrentShiftOrdersTable extends BaseWidget
                     ->color('primary')
                     ->toggleable(),
 
+                ...$this->scopedPaymentColumns('الشفت'),
+
                 TextColumn::make('user.name')
                     ->label('الموظف')
                     ->searchable()
                     ->color('gray')
+                    ->toggleable(),
+
+                TextColumn::make('terminal.name')
+                    ->label('منفذ البيع')
+                    ->color('gray')
+                    ->placeholder('—')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled())
                     ->toggleable(),
 
                 TextColumn::make('created_at')
@@ -229,19 +253,18 @@ class CurrentShiftOrdersTable extends BaseWidget
 
                 SelectFilter::make('type')
                     ->label('النوع')
-                    ->options(OrderType::class),
+                    ->options(fn (): array => app(OrderTypeCatalog::class)->options()),
 
-                SelectFilter::make('payment_method')
-                    ->label('طريقة الدفع')
-                    ->options(PaymentMethod::class)
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when(
-                            $data['value'],
-                            fn (Builder $query, $value): Builder => $query->whereHas('payments', function (Builder $subQuery) use ($value) {
-                                $subQuery->where('method', $value);
-                            })
-                        );
-                    }),
+                SelectFilter::make('terminal_id')
+                    ->label('منفذ البيع')
+                    ->relationship('terminal', 'name')
+                    ->visible(fn (): bool => app(FeatureService::class)->multiTerminalEnabled()),
+
+                $this->scopedPaymentMethodFilter($scope),
+
+                $this->paymentStatusFilter(),
+
+                $this->hasCreditFilter($scope),
 
                 TernaryFilter::make('has_discount')
                     ->label('يحتوي على خصم')

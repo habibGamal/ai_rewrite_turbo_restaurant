@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
+use App\Services\FeatureService;
 use App\Services\PeakHoursPerformanceReportService;
 use Filament\Support\ArrayRecord;
 use Filament\Tables\Columns\TextColumn;
@@ -61,6 +62,16 @@ class HourlyPerformanceTableWidget extends BaseWidget
                     ->money('EGP')
                     ->color('success')
                     ->weight('semibold'),
+
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray')
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP'),
 
                 TextColumn::make('total_profit')
                     ->label('إجمالي الأرباح')
@@ -152,6 +163,8 @@ class HourlyPerformanceTableWidget extends BaseWidget
                 'total_orders' => $totalOrders,
                 'total_sales' => $totalSales,
                 'total_profit' => $totalProfit,
+                'total_refunds' => (float) data_get($existing, 'total_refunds', 0.0),
+                'net_sales' => (float) data_get($existing, 'net_sales', $totalSales),
                 'profit_margin' => $profitMargin,
                 'avg_order_value' => $avgOrderValue,
                 'unique_customers' => $uniqueCustomers,

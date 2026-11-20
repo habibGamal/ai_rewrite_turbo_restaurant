@@ -3,14 +3,14 @@
 namespace App\Services\Orders;
 
 use App\Models\Order;
-use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\OrderRepository;
 
 class OrderCalculationService
 {
     private const TAX_RATE = 0.0; // 0% tax rate as per original system
 
     public function __construct(
-        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderRepository $orderRepository,
     ) {}
 
     public function calculateOrderTotals(Order $order): Order
@@ -19,7 +19,7 @@ class OrderCalculationService
 
         // Calculate subtotal
         $subtotal = $order->items->sum(fn ($item) => $item->total);
-        logger()->info("Calculated subtotal: {$subtotal} for Order ID: {$order->id} , Items Count: {$order->items->count()}");
+
         // Calculate service charge
         $serviceCharge = $this->calculateServiceCharge($order, $subtotal);
 
@@ -29,8 +29,13 @@ class OrderCalculationService
         // Apply discount if set
         $discount = $this->calculateDiscount($order, $subtotal);
 
+        // Fees and equipment are added after service and discount, which
+        // stay on the item subtotal only. Their columns are kept up to date
+        // by the fees and equipment services before they call this.
+        $charges = (float) $order->fees_total + (float) $order->equipment_total;
+
         // Calculate total
-        $total = ceil($subtotal + $serviceCharge + $tax - $discount);
+        $total = ceil($subtotal + $serviceCharge + $tax - $discount + $charges);
 
         // Calculate profit
         $profit = $this->calculateProfit($order, $total);
@@ -48,18 +53,30 @@ class OrderCalculationService
         return $order->refresh();
     }
 
-    public function applyDiscount(Order $order, float $discount, string $discountType): Order
+    /**
+     * Item discounts replace an order-level discount.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     */
+    public function clearOrderDiscountForItemDiscounts(Order $order, array $lines): void
     {
-        $order->load('items');
+        $hasItemDiscounts = collect($lines)->some(fn ($item) => ($item['item_discount'] ?? 0) > 0);
 
-        // Clear all item-level discounts when applying order-level discount
-        foreach ($order->items as $item) {
-            $item->update([
-                'item_discount' => 0,
-                'item_discount_type' => null,
-                'item_discount_percent' => null,
+        if ($hasItemDiscounts && ($order->discount > 0 || $order->temp_discount_percent > 0)) {
+            $this->orderRepository->update($order, [
+                'discount' => 0,
+                'temp_discount_percent' => 0,
             ]);
         }
+    }
+
+    public function applyDiscount(Order $order, float $discount, string $discountType): Order
+    {
+        $order->items()->update([
+            'item_discount' => 0,
+            'item_discount_type' => null,
+            'item_discount_percent' => null,
+        ]);
 
         // Reset existing discounts
         $updateData = [
@@ -83,15 +100,7 @@ class OrderCalculationService
 
     private function calculateServiceCharge(Order $order, float $subtotal): float
     {
-        if ($order->type->requiresTable()) {
-            // Dine-in service charge
-            return $subtotal * $order->service_rate;
-        } elseif ($order->type->hasDeliveryFee() && $order->customer) {
-            // Delivery fee from customer
-            return $order->customer->delivery_cost ?? 0;
-        }
-
-        return 0;
+        return $order->behavior()->serviceAmount($order, $subtotal);
     }
 
     private function calculateTax(float $subtotal): float
@@ -101,38 +110,26 @@ class OrderCalculationService
 
     private function calculateDiscount(Order $order, float $subtotal): float
     {
-        // Check if any items have item-level discounts
-        $hasItemDiscounts = $order->items->some(fn ($item) => ($item->item_discount ?? 0) > 0);
-
-        if ($hasItemDiscounts) {
-            // Calculate total discount from item-level discounts
-            return $order->items->sum(function ($item) {
-                $itemSubtotal = $item->price * $item->quantity;
-                $itemDiscount = 0;
-
-                if ($item->item_discount_type === 'percent' && $item->item_discount_percent) {
-                    $itemDiscount = $itemSubtotal * ($item->item_discount_percent / 100);
-                } else {
-                    $itemDiscount = $item->item_discount ?? 0;
-                }
-
-                // Ensure discount doesn't exceed item subtotal
-                return min($itemDiscount, $itemSubtotal);
-            });
+        if ($order->items->contains('item_discount', '>', 0)) {
+            return (float) $order->items->sum('item_discount');
         }
 
-        // Use order-level discount if no item discounts
+        // Use order-level discount if no item discounts, never more than the items:
+        // fees and equipment can't be discounted away.
         if ($order->temp_discount_percent > 0) {
-            return ($order->temp_discount_percent / 100) * $subtotal;
+            return min(max(0.0, (float) $order->temp_discount_percent), 100.0) / 100 * $subtotal;
         }
 
-        return $order->discount ?? 0;
+        return min(max(0.0, (float) ($order->discount ?? 0)), max(0.0, $subtotal));
     }
 
-    private function calculateProfit(Order $order, float $total): float
+    /**
+     * Total minus the items' cost and the equipment cost. Fees have no cost.
+     */
+    public function calculateProfit(Order $order, float $total): float
     {
         $totalCost = $order->items->sum(fn ($item) => $item->cost * $item->quantity);
 
-        return $total - $totalCost;
+        return $total - $totalCost - (float) $order->equipment_cost;
     }
 }

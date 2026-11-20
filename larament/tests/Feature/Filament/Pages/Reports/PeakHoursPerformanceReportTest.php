@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\PeakHoursPerformanceReport;
 use App\Filament\Widgets\DailyPerformanceChartWidget;
 use App\Filament\Widgets\HourlyPerformanceChartWidget;
@@ -19,7 +18,7 @@ use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     // Create admin user and authenticate
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 
     // Create a shift for orders
@@ -211,7 +210,7 @@ it('applies this month preset correctly', function () {
 
 // Access Control Tests
 it('allows viewer access', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(PeakHoursPerformanceReport::class)
@@ -219,7 +218,7 @@ it('allows viewer access', function () {
 });
 
 it('denies cashier access', function () {
-    $cashier = User::factory()->create(['role' => UserRole::CASHIER]);
+    $cashier = User::factory()->cashier()->create();
     actingAs($cashier);
 
     livewire(PeakHoursPerformanceReport::class)

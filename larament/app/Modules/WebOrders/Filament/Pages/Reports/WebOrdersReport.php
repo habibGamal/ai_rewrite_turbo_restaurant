@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Modules\WebOrders\Filament\Pages\Reports;
+
+use App\Filament\Traits\ViewerAccess;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersStats;
+use App\Modules\WebOrders\Filament\Widgets\WebOrdersTable;
+use Filament\Pages\Dashboard as BaseDashboard;
+
+class WebOrdersReport extends BaseDashboard
+{
+    use ViewerAccess;
+
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-globe-alt';
+
+    protected static string $routePath = 'web-orders-report';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'التقارير';
+
+    protected static ?string $navigationLabel = 'أوردرات الويب';
+
+    protected static ?string $title = 'أوردرات الويب';
+
+    protected static ?int $navigationSort = 10;
+
+    public function getWidgets(): array
+    {
+        return [
+            WebOrdersStats::class,
+            WebOrdersTable::class,
+        ];
+    }
+}

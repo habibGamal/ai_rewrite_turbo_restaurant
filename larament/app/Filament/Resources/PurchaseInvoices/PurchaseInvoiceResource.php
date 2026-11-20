@@ -3,19 +3,26 @@
 namespace App\Filament\Resources\PurchaseInvoices;
 
 use App\Filament\Actions\ClosePurchaseInvoiceAction;
+use App\Filament\Actions\Forms\GeneratePurchaseBarcodesAction;
 use App\Filament\Actions\Forms\LowStockImporterAction;
 use App\Filament\Actions\Forms\ProductImporterAction;
+use App\Filament\Actions\PrintLabelsAction;
 use App\Filament\Actions\PrintPurchaseInvoiceAction;
+use App\Filament\Components\Forms\BarcodeScanInput;
+use App\Filament\Components\Forms\DocumentBarcodeField;
 use App\Filament\Components\Forms\ProductSelector;
 use App\Filament\Resources\PurchaseInvoices\Pages\CreatePurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\EditPurchaseInvoice;
 use App\Filament\Resources\PurchaseInvoices\Pages\ListPurchaseInvoices;
 use App\Filament\Resources\PurchaseInvoices\Pages\ViewPurchaseInvoice;
-use App\Filament\Traits\AdminAccess;
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\FeatureService;
+use App\Services\Products\ProductLookupResult;
 use App\Services\Resources\PurchaseInvoiceCalculatorService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -37,13 +44,12 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseInvoiceResource extends Resource
 {
-    use AdminAccess;
-
     protected static ?string $model = PurchaseInvoice::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
@@ -68,6 +74,19 @@ class PurchaseInvoiceResource extends Resource
                             ->searchable()
                             ->required()
                             ->default(auth()->id()),
+
+                        Select::make('warehouse_id')
+                            ->label('المخزن')
+                            ->relationship(
+                                'warehouse',
+                                'name',
+                                fn (Builder $query): Builder => $query->where('is_active', true),
+                            )
+                            ->default(fn (): int => Warehouse::default()->id)
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?PurchaseInvoice $record): bool => $record?->closed_at !== null),
 
                         Select::make('supplier_id')
                             ->label('المورد')
@@ -108,17 +127,23 @@ class PurchaseInvoiceResource extends Resource
                         Actions::make([
                             ProductImporterAction::make('importProducts'),
                             LowStockImporterAction::make('importLowStock'),
+                            GeneratePurchaseBarcodesAction::make('generatePurchaseBarcodes'),
                         ])
+                            ->key('purchaseImportActions')
                             ->alignStart(),
+                        BarcodeScanInput::make()
+                            ->onScanned(fn (ProductLookupResult $result, $set, $get) => ProductSelector::addScannedProduct($result->product, $result->quantity, $set, $get))
+                            ->columnSpanFull(),
                         ProductSelector::make()
                             ->columnSpanFull(),
 
                         Repeater::make('items')
                             ->label('الأصناف')
                             ->relationship('items', fn ($query) => $query->with('product'))
-                            ->table([
+                            ->table(fn (): array => array_values(array_filter([
                                 TableColumn::make('المنتج')
                                     ->width('200px'),
+                                self::showsBarcodes() ? TableColumn::make('الباركود')->width('140px') : null,
                                 TableColumn::make('الوحدة')
                                     ->width('100px'),
                                 TableColumn::make('الكمية')
@@ -127,7 +152,7 @@ class PurchaseInvoiceResource extends Resource
                                     ->width('120px'),
                                 TableColumn::make('الإجمالي (ج.م)')
                                     ->width('120px'),
-                            ])
+                            ])))
                             ->schema([
                                 Hidden::make('product_id'),
                                 TextInput::make('product_name')
@@ -142,6 +167,18 @@ class PurchaseInvoiceResource extends Resource
                                     ->dehydrated(false)
                                     ->disabled(),
 
+                                // Read-only: filled from the product, or by «توليد باركود للأصناف».
+                                // Left out (not just hidden) when off: a hidden field still
+                                // takes a cell in the table repeater and shifts the columns.
+                                ...(self::showsBarcodes() ? [TextInput::make('barcode')
+                                    ->label('الباركود')
+                                    ->formatStateUsing(fn ($record, $state) => $state ?? $record?->product?->barcode)
+                                    ->placeholder('بدون باركود')
+                                    ->extraInputAttributes(['dir' => 'ltr'])
+                                    ->disabled()
+                                    ->dehydrated(false),
+                                ] : []),
+
                                 TextInput::make('unit')
                                     ->label('الوحدة')
                                     ->formatStateUsing(function ($record, $state) {
@@ -153,6 +190,7 @@ class PurchaseInvoiceResource extends Resource
                                 TextInput::make('quantity')
                                     ->label('الكمية')
                                     ->numeric()
+                                    ->step(0.001)
                                     ->required()
                                     ->default(1)
                                     ->minValue(0),
@@ -183,6 +221,15 @@ class PurchaseInvoiceResource extends Resource
                             ->collapsible(),
                     ]),
             ])->columns(1);
+    }
+
+    /**
+     * The barcode column exists while the vendor has switched purchase
+     * barcodes or document barcodes on.
+     */
+    public static function showsBarcodes(): bool
+    {
+        return app(FeatureService::class)->purchaseBarcodesEnabled() || DocumentBarcodeField::enabled();
     }
 
     public static function infolist(Schema $schema): Schema
@@ -231,6 +278,11 @@ class PurchaseInvoiceResource extends Resource
 
                 TextColumn::make('supplier.name')
                     ->label('المورد')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('warehouse.name')
+                    ->label('المخزن')
                     ->sortable()
                     ->searchable(),
 
@@ -298,6 +350,7 @@ class PurchaseInvoiceResource extends Resource
             ->recordActions([
                 ClosePurchaseInvoiceAction::table(),
                 PrintPurchaseInvoiceAction::table(),
+                self::printLabelsAction(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
@@ -310,14 +363,14 @@ class PurchaseInvoiceResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
-    public static function canEdit(Model $record): bool
+    public static function getEditAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
-    public static function canDelete(Model $record): bool
+    public static function getDeleteAuthorizationResponse(Model $record): Response
     {
-        return is_null($record->closed_at);
+        return (is_null($record->closed_at)) ? Response::allow() : Response::deny();
     }
 
     public static function getPages(): array
@@ -328,5 +381,13 @@ class PurchaseInvoiceResource extends Resource
             'view' => ViewPurchaseInvoice::route('/{record}'),
             'edit' => EditPurchaseInvoice::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Labels for the invoice's products, as many as were bought.
+     */
+    public static function printLabelsAction(): Action
+    {
+        return PrintLabelsAction::document();
     }
 }

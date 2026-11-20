@@ -1,5 +1,7 @@
 import { Order, OrderItemData } from "@/types";
 import { usePage } from "@inertiajs/react";
+import ExternalReceipt from "./ExternalReceipt";
+import { useTerms } from "@/lib/wording";
 
 export enum PartType {
     Header,
@@ -20,18 +22,7 @@ export default function PartialReceiptTemplate({
     partType: PartType;
     index: number;
 }) {
-    const getOrderTypeString = (type: string) => {
-        const typeMap = {
-            dine_in: "صالة",
-            takeaway: "تيك اواي",
-            delivery: "ديليفري",
-            companies: "شركات",
-            talabat: "طلبات",
-            web_delivery: "اونلاين دليفري",
-            web_takeaway: "اونلاين تيك أواي",
-        };
-        return typeMap[type as keyof typeof typeMap] || type;
-    };
+    const terms = useTerms();
     return (
         <div
             id={`receipt_${index}`}
@@ -58,19 +49,21 @@ export default function PartialReceiptTemplate({
                         تاريخ الطباعة :{" "}
                         {new Date().toLocaleString("ar-EG", { hour12: true })}
                     </p>
-                    <p>نوع الطلب : {getOrderTypeString(order.type)}</p>
-                    {order.type === "dine_in" && (
-                        <p>طاولة رقم {order.dine_table_number}</p>
+                    <p>نوع الطلب : {order.display?.label ?? order.type}</p>
+                    {order.display?.showTable && (
+                        <p>{terms.tableNumber} : {order.dine_table_number}</p>
                     )}
-                    {["delivery", "web_delivery", "web_takeaway"].includes(
-                        order.type
-                    ) && (
+                    {order.display?.showCustomer && (
                         <>
                             <p>رقم الهاتف : {order.customer?.phone || "-"}</p>
                             <p>اسم العميل : {order.customer?.name || "-"}</p>
-                            <p>العنوان : {order.customer?.address || "-"}</p>
-                            <p>السائق : {order.driver?.name || "-"}</p>
                         </>
+                    )}
+                    {order.display?.showAddress && (
+                        <p>العنوان : {order.customer?.address || "-"}</p>
+                    )}
+                    {order.display?.showDriver && (
+                        <p>السائق : {order.driver?.name || "-"}</p>
                     )}
                 </>
             )}
@@ -146,6 +139,16 @@ export default function PartialReceiptTemplate({
                                     {Number(order.tax).toFixed(2)}
                                 </td>
                             </tr>
+                            {(order.fees ?? []).map((fee) => (
+                                <tr key={`fee-${fee.id}`}>
+                                    <td className="p-2 py-4 border border-solid border-black">
+                                        {fee.name}
+                                    </td>
+                                    <td className="p-2 py-4 border border-solid border-black">
+                                        {Number(fee.amount).toFixed(2)}
+                                    </td>
+                                </tr>
+                            ))}
                             <tr>
                                 <td className="p-2 py-4 border border-solid border-black">
                                     الاجمالي النهائي
@@ -154,8 +157,29 @@ export default function PartialReceiptTemplate({
                                     {Number(order.total).toFixed(2)}
                                 </td>
                             </tr>
+                            {order.payment_status === "partial_paid" && order.receiptPayment && (
+                                <>
+                                    <tr>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            المدفوع
+                                        </td>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            {Number(order.receiptPayment.paid).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            المتبقي
+                                        </td>
+                                        <td className="p-2 py-4 border border-solid border-black">
+                                            {Number(order.receiptPayment.remaining).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                </>
+                            )}
                         </tbody>
                     </table>
+                    <ExternalReceipt receipt={order.receiptView} />
                     <p className="whitespace-pre-line mt-4 text-center">
                         {receiptFooter}
                     </p>

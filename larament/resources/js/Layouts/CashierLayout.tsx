@@ -1,5 +1,8 @@
+import CanAccess from "@/Components/CanAccess";
 import IsAdmin from "@/Components/IsAdmin";
 import { User } from "@/types";
+import { useModule } from "@/hooks/useModule";
+import { usePrintAgent } from "@/hooks/usePrintAgent";
 import {
     DollarCircleOutlined,
     LogoutOutlined,
@@ -15,6 +18,7 @@ import {
     notification,
     Button,
     ConfigProvider,
+    Alert,
 } from "antd";
 import { ReactNode, useLayoutEffect, useEffect } from "react";
 
@@ -46,6 +50,14 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         window.location.href = "/admin";
     };
 
+    const webOrdersEnabled = useModule("web_orders");
+
+    const terminal = usePage().props.terminal as
+        | { printAgent?: boolean }
+        | null
+        | undefined;
+    const printAgent = usePrintAgent(Boolean(terminal?.printAgent));
+
     const page = usePage();
     useLayoutEffect(() => {
         if (Object.values(page.props.errors).length > 0) {
@@ -61,6 +73,10 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
         // Request notification permission
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
+        }
+
+        if (!webOrdersEnabled) {
+            return;
         }
 
         if (!window.Echo) {
@@ -93,7 +109,7 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                         {
                             body: `رقم الطلب: ${order.order_number} - ${order.typeString}`,
                             icon: "/images/logo.jpg",
-                        }
+                        },
                     );
 
                     browserNotification.onclick = () => {
@@ -126,7 +142,7 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                                 onClick={() => {
                                     notification.destroy();
                                     router.get(
-                                        `/web-orders/manage-web-order/${order.id}`
+                                        `/web-orders/manage-web-order/${order.id}`,
                                     );
                                 }}
                             >
@@ -166,7 +182,7 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                 window.Echo.leave("web-orders");
             }
         };
-    }, []);
+    }, [webOrdersEnabled]);
 
     useEffect(() => {
         // refetch the page when the user clicks the back button
@@ -196,11 +212,13 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                         onClick={() => toAdmin()}
                     />
                 </IsAdmin>
-                <FloatButton
-                    tooltip="فتح درج الكاشير"
-                    icon={<DollarCircleOutlined />}
-                    onClick={() => openCashierDrawer()}
-                />
+                <CanAccess permission="cashier.open_drawer">
+                    <FloatButton
+                        tooltip="فتح درج الكاشير"
+                        icon={<DollarCircleOutlined />}
+                        onClick={() => openCashierDrawer()}
+                    />
+                </CanAccess>
                 <FloatButton
                     tooltip="تسجيل الخروج"
                     icon={<LogoutOutlined />}
@@ -208,6 +226,22 @@ export default function CashierLayout({ children, title }: CashierLayoutProps) {
                 />
             </FloatButton.Group>
 
+            {printAgent.running === false && (
+                <Alert
+                    type="warning"
+                    banner
+                    message="برنامج الطباعة Turbo Label مغلق على هذا الجهاز، ولن تعمل طباعة الفواتير وفتح درج النقود بدونه."
+                    action={
+                        <Button
+                            size="small"
+                            type="primary"
+                            onClick={printAgent.start}
+                        >
+                            تشغيل البرنامج
+                        </Button>
+                    }
+                />
+            )}
             <Content className="bg-gray-50">
                 <ConfigProvider
                     direction="rtl"

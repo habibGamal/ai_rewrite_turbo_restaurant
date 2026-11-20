@@ -7,12 +7,20 @@ use App\Jobs\PrintKitchenOrder;
 use App\Jobs\PrintOrderReceipt;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Terminal;
+use App\Orders\ReceiptPayment;
+use App\Orders\ReceiptView;
+use App\PrintAgent\AgentPrintConnector;
+use App\PrintAgent\PrintAgentException;
+use App\PrintAgent\PrintAgentTarget;
 use App\Services\PrintStrategies\PrintStrategyFactory;
 use App\Services\PrintStrategies\PrintStrategyInterface;
+use App\Terminals\TerminalSessionResolver;
 use Exception;
 use Log;
 use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
+use Mike42\Escpos\PrintConnectors\PrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
 
@@ -107,13 +115,64 @@ class PrintService
     }
 
     /**
+     * The receipt printer of this device's drawer (multiple terminals on and
+     * the drawer has its own printer), else the Settings cashier printer.
+     * Any drawer may print any order: the receipt goes to the printer of the
+     * device that asked for it.
+     */
+    public function cashierPrinter(): string
+    {
+        return app(TerminalSessionResolver::class)->terminal()?->receiptPrinter()
+            ?? (string) setting(SettingKey::CASHIER_PRINTER_IP);
+    }
+
+    /**
+     * Where this device's receipts and drawer kicks go: the Turbo Label app
+     * on the drawer's computer when the drawer prints via it, else the
+     * printer address. Agent bytes are sent by sendIfAgent() once complete.
+     */
+    /**
+     * The printer of the device that pressed print; from the admin panel (no
+     * device) the order's sales point; with a single sales point the default
+     * one. A sales point set to print through Turbo Label gets an agent job,
+     * anything else prints from the server.
+     */
+    private function cashierConnector(string $kind, ?Terminal $fallback = null): PrintConnector
+    {
+        $terminal = app(TerminalSessionResolver::class)->terminal()
+            ?? $fallback
+            ?? (app(FeatureService::class)->multiTerminalEnabled() ? null : Terminal::default());
+
+        if ($terminal !== null && $terminal->printsViaAgent()) {
+            return new AgentPrintConnector($terminal, $kind);
+        }
+
+        return $this->createConnector($this->cashierPrinter());
+    }
+
+    private function printerConnector(\App\Models\Printer $printer, string $kind): PrintConnector
+    {
+        if ($printer->printsViaAgent()) {
+            return new AgentPrintConnector($printer, $kind);
+        }
+
+        return $this->createConnector((string) $printer->ip_address);
+    }
+
+    private function sendIfAgent(PrintConnector $connector): void
+    {
+        if ($connector instanceof AgentPrintConnector) {
+            $connector->send();
+        }
+    }
+
+    /**
      * Open the cashier drawer
      */
     public function openCashierDrawer(): void
     {
         try {
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('drawer');
             $printer = new Printer($connector);
 
             Log::info('Opening cashier drawer');
@@ -129,6 +188,8 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**
@@ -176,8 +237,17 @@ class PrintService
             }
 
             // Print directly to each printer
+            $errors = [];
             foreach ($itemsByPrinterMap as $printerId => $printerItems) {
-                $this->printKitchenProcess($order, $printerItems, $printerId);
+                try {
+                    $this->printKitchenProcess($order, $printerItems, $printerId);
+                } catch (Exception $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+
+            if ($errors !== []) {
+                throw new PrintAgentException(implode(' — ', $errors));
             }
 
             if (empty($itemsByPrinterMap)) {
@@ -295,24 +365,43 @@ class PrintService
      */
     public function printKitchenProcess(Order $order, array $orderItems, int $printerId): void
     {
+        $this->printToKitchenPrinter(
+            $printerId,
+            'kitchen',
+            fn (): string => $this->generateKitchenHtml($order, $orderItems),
+            'kitchen order',
+        );
+    }
+
+    /**
+     * @param  callable(): string  $renderHtml
+     */
+    private function printToKitchenPrinter(int $printerId, string $kind, callable $renderHtml, string $context): void
+    {
+        $printer = null;
+        $escposPrinter = null;
+        $tempImagePath = null;
+
         try {
             $printer = \App\Models\Printer::findOrFail($printerId);
 
-            if (! $printer->ip_address) {
+            if (! $printer->printsViaAgent() && ! $printer->ipAddress()) {
                 Log::warning("Printer {$printer->name} has no IP address configured");
 
                 return;
             }
-            Log::info("Printing kitchen order to printer {$printer->name} ({$printer->ip_address}) using {$this->printStrategy->getName()}");
+
+            $targetLabel = $printer->printsViaAgent() ? 'Turbo Label' : $printer->ipAddress();
+            Log::info("Printing {$context} to printer {$printer->name} ({$targetLabel}) using {$this->printStrategy->getName()}");
 
             // ---------- 1. Generate HTML content using kitchen template ----------
-            $html = $this->generateKitchenHtml($order, $orderItems);
+            $html = $renderHtml();
 
             // ---------- 2. Convert HTML to image using current strategy ----------
             $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
 
             // ---------- 3. Print via escpos-php ----------
-            $connector = $this->createConnector($printer->ip_address);
+            $connector = $this->printerConnector($printer, $kind);
             $escposPrinter = new Printer($connector);
             $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
 
@@ -322,16 +411,24 @@ class PrintService
             $escposPrinter->feed(3);
             $escposPrinter->cut();
 
-            // Clean up
-            unlink($tempImagePath);
-            $escposPrinter->close();
-
-            Log::info("Kitchen order printed successfully to printer {$printer->name}");
-
+            Log::info("Kitchen ticket ({$context}) printed successfully to printer {$printer->name}");
         } catch (Exception $e) {
-            Log::error("Error printing kitchen order to printer {$printerId}: ".$e->getMessage());
-            // throw $e;
+            Log::error("Error printing {$context} to printer {$printerId}: ".$e->getMessage());
+            if ($printer?->printsViaAgent()) {
+                throw $e;
+            }
+
+            return;
+        } finally {
+            if ($tempImagePath !== null && file_exists($tempImagePath)) {
+                unlink($tempImagePath);
+            }
+            if ($escposPrinter !== null) {
+                $escposPrinter->close();
+            }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**
@@ -352,8 +449,8 @@ class PrintService
     public function testCashierPrinter(): void
     {
         try {
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('test');
+            $printerIp = $connector instanceof AgentPrintConnector ? 'Turbo Label' : $this->cashierPrinter();
             $printer = new Printer($connector);
 
             Log::info('Testing cashier printer connection');
@@ -381,6 +478,29 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
+    }
+
+    /**
+     * A test page on a drawer's or kitchen printer's printer through its Turbo Label app.
+     */
+    public function testThroughAgent(PrintAgentTarget $target): void
+    {
+        $connector = new AgentPrintConnector($target, 'test');
+        $printer = new Printer($connector);
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
+        $printer->text("Turbo Label\n");
+        $printer->selectPrintMode();
+        $printer->text("------------------------\n");
+        $printer->text('Date: '.now()->format('Y-m-d H:i:s')."\n");
+        $printer->text("Printer test OK\n");
+        $printer->feed(3);
+        $printer->cut();
+        $printer->close();
+
+        $connector->send();
     }
 
     /**
@@ -390,14 +510,14 @@ class PrintService
     {
         try {
 
-            $printerIp = setting(SettingKey::CASHIER_PRINTER_IP);
-            $connector = $this->createConnector($printerIp);
+            $connector = $this->cashierConnector('receipt', $order->terminal_id !== null ? Terminal::query()->find($order->terminal_id) : null);
             $printer = new Printer($connector);
 
             Log::info("Printing order receipt for order {$order->id} using {$this->printStrategy->getName()}");
 
             // Load order with relationships
-            $order->load(['user', 'customer', 'driver', 'items.product', 'table']);
+            $order->load(['user', 'customer', 'driver', 'items.product', 'table', 'payments']);
+            $receiptView = ReceiptView::forOrder($order);
 
             $itemCount = $order->items->count();
 
@@ -406,7 +526,7 @@ class PrintService
                 Log::info("Order {$order->id} has {$itemCount} items, using single receipt printing");
 
                 // ---------- 1. Generate HTML content using generateReceiptHtml method ----------
-                $html = $this->generateReceiptHtml($order);
+                $html = $this->generateReceiptHtml($order, $receiptView);
 
                 // ---------- 2. Convert HTML to image using current strategy ----------
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
@@ -431,7 +551,7 @@ class PrintService
 
                 // ---------- 1. Print header with first 5 items ----------
                 $headerItems = $order->items->take(5);
-                $html = $this->generateReceiptHeaderHtml($order, $headerItems);
+                $html = $this->generateReceiptHeaderHtml($order, $headerItems, $receiptView);
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                 $escposImage = EscposImage::load($tempImagePath);
                 $printer->bitImage($escposImage);
@@ -443,7 +563,7 @@ class PrintService
                 $chunks = $remainingItems->chunk(5);
 
                 foreach ($chunks as $index => $chunk) {
-                    $html = $this->generateReceiptItemsHtml($chunk);
+                    $html = $this->generateReceiptItemsHtml($chunk, $receiptView);
                     $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                     $escposImage = EscposImage::load($tempImagePath);
                     $printer->bitImage($escposImage);
@@ -452,7 +572,7 @@ class PrintService
                 }
 
                 // ---------- 3. Print footer with totals ----------
-                $html = $this->generateReceiptFooterHtml($order);
+                $html = $this->generateReceiptFooterHtml($order, $receiptView);
                 $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 567, 1200);
                 $escposImage = EscposImage::load($tempImagePath);
                 $printer->bitImage($escposImage);
@@ -472,16 +592,20 @@ class PrintService
                 $printer->close();
             }
         }
+
+        $this->sendIfAgent($connector);
     }
 
     /**
      * Generate HTML content for receipt printing
      */
-    private function generateReceiptHtml(Order $order): string
+    private function generateReceiptHtml(Order $order, array $receiptView): string
     {
         // Use Blade view to render the receipt with minimal data
         return view('print.receipt-template', [
             'order' => $order,
+            'receiptView' => $receiptView,
+            'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }
 
@@ -544,10 +668,11 @@ class PrintService
     /**
      * Generate HTML content for receipt header with specified items
      */
-    private function generateReceiptHeaderHtml(Order $order, $items): string
+    private function generateReceiptHeaderHtml(Order $order, $items, array $receiptView): string
     {
         return view('print.receipt-header', [
             'order' => $order,
+            'receiptView' => $receiptView,
             'items' => $items,
         ])->render();
     }
@@ -555,9 +680,10 @@ class PrintService
     /**
      * Generate HTML content for receipt items continuation
      */
-    private function generateReceiptItemsHtml($items): string
+    private function generateReceiptItemsHtml($items, array $receiptView): string
     {
         return view('print.receipt-items', [
+            'receiptView' => $receiptView,
             'items' => $items,
         ])->render();
     }
@@ -565,10 +691,12 @@ class PrintService
     /**
      * Generate HTML content for receipt footer
      */
-    private function generateReceiptFooterHtml(Order $order): string
+    private function generateReceiptFooterHtml(Order $order, array $receiptView): string
     {
         return view('print.receipt-footer', [
             'order' => $order,
+            'receiptView' => $receiptView,
+            'receiptPayment' => ReceiptPayment::forOrder($order),
         ])->render();
     }
 
@@ -600,8 +728,17 @@ class PrintService
                 }
             }
 
+            $errors = [];
             foreach ($itemsByPrinterMap as $printerId => $printerItems) {
-                $this->printKitchenChangesProcess($order, $printerItems, $printerId);
+                try {
+                    $this->printKitchenChangesProcess($order, $printerItems, $printerId);
+                } catch (Exception $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+
+            if ($errors !== []) {
+                throw new PrintAgentException(implode(' — ', $errors));
             }
 
             if (empty($itemsByPrinterMap)) {
@@ -696,37 +833,12 @@ class PrintService
 
     public function printKitchenChangesProcess(Order $order, array $orderItems, int $printerId): void
     {
-        try {
-            $printer = \App\Models\Printer::findOrFail($printerId);
-
-            if (! $printer->ip_address) {
-                Log::warning("Printer {$printer->name} has no IP address configured");
-
-                return;
-            }
-
-            Log::info("Printing kitchen changes to printer {$printer->name} ({$printer->ip_address})");
-
-            $html = $this->generateKitchenChangesHtml($order, $orderItems);
-            $tempImagePath = $this->printStrategy->generateImageFromHtml($html, 572, 100);
-
-            $connector = $this->createConnector($printer->ip_address);
-            $escposPrinter = new Printer($connector);
-            $escposPrinter->setJustification(Printer::JUSTIFY_CENTER);
-
-            $escposImage = EscposImage::load($tempImagePath);
-            $escposPrinter->bitImage($escposImage);
-            $escposPrinter->feed(3);
-            $escposPrinter->cut();
-
-            unlink($tempImagePath);
-            $escposPrinter->close();
-
-            Log::info("Kitchen changes printed successfully to printer {$printer->name}");
-
-        } catch (Exception $e) {
-            Log::error("Error printing kitchen changes to printer {$printerId}: ".$e->getMessage());
-        }
+        $this->printToKitchenPrinter(
+            $printerId,
+            'kitchen_changes',
+            fn (): string => $this->generateKitchenChangesHtml($order, $orderItems),
+            'kitchen changes',
+        );
     }
 
     private function generateKitchenChangesHtml(Order $order, array $orderItems): string

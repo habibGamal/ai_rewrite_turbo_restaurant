@@ -1,13 +1,26 @@
 <?php
 
+use App\Http\Controllers\BadgePrintController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoicePrintController;
-use App\Http\Controllers\KitchenController;
+use App\Http\Controllers\LabelJobController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderEquipmentController;
+use App\Http\Controllers\Pos\CustomerDisplayController;
+use App\Http\Controllers\Pos\HeldSaleController;
+use App\Http\Controllers\Pos\InstantReturnController;
+use App\Http\Controllers\Pos\InstantSaleController;
+use App\Http\Controllers\Pos\OrderFeeController;
+use App\Http\Controllers\Pos\PosProductController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ProductLabelController;
+use App\Http\Controllers\ProductLookupController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\WebOrderController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\TerminalController;
+use App\Http\Middleware\RejectBadgeSessions;
+use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,135 +32,127 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    // Kitchen Display Screen
-    Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen.index');
-
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // A badge login is POS-only: it can't change the account's e-mail or delete it.
+    Route::middleware(RejectBadgeSessions::class)->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
 
     // Shift Management Routes
     Route::prefix('shifts')->name('shifts.')->group(function () {
-        Route::get('/start', [OrderController::class, 'showStartShift'])->name('start');
-        Route::post('/start', [OrderController::class, 'startShift'])->name('store');
-        Route::post('/end', [OrderController::class, 'endShift'])->name('end');
+        Route::get('/start', [ShiftController::class, 'showStartShift'])
+            ->name('start')
+            ->middleware('permission:shift.start');
+        Route::post('/start', [ShiftController::class, 'startShift'])
+            ->name('store')
+            ->middleware('permission:shift.start');
+        Route::post('/end', [ShiftController::class, 'endShift'])
+            ->name('end')
+            ->middleware('permission:shift.end');
+    });
+
+    // Printable badge card (code shown once, right after «طباعة بادج»)
+    Route::get('/users/{user}/badge/print', BadgePrintController::class)
+        ->name('users.badge.print')
+        ->middleware(RejectBadgeSessions::class);
+
+    // Drawers (multiple terminals): bind device, open, take over, close
+    Route::prefix('terminals')->name('terminals.')->group(function () {
+        Route::get('/device', [TerminalController::class, 'device'])->name('device');
+        Route::post('/device', [TerminalController::class, 'bindDevice'])->name('device.bind')->middleware('permission:terminal.bind_device');
+        Route::get('/open', [TerminalController::class, 'showOpen'])->name('open');
+        Route::post('/open', [TerminalController::class, 'open'])->name('open.store')->middleware('permission:terminal.open');
+        Route::get('/handover', [TerminalController::class, 'showHandover'])->name('handover');
+        Route::post('/handover', [TerminalController::class, 'handover'])->name('handover.store')->middleware('permission:terminal.open');
+        Route::post('/close', [TerminalController::class, 'close'])->name('close')->middleware('permission:terminal.close');
+        Route::post('/sessions/{session}/close', [TerminalController::class, 'closeOther'])->name('sessions.close')->middleware('permission:terminal.close_others');
     });
 
     // Order Management Routes
-    Route::prefix('orders')->name('orders.')->group(function () {
+    Route::prefix('orders')->name('orders.')->middleware(['shift', 'permission:pos.access', 'order.tab'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/manage/{order}', [OrderController::class, 'manage'])->name('manage');
         Route::post('/create', [OrderController::class, 'createOrder'])->name('store');
         Route::post('/save-order/{order}', [OrderController::class, 'saveOrder'])->name('save');
         Route::post('/complete-order/{order}', [OrderController::class, 'completeOrder'])->name('complete');
+        Route::post('/collect-remaining/{order}', [OrderController::class, 'collectRemaining'])->name('collectRemaining');
         Route::post('/cancel-order/{order}', [OrderController::class, 'cancelOrder'])->name('cancel');
         Route::post('/update-customer/{order}', [OrderController::class, 'updateCustomer'])->name('updateCustomer');
-        Route::post('/update-driver/{order}', [OrderController::class, 'updateDriver'])->name('updateDriver');
         Route::post('/update-type/{order}', [OrderController::class, 'updateOrderType'])->name('updateType');
         Route::post('/update-notes/{order}', [OrderController::class, 'updateOrderNotes'])->name('updateNotes');
         Route::post('/apply-discount/{order}', [OrderController::class, 'applyDiscount'])->name('applyDiscount');
+        Route::post('/update-guests/{order}', [OrderController::class, 'updateGuestsCount'])->name('updateGuests');
         Route::post('/link-customer/{order}', [OrderController::class, 'linkCustomer'])->name('linkCustomer');
-        Route::post('/link-driver/{order}', [OrderController::class, 'linkDriver'])->name('linkDriver');
-    })->middleware(['shift']);
+        Route::post('/{order}/equipment', [OrderEquipmentController::class, 'save'])->name('equipment.save');
+        Route::delete('/{order}/equipment/{line}', [OrderEquipmentController::class, 'remove'])->name('equipment.remove');
+        Route::post('/{order}/fees', [OrderFeeController::class, 'store'])->name('fees.store');
+        Route::delete('/{order}/fees/{fee}', [OrderFeeController::class, 'destroy'])->name('fees.destroy');
+    });
 
     // Quick operations routes
-    Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift']);
-    Route::post('/quick-driver', [OrderController::class, 'quickDriver'])->name('quickDriver')->middleware(['shift']);
-    Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift']);
-    Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift']);
-    Route::post('/fetch-driver-info', [OrderController::class, 'fetchDriverInfo'])->name('fetchDriverInfo')->middleware(['shift']);
-    Route::get('/table-types', [OrderController::class, 'getTableTypes'])->name('tableTypes')->middleware(['shift']);
+    Route::post('/quick-customer', [OrderController::class, 'quickCustomer'])->name('quickCustomer')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/fetch-customer-info', [OrderController::class, 'fetchCustomerInfo'])->name('fetchCustomerInfo')->middleware(['shift', 'permission:pos.access']);
+    Route::post('/search-customers-by-name', [OrderController::class, 'searchCustomersByName'])->name('searchCustomersByName')->middleware(['shift', 'permission:pos.access']);
+    Route::get('/products/lookup', ProductLookupController::class)->name('products.lookup')->middleware(['shift', 'permission:pos.access']);
 
-    // Web Order Management Routes
-    Route::prefix('web-orders')->name('web-orders.')->group(function () {
-        Route::get('/manage-web-order/{order}', [WebOrderController::class, 'manage'])->name('manage');
-        Route::post('/accept-order/{order}', [WebOrderController::class, 'acceptOrder'])->name('accept');
-        Route::post('/reject-order/{order}', [WebOrderController::class, 'rejectOrder'])->name('reject');
-        Route::post('/complete-order/{order}', [WebOrderController::class, 'completeOrder'])->name('complete');
-        Route::post('/out-for-delivery/{order}', [WebOrderController::class, 'outForDelivery'])->name('outForDelivery');
-        Route::post('/apply-discount/{order}', [WebOrderController::class, 'applyDiscount'])->name('applyDiscount');
-        Route::post('/save-order/{order}', [WebOrderController::class, 'saveOrder'])->name('saveOrder');
+    // Customer-facing monitor (fed by the cashier screen in the same browser)
+    Route::get('/pos/customer-display', CustomerDisplayController::class)->name('pos.customer-display')->middleware('permission:pos.access');
+
+    // Instant sale (Phase 6c): one request per sale, held carts, returns and exchanges
+    Route::prefix('pos')->name('pos.')->middleware(['shift', 'permission:pos.access'])->group(function () {
+        Route::post('/instant-sales', [InstantSaleController::class, 'store'])->name('instant-sales.store');
+        Route::get('/products/search', [PosProductController::class, 'search'])->name('products.search');
+        Route::get('/products', [PosProductController::class, 'index'])->name('products.index');
+        Route::get('/held-sales', [HeldSaleController::class, 'index'])->name('held-sales.index');
+        Route::post('/held-sales', [HeldSaleController::class, 'store'])->name('held-sales.store');
+        Route::delete('/held-sales/{heldSale}', [HeldSaleController::class, 'destroy'])->name('held-sales.destroy');
+        Route::get('/instant-returns/lookup', [InstantReturnController::class, 'lookup'])->name('instant-returns.lookup');
+        Route::post('/instant-returns', [InstantReturnController::class, 'store'])->name('instant-returns.store');
     });
 
     // Printer Management Routes
-    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print');
-    Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products');
-    Route::post('/print-in-kitchen', [OrderController::class, 'printInKitchen'])->name('print.kitchen');
-    Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer');
+    Route::post('/orders/print/{order}', [OrderController::class, 'printReceipt'])->name('print')->middleware(['permission:pos.access', 'order.tab']);
+    Route::post('/printers-of-products', [OrderController::class, 'getPrintersOfProducts'])->name('printers.products')->middleware('permission:pos.access');
+    Route::post('/open-cashier-drawer', [OrderController::class, 'openCashierDrawer'])->name('cashier.openDrawer')->middleware('permission:cashier.open_drawer');
 
     // Admin Printer Management Routes
-    Route::prefix('admin/printers')->name('admin.printers.')->group(function () {
+    Route::prefix('admin/printers')->name('admin.printers.')->middleware('permission:view_printers')->group(function () {
         Route::post('/test', [PrinterController::class, 'testPrinter'])->name('test');
         Route::post('/scan', [PrinterController::class, 'scanNetwork'])->name('scan');
     });
 
     // Expense Management Routes
-    Route::prefix('expenses')->name('expenses.')->group(function () {
+    Route::prefix('expenses')->name('expenses.')->middleware(['shift', 'permission:pos.access', 'permission:pos.tab.system.expenses'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index');
         Route::post('/', [ExpenseController::class, 'store'])->name('store');
         Route::put('/{expense}', [ExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
-    })->middleware(['shift']);
+    });
 
     // Inventory Management Routes
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/day-status', [InventoryController::class, 'dayStatus'])->name('dayStatus');
-        Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay');
+        Route::post('/toggle-day', [InventoryController::class, 'toggleDay'])->name('toggleDay')->middleware('permission:inventory.toggle_day');
     });
+
+    // Barcode labels for a product group's variants
+    Route::get('/print/labels/group/{group}', [ProductLabelController::class, 'group'])->name('labels.group');
+    // Label print job in the browser (PC without the Windows print app)
+    Route::get('/print/labels/jobs/{job}', [LabelJobController::class, 'browser'])->whereUuid('job')->name('labels.jobs.browser');
 
     // Invoice Print Routes
     Route::get('/print/invoice/{type}/{id}', [InvoicePrintController::class, 'show'])
         ->name('invoice.print')
-        ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+']);
+        ->where(['type' => '(purchase_invoice|return_purchase_invoice|stocktaking|waste)', 'id' => '[0-9]+'])
+        ->middleware('permission:invoice.print');
 });
 
 require __DIR__.'/auth.php';
 
-// Test route for broadcasting
-Route::get('/test-broadcast', function () {
-    // Get the latest order or create a dummy one for testing
-    $order = \App\Models\Order::with(['customer', 'items'])->latest()->first();
-
-    if (! $order) {
-        return response()->json(['error' => 'No orders found. Create an order first.']);
-    }
-
-    // Log for debugging
-    \Log::info('Broadcasting test event for order: '.$order->id);
-    \Log::info('Broadcasting connection: '.config('broadcasting.default'));
-    \Log::info('Reverb config: ', config('broadcasting.connections.reverb'));
-
-    // Dispatch the event
-    $event = new \App\Events\Orders\WebOrderReceived($order);
-    \Log::info('Event created: '.get_class($event));
-    \Log::info('Broadcast channels: ', $event->broadcastOn());
-    \Log::info('Broadcast as: '.$event->broadcastAs());
-    \Log::info('Broadcast with: ', $event->broadcastWith());
-
-    event($event);
-
-    \Log::info('Event dispatched');
-
-    return response()->json([
-        'message' => 'Event dispatched successfully',
-        'order_id' => $order->id,
-        'order_number' => $order->order_number,
-        'broadcast_connection' => config('broadcasting.default'),
-        'reverb_config' => config('broadcasting.connections.reverb'),
-    ]);
-});
-
-// Simple test event
-Route::get('/test-simple', function () {
-    \Log::info('Dispatching simple test event');
-
-    $event = new \App\Events\TestEvent('This is a test message');
-    event($event);
-
-    \Log::info('Simple test event dispatched');
-
-    return response()->json([
-        'message' => 'Simple test event dispatched',
-        'timestamp' => now()->format('H:i:s'),
-    ]);
+// Label print jobs fetched by the Windows print app: signed links, no login.
+// Signed over the path only, so a proxy changing scheme/host/port can't break them.
+Route::middleware('signed:relative')->group(function () {
+    Route::get('/labels/jobs/{job}', [LabelJobController::class, 'manifest'])->whereUuid('job')->name('labels.jobs.manifest');
+    Route::get('/labels/jobs/{job}/pages/{page}', [LabelJobController::class, 'page'])->whereUuid('job')->whereNumber('page')->name('labels.jobs.page');
 });

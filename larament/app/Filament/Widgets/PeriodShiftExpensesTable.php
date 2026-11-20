@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Exports\PeriodShiftExpensesDetailedExporter;
 use App\Filament\Exports\PeriodShiftExpensesExporter;
+use App\Filament\Widgets\Concerns\ScopesReportToTerminal;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Services\ShiftsReportService;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 class PeriodShiftExpensesTable extends BaseWidget
 {
     use InteractsWithPageFilters;
+    use ScopesReportToTerminal;
 
     protected static bool $isLazy = false;
 
@@ -34,11 +36,13 @@ class PeriodShiftExpensesTable extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $this->reportTerminal();
+
         $filterType = $this->pageFilters['filterType'] ?? 'period';
 
         if ($filterType === 'shifts') {
             $shiftIds = $this->pageFilters['shifts'] ?? [];
-            $totalExpensesOverPeriod = Expense::query()
+            $totalExpensesOverPeriod = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                     return $query->whereIn('shift_id', $shiftIds);
                 })
@@ -47,6 +51,7 @@ class PeriodShiftExpensesTable extends BaseWidget
             $expenseTypeQuery = ExpenceType::query()
                 ->withCount([
                     'expenses' => function ($query) use ($shiftIds) {
+                        $this->reportTerminal()->money($query, 'expenses.terminal_session_id');
                         $query->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                             return $query->whereIn('shift_id', $shiftIds);
                         });
@@ -54,6 +59,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ])
                 ->withSum([
                     'expenses' => function ($query) use ($shiftIds) {
+                        $this->reportTerminal()->money($query, 'expenses.terminal_session_id');
                         $query->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                             return $query->whereIn('shift_id', $shiftIds);
                         });
@@ -61,7 +67,7 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ], 'amount');
 
             $detailedExportQuery = function (Builder $query) use ($shiftIds) {
-                return Expense::query()
+                return $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                     ->when(! empty($shiftIds), function (Builder $query) use ($shiftIds) {
                         return $query->whereIn('shift_id', $shiftIds);
                     })
@@ -71,9 +77,9 @@ class PeriodShiftExpensesTable extends BaseWidget
         } else {
             $startDate = $this->pageFilters['startDate'];
             $endDate = $this->pageFilters['endDate'];
-            $totalExpensesOverPeriod = Expense::query()
+            $totalExpensesOverPeriod = $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                 ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('created_at', [
+                    $query->whereBetween('start_at', [
                         Carbon::parse($startDate)->startOfDay(),
                         Carbon::parse($endDate)->endOfDay(),
                     ]);
@@ -82,8 +88,9 @@ class PeriodShiftExpensesTable extends BaseWidget
             $expenseTypeQuery = ExpenceType::query()
                 ->withCount([
                     'expenses' => function ($query) use ($startDate, $endDate) {
+                        $this->reportTerminal()->money($query, 'expenses.terminal_session_id');
                         $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                            $query->whereBetween('created_at', [
+                            $query->whereBetween('start_at', [
                                 Carbon::parse($startDate)->startOfDay(),
                                 Carbon::parse($endDate)->endOfDay(),
                             ]);
@@ -92,8 +99,9 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ])
                 ->withSum([
                     'expenses' => function ($query) use ($startDate, $endDate) {
+                        $this->reportTerminal()->money($query, 'expenses.terminal_session_id');
                         $query->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                            $query->whereBetween('created_at', [
+                            $query->whereBetween('start_at', [
                                 Carbon::parse($startDate)->startOfDay(),
                                 Carbon::parse($endDate)->endOfDay(),
                             ]);
@@ -102,9 +110,9 @@ class PeriodShiftExpensesTable extends BaseWidget
                 ], 'amount');
 
             $detailedExportQuery = function (Builder $query) use ($startDate, $endDate) {
-                return Expense::query()
+                return $this->reportTerminal()->money(Expense::query(), 'expenses.terminal_session_id')
                     ->whereHas('shift', function (Builder $query) use ($startDate, $endDate) {
-                        $query->whereBetween('created_at', [
+                        $query->whereBetween('start_at', [
                             Carbon::parse($startDate)->startOfDay(),
                             Carbon::parse($endDate)->endOfDay(),
                         ]);

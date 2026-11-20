@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Order;
 use App\Services\DailyComparisonReportService;
+use App\Services\FeatureService;
 use Filament\Support\ArrayRecord;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -50,6 +51,17 @@ class DailyComparisonTableWidget extends BaseWidget
                     ->label('إجمالي المبيعات')
                     ->money('EGP')
                     ->color('success')
+                    ->weight('semibold'),
+
+                TextColumn::make('total_refunds')
+                    ->label('المرتجعات')
+                    ->money('EGP')
+                    ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray')
+                    ->visible(fn (): bool => app(FeatureService::class)->returnsEnabled()),
+
+                TextColumn::make('net_sales')
+                    ->label('صافي المبيعات')
+                    ->money('EGP')
                     ->weight('semibold'),
 
                 TextColumn::make('total_profit')
@@ -120,6 +132,8 @@ class DailyComparisonTableWidget extends BaseWidget
                 'total_orders' => $item->total_orders,
                 'total_sales' => $item->total_sales,
                 'total_profit' => $item->total_profit,
+                'total_refunds' => $item->total_refunds,
+                'net_sales' => $item->net_sales,
                 'profit_margin' => $item->profit_margin,
                 'avg_order_value' => $item->avg_order_value,
                 'sales_share' => $salesShare,

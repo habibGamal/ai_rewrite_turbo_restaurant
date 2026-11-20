@@ -1,10 +1,9 @@
 <?php
 
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
-use App\Enums\UserRole;
 use App\Filament\Pages\Reports\CurrentShiftReport;
+use App\Filament\Widgets\CurrentShiftCreditCollectionsTable;
 use App\Filament\Widgets\CurrentShiftDoneOrdersStats;
 use App\Filament\Widgets\CurrentShiftExpensesDetailsTable;
 use App\Filament\Widgets\CurrentShiftExpensesTable;
@@ -13,18 +12,20 @@ use App\Filament\Widgets\CurrentShiftMoneyInfoStats;
 use App\Filament\Widgets\CurrentShiftOrdersStats;
 use App\Filament\Widgets\CurrentShiftOrdersTable;
 use App\Filament\Widgets\NoActiveShiftWidget;
+use App\Filament\Widgets\Returns\CurrentShiftReturnsTable;
 use App\Models\ExpenceType;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shift;
 use App\Models\User;
+use Carbon\Carbon;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->admin = User::factory()->admin()->create();
     actingAs($this->admin);
 });
 
@@ -51,7 +52,7 @@ it('can render the page without an active shift', function () {
 
 // Access Control Tests
 it('allows admin users to access the page', function () {
-    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $admin = User::factory()->admin()->create();
     actingAs($admin);
 
     livewire(CurrentShiftReport::class)
@@ -59,7 +60,7 @@ it('allows admin users to access the page', function () {
 });
 
 it('allows viewer users to access the page', function () {
-    $viewer = User::factory()->create(['role' => UserRole::VIEWER]);
+    $viewer = User::factory()->viewer()->create();
     actingAs($viewer);
 
     livewire(CurrentShiftReport::class)
@@ -67,7 +68,7 @@ it('allows viewer users to access the page', function () {
 });
 
 it('prevents non-admin and non-viewer users from accessing the page', function () {
-    $user = User::factory()->create(['role' => UserRole::CASHIER]);
+    $user = User::factory()->cashier()->create();
     actingAs($user);
 
     livewire(CurrentShiftReport::class)
@@ -101,6 +102,8 @@ it('displays all current shift widgets when there is an active shift', function 
         CurrentShiftOrdersStats::class,
         CurrentShiftDoneOrdersStats::class,
         CurrentShiftOrdersTable::class,
+        CurrentShiftReturnsTable::class,
+        CurrentShiftCreditCollectionsTable::class,
         CurrentShiftExpensesDetailsTable::class,
         CurrentShiftExpensesTable::class,
     ]);
@@ -165,7 +168,7 @@ it('has correct navigation sort order', function () {
 
 it('has correct route path', function () {
     // Route path is defined in the page class as a protected static property
-    $reflection = new \ReflectionClass(CurrentShiftReport::class);
+    $reflection = new ReflectionClass(CurrentShiftReport::class);
     $property = $reflection->getProperty('routePath');
     $property->setAccessible(true);
     expect($property->getValue())->toBe('current-shift-report');
@@ -372,21 +375,21 @@ it('handles different order types correctly', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 100.00,
     ]);
 
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 150.00,
     ]);
 
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 80.00,
     ]);
 
@@ -451,7 +454,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DINE_IN,
+        'type' => 'dine_in',
         'total' => 250.00,
         'profit' => 75.00,
         'discount' => 10.00,
@@ -460,7 +463,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::COMPLETED,
-        'type' => OrderType::DELIVERY,
+        'type' => 'delivery',
         'total' => 350.00,
         'profit' => 105.00,
         'discount' => 15.00,
@@ -469,7 +472,7 @@ it('handles a complete shift scenario with all data types', function () {
     Order::factory()->create([
         'shift_id' => $shift->id,
         'status' => OrderStatus::PENDING,
-        'type' => OrderType::TAKEAWAY,
+        'type' => 'takeaway',
         'total' => 100.00,
         'profit' => 30.00,
     ]);
@@ -520,7 +523,7 @@ it('widgets can access current shift data', function () {
 
 // User Context Tests
 it('associates shift with correct user', function () {
-    $user = User::factory()->create(['role' => UserRole::ADMIN]);
+    $user = User::factory()->admin()->create();
     $shift = Shift::factory()->active()->create([
         'user_id' => $user->id,
     ]);
@@ -549,7 +552,7 @@ it('correctly handles shift timestamps', function () {
     $currentShift = $component->instance()->getCurrentShift();
 
     expect($currentShift)->not->toBeNull();
-    expect($currentShift->start_at)->toBeInstanceOf(\Carbon\Carbon::class);
+    expect($currentShift->start_at)->toBeInstanceOf(Carbon::class);
     expect($currentShift->start_at->diffInHours(now()))->toBeGreaterThanOrEqual(8);
 });
 
