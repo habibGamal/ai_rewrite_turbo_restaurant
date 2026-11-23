@@ -2,11 +2,12 @@
 
 namespace App\Filament\Pages;
 
-use App\Services\SpecificDataImportService;
+use App\Services\ImportStrategies\ImportStrategyManager;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -46,7 +47,9 @@ class ExcelImport extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->form->fill();
+        $this->form->fill([
+            'import_type' => 'auto',
+        ]);
     }
 
     /**
@@ -68,8 +71,19 @@ class ExcelImport extends Page implements HasForms
         return $schema
             ->components([
                 Section::make('رفع ملف Excel / JSON')
-                    ->description('اختر ملف Excel (.xlsx) أو ملف JSON (.json) لرفعه وتحليل بياناته')
+                    ->description('اختر ملف Excel (.xlsx) أو ملف JSON (.json) لرفعه وتحليل بياناته مع اختيار نوع الاستيراد')
                     ->schema([
+                        Select::make('import_type')
+                            ->label('نوع الاستيراد')
+                            ->options(fn () => app(ImportStrategyManager::class)->getStrategyOptions())
+                            ->default('auto')
+                            ->native(false)
+                            ->reactive()
+                            ->afterStateUpdated(function ($state) {
+                                $this->analysisResult = null;
+                                $this->importResult = null;
+                            }),
+
                         FileUpload::make('excel_file')
                             ->label('ملف Excel أو JSON')
                             ->acceptedFileTypes([
@@ -154,13 +168,14 @@ class ExcelImport extends Page implements HasForms
         }
 
         try {
-            $service = new SpecificDataImportService;
-            $this->analysisResult = $service->analyzeStructure($file);
+            $manager = app(ImportStrategyManager::class);
+            $strategy = $manager->resolveStrategy($this->data['import_type'] ?? 'auto', $file);
+            $this->analysisResult = $strategy->analyzeStructure($file);
 
             if ($this->analysisResult['success']) {
                 Notification::make()
                     ->title('نجح التحليل')
-                    ->body('تم تحليل الملف بنجاح')
+                    ->body('تم تحليل الملف بنجاح (الاستراتيجية: '.$strategy->getLabel().')')
                     ->success()
                     ->send();
             } else {
@@ -194,8 +209,9 @@ class ExcelImport extends Page implements HasForms
         }
 
         try {
-            $service = new SpecificDataImportService;
-            $this->importResult = $service->importData($file);
+            $manager = app(ImportStrategyManager::class);
+            $strategy = $manager->resolveStrategy($this->data['import_type'] ?? 'auto', $file);
+            $this->importResult = $strategy->import($file);
 
             if ($this->importResult['success']) {
                 $imported = $this->importResult['imported_count'];
