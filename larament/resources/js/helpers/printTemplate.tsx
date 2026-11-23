@@ -5,13 +5,16 @@ import { PartType } from '../Components/Print/PartialReceiptTemplate';
 
 export { PartType };
 
-export async function printOrder(order: Order) {
-    const key = `print-${order.id}`;
-    message.loading({ content: 'جاري الطباعة...', key, duration: 0 });
-    try {
-        const response = await axios.post(`/orders/print/${order.id}`);
-        message.success({ content: response.data?.message || 'تم إرسال طلب الطباعة', key });
-    } catch (error: any) {
-        message.error({ content: error?.response?.data?.message || 'حدث خطأ أثناء طباعة الطلب', key });
-    }
+/**
+ * Send the receipt to the printer without waiting: the cashier keeps working
+ * while the server prints, and only a failure is shown when the answer comes.
+ */
+export function printReceipt(orderId: number): void {
+    axios.post(`/orders/print/${orderId}`).catch((error: any) => {
+        message.error(error?.response?.data?.message || 'حدث خطأ أثناء طباعة الطلب');
+    });
+}
+
+export function printOrder(order: Order): void {
+    printReceipt(order.id);
 }
