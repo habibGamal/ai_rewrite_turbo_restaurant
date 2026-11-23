@@ -290,8 +290,9 @@ export default function ManageOrder({
     const handleSaveAndPrint = () => {
         setIsChangesLoading(true);
         save(() => {
-            // Sent without waiting: the cashier keeps working, only a failure is shown.
+            // Sent without waiting: the cashier keeps working; a failure is shown when the answer comes.
             setIsPrintChangesModalOpen(false);
+            message.info(terms.changesSentToKitchen);
             axios
                 .post("/print-in-kitchen", {
                     orderId: order.id,

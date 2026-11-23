@@ -81,7 +81,8 @@ export default function PrintInKitchenModal({
     const mappingItemsToPrinters = () => {
         onCancel();
 
-        // Sent without waiting: the cashier keeps working, only a failure is shown.
+        // Sent without waiting: the cashier keeps working; a failure is shown when the answer comes.
+        message.info('تم إرسال الطلب للمطبخ');
         axios
             .post('/print-in-kitchen', {
                 orderId: order.id,

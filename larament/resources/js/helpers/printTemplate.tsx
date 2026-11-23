@@ -7,9 +7,11 @@ export { PartType };
 
 /**
  * Send the receipt to the printer without waiting: the cashier keeps working
- * while the server prints, and only a failure is shown when the answer comes.
+ * while the server prints. A toast says it was sent; a failure is shown when
+ * the answer comes.
  */
 export function printReceipt(orderId: number): void {
+    message.info('تم إرسال طلب الطباعة');
     axios.post(`/orders/print/${orderId}`).catch((error: any) => {
         message.error(error?.response?.data?.message || 'حدث خطأ أثناء طباعة الطلب');
     });
