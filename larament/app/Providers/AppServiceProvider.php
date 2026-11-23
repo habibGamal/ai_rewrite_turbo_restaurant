@@ -49,6 +49,7 @@ use App\Orders\OrderTypeCatalog;
 use App\Policies\RolePolicy;
 use App\Services\FeatureService;
 use App\Services\Reports\ReportTerminalScope;
+use App\Services\SettingsService;
 use App\Sync\SyncOutboxObserver;
 use App\Terminals\TerminalSessionResolver;
 use Filament\Actions\Exports\Jobs\ExportCsv;
@@ -60,7 +61,9 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Events\TransactionRolledBack;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -108,6 +111,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // Settings are remembered for one request or job only (SettingsService::get).
+        SettingsService::flushMemo();
+        Event::listen(RequestHandled::class, fn () => SettingsService::flushMemo());
+        Event::listen(JobProcessing::class, fn () => SettingsService::flushMemo());
 
         // A password login clears the POS-only mark a badge login leaves.
         Event::listen(Login::class, function (): void {

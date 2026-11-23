@@ -740,9 +740,11 @@ describe('OrderController Feature Tests', function () {
                 'images' => ['base64_image_data'],
             ]);
 
-            // Test that the endpoint is accessible and redirects properly
-            // Network connection errors are expected in test environment
-            $response->assertRedirect();
+            // A short JSON answer, never a redirect that reloads the order page.
+            // No printer is reachable in tests, so the error answer is expected.
+            expect($response->isRedirect())->toBeFalse();
+            $response->assertHeader('content-type', 'application/json')
+                ->assertJsonStructure(['message']);
         });
 
         it('gets printers for products successfully', function () {

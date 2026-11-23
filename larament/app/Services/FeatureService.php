@@ -31,6 +31,8 @@ class FeatureService
      */
     private array $disableBlockers = [];
 
+    private static bool $orderTypesTableExists = false;
+
     /**
      * Additional permissions registered dynamically per feature.
      *
@@ -431,7 +433,9 @@ class FeatureService
      */
     private function hiddenOrderTypeTabPermissions(): array
     {
-        if (! Schema::hasTable('order_types')) {
+        // Asked once per permission on every page (shared props); once the
+        // table exists it stays, so only the "missing" answer is asked again.
+        if (! self::$orderTypesTableExists && ! (self::$orderTypesTableExists = Schema::hasTable('order_types'))) {
             return [];
         }
 

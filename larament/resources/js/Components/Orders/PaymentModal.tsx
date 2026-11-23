@@ -146,9 +146,9 @@ export default function PaymentModal({
                     },
                     {
                         onSuccess: () => {
+                            // The server already redirected to the orders screen on this type's tab.
                             message.success("تم إنهاء الطلب بنجاح");
                             onCancel();
-                            router.get(route("orders.index") + `#${order!.type}`);
                         },
                         onFinish: () => {
                             finish();
@@ -236,10 +236,8 @@ export default function PaymentModal({
         router.post(url, finalValues, {
             onSuccess: () => {
                 message.success(mode === "collect" ? "تم تحصيل المتبقي بنجاح" : "تم إنهاء الطلب بنجاح");
+                // On complete the server already redirected to the orders screen on this type's tab.
                 onCancel();
-                if (mode === "complete") {
-                    router.get(route("orders.index") + `#${order!.type}`);
-                }
             },
             onFinish: () => {
                 finish();

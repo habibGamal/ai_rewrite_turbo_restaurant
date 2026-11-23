@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\SettingKey;
 use App\Services\FeatureService;
+use App\Services\SettingsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -36,6 +37,7 @@ class Setting extends Model
     public static function invalidateCache(?string $key = null): void
     {
         $forget = static function () use ($key): void {
+            SettingsService::flushMemo();
             if ($key !== null && $key !== '') {
                 Cache::forget("settings.{$key}");
             }
