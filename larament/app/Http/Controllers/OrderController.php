@@ -31,6 +31,7 @@ use App\Orders\OrderTypeCatalog;
 use App\Orders\ReceiptPayment;
 use App\Orders\ReceiptView;
 use App\Orders\Tenders;
+use App\PrintAgent\PrintAgentException;
 use App\Repositories\OrderRepository;
 use App\Services\FeatureService;
 use App\Services\Orders\OrderCompletionService;
@@ -47,7 +48,9 @@ use App\Services\ShiftService;
 use App\Terminals\TerminalSeparation;
 use App\Terminals\TerminalSessionResolver;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -79,6 +82,31 @@ class OrderController extends Controller
         }
 
         $user = $this->deskUser();
+        $tabs = null;
+        $tabsPayload = function () use (&$tabs, $currentShift): array {
+            return $tabs ??= $this->tabsPayload($currentShift);
+        };
+
+        // Closures so a partial reload (live updates ask for only orders and
+        // tabs) builds only what it asked for.
+        return Inertia::render('Orders/Index', [
+            'orders' => fn (): array => $this->deskOrders($currentShift, $user),
+            'tabs' => $tabsPayload,
+            'defaultTab' => fn (): ?string => $this->defaultTab($tabsPayload()),
+            'tabsOrientation' => fn () => app(SettingsService::class)->getCashierTabsOrientation(),
+            'receivables' => fn (): array => $this->deskReceivables($user),
+            'currentShift' => $currentShift,
+            'expenses' => fn () => $this->deskExpenses($currentShift, $user),
+            'expenseTypes' => fn () => $user->canSeeTab('system:expenses') ? ExpenceType::all() : [],
+            'kdsCashierStatusEnabled' => fn (): bool => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function deskOrders(Shift $currentShift, User $user): array
+    {
         $separation = app(TerminalSeparation::class);
 
         $orders = [];
@@ -87,46 +115,53 @@ class OrderController extends Controller
                 continue;
             }
 
-            $orders[] = $this->orderPayload($order);
+            $payload = $this->orderPayload($order);
+            // Loaded for receiptPayment only; the order cards never read the rows.
+            unset($payload['payments']);
+            $orders[] = $payload;
         }
 
+        return $orders;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function deskReceivables(User $user): array
+    {
+        if (! $user->canSeeTab('system:receivables')) {
+            return [];
+        }
+
+        $separation = app(TerminalSeparation::class);
         $receivables = [];
-        if ($user->canSeeTab('system:receivables')) {
-            foreach ($this->orderRepository->receivablesForTypes($this->catalog->creditCodes()) as $order) {
-                if (! $separation->canAct($order)) {
-                    continue;
-                }
-                $receivables[] = $this->receivablePayload($order);
+        foreach ($this->orderRepository->receivablesForTypes($this->catalog->creditCodes()) as $order) {
+            if (! $separation->canAct($order)) {
+                continue;
             }
+            $receivables[] = $this->receivablePayload($order);
         }
 
-        $expenses = [];
-        $expenseTypes = [];
-        if ($user->canSeeTab('system:expenses')) {
-            $drawer = app(TerminalSessionResolver::class)->current();
-            $expenses = Expense::with('expenceType')
-                ->where('shift_id', $currentShift->id)
-                // With several drawers each one lists its own expenses.
-                ->when($drawer !== null && app(FeatureService::class)->multiTerminalEnabled(), fn ($query) => $query->where('terminal_session_id', $drawer->getKey()))
-                ->orderBy('created_at', 'desc')
-                ->get();
+        return $receivables;
+    }
 
-            $expenseTypes = ExpenceType::all();
+    /**
+     * @return Collection<int, Expense>|array{}
+     */
+    private function deskExpenses(Shift $currentShift, User $user): Collection|array
+    {
+        if (! $user->canSeeTab('system:expenses')) {
+            return [];
         }
 
-        $tabs = $this->tabsPayload($currentShift);
+        $drawer = app(TerminalSessionResolver::class)->current();
 
-        return Inertia::render('Orders/Index', [
-            'orders' => $orders,
-            'tabs' => $tabs,
-            'defaultTab' => $this->defaultTab($tabs),
-            'tabsOrientation' => app(SettingsService::class)->getCashierTabsOrientation(),
-            'receivables' => $receivables,
-            'currentShift' => $currentShift,
-            'expenses' => $expenses,
-            'expenseTypes' => $expenseTypes,
-            'kdsCashierStatusEnabled' => setting(SettingKey::KDS_CASHIER_STATUS_ENABLED) === 'true',
-        ]);
+        return Expense::with('expenceType')
+            ->where('shift_id', $currentShift->id)
+            // With several drawers each one lists its own expenses.
+            ->when($drawer !== null && app(FeatureService::class)->multiTerminalEnabled(), fn ($query) => $query->where('terminal_session_id', $drawer->getKey()))
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     private function deskUser(): User
@@ -564,7 +599,9 @@ class OrderController extends Controller
             // Log order completion
             $this->loggingService->logOrderCompletion($order->id, $paymentsData, $completedOrder->total);
 
-            return redirect()->to(route('orders.index').'#'.$order->type)
+            // ?tab= instead of #type: an Inertia redirect drops the hash, which made the
+            // payment window load the orders screen a second time just to set it.
+            return redirect()->route('orders.index', ['tab' => $order->type])
                 ->with('success', 'تم إنهاء الطلب بنجاح');
         } catch (Exception $e) {
             $this->loggingService->logAction('فشل في إتمام الطلب', [
@@ -925,18 +962,23 @@ class OrderController extends Controller
     /**
      * Print order receipt
      */
-    public function printReceipt(Request $request, Order $order)
+    public function printReceipt(Request $request, Order $order): JsonResponse
     {
         $order = $this->orderService->getOrderDetails($order->id);
 
+        // A short JSON answer: the caller is axios, and a back() redirect made it
+        // download and render the whole order page again after every print.
         try {
             $this->printService->printOrderReceipt($order);
 
-            return back()->with('success', 'تم إرسال طباعة الطلب بنجاح');
+            return response()->json(['message' => 'تم إرسال طباعة الطلب بنجاح']);
+        } catch (PrintAgentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (Exception $e) {
-            return back()->withErrors(['error' => 'حدث خطأ أثناء طباعة طلب ']);
-        }
+            report($e);
 
+            return response()->json(['message' => 'حدث خطأ أثناء طباعة الطلب'], 500);
+        }
     }
 
     /**

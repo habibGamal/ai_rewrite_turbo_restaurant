@@ -214,7 +214,7 @@ describe('OrderPaymentService', function () {
             'print' => false,
         ]);
 
-        $response->assertRedirect(route('orders.index').'#takeaway')
+        $response->assertRedirect(route('orders.index', ['tab' => 'takeaway']))
             ->assertSessionHas('success', 'تم إنهاء الطلب بنجاح');
 
         $order->refresh();

@@ -38,6 +38,22 @@ class SettingsService
 
     public const FEATURE_CUSTOM_FEES_ENABLED = 'feature_custom_fees_enabled';
 
+    /**
+     * Values already read in this request or job (key => raw value, null =
+     * no row). The cashier screen asks for the same feature flags thousands
+     * of times per page; this keeps that at one query per key. Cleared when
+     * a setting is saved (Setting::invalidateCache) and at the start of every
+     * request and queued job (AppServiceProvider).
+     *
+     * @var array<string, string|null>
+     */
+    private static array $memo = [];
+
+    public static function flushMemo(): void
+    {
+        self::$memo = [];
+    }
+
     public const FEATURE_OUTSOURCED_ORDERS_ENABLED = 'feature_outsourced_orders_enabled';
 
     public const FEATURE_EQUIPMENT_ENABLED = 'feature_equipment_enabled';
@@ -212,9 +228,13 @@ class SettingsService
      */
     public function get(string $key, mixed $default = null): mixed
     {
-        $setting = Setting::where('key', $key)->first();
+        if (! array_key_exists($key, self::$memo)) {
+            self::$memo[$key] = Setting::where('key', $key)->value('value');
+        }
 
-        return $setting?->value !== null && $setting->value !== '' ? $setting->value : $default;
+        $value = self::$memo[$key];
+
+        return $value !== null && $value !== '' ? $value : $default;
     }
 
     /**

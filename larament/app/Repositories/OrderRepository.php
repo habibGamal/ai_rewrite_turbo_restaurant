@@ -48,7 +48,8 @@ class OrderRepository
     public function getShiftOrders(int $shiftId): Collection
     {
         return Order::where('shift_id', $shiftId)
-            ->with(['customer', 'driver', 'table', 'items.product', 'kitchenTicket.items'])
+            // payments: the cashier screen shows paid / remaining for every order.
+            ->with(['customer', 'driver', 'table', 'items.product', 'kitchenTicket.items', 'payments'])
             ->orderBy('created_at', 'asc')
             ->get();
     }

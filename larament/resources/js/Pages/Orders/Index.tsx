@@ -101,7 +101,11 @@ const OrdersIndex: React.FC<IndexProps> = ({
     const renderedTabs = tabs;
 
     const initialTab = () => {
-        const hash = window.location.hash.replace('#', '') || defaultTab || '';
+        const hash =
+            window.location.hash.replace('#', '') ||
+            new URLSearchParams(window.location.search).get('tab') ||
+            defaultTab ||
+            '';
         const found = renderedTabs.find(
             (candidate) =>
                 candidate.key === hash ||
@@ -290,7 +294,9 @@ const OrdersIndex: React.FC<IndexProps> = ({
                         tabPosition={isVertical ? 'right' : 'top'}
                         onChange={(key) => {
                             setTab(key);
-                            window.location.hash = key;
+                            // replaceState, not location.hash: a hash change fires popstate,
+                            // and the layout reloads the whole page on popstate.
+                            window.history.replaceState(window.history.state, '', `${window.location.pathname}#${key}`);
                         }}
                         activeKey={tab}
                         type="card"
