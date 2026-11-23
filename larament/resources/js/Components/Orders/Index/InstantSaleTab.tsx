@@ -74,6 +74,7 @@ import {
 } from "@/Components/Orders/Instant/instantCart";
 import { fetchProductsByIds, mergeProducts } from "@/Components/Orders/Instant/remoteCatalog";
 import { publishCustomerDisplay } from "@/lib/customerDisplay";
+import { printReceipt } from "@/helpers/printTemplate";
 
 interface InstantSaleTabProps {
     tab: CashierTab;
@@ -292,19 +293,13 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
     };
 
     // ---- Actions ----
-    const reprintLast = async () => {
+    const reprintLast = () => {
         if (!lastSale) {
             message.warning("لا توجد فاتورة سابقة");
             return;
         }
-        try {
-            await axios.post(`/orders/print/${lastSale.id}`);
-            message.success("تم إرسال طلب الطباعة");
-        } catch (error) {
-            message.error(errorMessage(error, "تعذر طباعة الفاتورة"));
-        } finally {
-            focusScan();
-        }
+        printReceipt(lastSale.id);
+        focusScan();
     };
 
     const holdSale = async () => {
@@ -452,7 +447,8 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
             customer_id: customer?.id ?? null,
             order_notes: notes || null,
             tenders,
-            print,
+            // The receipt is sent separately after the sale, so the cashier never waits for the printer.
+            print: false,
             held_sale_id: heldSaleId,
         };
         // Network failures retry with the same client_uuid, so the server never books twice.
@@ -480,6 +476,7 @@ export const InstantSaleTab: React.FC<InstantSaleTabProps> = ({ tab, shiftId, ac
                     message.info(`الفاتورة #${order.order_number} مسجلة بالفعل`);
                 } else {
                     message.success(`تم البيع - فاتورة #${order.order_number}`);
+                    if (print) printReceipt(order.id);
                 }
                 focusScan();
                 return true;

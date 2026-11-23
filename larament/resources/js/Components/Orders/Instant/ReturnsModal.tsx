@@ -34,6 +34,7 @@ import {
     newClientUuid,
 } from "./instantCart";
 import { parseScan } from "./keymap";
+import { printReceipt } from "@/helpers/printTemplate";
 
 interface ReturnLine {
     id: number;
@@ -234,7 +235,10 @@ export default function ReturnsModal({ open, onClose, products, resolveProduct, 
                         : undefined,
                 tenders,
                 refund_method: net < 0 ? refundMethod : undefined,
+                // The exchange receipt is sent separately, so the cashier never waits for the printer.
+                print: false,
             });
+            if (data.exchange_order) printReceipt(data.exchange_order.id);
             onDone(data);
             message.success(
                 data.net < 0

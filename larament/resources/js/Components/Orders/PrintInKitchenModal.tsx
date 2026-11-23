@@ -78,12 +78,13 @@ export default function PrintInKitchenModal({
     const disablePrint = checkedList.length === 0;
     const itemsToPrint = itemsQuantity.filter((item) => checkedList.includes(item.product_id));
 
-    const mappingItemsToPrinters = async () => {
+    const mappingItemsToPrinters = () => {
         onCancel();
 
-        try {
-            // Send items data directly to backend for server-side processing
-            await axios.post('/print-in-kitchen', {
+        // Sent without waiting: the cashier keeps working; a failure is shown when the answer comes.
+        message.info('تم إرسال الطلب للمطبخ');
+        axios
+            .post('/print-in-kitchen', {
                 orderId: order.id,
                 items: itemsToPrint.map(item => ({
                     product_id: item.product_id,
@@ -93,15 +94,13 @@ export default function PrintInKitchenModal({
                 })),
                 // Keep images for backward compatibility (not used in new implementation)
                 images: [],
+            })
+            .catch((error) => {
+                const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+                    ? error.response?.data?.message
+                    : undefined;
+                message.error(serverMessage || 'حدث خطأ أثناء إرسال الطلب للمطبخ');
             });
-
-            message.success('تم إرسال الطلب للمطبخ بنجاح');
-        } catch (error) {
-            const serverMessage = axios.isAxiosError<{ message?: string }>(error)
-                ? error.response?.data?.message
-                : undefined;
-            message.error(serverMessage || 'حدث خطأ أثناء إرسال الطلب للمطبخ');
-        }
     };
 
     return (

@@ -289,9 +289,12 @@ export default function ManageOrder({
 
     const handleSaveAndPrint = () => {
         setIsChangesLoading(true);
-        save(async () => {
-            try {
-                await axios.post("/print-in-kitchen", {
+        save(() => {
+            // Sent without waiting: the cashier keeps working; a failure is shown when the answer comes.
+            setIsPrintChangesModalOpen(false);
+            message.info(terms.changesSentToKitchen);
+            axios
+                .post("/print-in-kitchen", {
                     orderId: order.id,
                     type: "changes",
                     items: pendingChangedItems.map((item) => ({
@@ -302,16 +305,13 @@ export default function ManageOrder({
                         delta: item.delta,
                         notes: item.notes || null,
                     })),
+                })
+                .catch((error) => {
+                    const serverMessage = axios.isAxiosError<{ message?: string }>(error)
+                        ? error.response?.data?.message
+                        : undefined;
+                    message.error(serverMessage || terms.sendChangesFailed);
                 });
-                message.success(terms.changesSentToKitchen);
-            } catch (error) {
-                const serverMessage = axios.isAxiosError<{ message?: string }>(error)
-                    ? error.response?.data?.message
-                    : undefined;
-                message.error(serverMessage || terms.sendChangesFailed);
-            } finally {
-                setIsPrintChangesModalOpen(false);
-            }
         }, () => setIsChangesLoading(false));
     };
 
