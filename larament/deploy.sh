@@ -122,7 +122,7 @@ if [ -f .env ]; then
 fi
 
 echo "📦 Installing Dependencies..."
-composer install
+composer install --no-dev --optimize-autoloader --no-interaction
 npm install && npm run build
 
 # --- PERMISSIONS SECTION ---
