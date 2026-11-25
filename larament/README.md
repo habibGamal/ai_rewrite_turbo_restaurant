@@ -2,11 +2,11 @@
 
 The Laravel application behind Turbo POS. Full documentation lives in [`../docs`](../docs): run `npm install && npm run dev` there, or read the Markdown directly.
 
-- [Technical overview](../docs/technical/index.md)
-- [Local setup](../docs/technical/setup.md) and [Deployment](../docs/technical/deployment.md)
-- [Modules & business types](../docs/technical/modules.md)
-- [Website integration API](../docs/technical/website-integration.md)
-- [Arabic user guide](../docs/ar/guide/index.md)
+- [Arabic user guide](../docs/start/index.md)
+- [Developer overview](../docs/dev/index.md)
+- [Local setup](../docs/dev/setup.md) and [Deployment](../docs/dev/ops/deployment.md)
+- [Modules & business types](../docs/dev/modules.md)
+- [Website integration API](../docs/dev/website-integration.md)
 
 ## Quick commands
 
