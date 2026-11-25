@@ -84,3 +84,21 @@ Every site uses the same six-section layout in this order:
 
 - All `docs/dev/**` pages are **private** and excluded from the public build (`DOCS_PUBLIC=1`).
 - Public pages (`/start/`, `/guide/`, `/admin/`, `/integrations/`) must **never** link to `/dev/` pages; the public build validates dead links and will fail if any public page links to `/dev/`.
+
+## Shared theme
+
+- `docs/.vitepress/theme/` is shared by the three docs sites and owned by the POS repo (`ai_rewrite_turbo_restaurant`). Site-specific values (name, logo, `--brand` colour, sidebar, redirects, product links) live only in each site's `config.mts`.
+- To change the theme: edit it in the POS repo, run `bash scripts/docs-theme.sh lock`, then in the website and platform repos run `bash scripts/docs-theme.sh pull <path-to-POS-checkout>`.
+- `bash scripts/docs-check.sh` runs `docs-theme.sh verify` in every repo and fails when the theme files do not match `docs/.vitepress/theme.lock`.
+
+## Running the three sites together
+
+The sites are not hosted; developers and agents run them locally. Each one uses a fixed port so the «المنتجات» switcher in the top bar links between them:
+
+| Site | Repo | Command | Address |
+|---|---|---|---|
+| نقاط البيع | `ai_rewrite_turbo_restaurant` | `cd docs && npm run dev` | `http://localhost:5173` |
+| موقع الطلبات | `turbo_tenant` | `cd docs && npm run dev` | `http://localhost:5174` |
+| المنصة المركزية | `platform_restaurant` | `cd docs && npm run dev` | `http://localhost:5175` |
+
+Run `npm install` once in each `docs/` folder first. `npm run build:public` builds only the public sections (without `/dev/`).
