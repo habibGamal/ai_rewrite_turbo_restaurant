@@ -18,5 +18,3 @@ The Laravel application behind Turbo POS. Full documentation lives in [`../docs`
 | Tests | `./vendor/bin/pest --parallel` |
 | Vendor account | `php artisan pos:vendor` |
 | Business type | `php artisan pos:profile [type]` |
-
-Older notes in this folder (`FEATURES_AND_TECH_STACK.md`, `SETTINGS_DOCUMENTATION.md`, `docs/api/web-orders-create-order.md`, …) predate the modular core; the docs site supersedes them where they differ.
