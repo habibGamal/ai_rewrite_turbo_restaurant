@@ -1,3 +1,10 @@
 manage_operations
 out/
 out.zip
+.workspace/prototypes/*
+!.workspace/prototypes/README.md
+**/.plan/
+**/.plans/
+**/.superpowers/
+**/.remember/
+**/docs/superpowers/

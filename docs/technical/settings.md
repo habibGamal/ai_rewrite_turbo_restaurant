@@ -2,7 +2,7 @@
 
 Settings live in the `settings` table, read through `SettingsService` / the `setting()` helper with an in-memory cache. Keys are the `App\Enums\SettingKey` enum, which also holds each key's Arabic label, help text, default and validation rules.
 
-Admin page: «الإعدادات» (`/admin/settings`, `manage_settings`). CLI: `php artisan settings get|set|reset ...`.
+Admin page: «الإعدادات» (`/admin/settings`, `manage_settings`). CLI: `php artisan settings get|set|list|reset ...`.
 
 ## Shop settings (Settings page)
 
@@ -95,3 +95,10 @@ Shop-editable, shown in «الإعدادات العامة» → «باركود �
 | `WEB_API_KEY` | Fallback API key when the setting is empty. |
 | `MANAGEMENT_SECRET_KEY` | `X-Management-Key` for `/api/management/*` (deploy, start, stop, status). |
 | `OLD_DB_*` | Legacy database for `migrate:old-data`. |
+
+## Storage, caching and adding keys
+
+- **Database and model:** settings are stored as `(key, value)` text pairs in `settings`. `App\Models\Setting` provides `getValue()`, `setValue()`, `hasKey()`, and `getAllAsArray()`.
+- **Caching:** `SettingsService::all()` caches `settings.all` for 3600 seconds (1 hour). `SettingsService::get()` memoizes keys per request or queued job (`SettingsService::flushMemo()`). Saving or deleting a `Setting` calls `Setting::invalidateCache()` (and registers a `DB::afterCommit` flush inside transactions).
+- **Settings page actions:** «حفظ الإعدادات» saves shop-editable settings (and `cashier_tabs` via `CashierTabLayout`), «اختبار الطابعة» runs `PrintService::testCashierPrinter()`, and «إعادة تعيين للافتراضي» resets shop-editable keys while keeping `web_api_key`, `website_integration_token`, and vendor-owned keys untouched.
+- **Adding a new setting:** add a case to `App\Enums\SettingKey` (with `defaultValue()`, `validationRules()`, `label()`, `helperText()`, `placeholder()`, and `isBooleanSetting()` / `isFeatureFlag()` / `isVendorOwned()` as needed), then add its form component in `App\Filament\Pages\Settings` (or `VendorConsole` for vendor-owned keys).

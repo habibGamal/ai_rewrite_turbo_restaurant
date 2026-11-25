@@ -72,6 +72,8 @@ True when a shift is open, or the day has inventory activity (a daily snapshot f
 
 ### `POST /api/web-orders/place-order`
 
+Handled by `App\Modules\WebOrders\Http\Controllers\Api\WebOrdersController::createOrder` and `App\Modules\WebOrders\Services\WebApiService::placeOrder`. Send `Content-Type: application/json` and `Accept: application/json`. New orders start with order status `pending` and payment status `pending`.
+
 ```json
 {
   "user": {
@@ -110,12 +112,14 @@ True when a shift is open, or the day has inventory activity (a daily snapshot f
 | `order.shiftId` | Required, must be the open shift. |
 | `order.orderNumber` | Required, the website's order number. |
 | `order.idempotencyKey` | Optional, ≤ 100 chars. Stored in `orders.web_order_key` (unique). The website sends `sha256(tenant | order id | number)`. |
-| `order.subTotal`, `tax`, `service`, `discount`, `total` | Required numbers. `service` carries the delivery fee. |
-| `order.note` | Optional. |
+| `order.subTotal`, `tax`, `service`, `discount`, `total` | Required numbers. `service` carries the delivery fee (also stored on `customer.delivery_cost`). |
+| `order.note` | Optional, stored in `orders.order_notes`. |
 | `order.webPreferences.payment_method` | Optional: `cash`, `card` or `talabat_card`. `transaction_id` optional. |
 | `order.items[].quantity` | Required, ≥ 0.001. |
 | `order.items[].notes` | Optional; the website puts variants, weights and add-on notes here. |
-| `order.items[].posRefObj[]` | Required list of `{ productRef, quantity }`. `productRef` matches `products.product_ref`. Each ref becomes one POS line with quantity `item.quantity × ref.quantity`. |
+| `order.items[].posRefObj[]` | Required list of `{ productRef, quantity }` (`quantity` ≥ 0.001). `productRef` matches `products.product_ref`. Each ref becomes one POS line with quantity `item.quantity × ref.quantity`. |
+
+**Bundle mapping (`posRefObj`).** A single website item can expand into multiple POS order lines. For example, a combo item with `quantity: 1` and three entries in `posRefObj` (burger, fries, drink) creates three `order_items` rows so inventory deduction and item costs stay accurate.
 
 **How prices are set.** Line prices and costs come from the POS products. The website `total` is kept as the order total; the gap between the POS total and the website total is stored as `web_pos_diff` and as the order discount. Unknown refs fail the whole order: `منتجات غير موجودة: [...]`.
 
@@ -125,10 +129,20 @@ True when a shift is open, or the day has inventory activity (a daily snapshot f
 |---|---|---|
 | **200** | New order saved | `{ "message": "تم إنشاء الطلب بنجاح", "already_received": false, "order": { "id", "order_number", "status": "pending", "total" } }` |
 | **200** | Retry of an order already saved (same key, phone, total and items) | Same shape with `"already_received": true` and the current `status`. |
-| **409** | The order number (or key) already belongs to a **different** order | `{ "conflict": true, "mismatches": [...], "existing_order": { "id", "order_number", "status" } }`. Do not retry. |
-| **422** | Validation failed | Laravel validation errors. |
+| **409** | The order number (or key) already belongs to a **different** order | `{ "message": "رقم الطلب مستخدم بالفعل لطلب مختلف", "error": "...", "conflict": true, "mismatches": [...], "existing_order": { "id", "order_number", "status" } }`. Do not retry. |
+| **422** | Validation failed | Laravel validation errors (`{ "message": "...", "errors": { ... } }`). |
 | **400** | Anything else (wrong shift, unknown products, blocked category) | `{ "message": "فشل في إنشاء الطلب", "error": "<reason>" }` |
 | **401** | Missing or wrong key | `{ "message": "Unauthorized" }` |
+
+Example `400` bodies:
+
+```json
+{ "message": "فشل في إنشاء الطلب", "error": "الوردية غير صحيحة" }
+```
+
+```json
+{ "message": "فشل في إنشاء الطلب", "error": "منتجات غير موجودة: [\"INVALID-REF-101\"]" }
+```
 
 Without an `idempotencyKey`, an existing order is looked up by order number among web order types (any shift).
 

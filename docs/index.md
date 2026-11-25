@@ -45,3 +45,12 @@ features:
     details: A hidden vendor account sets the business type, modules and paid features. Shop admins never see it.
     link: /technical/vendor
 ---
+
+## Features
+
+- **Point of sale:** Order-type tabs, instant barcode/scale selling, held carts, dine-in tables and floor grid, delivery dispatch, split and deferred payments, order fees and equipment rentals.
+- **Shifts and cash:** Opening float, shift cash tracking, multi-terminal sessions and handovers, expenses, other revenues, refunds and returns, and audit logging.
+- **Kitchen and printing:** Live KDS over Reverb, station routing, ESC/POS thermal receipt printing, network printer scanning, and barcode label templates via Turbo Label.
+- **Inventory and purchasing:** Raw materials, consumables, manufactured recipes (BOM), multiple warehouses, costing methods (immediate or weighted average), purchase invoices, purchase returns, waste, stocktaking, transfers and issues.
+- **Online ordering and sync:** Linked `turbo_tenant` storefront API with idempotent retries and status callbacks, master/slave catalog sync, and central platform outbox sync.
+- **Administration and analytics:** Role-based permissions, Filament 5 reports with Excel export, and a read-only remote MCP server for AI assistants.

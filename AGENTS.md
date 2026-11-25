@@ -4,7 +4,7 @@
 
 This workspace rewrites **turbo_resturant** (AdonisJS) into **larament** (Laravel + FilamentPHP + React/Inertia). The old app is reference-only — do not modify it.
 
-- `larament/` — Primary app. Laravel 11, FilamentPHP v4 admin panel, React frontend via Inertia.js, TypeScript, Tailwind v4.
+- `larament/` — Primary app. Laravel 11 (`^11.9`), FilamentPHP v5 (`~5.0`) admin panel, React frontend via Inertia.js, TypeScript, Tailwind v4.
 - `manage_operations/` — Ops tool for deploy/SSH management. Separate git repo (gitignored at workspace root). Laravel 12, React/Inertia, shadcn/ui.
 - `turbo_resturant/` — Legacy AdonisJS app. Read-only reference for business logic.
 
@@ -42,17 +42,19 @@ Why: the cloud proxy blocks GitHub zip downloads, so plain `composer install` fa
 
 ### manage_operations
 
+Separate gitignored repo at `D:/ai_rewrite_turbo_restaurant/manage_operations`.
+
 | Task | Command |
 |---|---|
-| Lint (ESLint) | `cd e:\AI_rewirte\manage_operations; npm run lint` |
-| Format check | `cd e:\AI_rewirte\manage_operations; npm run format:check` |
-| Type check | `cd e:\AI_rewirte\manage_operations; npm run types` |
-| Build | `cd e:\AI_rewirte\manage_operations; npm run build` |
-| Tests | `cd e:\AI_rewirte\manage_operations; composer test` |
+| Lint (ESLint) | `cd D:/ai_rewrite_turbo_restaurant/manage_operations; npm run lint` |
+| Format check | `cd D:/ai_rewrite_turbo_restaurant/manage_operations; npm run format:check` |
+| Type check | `cd D:/ai_rewrite_turbo_restaurant/manage_operations; npm run types` |
+| Build | `cd D:/ai_rewrite_turbo_restaurant/manage_operations; npm run build` |
+| Tests | `cd D:/ai_rewrite_turbo_restaurant/manage_operations; composer test` |
 
 ## Architecture (larament)
 
-- **FilamentPHP v4 admin panel** — Resources in `app/Filament/Resources/`, pages/widgets/actions in sibling dirs under `app/Filament/`
+- **FilamentPHP v5 admin panel** — Resources in `app/Filament/Resources/`, pages/widgets/actions in sibling dirs under `app/Filament/`
 - **React frontend** — Entry `resources/js/app.tsx`, pages in `resources/js/Pages/`, components in `resources/js/Components/`
 - **Path alias** — `@/*` maps to `resources/js/*` (configured in both `tsconfig.json` and `vite.config.js`)
 - **Reverb** for WebSockets (broadcasting), **Ziggy** for route names in JS
@@ -74,8 +76,26 @@ Why: the cloud proxy blocks GitHub zip downloads, so plain `composer install` fa
 
 ## Conventions
 
+- PRs target `master`.
 - `composer review` is the pre-push quality gate: Pint → Pest → PHPStan
-- FilamentPHP v4: consult `.github/docs/filament-v4-upgrade-guide.md` and `.claude/skills/` for planning/testing patterns
+- FilamentPHP v5: consult `.claude/skills/filamentphp-planning/` and `.claude/skills/filamentphp-testing/` for planning/testing patterns
 - MCP server / ChatGPT, Claude or Gemini connectors: follow `.claude/skills/laravel-mcp-server/`
 - `lang/ar.json` is the primary translation file (Arabic UI)
 - Default seed user: `admin@example.com` / `password`
+
+## Documentation
+
+- `docs/` (VitePress) is the single source of truth.
+- Any PR that changes behaviour, settings, an API, or deployment must update the matching `docs/` page in the same PR and add a line to `CHANGELOG.md`.
+- Only these `.md` locations are allowed: `docs/**` (excluding `docs/node_modules`), `.workspace/**`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `CLAUDE.md`, `label-agent/README.md`, `larament/README.md`, `.claude/**`, `larament/resources/ai/**`, and `turbo_resturant/**`.
+- Run `bash scripts/docs-check.sh` before pushing.
+
+## Workspace
+
+All drafts, plans, specs, tickets, ADRs, research, and handoffs go in `.workspace/` (see `.workspace/index.md`), never in the repo root or `docs/`.
+
+## Agent skills
+
+- Issue tracker -> `.workspace/agents/issue-tracker.md`
+- Domain docs (glossary, ADRs) -> `.workspace/agents/domain.md`
+- Coding standards -> `.workspace/CODING_STANDARDS.md`
