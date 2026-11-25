@@ -26,4 +26,4 @@ Read with SKILL.md. Where this file and the skill differ, this file wins for thi
   call log). Register new tools in `BusinessServer::TOOLS`. Playbook prompts are Markdown files in
   `resources/ai/playbooks/*.md`; their `requires:` front matter names the tools they need, and the prompt is
   listed only when the user may call all of them. No `SkillPrompt` class. Resources: `pos://glossary`
-  (`resources/ai/glossary.md`) and `pos://business-profile`. Answer eval set: `docs/technical/ai-mcp.md#evaluation`.
+  (`resources/ai/glossary.md`) and `pos://business-profile`. Answer eval set: `docs/dev/ai-mcp.md#evaluation`.
