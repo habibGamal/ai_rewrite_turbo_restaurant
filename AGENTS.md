@@ -85,10 +85,10 @@ Separate gitignored repo at `D:/ai_rewrite_turbo_restaurant/manage_operations`.
 
 ## Documentation
 
-- `docs/` (VitePress) is the single source of truth.
+- `docs/` (VitePress) is the single source of truth: Arabic user guide at `/` (`start/`, `guide/`, `admin/`, `integrations/`) and English developer handbook under `docs/dev/` (with `docs/dev/ops/`). Follow `docs/dev/style-guide.md`.
 - Any PR that changes behaviour, settings, an API, or deployment must update the matching `docs/` page in the same PR and add a line to `CHANGELOG.md`.
 - Only these `.md` locations are allowed: `docs/**` (excluding `docs/node_modules`), `.workspace/**`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `CLAUDE.md`, `label-agent/README.md`, `larament/README.md`, `.claude/**`, `larament/resources/ai/**`, and `turbo_resturant/**`.
-- Run `bash scripts/docs-check.sh` before pushing.
+- Run `bash scripts/docs-check.sh` (or `bash scripts/docs-check.sh --build` for full + public VitePress builds) before pushing.
 
 ## Workspace
 

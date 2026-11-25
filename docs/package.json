@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vitepress dev",
+    "dev": "vitepress dev --port 5173",
     "build": "vitepress build",
+    "build:public": "DOCS_PUBLIC=1 vitepress build",
     "preview": "vitepress preview"
   },
   "devDependencies": {

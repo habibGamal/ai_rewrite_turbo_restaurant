@@ -5,7 +5,7 @@ Multi-purpose point of sale for restaurants, cafés, bakeries, fashion stores, g
 | Path | What it is |
 |---|---|
 | [`larament/`](larament/) | The application (Laravel 11, Filament 5, React/Inertia, Pest 4). |
-| [`docs/`](docs/) | Documentation site (VitePress): English technical handbook + Arabic user guide. |
+| [`docs/`](docs/) | Documentation site (VitePress): Arabic user guide at `/` + English developer handbook under `docs/dev/`. |
 | `turbo_resturant/` | Legacy AdonisJS app, read-only reference. |
 
 ## Documentation
@@ -13,11 +13,12 @@ Multi-purpose point of sale for restaurants, cafés, bakeries, fashion stores, g
 ```bash
 cd docs
 npm install
-npm run dev     # http://localhost:5173
+npm run dev          # http://localhost:5173
+npm run build:public # public user docs only (run from Git Bash on Windows)
 ```
 
-- Technical handbook: [`docs/technical/`](docs/technical/index.md) (architecture, modules, events, vendor account, settings, website API, deployment)
-- دليل المستخدم بالعربي: [`docs/ar/guide/`](docs/ar/guide/index.md)
+- دليل المستخدم بالعربي: [`docs/start/`](docs/start/index.md) (`start/`, `guide/`, `admin/`, `integrations/`)
+- Developer handbook: [`docs/dev/`](docs/dev/index.md) (architecture, modules, events, vendor account, settings, website API, deployment)
 
 ## Quick start
 
@@ -30,4 +31,4 @@ php artisan pos:vendor     # hidden vendor account, keep the password
 composer dev
 ```
 
-See [Local setup](docs/technical/setup.md) and [Deployment](docs/technical/deployment.md).
+See [Local setup](docs/dev/setup.md) and [Deployment](docs/dev/ops/deployment.md).
