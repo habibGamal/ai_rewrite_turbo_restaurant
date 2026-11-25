@@ -89,6 +89,7 @@ Separate gitignored repo at `D:/ai_rewrite_turbo_restaurant/manage_operations`.
 - Any PR that changes behaviour, settings, an API, or deployment must update the matching `docs/` page in the same PR and add a line to `CHANGELOG.md`.
 - Only these `.md` locations are allowed: `docs/**` (excluding `docs/node_modules`), `.workspace/**`, `README.md`, `CHANGELOG.md`, `AGENTS.md`, `CLAUDE.md`, `label-agent/README.md`, `larament/README.md`, `.claude/**`, `larament/resources/ai/**`, and `turbo_resturant/**`.
 - Run `bash scripts/docs-check.sh` (or `bash scripts/docs-check.sh --build` for full + public VitePress builds) before pushing.
+- The docs theme in `docs/.vitepress/theme/` is shared by the POS, website and platform docs and is edited only in the POS repo. See `docs/dev/style-guide.md` ("Shared theme") and `bash scripts/docs-theme.sh`.
 
 ## Workspace
 
