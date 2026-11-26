@@ -130,6 +130,11 @@ class ReturnsAggregates
      * Refund amount and profit impact grouped by an expression over the
      * joined lines (e.g. "ro.type" or "DATE(orr.created_at)").
      *
+     * Grouped by the select alias, not by repeating the expression: MySQL
+     * merges the orr derived table into the outer query and then may no
+     * longer see that the GROUP BY copy of an expression over orr matches
+     * the SELECT copy, failing with 1055 under ONLY_FULL_GROUP_BY.
+     *
      * @return array<string, array{count: int, amount: float, profit_impact: float, quantity: float}>
      */
     public function groupedBy(QueryBuilder $returns, string $expression): array
@@ -140,7 +145,7 @@ class ReturnsAggregates
             ->selectRaw('COALESCE(SUM(ori.refund_amount), 0) as amount')
             ->selectRaw('COALESCE(SUM('.self::profitImpactSql().'), 0) as profit_impact')
             ->selectRaw('COALESCE(SUM('.self::itemQuantitySql().'), 0) as quantity')
-            ->groupByRaw($expression)
+            ->groupBy('group_key')
             ->get();
 
         $result = [];

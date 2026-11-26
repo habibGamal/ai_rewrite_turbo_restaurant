@@ -17,13 +17,18 @@ use App\Filament\Widgets\NoCustomersSalesInPeriodWidget;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturn;
+use App\Models\OrderReturnItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\ChannelPerformanceReportService;
 use App\Services\Reports\Channels\ChannelReportFilters;
+use App\Services\Reports\ReturnsAggregates;
+use App\Services\Reports\SqlDates;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 use function Pest\Laravel\actingAs;
@@ -283,6 +288,38 @@ describe('time', function () {
             ->and(array_keys($trend['series']))->toBe(['dine_in', 'delivery'])
             ->and($trend['series']['delivery']['values']['2026-11-15'])->toBe(['orders' => 2, 'net_sales' => 150.0])
             ->and($trend['series']['delivery']['values']['2026-11-16'])->toBe(['orders' => 0, 'net_sales' => 0.0]);
+    });
+
+    it('takes refunds off the channel line on the day they were paid', function () {
+        $this->travelTo(CarbonImmutable::parse('2026-11-15 18:00'));
+        $order = channelOrder('delivery', 100, ['created_at' => '2026-11-14 13:00']);
+        $return = OrderReturn::create([
+            'order_id' => $order->id,
+            'user_id' => $this->admin->id,
+            'shift_id' => $order->shift_id,
+            'total_refund' => 30,
+        ]);
+        $item = OrderItem::factory()->create(['order_id' => $order->id, 'product_id' => Product::factory()->create()->id]);
+        OrderReturnItem::create(['order_return_id' => $return->id, 'order_item_id' => $item->id, 'quantity' => 1, 'refund_amount' => 30]);
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 12:00'));
+
+        $trend = $this->service->trend(ChannelReportFilters::fromArray(['startDate' => '2026-11-14', 'endDate' => '2026-11-16']));
+
+        expect($trend['series']['delivery']['values']['2026-11-14'])->toBe(['orders' => 1, 'net_sales' => 100.0])
+            ->and($trend['series']['delivery']['values']['2026-11-15'])->toBe(['orders' => 0, 'net_sales' => -30.0]);
+    });
+
+    // MariaDB (and MySQL in some cases) rejects GROUP BY CONCAT(ro.type, ...)
+    // under ONLY_FULL_GROUP_BY with error 1055; grouping by the alias works on
+    // every driver. SQLite does not enforce the rule, so check the SQL itself.
+    it('groups refunds by the select alias, so strict MySQL and MariaDB accept compound keys', function () {
+        $aggregates = app(ReturnsAggregates::class);
+
+        DB::enableQueryLog();
+        $aggregates->groupedBy($aggregates->periodQuery(null, null), SqlDates::pair('ro.type', SqlDates::day('orr.created_at')));
+        $sql = collect(DB::getQueryLog())->last()['query'];
+
+        expect($sql)->toEndWith('group by '.DB::getQueryGrammar()->wrap('group_key'));
     });
 
     it('groups weeks from Saturday', function () {
