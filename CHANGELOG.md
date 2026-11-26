@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Added `e2e/`: a Docker stack (POS, website, MariaDB, Mailpit, optional Cloudflare tunnel and runner) with a `--reuse-host` low-download mode, seed scripts that link the POS and the website, Paymob test-mode wiring, and e2e tests whose agent steps run on agy over ACP. See `docs/dev/ops/e2e-stack.md`.
 - Fixed the channels report (and the other reports that group refunds by channel and date) failing with SQL error 1055 on MariaDB / strict MySQL: `ReturnsAggregates::groupedBy` now groups by its `group_key` alias instead of repeating the expression.
 - Shared docs theme check: `scripts/docs-theme.sh` (verify / lock / pull) and `docs/.vitepress/theme.lock` keep the theme identical across the POS, website and platform docs; `docs-check.sh` fails when they differ. The style guide explains how to run the three sites together.
 - Restructured `docs/` into the six-section Arabic-default layout (`start/`, `guide/`, `admin/`, `integrations/`, `dev/`, `dev/ops/`), added the shared VitePress theme with product switcher and client-side redirects, added `DOCS_PUBLIC=1` public build mode, generated user glossary from `.workspace/GLOSSARY.md`, added `docs/dev/style-guide.md` and `docs/dev/ops/runbooks.md`, and updated `scripts/docs-check.sh`.
