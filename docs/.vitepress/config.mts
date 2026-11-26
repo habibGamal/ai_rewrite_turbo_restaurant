@@ -91,6 +91,7 @@ const devSidebar: DefaultTheme.Sidebar = [
     items: [
       { text: 'Deployment', link: '/dev/ops/deployment' },
       { text: 'Runbooks', link: '/dev/ops/runbooks' },
+      { text: 'E2E test stack', link: '/dev/ops/e2e-stack' },
       { text: 'Changelog', link: '/changelog' },
     ],
   },

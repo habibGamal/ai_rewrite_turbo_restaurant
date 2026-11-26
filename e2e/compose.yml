@@ -1,0 +1,157 @@
+# POS + website end-to-end stack. Use e2e/stack.sh rather than calling compose directly.
+# This base file mounts both repos from the host. compose.full.yml (the default mode)
+# adds container-only vendor/ and node_modules volumes; --reuse-host skips it.
+name: turbo-e2e
+
+x-php: &php
+  image: turbo-e2e-php:1
+  build:
+    context: ./docker/php
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-db-env: &db-env
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_USERNAME: root
+  DB_PASSWORD: e2e
+
+x-pos-env: &pos-env
+  <<: *db-env
+  APP_NAME: "Turbo POS E2E"
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_KEY: base64:j63XdlZ+wgqArEmgzM3haExBF5T9PSUOSzwOFtklkUI=
+  APP_URL: http://localhost:${POS_PORT:-8001}
+  APP_LOCALE: ar
+  APP_TIMEZONE: Africa/Cairo
+  DB_DATABASE: pos_e2e
+  CACHE_STORE: file
+  SESSION_DRIVER: file
+  QUEUE_CONNECTION: sync
+  BROADCAST_CONNECTION: log
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  WEB_API_KEY: ${E2E_WEB_API_KEY:-193b6c8a03c1e8d097b8b942ded69113448c1239c66c47ba}
+  PHP_CLI_SERVER_WORKERS: "4"
+
+x-site-env: &site-env
+  <<: *db-env
+  APP_NAME: "Turbo Website E2E"
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_KEY: base64:2Qz0YnkvQiQvBT7rZAK23E+HMqYLjNq8EcOc69H9XD4=
+  APP_URL: http://e2e.localhost:${SITE_PORT:-8000}
+  DB_DATABASE: site_e2e
+  CACHE_STORE: array
+  SESSION_DRIVER: file
+  QUEUE_CONNECTION: database
+  # Tenant requests must queue jobs in the central DB, where the worker reads them.
+  DB_QUEUE_CONNECTION: mysql
+  BROADCAST_CONNECTION: log
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  DEBUGBAR_ENABLED: "false"
+  # The branch link is http://pos:8000 inside Docker, which is a private address.
+  NETWORK_ALLOW_PRIVATE_HOSTS: "true"
+  PHP_CLI_SERVER_WORKERS: "4"
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: e2e
+      TZ: Africa/Cairo
+    ports: ["${DB_PORT:-33306}:3306"]
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports: ["${MAILPIT_PORT:-8025}:8025"]
+
+  pos:
+    <<: *php
+    working_dir: /app/larament
+    environment: *pos-env
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    ports: ["${POS_PORT:-8001}:8000"]
+    volumes:
+      - ${POS_DIR:-..}:/app
+      - pos_bootstrap_cache:/app/larament/bootstrap/cache
+      - pos_storage:/app/larament/storage
+      - ./seed:/e2e-seed:ro
+
+  site:
+    <<: *php
+    working_dir: /app
+    environment: *site-env
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    ports: ["${SITE_PORT:-8000}:8000"]
+    networks:
+      default:
+        # The POS calls the website by this name; it is also a tenant domain.
+        aliases: [e2e-shop.test]
+    volumes:
+      - ${SITE_DIR:-../../turbo_tenant}:/app
+      - site_bootstrap_cache:/app/bootstrap/cache
+      - site_storage:/app/storage
+      - ./seed:/e2e-seed:ro
+
+  site-queue:
+    <<: *php
+    working_dir: /app
+    environment: *site-env
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1"]
+    volumes:
+      - ${SITE_DIR:-../../turbo_tenant}:/app
+      - site_bootstrap_cache:/app/bootstrap/cache
+      - site_storage:/app/storage
+
+  # Public HTTPS URL for the website (Paymob redirects and webhooks). Started with --tunnel.
+  # Without CLOUDFLARE_TUNNEL_TOKEN it opens a free quick tunnel (*.trycloudflare.com).
+  tunnel:
+    image: cloudflare/cloudflared:2025.11.1
+    profiles: [tunnel]
+    restart: unless-stopped
+    command: >-
+      ${E2E_TUNNEL_COMMAND:-tunnel --no-autoupdate --url http://site:8000}
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [site]
+
+  # Optional runner for machines without Node (and CI). Agent steps need agy on the
+  # host, so run agent tests from the host/WSL instead.
+  runner:
+    profiles: [runner]
+    build:
+      context: .
+      dockerfile: docker/runner/Dockerfile
+    environment:
+      SITE_URL: http://e2e-shop.test:8000
+      POS_URL: http://pos:8000
+      E2E_AGENT: ${E2E_AGENT:-none}
+      CI: ${CI:-}
+    volumes:
+      - ./tests:/e2e/tests
+      - ./.e2e:/e2e/.e2e
+
+volumes:
+  db_data:
+  pos_bootstrap_cache:
+  pos_storage:
+  site_bootstrap_cache:
+  site_storage:

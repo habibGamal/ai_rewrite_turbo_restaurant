@@ -1,0 +1,44 @@
+# Default "normal install" mode: vendor/ and node_modules live in container-only volumes,
+# so nothing on the host is used or overwritten. Filled by `e2e/stack.sh install`.
+services:
+  pos:
+    volumes:
+      - pos_vendor:/app/larament/vendor
+  site:
+    volumes:
+      - site_vendor:/app/vendor
+  site-queue:
+    volumes:
+      - site_vendor:/app/vendor
+
+  # One-shot jobs used by `stack.sh install`.
+  install-php:
+    image: turbo-e2e-php:1
+    profiles: [install]
+    entrypoint: ["bash", "-lc"]
+    volumes:
+      - ${POS_DIR:-..}:/app/pos
+      - ${SITE_DIR:-../../turbo_tenant}:/app/site
+      - pos_vendor:/app/pos/larament/vendor
+      - site_vendor:/app/site/vendor
+      - composer_cache:/root/.cache/composer
+  install-assets:
+    image: node:24-alpine
+    profiles: [install]
+    entrypoint: ["sh", "-lc"]
+    volumes:
+      - ${POS_DIR:-..}:/app/pos
+      - ${SITE_DIR:-../../turbo_tenant}:/app/site
+      - pos_vendor:/app/pos/larament/vendor
+      - site_vendor:/app/site/vendor
+      - pos_node_modules:/app/pos/larament/node_modules
+      - site_node_modules:/app/site/node_modules
+      - npm_cache:/root/.npm
+
+volumes:
+  pos_vendor:
+  site_vendor:
+  pos_node_modules:
+  site_node_modules:
+  composer_cache:
+  npm_cache:
